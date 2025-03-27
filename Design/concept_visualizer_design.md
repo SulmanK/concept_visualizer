@@ -244,7 +244,7 @@ interface ApiError {
 
 ### Runtime Dependencies
 #### Backend
-- Python 3.9+
+- Python 3.11
 - FastAPI
 - Uvicorn
 - Requests
@@ -253,7 +253,7 @@ interface ApiError {
 - Pillow (for image processing)
 
 #### Frontend
-- React 18+
+- React 19+
 - TypeScript
 - Axios
 - React Color (for color visualization)
