@@ -4,8 +4,8 @@ globs: .py
 alwaysApply: true
 ---
 ---
-description:
-globs: .py
+description: Coding standards for Python and TypeScript
+globs: 
 alwaysApply: true
 ---
 # Coding Standards
