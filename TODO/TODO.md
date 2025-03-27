@@ -19,8 +19,8 @@
 ### Frontend Component Design
 - [x] Design document for shared components (Button, LoadingSpinner, ErrorMessage)
 - [x] Design document for ConceptCreator feature
-- [ ] Design document for Refinement feature
-- [ ] Design document for frontend hooks and services (API client, error handling, etc.)
+- [x] Design document for Refinement feature
+- [x] Design document for frontend hooks and services (API client, error handling, etc.)
 
 ## Theme selection and UI design
 - [x] Create theme variations for comparison and selection
