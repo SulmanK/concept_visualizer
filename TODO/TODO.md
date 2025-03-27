@@ -17,20 +17,14 @@
   - [x] Internal data structures
 
 ### Frontend Component Design
-- [ ] Design document for ConceptCreator feature
-  - [ ] ConceptForm component
-  - [ ] ImageDisplay component
-  - [ ] ColorPalettes component
+- [x] Design document for shared components (Button, LoadingSpinner, ErrorMessage)
+- [x] Design document for ConceptCreator feature
 - [ ] Design document for Refinement feature
-  - [ ] RefinementForm component
-- [ ] Design document for shared components
-  - [ ] Button component
-  - [ ] LoadingSpinner component
-  - [ ] ErrorMessage component
-- [ ] Design document for hooks and services
-  - [ ] useConceptGeneration hook
-  - [ ] useApi hook
-  - [ ] conceptApi service
+- [ ] Design document for frontend hooks and services (API client, error handling, etc.)
+
+## Theme selection and UI design
+- [x] Create theme variations for comparison and selection
+- [x] Select Modern Gradient Violet theme as the project theme
 
 ## Phase 1: Basic Implementation
 
@@ -43,6 +37,7 @@
   - [ ] Initialize with Vite
   - [ ] Configure TypeScript
   - [ ] Set up Tailwind CSS
+  - [ ] Implement selected Modern Gradient Violet theme
 
 ### Backend Implementation
 - [ ] Implement core configuration

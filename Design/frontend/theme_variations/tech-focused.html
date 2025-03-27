@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tech-Focused - Concept Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0DFDD7',
+            'primary-dark': '#09D6B4',
+            secondary: '#FF3864',
+            'secondary-dark': '#E12C56',
+            darkbg: {
+              950: '#050A1C',
+              900: '#0A1128',
+              800: '#131A36',
+              700: '#1E2A4A',
+            },
+            'grid': 'rgba(13, 253, 215, 0.08)',
+          },
+          boxShadow: {
+            'tech': '0 0 15px rgba(13, 253, 215, 0.2)',
+            'tech-hover': '0 0 25px rgba(13, 253, 215, 0.35)',
+          },
+          backgroundImage: {
+            'tech-grid': 'linear-gradient(to right, rgba(13, 253, 215, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(13, 253, 215, 0.05) 1px, transparent 1px)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      padding: 2rem;
+      background-color: #050A1C;
+      background-image: 
+        radial-gradient(circle at 15px 15px, rgba(13, 253, 215, 0.035) 2px, transparent 0),
+        linear-gradient(to right, rgba(13, 253, 215, 0.03) 1px, transparent 1px), 
+        linear-gradient(to bottom, rgba(13, 253, 215, 0.03) 1px, transparent 1px);
+      background-size: 30px 30px, 30px 30px, 30px 30px;
+      color: #E2E8F0;
+    }
+    .component-section {
+      margin-bottom: 4rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(13, 253, 215, 0.1);
+    }
+    .component-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .futuristic-border {
+      position: relative;
+      overflow: hidden;
+    }
+    .futuristic-border::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 1px solid rgba(13, 253, 215, 0.4);
+      border-radius: inherit;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-5xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl font-bold mb-2 text-white">Concept<span class="text-primary">Visualizer</span></h1>
+      <p class="text-gray-400 text-lg">Tech-Focused Theme</p>
+    </header>
+    
+    <!-- Buttons -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-gray-200">Buttons</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-gray-300">Variants</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-primary text-darkbg-950 hover:bg-primary-dark shadow-tech hover:shadow-tech-hover">
+          Primary Button
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-secondary text-white hover:bg-secondary-dark shadow-[0_0_15px_rgba(255,56,100,0.2)] hover:shadow-[0_0_25px_rgba(255,56,100,0.35)]">
+          Secondary Button
+        </button>
+        
+        <button class="futuristic-border inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-transparent hover:bg-darkbg-800 text-primary hover:text-white overflow-hidden">
+          <span class="relative z-10">Outline Button</span>
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 hover:bg-darkbg-800 text-gray-300 hover:text-primary">
+          Ghost Button
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-gray-300">Sizes</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-9 px-3 text-sm bg-primary text-darkbg-950 hover:bg-primary-dark shadow-tech hover:shadow-tech-hover">
+          Small
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-primary text-darkbg-950 hover:bg-primary-dark shadow-tech hover:shadow-tech-hover">
+          Medium
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-12 px-8 text-lg bg-primary text-darkbg-950 hover:bg-primary-dark shadow-tech hover:shadow-tech-hover">
+          Large
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-gray-300">States</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-primary text-darkbg-950 shadow-tech hover:shadow-tech-hover opacity-30 pointer-events-none">
+          Disabled
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-5 py-2 bg-primary text-darkbg-950 shadow-tech hover:shadow-tech-hover disabled:opacity-30 disabled:pointer-events-none">
+          <svg class="h-4 w-4 mr-2 animate-spin text-darkbg-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading
+        </button>
+      </div>
+    </div>
+    
+    <!-- Loading Spinners -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-gray-200">Loading Spinners</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-gray-300">Sizes</h3>
+      <div class="component-group items-center">
+        <div role="status" class="inline-block">
+          <svg class="h-5 w-5 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block">
+          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block">
+          <svg class="h-12 w-12 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Error Messages -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-gray-200">Error Messages</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-gray-300">Default Variant</h3>
+      <div class="component-group flex-col">
+        <div class="flex items-center p-4 rounded-md text-sm bg-darkbg-800 border border-secondary/30 text-gray-200 shadow-[0_0_15px_rgba(255,56,100,0.1)]" role="alert">
+          <div class="flex-1">
+            <div class="font-medium">Failed to generate concept</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="text-xs font-medium px-3 py-1 rounded-sm bg-darkbg-700 border border-secondary/50 text-secondary hover:text-white hover:bg-secondary/90 transition-colors focus:outline-none" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-sm bg-darkbg-700 border border-gray-600/50 text-gray-400 hover:text-gray-200 hover:bg-darkbg-800 transition-colors focus:outline-none" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex items-center p-4 rounded-md text-sm bg-darkbg-800 border border-secondary/30 text-gray-200 shadow-[0_0_15px_rgba(255,56,100,0.1)]" role="alert">
+          <div class="flex-1">
+            <div class="font-medium">Failed to connect to server</div>
+            <div class="text-xs mt-1 text-gray-400">Network error: Connection refused</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="text-xs font-medium px-3 py-1 rounded-sm bg-darkbg-700 border border-secondary/50 text-secondary hover:text-white hover:bg-secondary/90 transition-colors focus:outline-none" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-sm bg-darkbg-700 border border-gray-600/50 text-gray-400 hover:text-gray-200 hover:bg-darkbg-800 transition-colors focus:outline-none" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form Example with Components -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-gray-200">Form Example</h2>
+      
+      <div class="bg-darkbg-800 p-6 rounded-md border border-primary/20 shadow-tech">
+        <h3 class="text-xl font-bold mb-6 text-gray-200 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364zM3 11a1 1 0 011 1v1.42l1.246.712a1 1 0 11-.992 1.736l-1.75-1A1 1 0 012 14v-2a1 1 0 011-1zm14 0a1 1 0 011 1v2a1 1 0 01-.504.868l-1.75 1a1 1 0 11-.992-1.736L16 13.42V12a1 1 0 011-1zm-9.618 5.504a1 1 0 011.364-.372l.254.145V16a1 1 0 112 0v.277l.254-.145a1 1 0 11.992 1.736l-1.735.992a.995.995 0 01-1.022 0l-1.735-.992a1 1 0 01-.372-1.364z" clip-rule="evenodd"></path>
+          </svg>
+          Generate New Concept
+        </h3>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Logo Description</label>
+            <input type="text" class="w-full px-4 py-3 bg-darkbg-900 border border-darkbg-700 text-gray-200 rounded-md focus:ring-2 focus:ring-primary/30 focus:border-primary/60 focus:outline-none transition-all duration-200" 
+              placeholder="A modern tech startup logo with abstract geometric shapes">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Theme Description</label>
+            <input type="text" class="w-full px-4 py-3 bg-darkbg-900 border border-darkbg-700 text-gray-200 rounded-md focus:ring-2 focus:ring-primary/30 focus:border-primary/60 focus:outline-none transition-all duration-200" 
+              placeholder="Professional corporate theme with a touch of creativity">
+          </div>
+          
+          <div class="flex items-center p-4 rounded-md text-sm bg-darkbg-800 border border-secondary/30 text-gray-200 shadow-[0_0_15px_rgba(255,56,100,0.1)]" role="alert">
+            <div class="flex-1">
+              <div class="font-medium">Failed to generate concept. Please try again.</div>
+            </div>
+            
+            <div class="flex gap-3 ml-4">
+              <button class="text-xs font-medium px-3 py-1 rounded-sm bg-darkbg-700 border border-secondary/50 text-secondary hover:text-white hover:bg-secondary/90 transition-colors focus:outline-none" aria-label="Retry">
+                Retry
+              </button>
+              
+              <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-sm bg-darkbg-700 border border-gray-600/50 text-gray-400 hover:text-gray-200 hover:bg-darkbg-800 transition-colors focus:outline-none" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex justify-end pt-2">
+            <button class="inline-flex items-center justify-center rounded-md font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg-900 h-11 px-6 py-2 bg-primary text-darkbg-950 hover:bg-primary-dark shadow-tech hover:shadow-tech-hover">
+              Generate Concept
+            </button>
+          </div>
+          
+          <div class="flex justify-center py-12">
+            <div role="status" class="inline-block">
+              <svg class="h-14 w-14 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="sr-only">Generating your concept...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 
