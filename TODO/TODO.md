@@ -3,18 +3,18 @@
 ## Design Documents
 
 ### Backend Component Design
-- [ ] Design document for JigsawStack client implementation
-  - [ ] Image generation client
-  - [ ] Text generation client
-- [ ] Design document for API endpoints
-  - [ ] Generate concept endpoint
-  - [ ] Refine concept endpoint
-- [ ] Design document for service layer
-  - [ ] Concept generation service
-  - [ ] Color palette generation function
-- [ ] Design document for data models
-  - [ ] Request/response models
-  - [ ] Internal data structures
+- [x] Design document for JigsawStack client implementation
+  - [x] Image generation client
+  - [x] Text generation client
+- [x] Design document for API endpoints
+  - [x] Generate concept endpoint
+  - [x] Refine concept endpoint
+- [x] Design document for service layer
+  - [x] Concept generation service
+  - [x] Color palette generation function
+- [x] Design document for data models
+  - [x] Request/response models
+  - [x] Internal data structures
 
 ### Frontend Component Design
 - [ ] Design document for ConceptCreator feature

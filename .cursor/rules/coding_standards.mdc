@@ -1,11 +1,6 @@
 ---
-description: 
+description:
 globs: .py
-alwaysApply: true
----
----
-description: Coding standards for Python and TypeScript
-globs: 
 alwaysApply: true
 ---
 # Coding Standards
@@ -206,4 +201,3 @@ export const Button: FC<ButtonProps> = ({
 - Handle errors at appropriate levels of abstraction.
 - Provide meaningful error messages.
 - Include error context in logs.
-
