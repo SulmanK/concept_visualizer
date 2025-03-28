@@ -5,6 +5,7 @@ import { ConceptCard } from '../components/ui/ConceptCard';
 import { GenerationResponse } from '../types';
 import { useConceptGeneration } from '../hooks/useConceptGeneration';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/Button';
 
 /**
  * Feature component for generating new concepts
@@ -89,8 +90,80 @@ export const ConceptGenerator: React.FC = () => {
     marginBottom: '2rem' // Increased spacing before form
   };
   
+  const cardStyle = {
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+    padding: '2rem',
+    marginBottom: '2rem'
+  };
+  
+  const circleNumberStyle = {
+    width: '48px', 
+    height: '48px', 
+    backgroundColor: '#EEF2FF', 
+    color: '#4F46E5', 
+    borderRadius: '50%', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    fontSize: '20px', 
+    fontWeight: 600
+  };
+  
+  const editButtonStyle = {
+    color: '#6366F1',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    textDecoration: 'none',
+    padding: '0',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'color 0.2s ease'
+  };
+  
+  const viewDetailsButtonStyle = {
+    color: '#6366F1',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    textDecoration: 'none',
+    padding: '0',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'color 0.2s ease'
+  };
+  
+  const handleGetStarted = () => {
+    // Scroll to form
+    const formElement = document.getElementById('create-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
+  const conceptCardStyle = {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    backgroundColor: 'white',
+    borderRadius: '0.5rem',
+    overflow: 'hidden',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    height: '100%'
+  };
+  
+  const conceptGridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '2rem',
+    margin: '0',
+    padding: '0',
+    width: '100%'
+  };
+  
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <div className="text-left mb-8">
         <h1 className="text-4xl font-bold text-indigo-900 mb-4">
           Create Visual Concepts
@@ -100,12 +173,14 @@ export const ConceptGenerator: React.FC = () => {
         </p>
       </div>
       
-      <ConceptForm
-        onSubmit={handleGenerateConcept}
-        status={status}
-        error={error}
-        onReset={handleReset}
-      />
+      <div id="create-form">
+        <ConceptForm
+          onSubmit={handleGenerateConcept}
+          status={status}
+          error={error}
+          onReset={handleReset}
+        />
+      </div>
       
       {status === 'success' && result && (
         <div className="mt-8 pt-8 border-t border-indigo-100">
@@ -131,46 +206,147 @@ export const ConceptGenerator: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-16">
-        <h2 className="text-2xl font-bold text-indigo-900 mb-6">
+      <div className="mt-20">
+        <h2 className="text-2xl font-bold text-indigo-900 mb-10">
           Recent Concepts
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div style={{...conceptGridStyle, marginTop: '2.5rem'}}>
           {recentConcepts.map((concept) => (
-            <ConceptCard
-              key={concept.id}
-              title={concept.title}
-              description={concept.description}
-              colors={concept.colors}
-              gradient={concept.gradient}
-              initials={concept.initials}
-              onEdit={() => handleEdit(concept.id)}
-              onViewDetails={() => handleViewDetails(concept.id)}
-            />
+            <div key={concept.id} style={conceptCardStyle}>
+              <div style={{ 
+                background: `linear-gradient(to right, ${concept.colors[0]}, ${concept.colors[1]})`, 
+                height: '200px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <div style={{
+                  width: '70px',
+                  height: '70px',
+                  backgroundColor: 'white',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '20px',
+                  color: concept.colors[0]
+                }}>
+                  {concept.initials}
+                </div>
+              </div>
+              <div style={{padding: '1.25rem 1.5rem', flexGrow: 1}}>
+                <h3 style={{
+                  fontWeight: 600, 
+                  fontSize: '1rem',
+                  color: '#1E293B', 
+                  marginBottom: '0.5rem'
+                }}>
+                  {concept.title}
+                </h3>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#64748B',
+                  lineHeight: '1.25rem',
+                  marginBottom: '1rem'
+                }}>
+                  {concept.description}
+                </p>
+                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem'}}>
+                  {concept.colors.map((color, index) => (
+                    <span 
+                      key={index}
+                      style={{ 
+                        backgroundColor: color,
+                        width: '1.5rem',
+                        height: '1.5rem',
+                        borderRadius: '9999px',
+                        display: 'inline-block'
+                      }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid #E2E8F0'
+                }}>
+                  <a 
+                    href="#"
+                    style={{
+                      color: '#6366F1',
+                      fontWeight: 500,
+                      fontSize: '0.875rem',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0'
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleEdit(concept.id);
+                    }}
+                  >
+                    Edit
+                  </a>
+                  <a 
+                    href="#"
+                    style={{
+                      color: '#6366F1',
+                      fontWeight: 500,
+                      fontSize: '0.875rem',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0'
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleViewDetails(concept.id);
+                    }}
+                  >
+                    View Details
+                  </a>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
       
-      <div className="mt-16">
+      <div style={{...cardStyle, marginTop: '4rem'}} className="mt-20">
         <h2 className="text-2xl font-bold text-indigo-900 mb-6">
           How It Works
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
+          <div className="text-center">
+            <div style={circleNumberStyle} className="mx-auto mb-4">1</div>
             <h3 className="text-lg font-semibold text-indigo-900 mb-2">Describe Your Vision</h3>
-            <p className="text-sm text-indigo-700">Provide detailed descriptions of your logo concept and color preferences.</p>
+            <p className="text-indigo-700 text-sm">Provide detailed descriptions of your logo concept and color preferences.</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
+          <div className="text-center">
+            <div style={circleNumberStyle} className="mx-auto mb-4">2</div>
             <h3 className="text-lg font-semibold text-indigo-900 mb-2">AI Generation</h3>
-            <p className="text-sm text-indigo-700">Our AI processes your description and creates unique visual concepts.</p>
+            <p className="text-indigo-700 text-sm">Our AI processes your description and creates unique visual concepts.</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
+          <div className="text-center">
+            <div style={circleNumberStyle} className="mx-auto mb-4">3</div>
             <h3 className="text-lg font-semibold text-indigo-900 mb-2">Refine & Download</h3>
-            <p className="text-sm text-indigo-700">Refine the generated concepts and download your final designs.</p>
+            <p className="text-indigo-700 text-sm">Refine the generated concepts and download your final designs.</p>
           </div>
+        </div>
+        <div className="flex justify-center mt-10 space-x-4">
+          <button 
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+            onClick={handleGetStarted}
+          >
+            Get Started
+          </button>
+          <button 
+            className="border border-indigo-600 text-indigo-600 px-4 py-2 rounded-md font-medium hover:bg-indigo-50 transition-colors"
+          >
+            Learn More
+          </button>
         </div>
       </div>
     </div>
