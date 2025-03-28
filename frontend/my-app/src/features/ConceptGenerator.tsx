@@ -315,37 +315,140 @@ export const ConceptGenerator: React.FC = () => {
       </div>
       
       <div style={{...cardStyle, marginTop: '4rem'}} className="mt-20">
-        <h2 className="text-2xl font-bold text-indigo-900 mb-6">
+        <h2 className="text-2xl font-bold text-indigo-900 mb-16">
           How It Works
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
-          <div className="text-center">
-            <div style={circleNumberStyle} className="mx-auto mb-4">1</div>
-            <h3 className="text-lg font-semibold text-indigo-900 mb-2">Describe Your Vision</h3>
-            <p className="text-indigo-700 text-sm">Provide detailed descriptions of your logo concept and color preferences.</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem', marginTop: '2rem', position: 'relative' }}>
+          {/* Arrow 1 to 2 */}
+          <div style={{
+            position: 'absolute',
+            top: '30px',
+            left: 'calc(16.65% + 60px)',
+            width: 'calc(33.3% - 120px)',
+            height: '2px',
+            backgroundColor: '#6366F1',
+            zIndex: 0
+          }}>
+            <div style={{
+              position: 'absolute',
+              right: '-8px',
+              top: '-4px',
+              width: '0',
+              height: '0',
+              borderTop: '5px solid transparent',
+              borderBottom: '5px solid transparent',
+              borderLeft: '8px solid #6366F1'
+            }}></div>
           </div>
-          <div className="text-center">
-            <div style={circleNumberStyle} className="mx-auto mb-4">2</div>
-            <h3 className="text-lg font-semibold text-indigo-900 mb-2">AI Generation</h3>
-            <p className="text-indigo-700 text-sm">Our AI processes your description and creates unique visual concepts.</p>
+          
+          {/* Arrow 2 to 3 */}
+          <div style={{
+            position: 'absolute',
+            top: '30px',
+            left: 'calc(50% + 60px)',
+            width: 'calc(33.3% - 120px)',
+            height: '2px',
+            backgroundColor: '#6366F1',
+            zIndex: 0
+          }}>
+            <div style={{
+              position: 'absolute',
+              right: '-8px',
+              top: '-4px',
+              width: '0',
+              height: '0',
+              borderTop: '5px solid transparent',
+              borderBottom: '5px solid transparent',
+              borderLeft: '8px solid #6366F1'
+            }}></div>
           </div>
-          <div className="text-center">
-            <div style={circleNumberStyle} className="mx-auto mb-4">3</div>
-            <h3 className="text-lg font-semibold text-indigo-900 mb-2">Refine & Download</h3>
-            <p className="text-indigo-700 text-sm">Refine the generated concepts and download your final designs.</p>
+          
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>1</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>Describe Your Vision</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Provide detailed descriptions of your logo concept and color preferences.</p>
+          </div>
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>2</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>AI Generation</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Our AI processes your description and creates unique visual concepts.</p>
+          </div>
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>3</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>Refine & Download</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Refine the generated concepts and download your final designs.</p>
           </div>
         </div>
-        <div className="flex justify-center mt-10 space-x-4">
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
           <button 
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+            style={{
+              backgroundColor: '#6366F1',
+              color: 'white',
+              padding: '0.5rem 1.25rem',
+              borderRadius: '0.375rem',
+              fontWeight: 500,
+              fontSize: '0.875rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
             onClick={handleGetStarted}
           >
             Get Started
-          </button>
-          <button 
-            className="border border-indigo-600 text-indigo-600 px-4 py-2 rounded-md font-medium hover:bg-indigo-50 transition-colors"
-          >
-            Learn More
           </button>
         </div>
       </div>
