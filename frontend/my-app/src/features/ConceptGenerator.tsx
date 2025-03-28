@@ -173,6 +173,145 @@ export const ConceptGenerator: React.FC = () => {
         </p>
       </div>
       
+      <div style={{...cardStyle, marginBottom: '3rem'}} className="mt-8">
+        <h2 className="text-2xl font-bold text-indigo-900 mb-16">
+          How It Works
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem', marginTop: '2rem', position: 'relative' }}>
+          {/* Arrow 1 to 2 */}
+          <div style={{
+            position: 'absolute',
+            top: '30px',
+            left: 'calc(16.0% + 35px)',
+            width: 'calc(33.3% - 70px)',
+            height: '2px',
+            backgroundColor: '#6366F1',
+            zIndex: 0
+          }}>
+            <div style={{
+              position: 'absolute',
+              right: '-8px',
+              top: '-4px',
+              width: '0',
+              height: '0',
+              borderTop: '5px solid transparent',
+              borderBottom: '5px solid transparent',
+              borderLeft: '8px solid #6366F1'
+            }}></div>
+          </div>
+          
+          {/* Arrow 2 to 3 */}
+          <div style={{
+            position: 'absolute',
+            top: '30px',
+            left: 'calc(50% + 35px)',
+            width: 'calc(33.3% - 70px)',
+            height: '2px',
+            backgroundColor: '#6366F1',
+            zIndex: 0
+          }}>
+            <div style={{
+              position: 'absolute',
+              right: '-8px',
+              top: '-4px',
+              width: '0',
+              height: '0',
+              borderTop: '5px solid transparent',
+              borderBottom: '5px solid transparent',
+              borderLeft: '8px solid #6366F1'
+            }}></div>
+          </div>
+          
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>1</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>Describe Your Vision</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Provide detailed descriptions of your logo concept and color preferences.</p>
+          </div>
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>2</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>AI Generation</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Our AI processes your description and creates unique visual concepts.</p>
+          </div>
+          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+            <div style={{
+              ...circleNumberStyle,
+              width: '60px',
+              height: '60px',
+              marginBottom: '1.5rem',
+              backgroundColor: '#EEF2FF',
+              color: '#6366F1',
+              fontSize: '20px',
+              margin: '0 auto'
+            }}>3</div>
+            <h3 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: '#1E293B',
+              marginBottom: '1rem'
+            }}>Refine & Download</h3>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#64748B',
+              lineHeight: '1.25rem'
+            }}>Refine the generated concepts and download your final designs.</p>
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <button 
+            style={{
+              backgroundColor: '#4F46E5',
+              color: 'white',
+              padding: '0.75rem 1.5rem',
+              borderRadius: '0.375rem',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s'
+            }}
+            onClick={handleGetStarted}
+          >
+            Get Started
+          </button>
+        </div>
+      </div>
+      
       <div id="create-form">
         <ConceptForm
           onSubmit={handleGenerateConcept}
@@ -311,145 +450,6 @@ export const ConceptGenerator: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-      </div>
-      
-      <div style={{...cardStyle, marginTop: '4rem'}} className="mt-20">
-        <h2 className="text-2xl font-bold text-indigo-900 mb-16">
-          How It Works
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginBottom: '2rem', marginTop: '2rem', position: 'relative' }}>
-          {/* Arrow 1 to 2 */}
-          <div style={{
-            position: 'absolute',
-            top: '30px',
-            left: 'calc(16.65% + 60px)',
-            width: 'calc(33.3% - 120px)',
-            height: '2px',
-            backgroundColor: '#6366F1',
-            zIndex: 0
-          }}>
-            <div style={{
-              position: 'absolute',
-              right: '-8px',
-              top: '-4px',
-              width: '0',
-              height: '0',
-              borderTop: '5px solid transparent',
-              borderBottom: '5px solid transparent',
-              borderLeft: '8px solid #6366F1'
-            }}></div>
-          </div>
-          
-          {/* Arrow 2 to 3 */}
-          <div style={{
-            position: 'absolute',
-            top: '30px',
-            left: 'calc(50% + 60px)',
-            width: 'calc(33.3% - 120px)',
-            height: '2px',
-            backgroundColor: '#6366F1',
-            zIndex: 0
-          }}>
-            <div style={{
-              position: 'absolute',
-              right: '-8px',
-              top: '-4px',
-              width: '0',
-              height: '0',
-              borderTop: '5px solid transparent',
-              borderBottom: '5px solid transparent',
-              borderLeft: '8px solid #6366F1'
-            }}></div>
-          </div>
-          
-          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            <div style={{
-              ...circleNumberStyle,
-              width: '60px',
-              height: '60px',
-              marginBottom: '1.5rem',
-              backgroundColor: '#EEF2FF',
-              color: '#6366F1',
-              fontSize: '20px',
-              margin: '0 auto'
-            }}>1</div>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: '#1E293B',
-              marginBottom: '1rem'
-            }}>Describe Your Vision</h3>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#64748B',
-              lineHeight: '1.25rem'
-            }}>Provide detailed descriptions of your logo concept and color preferences.</p>
-          </div>
-          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            <div style={{
-              ...circleNumberStyle,
-              width: '60px',
-              height: '60px',
-              marginBottom: '1.5rem',
-              backgroundColor: '#EEF2FF',
-              color: '#6366F1',
-              fontSize: '20px',
-              margin: '0 auto'
-            }}>2</div>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: '#1E293B',
-              marginBottom: '1rem'
-            }}>AI Generation</h3>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#64748B',
-              lineHeight: '1.25rem'
-            }}>Our AI processes your description and creates unique visual concepts.</p>
-          </div>
-          <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            <div style={{
-              ...circleNumberStyle,
-              width: '60px',
-              height: '60px',
-              marginBottom: '1.5rem',
-              backgroundColor: '#EEF2FF',
-              color: '#6366F1',
-              fontSize: '20px',
-              margin: '0 auto'
-            }}>3</div>
-            <h3 style={{
-              fontSize: '1.125rem',
-              fontWeight: 600,
-              color: '#1E293B',
-              marginBottom: '1rem'
-            }}>Refine & Download</h3>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#64748B',
-              lineHeight: '1.25rem'
-            }}>Refine the generated concepts and download your final designs.</p>
-          </div>
-        </div>
-        <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-          <button 
-            style={{
-              backgroundColor: '#6366F1',
-              color: 'white',
-              padding: '0.5rem 1.25rem',
-              borderRadius: '0.375rem',
-              fontWeight: 500,
-              fontSize: '0.875rem',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s'
-            }}
-            onClick={handleGetStarted}
-          >
-            Get Started
-          </button>
         </div>
       </div>
     </div>
