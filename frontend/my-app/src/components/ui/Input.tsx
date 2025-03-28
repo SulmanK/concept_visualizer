@@ -101,7 +101,7 @@ export const Input: React.FC<InputProps> = ({
       )}
       
       {!error && helperText && (
-        <p id={`${inputId}-helper`} className="mt-1 text-sm text-dark-500">
+        <p id={`${inputId}-helper`} className="helper-text">
           {helperText}
         </p>
       )}

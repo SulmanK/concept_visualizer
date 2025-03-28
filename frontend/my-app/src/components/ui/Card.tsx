@@ -53,9 +53,9 @@ export const Card: React.FC<CardProps> = ({
   
   const contentClass = padded ? 'p-4 sm:p-6' : '';
   
-  const headerClass = 'px-4 py-3 sm:px-6 border-b border-dark-200 bg-dark-50';
+  const headerClass = 'px-4 py-3 sm:px-6 border-b border-indigo-200 bg-indigo-50/50';
   
-  const footerClass = 'px-4 py-3 sm:px-6 border-t border-dark-200 bg-dark-50';
+  const footerClass = 'px-4 py-3 sm:px-6 border-t border-indigo-200 bg-indigo-50/50';
   
   return (
     <div className={cardClass} {...props}>

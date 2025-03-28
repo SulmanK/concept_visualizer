@@ -5,12 +5,37 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Concept Visualizer</title>
-    <!-- Load Inter font -->
+    <!-- Load Montserrat font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow-x: hidden !important;
+      }
+      #root {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      
+      /* Override any potential Vite/React default styles */
+      body > div:first-child {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+    </style>
   </head>
-  <body>
+  <body class="bg-gradient-page">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

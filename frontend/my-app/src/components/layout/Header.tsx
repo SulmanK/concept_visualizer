@@ -9,57 +9,112 @@ export interface HeaderProps {
 }
 
 /**
- * Application header with navigation
+ * Application header with navigation - directly implemented from the mockup HTML
  */
 export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
-  const navItems = [
-    { label: 'Create', path: '/', icon: '✨' },
-    { label: 'Refine', path: '/refine', icon: '🔄' },
-    { label: 'Gallery', path: '/gallery', icon: '🖼️' },
-  ];
+  // Define styles as constants to avoid inline style clutter
+  const headerStyle = {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backdropFilter: 'blur(4px)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+    borderBottom: '1px solid #e0e7ff',
+    position: 'sticky' as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    margin: 0,
+    padding: 0
+  };
+
+  const containerStyle = {
+    width: '100%',
+    maxWidth: '1280px',
+    margin: '0 auto',
+    padding: '0 2rem'
+  };
+
+  const logoStyle = {
+    height: '2.5rem',
+    width: '2.5rem',
+    background: 'linear-gradient(to right, #4F46E5, #4338CA)',
+    boxShadow: '0 10px 30px -5px rgba(79, 70, 229, 0.2)'
+  };
+
+  const titleStyle = {
+    marginLeft: '0.75rem',
+    fontSize: '1.25rem',
+    fontWeight: 700,
+    background: 'linear-gradient(to right, #4F46E5, #818CF8)',
+    WebkitBackgroundClip: 'text',
+    backgroundClip: 'text',
+    color: 'transparent'
+  };
+
+  const activeNavStyle = {
+    padding: '0.5rem 1rem',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    background: 'linear-gradient(to right, #4F46E5, #4338CA)',
+    color: 'white',
+    boxShadow: '0 10px 30px -5px rgba(79, 70, 229, 0.2)'
+  };
+
+  const inactiveNavStyle = {
+    padding: '0.5rem 1rem',
+    borderRadius: '0.5rem',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    color: '#4338CA',
+    transition: 'all 0.2s'
+  };
+
+  const navIconStyle = {
+    marginRight: '0.5rem'
+  };
   
   return (
-    <header className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header style={headerStyle}>
+      <div style={containerStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '4rem' }}>
           {/* Logo and title */}
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-gradient-primary rounded-full flex items-center justify-center text-white font-bold shadow-glow">
-                CV
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              <div>
+                <div style={{ ...logoStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', borderRadius: '9999px' }}>
+                  CV
+                </div>
               </div>
-            </div>
-            <h1 className="ml-3 text-xl font-semibold text-dark-900 flex items-center">
-              <span className="bg-gradient-to-r from-primary-600 to-accent-600 text-transparent bg-clip-text">
+              <h1 style={titleStyle}>
                 Concept Visualizer
-              </span>
-            </h1>
+              </h1>
+            </Link>
           </div>
           
           {/* Navigation */}
-          <nav className="flex space-x-4">
-            {navItems.map(item => {
-              const isActive = activeRoute === item.path;
-              
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`
-                    px-3 py-2 rounded-md text-sm font-medium
-                    ${isActive 
-                      ? 'text-primary-700 bg-primary-50 shadow-sm'
-                      : 'text-dark-600 hover:text-primary-600 hover:bg-primary-50'
-                    }
-                    transition-colors duration-150
-                  `}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <span className="mr-1">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav style={{ display: 'flex', gap: '1rem' }}>
+            <Link 
+              to="/create" 
+              style={{...activeRoute === '/create' ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
+            >
+              <span style={navIconStyle}>✨</span>Create
+            </Link>
+            
+            <Link 
+              to="/refine" 
+              style={{...activeRoute === '/refine' ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
+            >
+              <span style={navIconStyle}>🔄</span>Refine
+            </Link>
+            
+            <Link 
+              to="/gallery" 
+              style={{...activeRoute === '/gallery' ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
+            >
+              <span style={navIconStyle}>🖼️</span>Gallery
+            </Link>
           </nav>
         </div>
       </div>

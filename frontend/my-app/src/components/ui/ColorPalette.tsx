@@ -84,7 +84,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
               className={`
                 ${swatchSize} rounded-full shadow-sm border border-dark-200 
                 ${interactionClasses}
-                ${selectedColor === color ? 'ring-2 ring-primary-500 ring-offset-2' : ''}
+                ${selectedColor === color ? 'ring-2 ring-primary ring-offset-2' : ''}
               `}
               style={{ backgroundColor: color }}
               onClick={() => handleColorSelect(color, label.toLowerCase())}
@@ -107,7 +107,7 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
                   className={`
                     ${swatchSize} rounded-full shadow-sm border border-dark-200
                     ${interactionClasses}
-                    ${selectedColor === color ? 'ring-2 ring-primary-500 ring-offset-2' : ''}
+                    ${selectedColor === color ? 'ring-2 ring-primary ring-offset-2' : ''}
                   `}
                   style={{ backgroundColor: color }}
                   onClick={() => handleColorSelect(color, `additional-${index}`)}

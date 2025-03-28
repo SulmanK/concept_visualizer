@@ -1,0 +1,52 @@
+/* Direct header fixes to match mockup */
+header {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border-bottom: 1px solid #e0e7ff !important;
+}
+
+header .logo-circle {
+  height: 2.5rem !important;
+  width: 2.5rem !important;
+  background: linear-gradient(to right, #4F46E5, #4338CA) !important;
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2) !important;
+}
+
+header .header-title {
+  margin-left: 0.75rem !important;
+  font-size: 1.25rem !important;
+  background: linear-gradient(to right, #4F46E5, #818CF8) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+  font-weight: 700 !important;
+}
+
+header .active-nav-link {
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  background: linear-gradient(to right, #4F46E5, #4338CA) !important;
+  color: white !important;
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2) !important;
+}
+
+header .inactive-nav-link {
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: #4338CA !important;
+  transition: all 0.2s !important;
+}
+
+header .inactive-nav-link:hover {
+  background-color: rgba(243, 244, 246, 0.8) !important;
+  color: #4F46E5 !important;
+}
+
+header .nav-icon {
+  margin-right: 0.5rem !important;
+} 

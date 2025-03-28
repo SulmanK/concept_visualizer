@@ -1,0 +1,46 @@
+/* Header-specific styles */
+.headerContainer {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #e0e7ff;
+}
+
+.logo {
+  height: 2.5rem;
+  width: 2.5rem;
+  background: linear-gradient(to right, #4F46E5, #4338CA);
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+}
+
+.titleText {
+  background: linear-gradient(to right, #4F46E5, #818CF8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+
+.activeNavLink {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: linear-gradient(to right, #4F46E5, #4338CA);
+  color: white;
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+}
+
+.inactiveNavLink {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4338CA;
+  transition: all 0.2s;
+}
+
+.inactiveNavLink:hover {
+  background-color: rgba(243, 244, 246, 0.8);
+  color: #4F46E5;
+} 

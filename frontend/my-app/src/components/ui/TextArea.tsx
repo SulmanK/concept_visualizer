@@ -76,7 +76,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
       )}
       
       {!error && helperText && (
-        <p id={`${textareaId}-helper`} className="mt-1 text-sm text-dark-500">
+        <p id={`${textareaId}-helper`} className="helper-text">
           {helperText}
         </p>
       )}

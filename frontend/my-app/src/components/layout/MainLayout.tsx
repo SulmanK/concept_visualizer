@@ -16,14 +16,30 @@ export interface MainLayoutProps {
 export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
   const location = useLocation();
   
+  const layoutStyle = {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    minHeight: '100vh',
+    width: '100%',
+    margin: 0,
+    padding: 0,
+    background: 'linear-gradient(to bottom right, #EEF2FF, #C7D2FE)'
+  };
+  
+  const mainStyle = {
+    flex: '1 1 auto',
+    width: '100%',
+    maxWidth: '1280px', 
+    margin: '0 auto',
+    padding: '2rem'
+  };
+  
   return (
-    <div className="flex flex-col min-h-screen">
+    <div style={layoutStyle}>
       <Header activeRoute={location.pathname} />
       
-      <main className={`flex-grow py-6 px-4 sm:px-6 lg:px-8 ${className}`}>
-        <div className="max-w-7xl mx-auto">
-          <Outlet />
-        </div>
+      <main style={mainStyle}>
+        <Outlet />
       </main>
       
       <Footer />
