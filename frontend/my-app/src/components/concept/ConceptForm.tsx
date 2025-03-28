@@ -80,68 +80,106 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     if (onReset) onReset();
   };
   
+  const formStyle = {
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+    padding: '2rem',
+    marginBottom: '2rem'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    color: '#4338CA',
+    marginBottom: '0.5rem'
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '0.75rem',
+    border: '1px solid #E0E7FF',
+    borderRadius: '0.375rem',
+    fontSize: '0.875rem',
+    backgroundColor: '#F5F7FF',
+    resize: 'vertical' as const,
+    minHeight: '7rem',
+    outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s'
+  };
+
+  const helperTextStyle = {
+    fontSize: '0.75rem',
+    color: '#6366F1',
+    marginTop: '0.25rem'
+  };
+
+  const buttonStyle = {
+    backgroundColor: '#4F46E5',
+    color: 'white',
+    padding: '0.75rem 1.5rem',
+    borderRadius: '0.375rem',
+    fontWeight: 600,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    marginTop: '1rem'
+  };
+  
   return (
-    <Card 
-      variant="gradient"
-      className="max-w-xl mx-auto"
-      header={
-        <h2 className="text-xl font-semibold text-dark-900">Create New Concept</h2>
-      }
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
+    <div style={formStyle}>
+      <h2 className="text-xl font-semibold text-indigo-900 mb-6">Create New Concept</h2>
+      
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <TextArea
-            label="Logo Description"
-            placeholder="Describe the logo you want to generate..."
-            value={logoDescription}
-            onChange={(e) => setLogoDescription(e.target.value)}
-            error={validationErrors.logo}
-            fullWidth
-            disabled={isSubmitting || isSuccess}
-            helperText="Be descriptive about style, symbols, and colors you want"
-          />
-        </div>
-        
-        <div>
-          <TextArea
-            label="Theme/Color Scheme Description"
-            placeholder="Describe the theme or color scheme..."
-            value={themeDescription}
-            onChange={(e) => setThemeDescription(e.target.value)}
-            error={validationErrors.theme}
-            fullWidth
-            disabled={isSubmitting || isSuccess}
-            helperText="Describe mood, colors, and style of your brand"
-          />
+          <div className="mb-6">
+            <label style={labelStyle}>Logo Description</label>
+            <textarea
+              placeholder="Describe the logo you want to generate..."
+              value={logoDescription}
+              onChange={(e) => setLogoDescription(e.target.value)}
+              style={inputStyle}
+              disabled={isSubmitting || isSuccess}
+            />
+            <p style={helperTextStyle}>Be descriptive about style, symbols, and colors you want</p>
+            {validationErrors.logo && (
+              <p className="text-red-500 text-xs mt-1">{validationErrors.logo}</p>
+            )}
+          </div>
+          
+          <div className="mb-6">
+            <label style={labelStyle}>Theme/Color Scheme Description</label>
+            <textarea
+              placeholder="Describe the theme or color scheme..."
+              value={themeDescription}
+              onChange={(e) => setThemeDescription(e.target.value)}
+              style={inputStyle}
+              disabled={isSubmitting || isSuccess}
+            />
+            <p style={helperTextStyle}>Describe mood, colors, and style of your brand</p>
+            {validationErrors.theme && (
+              <p className="text-red-500 text-xs mt-1">{validationErrors.theme}</p>
+            )}
+          </div>
         </div>
         
         {error && (
-          <div className="p-3 bg-accent-50 border border-accent-200 rounded text-accent-800 text-sm">
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
             {error}
           </div>
         )}
         
-        <div className="flex justify-end space-x-3 pt-2">
-          {isSuccess && (
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              type="button"
-            >
-              Create New
-            </Button>
-          )}
-          
-          <Button
-            variant="primary"
+        <div className="flex justify-end">
+          <button
             type="submit"
-            isLoading={isSubmitting}
+            style={buttonStyle}
             disabled={isSubmitting || isSuccess}
           >
             {isSubmitting ? 'Generating...' : 'Generate Concept'}
-          </Button>
+          </button>
         </div>
       </form>
-    </Card>
+    </div>
   );
 }; 

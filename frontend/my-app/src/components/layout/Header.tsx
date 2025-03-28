@@ -75,6 +75,9 @@ export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
     marginRight: '0.5rem'
   };
   
+  // Consider both '/' and '/create' as the create route since they show the same component
+  const isCreateRoute = activeRoute === '/' || activeRoute === '/create';
+  
   return (
     <header style={headerStyle}>
       <div style={containerStyle}>
@@ -97,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
           <nav style={{ display: 'flex', gap: '1rem' }}>
             <Link 
               to="/create" 
-              style={{...activeRoute === '/create' ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
+              style={{...isCreateRoute ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
             >
               <span style={navIconStyle}>✨</span>Create
             </Link>

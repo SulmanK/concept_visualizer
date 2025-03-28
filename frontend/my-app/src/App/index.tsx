@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ConceptGenerator } from '../features/ConceptGenerator';
 import { ConceptRefinement } from '../features/ConceptRefinement';
-import { Home } from '../features/Home';
 import { TestHeader } from '../features/TestHeader';
 import './App.css';
 
@@ -28,10 +27,10 @@ export default function App() {
           
           {/* Main application routes */}
           <Route path="/" element={<MainLayout />}>
-            {/* Home page */}
-            <Route index element={<Home />} />
+            {/* Make ConceptGenerator the default homepage */}
+            <Route index element={<ConceptGenerator />} />
             
-            {/* Create concept page */}
+            {/* Create concept page - same as homepage for consistent navigation */}
             <Route path="create" element={<ConceptGenerator />} />
             
             {/* Refinement routes */}
