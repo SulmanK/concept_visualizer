@@ -38,21 +38,21 @@ exports[`ConceptRefinementForm Component > matches snapshot 1`] = `
         >
           <label
             class="label"
-            for="textarea-2j3cef1at"
+            for="textarea-azmj9umm9"
           >
             Refinement Instructions
           </label>
           <textarea
-            aria-describedby="textarea-2j3cef1at-helper"
+            aria-describedby="textarea-azmj9umm9-helper"
             aria-invalid="false"
             class="input resize-y  w-full"
-            id="textarea-2j3cef1at"
+            id="textarea-azmj9umm9"
             placeholder="Describe how you want to refine this concept..."
             rows="3"
           />
           <p
             class="helper-text"
-            id="textarea-2j3cef1at-helper"
+            id="textarea-azmj9umm9-helper"
           >
             Be specific about what you want to change
           </p>
@@ -64,15 +64,15 @@ exports[`ConceptRefinementForm Component > matches snapshot 1`] = `
         >
           <label
             class="label"
-            for="textarea-wajfge0re"
+            for="textarea-iqtobjlyv"
           >
             Updated Logo Description (Optional)
           </label>
           <textarea
-            aria-describedby="textarea-wajfge0re-helper"
+            aria-describedby="textarea-iqtobjlyv-helper"
             aria-invalid="false"
             class="input resize-y  w-full"
-            id="textarea-wajfge0re"
+            id="textarea-iqtobjlyv"
             placeholder="Update the logo description or leave as is..."
             rows="2"
           >
@@ -80,7 +80,7 @@ exports[`ConceptRefinementForm Component > matches snapshot 1`] = `
           </textarea>
           <p
             class="helper-text"
-            id="textarea-wajfge0re-helper"
+            id="textarea-iqtobjlyv-helper"
           >
             Leave empty to keep original description
           </p>
@@ -92,15 +92,15 @@ exports[`ConceptRefinementForm Component > matches snapshot 1`] = `
         >
           <label
             class="label"
-            for="textarea-18wamhien"
+            for="textarea-m9wxujiby"
           >
             Updated Theme Description (Optional)
           </label>
           <textarea
-            aria-describedby="textarea-18wamhien-helper"
+            aria-describedby="textarea-m9wxujiby-helper"
             aria-invalid="false"
             class="input resize-y  w-full"
-            id="textarea-18wamhien"
+            id="textarea-m9wxujiby"
             placeholder="Update the theme description or leave as is..."
             rows="2"
           >
@@ -108,7 +108,7 @@ exports[`ConceptRefinementForm Component > matches snapshot 1`] = `
           </textarea>
           <p
             class="helper-text"
-            id="textarea-18wamhien-helper"
+            id="textarea-m9wxujiby-helper"
           >
             Leave empty to keep original description
           </p>

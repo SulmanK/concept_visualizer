@@ -2,55 +2,53 @@
 
 exports[`Header Component > Snapshots > default header snapshot 1`] = `
 <header
-  style="width: 100%; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); border-bottom: 1px solid #e0e7ff; position: sticky; top: 0px; left: 0px; right: 0px; z-index: 100; margin: 0px; padding: 0px;"
+  class="_headerContainer_5ee9af"
 >
   <div
-    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+    class="_innerContainer_5ee9af"
   >
     <div
-      style="display: flex; justify-content: space-between; align-items: center; height: 4rem;"
+      class="_headerRow_5ee9af"
     >
       <div
-        style="display: flex; align-items: center;"
+        class="_logoWrapper_5ee9af"
       >
         <a
+          class="_logoLink_5ee9af"
           href="/"
-          style="display: flex; align-items: center; text-decoration: none;"
         >
-          <div>
-            <div
-              style="height: 2.5rem; width: 2.5rem; background: linear-gradient(to right, #4F46E5, #4338CA); box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-radius: 9999px;"
-            >
-              CV
-            </div>
+          <div
+            class="_logoCircle_5ee9af"
+          >
+            CV
           </div>
           <h1
-            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; background: linear-gradient(to right, #4F46E5, #818CF8); background-clip: text; color: transparent;"
+            class="_titleText_5ee9af"
           >
             Concept Visualizer
           </h1>
         </a>
       </div>
       <nav
-        style="display: flex; gap: 1rem;"
+        class="_navContainer_5ee9af"
       >
         <a
+          class="_activeNavLink_5ee9af"
           href="/create"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(to right, #4F46E5, #4338CA); color: white; box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             ✨
           </span>
           Create
         </a>
         <a
+          class="_inactiveNavLink_5ee9af"
           href="/refine"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); transition: all 0.2s; text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             🔄
           </span>
@@ -64,55 +62,53 @@ exports[`Header Component > Snapshots > default header snapshot 1`] = `
 
 exports[`Header Component > Snapshots > header with create route active snapshot 1`] = `
 <header
-  style="width: 100%; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); border-bottom: 1px solid #e0e7ff; position: sticky; top: 0px; left: 0px; right: 0px; z-index: 100; margin: 0px; padding: 0px;"
+  class="_headerContainer_5ee9af"
 >
   <div
-    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+    class="_innerContainer_5ee9af"
   >
     <div
-      style="display: flex; justify-content: space-between; align-items: center; height: 4rem;"
+      class="_headerRow_5ee9af"
     >
       <div
-        style="display: flex; align-items: center;"
+        class="_logoWrapper_5ee9af"
       >
         <a
+          class="_logoLink_5ee9af"
           href="/"
-          style="display: flex; align-items: center; text-decoration: none;"
         >
-          <div>
-            <div
-              style="height: 2.5rem; width: 2.5rem; background: linear-gradient(to right, #4F46E5, #4338CA); box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-radius: 9999px;"
-            >
-              CV
-            </div>
+          <div
+            class="_logoCircle_5ee9af"
+          >
+            CV
           </div>
           <h1
-            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; background: linear-gradient(to right, #4F46E5, #818CF8); background-clip: text; color: transparent;"
+            class="_titleText_5ee9af"
           >
             Concept Visualizer
           </h1>
         </a>
       </div>
       <nav
-        style="display: flex; gap: 1rem;"
+        class="_navContainer_5ee9af"
       >
         <a
+          class="_activeNavLink_5ee9af"
           href="/create"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(to right, #4F46E5, #4338CA); color: white; box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             ✨
           </span>
           Create
         </a>
         <a
+          class="_inactiveNavLink_5ee9af"
           href="/refine"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); transition: all 0.2s; text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             🔄
           </span>
@@ -126,55 +122,53 @@ exports[`Header Component > Snapshots > header with create route active snapshot
 
 exports[`Header Component > Snapshots > header with refine route active snapshot 1`] = `
 <header
-  style="width: 100%; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); border-bottom: 1px solid #e0e7ff; position: sticky; top: 0px; left: 0px; right: 0px; z-index: 100; margin: 0px; padding: 0px;"
+  class="_headerContainer_5ee9af"
 >
   <div
-    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+    class="_innerContainer_5ee9af"
   >
     <div
-      style="display: flex; justify-content: space-between; align-items: center; height: 4rem;"
+      class="_headerRow_5ee9af"
     >
       <div
-        style="display: flex; align-items: center;"
+        class="_logoWrapper_5ee9af"
       >
         <a
+          class="_logoLink_5ee9af"
           href="/"
-          style="display: flex; align-items: center; text-decoration: none;"
         >
-          <div>
-            <div
-              style="height: 2.5rem; width: 2.5rem; background: linear-gradient(to right, #4F46E5, #4338CA); box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-radius: 9999px;"
-            >
-              CV
-            </div>
+          <div
+            class="_logoCircle_5ee9af"
+          >
+            CV
           </div>
           <h1
-            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; background: linear-gradient(to right, #4F46E5, #818CF8); background-clip: text; color: transparent;"
+            class="_titleText_5ee9af"
           >
             Concept Visualizer
           </h1>
         </a>
       </div>
       <nav
-        style="display: flex; gap: 1rem;"
+        class="_navContainer_5ee9af"
       >
         <a
+          class="_inactiveNavLink_5ee9af"
           href="/create"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); transition: all 0.2s; text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             ✨
           </span>
           Create
         </a>
         <a
+          class="_activeNavLink_5ee9af"
           href="/refine"
-          style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; background: linear-gradient(to right, #4F46E5, #4338CA); color: white; box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2); text-decoration: none;"
         >
           <span
-            style="margin-right: 0.5rem;"
+            class="_navIcon_5ee9af"
           >
             🔄
           </span>

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Header } from '../Header';
+import styles from '../header.module.css';
 
 // Helper function to render with router
 const renderWithRouter = (ui: React.ReactElement, { route = '/' } = {}) => {
@@ -45,13 +46,13 @@ describe('Header Component', () => {
     const createLink = screen.getByText(/Create/i).closest('a');
     const refineLink = screen.getByText(/Refine/i).closest('a');
     
-    // Testing active/inactive states using more specific approach
+    // Testing active/inactive CSS classes
     expect(createLink).toHaveAttribute('href', '/create');
     expect(refineLink).toHaveAttribute('href', '/refine');
     
-    // Test color values as they appear in the test environment
-    expect(createLink?.style.color).toBe('white');
-    expect(refineLink?.style.color).not.toBe('white');
+    // Test CSS classes instead of inline styles
+    expect(createLink).toHaveClass(styles.activeNavLink);
+    expect(refineLink).toHaveClass(styles.inactiveNavLink);
   });
   
   test('highlights Refine link when on refine route', () => {
@@ -60,9 +61,9 @@ describe('Header Component', () => {
     const createLink = screen.getByText(/Create/i).closest('a');
     const refineLink = screen.getByText(/Refine/i).closest('a');
     
-    // Check that correct link is highlighted
-    expect(refineLink?.style.color).toBe('white');
-    expect(createLink?.style.color).not.toBe('white');
+    // Check that correct link is highlighted via CSS classes
+    expect(refineLink).toHaveClass(styles.activeNavLink);
+    expect(createLink).toHaveClass(styles.inactiveNavLink);
   });
   
   // Home route test
@@ -72,7 +73,7 @@ describe('Header Component', () => {
     const createLink = screen.getByText(/Create/i).closest('a');
     
     // Check that Create is highlighted on home route
-    expect(createLink?.style.color).toBe('white');
+    expect(createLink).toHaveClass(styles.activeNavLink);
   });
   
   // Snapshot tests

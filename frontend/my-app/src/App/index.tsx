@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from '../components/layout/MainLayout';
 import { ConceptGenerator } from '../features/ConceptGenerator';
 import { ConceptRefinement } from '../features/ConceptRefinement';
-import { TestHeader } from '../features/TestHeader';
 import './App.css';
 
 // Ensure no gaps and full width but allow MainLayout to control its content width
@@ -22,9 +21,6 @@ export default function App() {
     <div style={appStyle}>
       <Router>
         <Routes>
-          {/* Test routes outside of MainLayout */}
-          <Route path="/test-header" element={<TestHeader />} />
-          
           {/* Main application routes */}
           <Route path="/" element={<MainLayout />}>
             {/* Make ConceptGenerator the default homepage */}

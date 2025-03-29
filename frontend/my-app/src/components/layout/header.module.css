@@ -1,24 +1,77 @@
-/* Header-specific styles */
+/* 
+ * Header styles for the Concept Visualizer application
+ * Combined and organized styles from both header.module.css and header-fix.css
+ */
+
+/* Container styling */
 .headerContainer {
+  width: 100%;
   background-color: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(4px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid #e0e7ff;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 0;
 }
 
-.logo {
+.innerContainer {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4rem;
+}
+
+/* Logo and branding */
+.logoWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoCircle {
   height: 2.5rem;
   width: 2.5rem;
   background: linear-gradient(to right, #4F46E5, #4338CA);
   box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  border-radius: 9999px;
 }
 
 .titleText {
+  margin-left: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
   background: linear-gradient(to right, #4F46E5, #818CF8);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-weight: 700;
+}
+
+/* Navigation styling */
+.navContainer {
+  display: flex;
+  gap: 1rem;
 }
 
 .activeNavLink {
@@ -29,6 +82,7 @@
   background: linear-gradient(to right, #4F46E5, #4338CA);
   color: white;
   box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+  text-decoration: none;
 }
 
 .inactiveNavLink {
@@ -38,9 +92,14 @@
   font-weight: 600;
   color: #4338CA;
   transition: all 0.2s;
+  text-decoration: none;
 }
 
 .inactiveNavLink:hover {
   background-color: rgba(243, 244, 246, 0.8);
   color: #4F46E5;
+}
+
+.navIcon {
+  margin-right: 0.5rem;
 } 

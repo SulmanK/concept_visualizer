@@ -55,21 +55,21 @@ exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
           >
             <label
               class="label"
-              for="textarea-sxw0x6xw9"
+              for="textarea-nk6tknt3k"
             >
               Refinement Instructions
             </label>
             <textarea
-              aria-describedby="textarea-sxw0x6xw9-helper"
+              aria-describedby="textarea-nk6tknt3k-helper"
               aria-invalid="false"
               class="input resize-y  w-full"
-              id="textarea-sxw0x6xw9"
+              id="textarea-nk6tknt3k"
               placeholder="Describe how you want to refine this concept..."
               rows="3"
             />
             <p
               class="helper-text"
-              id="textarea-sxw0x6xw9-helper"
+              id="textarea-nk6tknt3k-helper"
             >
               Be specific about what you want to change
             </p>
@@ -81,15 +81,15 @@ exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
           >
             <label
               class="label"
-              for="textarea-oxp5g00g3"
+              for="textarea-00ku13t95"
             >
               Updated Logo Description (Optional)
             </label>
             <textarea
-              aria-describedby="textarea-oxp5g00g3-helper"
+              aria-describedby="textarea-00ku13t95-helper"
               aria-invalid="false"
               class="input resize-y  w-full"
-              id="textarea-oxp5g00g3"
+              id="textarea-00ku13t95"
               placeholder="Update the logo description or leave as is..."
               rows="2"
             >
@@ -97,7 +97,7 @@ exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
             </textarea>
             <p
               class="helper-text"
-              id="textarea-oxp5g00g3-helper"
+              id="textarea-00ku13t95-helper"
             >
               Leave empty to keep original description
             </p>
@@ -109,15 +109,15 @@ exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
           >
             <label
               class="label"
-              for="textarea-dpne05v51"
+              for="textarea-gl3759cij"
             >
               Updated Theme Description (Optional)
             </label>
             <textarea
-              aria-describedby="textarea-dpne05v51-helper"
+              aria-describedby="textarea-gl3759cij-helper"
               aria-invalid="false"
               class="input resize-y  w-full"
-              id="textarea-dpne05v51"
+              id="textarea-gl3759cij"
               placeholder="Update the theme description or leave as is..."
               rows="2"
             >
@@ -125,7 +125,7 @@ exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
             </textarea>
             <p
               class="helper-text"
-              id="textarea-dpne05v51-helper"
+              id="textarea-gl3759cij-helper"
             >
               Leave empty to keep original description
             </p>
