@@ -1,0 +1,230 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ConceptRefinement Component > matches snapshot in initial state 1`] = `
+<div
+  class="space-y-8"
+>
+  <div
+    class="text-center mb-8"
+  >
+    <h1
+      class="text-3xl font-bold text-dark-900 mb-2"
+    >
+      Refine Your Concept
+    </h1>
+    <p
+      class="text-dark-600 max-w-2xl mx-auto"
+    >
+      Provide instructions to refine your existing concept. You can update the logo or theme description, or specify what aspects to preserve.
+    </p>
+  </div>
+  <div
+    class="card-gradient max-w-xl mx-auto"
+  >
+    <div
+      class="px-4 py-3 sm:px-6 border-b border-indigo-200 bg-indigo-50/50"
+    >
+      <h2
+        class="text-xl font-semibold text-dark-900"
+      >
+        Refine Concept
+      </h2>
+    </div>
+    <div
+      class="p-4 sm:p-6"
+    >
+      <form
+        class="space-y-4"
+      >
+        <div
+          class="flex justify-center mb-4"
+        >
+          <div
+            class="w-40 h-40 border border-dark-200 rounded-lg overflow-hidden shadow-sm"
+          >
+            <img
+              alt="Original concept"
+              class="w-full h-full object-cover"
+              src="https://placehold.co/800x800?text=Original+Concept"
+            />
+          </div>
+        </div>
+        <div>
+          <div
+            class="w-full"
+          >
+            <label
+              class="label"
+              for="textarea-sxw0x6xw9"
+            >
+              Refinement Instructions
+            </label>
+            <textarea
+              aria-describedby="textarea-sxw0x6xw9-helper"
+              aria-invalid="false"
+              class="input resize-y  w-full"
+              id="textarea-sxw0x6xw9"
+              placeholder="Describe how you want to refine this concept..."
+              rows="3"
+            />
+            <p
+              class="helper-text"
+              id="textarea-sxw0x6xw9-helper"
+            >
+              Be specific about what you want to change
+            </p>
+          </div>
+        </div>
+        <div>
+          <div
+            class="w-full"
+          >
+            <label
+              class="label"
+              for="textarea-oxp5g00g3"
+            >
+              Updated Logo Description (Optional)
+            </label>
+            <textarea
+              aria-describedby="textarea-oxp5g00g3-helper"
+              aria-invalid="false"
+              class="input resize-y  w-full"
+              id="textarea-oxp5g00g3"
+              placeholder="Update the logo description or leave as is..."
+              rows="2"
+            >
+              A modern logo for a tech company
+            </textarea>
+            <p
+              class="helper-text"
+              id="textarea-oxp5g00g3-helper"
+            >
+              Leave empty to keep original description
+            </p>
+          </div>
+        </div>
+        <div>
+          <div
+            class="w-full"
+          >
+            <label
+              class="label"
+              for="textarea-dpne05v51"
+            >
+              Updated Theme Description (Optional)
+            </label>
+            <textarea
+              aria-describedby="textarea-dpne05v51-helper"
+              aria-invalid="false"
+              class="input resize-y  w-full"
+              id="textarea-dpne05v51"
+              placeholder="Update the theme description or leave as is..."
+              rows="2"
+            >
+              Blue and purple futuristic theme
+            </textarea>
+            <p
+              class="helper-text"
+              id="textarea-dpne05v51-helper"
+            >
+              Leave empty to keep original description
+            </p>
+          </div>
+        </div>
+        <div>
+          <p
+            class="label mb-2"
+          >
+            Preserve Aspects (Optional)
+          </p>
+          <div
+            class="flex flex-wrap gap-3"
+          >
+            <label
+              class="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                type="checkbox"
+              />
+              <span
+                class="text-sm text-dark-700"
+              >
+                Layout
+              </span>
+            </label>
+            <label
+              class="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                type="checkbox"
+              />
+              <span
+                class="text-sm text-dark-700"
+              >
+                Colors
+              </span>
+            </label>
+            <label
+              class="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                type="checkbox"
+              />
+              <span
+                class="text-sm text-dark-700"
+              >
+                Style
+              </span>
+            </label>
+            <label
+              class="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                type="checkbox"
+              />
+              <span
+                class="text-sm text-dark-700"
+              >
+                Symbols/Icons
+              </span>
+            </label>
+            <label
+              class="flex items-center space-x-2 cursor-pointer"
+            >
+              <input
+                class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                type="checkbox"
+              />
+              <span
+                class="text-sm text-dark-700"
+              >
+                Proportions
+              </span>
+            </label>
+          </div>
+        </div>
+        <div
+          class="flex justify-end space-x-3 pt-2"
+        >
+          <button
+            class="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed border border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 hover:text-primary-dark text-sm px-4 py-2 rounded-lg "
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            class="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover hover:brightness-105 text-sm px-4 py-2 rounded-lg "
+            type="submit"
+          >
+            Refine Concept
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+`;

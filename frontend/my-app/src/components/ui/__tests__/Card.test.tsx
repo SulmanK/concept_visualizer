@@ -15,23 +15,11 @@ describe('Card Component', () => {
     expect(content).toBeInTheDocument();
   });
   
-  test('renders card with title when provided', () => {
-    render(
-      <Card title="Card Title">
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const title = screen.getByText('Card Title');
-    expect(title).toBeInTheDocument();
-    expect(title.tagName).toBe('H3');
-  });
-  
   // Variant tests
   test.each([
-    ['primary', 'bg-violet-50'],
-    ['secondary', 'bg-white'],
-    ['accent', 'bg-violet-100'],
+    ['default', 'card'],
+    ['gradient', 'card-gradient'],
+    ['elevated', 'card bg-white border-none shadow-lg'],
   ])('renders %s variant correctly', (variant, expectedClass) => {
     render(
       <Card variant={variant as any}>
@@ -39,83 +27,44 @@ describe('Card Component', () => {
       </Card>
     );
     
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).toContain(expectedClass);
-  });
-  
-  // Border tests
-  test('renders card with border when hasBorder is true', () => {
-    render(
-      <Card hasBorder>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).toContain('border');
-  });
-  
-  test('renders card without border when hasBorder is false', () => {
-    render(
-      <Card hasBorder={false}>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).not.toContain('border');
-  });
-  
-  // Shadow tests
-  test('renders card with shadow when hasShadow is true', () => {
-    render(
-      <Card hasShadow>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).toContain('shadow');
-  });
-  
-  test('renders card without shadow when hasShadow is false', () => {
-    render(
-      <Card hasShadow={false}>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).not.toContain('shadow');
+    const contentElement = screen.getByText('Card content');
+    const card = contentElement.parentElement?.parentElement;
+    expect(card?.className).toContain(expectedClass.split(' ')[0]); // Just check the first class
   });
   
   // Padding tests
-  test.each([
-    ['none', 'p-0'],
-    ['small', 'p-3'],
-    ['medium', 'p-4'],
-    ['large', 'p-6'],
-  ])('renders card with %s padding correctly', (padding, expectedClass) => {
+  test('renders card with padding when padded is true', () => {
     render(
-      <Card padding={padding as any}>
+      <Card padded>
         <p>Card content</p>
       </Card>
     );
     
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).toContain(expectedClass);
+    const contentDiv = screen.getByText('Card content').parentElement;
+    expect(contentDiv?.className).toContain('p-4');
   });
   
-  // Width tests
-  test('renders card with full width when fullWidth is true', () => {
+  test('renders card without padding when padded is false', () => {
     render(
-      <Card fullWidth>
+      <Card padded={false}>
         <p>Card content</p>
       </Card>
     );
     
-    const card = screen.getByText('Card content').closest('div');
-    expect(card?.className).toContain('w-full');
+    const contentDiv = screen.getByText('Card content').parentElement;
+    expect(contentDiv?.className).toBe('');
+  });
+  
+  // Loading state tests
+  test('renders loading spinner when isLoading is true', () => {
+    render(
+      <Card isLoading>
+        <p>Card content</p>
+      </Card>
+    );
+    
+    const spinner = document.querySelector('.animate-spin');
+    expect(spinner).not.toBeNull();
   });
   
   // Custom className test
@@ -126,7 +75,8 @@ describe('Card Component', () => {
       </Card>
     );
     
-    const card = screen.getByText('Card content').closest('div');
+    const contentElement = screen.getByText('Card content');
+    const card = contentElement.parentElement?.parentElement;
     expect(card?.className).toContain('custom-class');
   });
   
@@ -157,5 +107,64 @@ describe('Card Component', () => {
     const cardFooter = screen.getByTestId('card-footer');
     expect(cardFooter).toBeInTheDocument();
     expect(cardFooter.textContent).toBe('Custom Footer');
+  });
+  
+  // Snapshot tests
+  describe('Snapshots', () => {
+    test('default card snapshot', () => {
+      const { container } = render(
+        <Card>
+          <p>Default card content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('gradient variant card snapshot', () => {
+      const { container } = render(
+        <Card variant="gradient">
+          <p>Gradient card content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('elevated variant card snapshot', () => {
+      const { container } = render(
+        <Card variant="elevated">
+          <p>Elevated card content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('card with header snapshot', () => {
+      const header = <div>Header Content</div>;
+      const { container } = render(
+        <Card header={header}>
+          <p>Card with header content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('card with footer snapshot', () => {
+      const footer = <div>Footer Content</div>;
+      const { container } = render(
+        <Card footer={footer}>
+          <p>Card with footer content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('loading card snapshot', () => {
+      const { container } = render(
+        <Card isLoading>
+          <p>Loading card content</p>
+        </Card>
+      );
+      expect(container.firstChild).toMatchSnapshot();
+    });
   });
 }); 

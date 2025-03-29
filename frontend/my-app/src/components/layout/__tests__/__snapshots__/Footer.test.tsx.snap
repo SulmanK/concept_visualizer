@@ -1,0 +1,223 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Footer Component > Snapshots > default footer snapshot 1`] = `
+<footer
+  style="background-color: rgb(49, 46, 129); color: rgb(224, 231, 255); padding: 2rem 0px; margin-top: 3rem; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;"
+>
+  <div
+    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+  >
+    <div
+      style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2rem;"
+    >
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <div
+          style="display: flex; align-items: center;"
+        >
+          <div
+            style="height: 2.5rem; width: 2.5rem; border-radius: 9999px; background: linear-gradient(to right, #8B5CF6, #7C3AED); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.2);"
+          >
+            CV
+          </div>
+          <h2
+            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; color: white;"
+          >
+            Concept Visualizer
+          </h2>
+        </div>
+        <p
+          style="margin-top: 0.75rem; font-size: 0.875rem; color: rgb(199, 210, 254);"
+        >
+          Create and refine visual concepts with AI
+        </p>
+      </div>
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <h3
+          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
+        >
+          Features
+        </h3>
+        <ul
+          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
+        >
+          <li>
+            <a
+              href="/create"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+            >
+              Create Concepts
+            </a>
+          </li>
+          <li>
+            <a
+              href="/refine"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+            >
+              Refine Concepts
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <h3
+          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
+        >
+          Resources
+        </h3>
+        <ul
+          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
+        >
+          <li>
+            <a
+              href="https://github.com/username/concept-visualizer"
+              rel="noopener noreferrer"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+              target="_blank"
+            >
+              GitHub Repository
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://jigsawstack.com"
+              rel="noopener noreferrer"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+              target="_blank"
+            >
+              JigsawStack API
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div
+      style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #4F46E5; text-align: center;"
+    >
+      <p
+        style="font-size: 0.875rem; color: rgb(165, 180, 252);"
+      >
+        © 
+        2025
+         Concept Visualizer. All rights reserved.
+      </p>
+    </div>
+  </div>
+</footer>
+`;
+
+exports[`Footer Component > Snapshots > footer with custom year snapshot 1`] = `
+<footer
+  style="background-color: rgb(49, 46, 129); color: rgb(224, 231, 255); padding: 2rem 0px; margin-top: 3rem; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;"
+>
+  <div
+    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+  >
+    <div
+      style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2rem;"
+    >
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <div
+          style="display: flex; align-items: center;"
+        >
+          <div
+            style="height: 2.5rem; width: 2.5rem; border-radius: 9999px; background: linear-gradient(to right, #8B5CF6, #7C3AED); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.2);"
+          >
+            CV
+          </div>
+          <h2
+            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; color: white;"
+          >
+            Concept Visualizer
+          </h2>
+        </div>
+        <p
+          style="margin-top: 0.75rem; font-size: 0.875rem; color: rgb(199, 210, 254);"
+        >
+          Create and refine visual concepts with AI
+        </p>
+      </div>
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <h3
+          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
+        >
+          Features
+        </h3>
+        <ul
+          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
+        >
+          <li>
+            <a
+              href="/create"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+            >
+              Create Concepts
+            </a>
+          </li>
+          <li>
+            <a
+              href="/refine"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+            >
+              Refine Concepts
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div
+        style="flex: 1; min-width: 250px;"
+      >
+        <h3
+          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
+        >
+          Resources
+        </h3>
+        <ul
+          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
+        >
+          <li>
+            <a
+              href="https://github.com/username/concept-visualizer"
+              rel="noopener noreferrer"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+              target="_blank"
+            >
+              GitHub Repository
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://jigsawstack.com"
+              rel="noopener noreferrer"
+              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
+              target="_blank"
+            >
+              JigsawStack API
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div
+      style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #4F46E5; text-align: center;"
+    >
+      <p
+        style="font-size: 0.875rem; color: rgb(165, 180, 252);"
+      >
+        © 
+        2025
+         Concept Visualizer. All rights reserved.
+      </p>
+    </div>
+  </div>
+</footer>
+`;

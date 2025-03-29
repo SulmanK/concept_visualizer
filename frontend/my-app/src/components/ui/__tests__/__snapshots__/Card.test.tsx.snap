@@ -1,0 +1,103 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Card Component > Snapshots > card with footer snapshot 1`] = `
+<div
+  class="card"
+>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <p>
+      Card with footer content
+    </p>
+  </div>
+  <div
+    class="px-4 py-3 sm:px-6 border-t border-indigo-200 bg-indigo-50/50"
+  >
+    <div>
+      Footer Content
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Card Component > Snapshots > card with header snapshot 1`] = `
+<div
+  class="card"
+>
+  <div
+    class="px-4 py-3 sm:px-6 border-b border-indigo-200 bg-indigo-50/50"
+  >
+    <div>
+      Header Content
+    </div>
+  </div>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <p>
+      Card with header content
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Card Component > Snapshots > default card snapshot 1`] = `
+<div
+  class="card"
+>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <p>
+      Default card content
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Card Component > Snapshots > elevated variant card snapshot 1`] = `
+<div
+  class="card bg-white border-none shadow-lg"
+>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <p>
+      Elevated card content
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Card Component > Snapshots > gradient variant card snapshot 1`] = `
+<div
+  class="card-gradient"
+>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <p>
+      Gradient card content
+    </p>
+  </div>
+</div>
+`;
+
+exports[`Card Component > Snapshots > loading card snapshot 1`] = `
+<div
+  class="card"
+>
+  <div
+    class="p-4 sm:p-6"
+  >
+    <div
+      class="flex justify-center items-center py-12"
+    >
+      <div
+        class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"
+      />
+    </div>
+  </div>
+</div>
+`;

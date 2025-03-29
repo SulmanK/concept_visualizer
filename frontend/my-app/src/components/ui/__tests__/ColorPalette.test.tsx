@@ -1,158 +1,143 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ColorPalette } from '../ColorPalette';
-import { ColorPaletteModel } from '../../../types';
+import { ColorPalette as ColorPaletteType } from '../../../types';
 
 describe('ColorPalette Component', () => {
   // Sample color palette data for testing
-  const samplePalette: ColorPaletteModel = {
-    name: 'Purple Dream',
-    colors: [
-      { hex: '#4C1D95', name: 'Deep Purple' },
-      { hex: '#7C3AED', name: 'Violet' },
-      { hex: '#A78BFA', name: 'Lavender' },
-      { hex: '#C4B5FD', name: 'Light Lavender' },
-      { hex: '#EDE9FE', name: 'Pale Lavender' },
-    ],
-    description: 'A gradient of purple shades from deep to pale',
+  const samplePalette: ColorPaletteType = {
+    primary: '#4C1D95',
+    secondary: '#7C3AED',
+    accent: '#A78BFA',
+    background: '#EDE9FE',
+    text: '#1F1F1F',
+    additionalColors: ['#C4B5FD', '#DDD6FE']
   };
 
   // Basic rendering tests
-  test('renders palette with correct title', () => {
+  test('renders all main color swatches', () => {
     render(<ColorPalette palette={samplePalette} />);
     
-    const title = screen.getByText('Purple Dream');
-    expect(title).toBeInTheDocument();
+    // Check if all color labels are rendered
+    expect(screen.getByText('Primary')).toBeInTheDocument();
+    expect(screen.getByText('Secondary')).toBeInTheDocument();
+    expect(screen.getByText('Accent')).toBeInTheDocument();
+    expect(screen.getByText('Background')).toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
+    
+    // Check if correct number of color swatches are present (5 main + 2 additional)
+    const colorSwatches = document.querySelectorAll('[style*="background-color"]');
+    expect(colorSwatches.length).toBe(7);
   });
   
-  test('renders all color swatches', () => {
+  test('renders additional colors when provided', () => {
     render(<ColorPalette palette={samplePalette} />);
     
-    // Check if all colors are rendered
-    const deepPurple = screen.getByText('Deep Purple');
-    const violet = screen.getByText('Violet');
-    const lavender = screen.getByText('Lavender');
-    const lightLavender = screen.getByText('Light Lavender');
-    const paleLavender = screen.getByText('Pale Lavender');
-    
-    expect(deepPurple).toBeInTheDocument();
-    expect(violet).toBeInTheDocument();
-    expect(lavender).toBeInTheDocument();
-    expect(lightLavender).toBeInTheDocument();
-    expect(paleLavender).toBeInTheDocument();
-  });
-  
-  test('renders palette description when provided', () => {
-    render(<ColorPalette palette={samplePalette} />);
-    
-    const description = screen.getByText('A gradient of purple shades from deep to pale');
-    expect(description).toBeInTheDocument();
+    // Check if additional colors section is rendered
+    expect(screen.getByText('Additional Colors')).toBeInTheDocument();
+    expect(screen.getByText('A1')).toBeInTheDocument();
+    expect(screen.getByText('A2')).toBeInTheDocument();
   });
   
   // Selection tests
-  test('calls onSelect when a color is clicked', () => {
+  test('calls onColorSelect when a color is clicked and selectable is true', () => {
     const handleSelect = jest.fn();
-    render(<ColorPalette palette={samplePalette} onSelect={handleSelect} />);
+    render(
+      <ColorPalette 
+        palette={samplePalette} 
+        onColorSelect={handleSelect} 
+        selectable={true}
+      />
+    );
     
-    const deepPurpleColor = screen.getByText('Deep Purple').closest('div');
-    fireEvent.click(deepPurpleColor!);
+    // Find the primary color swatch and click it
+    const primarySwatch = screen.getByText('Primary').previousElementSibling;
+    fireEvent.click(primarySwatch!);
     
     expect(handleSelect).toHaveBeenCalledTimes(1);
-    expect(handleSelect).toHaveBeenCalledWith(samplePalette.colors[0]);
+    expect(handleSelect).toHaveBeenCalledWith('#4C1D95', 'primary');
+  });
+  
+  test('does not call onColorSelect when selectable is false', () => {
+    const handleSelect = jest.fn();
+    render(
+      <ColorPalette 
+        palette={samplePalette} 
+        onColorSelect={handleSelect} 
+        selectable={false}
+      />
+    );
+    
+    // Find the primary color swatch and click it
+    const primarySwatch = screen.getByText('Primary').previousElementSibling;
+    fireEvent.click(primarySwatch!);
+    
+    expect(handleSelect).not.toHaveBeenCalled();
   });
   
   test('highlights selected color when selectedColor matches', () => {
     render(
       <ColorPalette 
         palette={samplePalette} 
-        selectedColor={samplePalette.colors[1].hex} 
+        selectedColor={samplePalette.secondary}
+        selectable={true}
       />
     );
     
-    // Find the violet color swatch
-    const violetColorSwatch = screen.getByText('Violet').closest('div');
+    // Find the secondary color swatch (which should have the ring styling)
+    const swatches = document.querySelectorAll('[style*="background-color"]');
+    const secondarySwatch = swatches[1]; // Secondary is the second swatch
     
     // Check if it has a selection indicator
-    expect(violetColorSwatch?.className).toContain('ring-2');
-    expect(violetColorSwatch?.className).toContain('ring-violet-600');
-  });
-  
-  // Interactive behavior tests
-  test('shows color hex on hover', async () => {
-    render(<ColorPalette palette={samplePalette} />);
-    
-    // Find the deep purple color swatch
-    const deepPurpleColor = screen.getByText('Deep Purple').closest('div');
-    
-    // Hover over the color swatch
-    fireEvent.mouseEnter(deepPurpleColor!);
-    
-    // Check if the hex value is displayed
-    const hexValue = await screen.findByText('#4C1D95');
-    expect(hexValue).toBeInTheDocument();
-    
-    // Move mouse away
-    fireEvent.mouseLeave(deepPurpleColor!);
-    
-    // Check that hex is no longer shown
-    expect(screen.queryByText('#4C1D95')).not.toBeInTheDocument();
+    expect(secondarySwatch.className).toContain('ring-2');
   });
   
   // Size tests
   test.each([
-    ['small', 'h-8'],
-    ['medium', 'h-12'],
-    ['large', 'h-16'],
+    ['sm', 'h-6'],
+    ['md', 'h-8'],
+    ['lg', 'h-12'],
   ])('renders %s size correctly', (size, expectedClass) => {
     render(<ColorPalette palette={samplePalette} size={size as any} />);
     
     // Check any color swatch for the expected size class
-    const colorSwatch = screen.getByText('Deep Purple').closest('div');
-    expect(colorSwatch?.className).toContain(expectedClass);
+    const swatch = document.querySelector('[style*="background-color"]');
+    expect(swatch?.className).toContain(expectedClass);
   });
   
-  // Variant tests
-  test('renders horizontal variant by default', () => {
-    render(<ColorPalette palette={samplePalette} />);
+  // Label visibility test
+  test('shows labels when showLabels is true', () => {
+    render(<ColorPalette palette={samplePalette} showLabels={true} />);
     
-    const paletteContainer = screen.getByText('Purple Dream').closest('div')?.nextElementSibling;
-    expect(paletteContainer?.className).toContain('flex-row');
+    expect(screen.getByText('Primary')).toBeInTheDocument();
+    expect(screen.getByText('Secondary')).toBeInTheDocument();
   });
   
-  test('renders vertical variant when specified', () => {
-    render(<ColorPalette palette={samplePalette} variant="vertical" />);
+  test('hides labels when showLabels is false', () => {
+    render(<ColorPalette palette={samplePalette} showLabels={false} />);
     
-    const paletteContainer = screen.getByText('Purple Dream').closest('div')?.nextElementSibling;
-    expect(paletteContainer?.className).toContain('flex-col');
-  });
-  
-  // Empty state test
-  test('renders placeholder message when palette has no colors', () => {
-    const emptyPalette = {
-      name: 'Empty Palette',
-      colors: [],
-      description: 'No colors defined',
-    };
-    
-    render(<ColorPalette palette={emptyPalette} />);
-    
-    const emptyMessage = screen.getByText('No colors available');
-    expect(emptyMessage).toBeInTheDocument();
+    expect(screen.queryByText('Primary')).not.toBeInTheDocument();
+    expect(screen.queryByText('Secondary')).not.toBeInTheDocument();
   });
   
   // Interactive component test
-  test('renders as interactive when onSelect is provided', () => {
-    const handleSelect = jest.fn();
-    render(<ColorPalette palette={samplePalette} onSelect={handleSelect} />);
+  test('renders as interactive when selectable is true', () => {
+    render(
+      <ColorPalette
+        palette={samplePalette}
+        selectable={true}
+        onColorSelect={() => {}}
+      />
+    );
     
-    const colorSwatches = screen.getAllByRole('button');
-    expect(colorSwatches.length).toBe(samplePalette.colors.length);
+    const swatch = document.querySelector('[style*="background-color"]');
+    expect(swatch?.className).toContain('cursor-pointer');
   });
   
-  test('renders as non-interactive when onSelect is not provided', () => {
-    render(<ColorPalette palette={samplePalette} />);
+  test('renders as non-interactive when selectable is false', () => {
+    render(<ColorPalette palette={samplePalette} selectable={false} />);
     
-    const colorSwatches = screen.queryAllByRole('button');
-    expect(colorSwatches.length).toBe(0);
+    const swatch = document.querySelector('[style*="background-color"]');
+    expect(swatch?.className).not.toContain('cursor-pointer');
   });
 }); 

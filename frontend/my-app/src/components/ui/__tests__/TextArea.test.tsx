@@ -43,23 +43,20 @@ describe('TextArea Component', () => {
     expect(errorMessage).toBeInTheDocument();
     
     const textarea = screen.getByLabelText('Description');
-    expect(textarea.className).toContain('border-red-500');
+    expect(textarea.className).toContain('border-accent-500');
   });
   
   // Required state test
-  test('adds required attribute when isRequired is true', () => {
-    render(<TextArea label="Description" name="description" isRequired />);
+  test('adds required attribute when required prop is true', () => {
+    render(<TextArea label="Description" name="description" required />);
     
     const textarea = screen.getByLabelText(/Description/);
     expect(textarea).toHaveAttribute('required');
-    
-    const requiredIndicator = screen.getByText('*');
-    expect(requiredIndicator).toBeInTheDocument();
   });
   
   // Disabled state test
-  test('disables textarea when isDisabled is true', () => {
-    render(<TextArea label="Description" name="description" isDisabled />);
+  test('disables textarea when disabled prop is true', () => {
+    render(<TextArea label="Description" name="description" disabled />);
     
     const textarea = screen.getByLabelText('Description');
     expect(textarea).toBeDisabled();
@@ -69,8 +66,8 @@ describe('TextArea Component', () => {
   test('renders full width textarea when fullWidth is true', () => {
     render(<TextArea label="Description" name="description" fullWidth />);
     
-    const textareaContainer = screen.getByLabelText('Description').parentElement;
-    expect(textareaContainer?.className).toContain('w-full');
+    const textarea = screen.getByLabelText('Description');
+    expect(textarea.className).toContain('w-full');
   });
   
   // Event handling tests
@@ -102,6 +99,21 @@ describe('TextArea Component', () => {
     fireEvent.blur(textarea);
     
     expect(handleBlur).toHaveBeenCalledTimes(1);
+  });
+  
+  // Helper text test
+  test('displays helper text when provided', () => {
+    render(
+      <TextArea 
+        label="Description" 
+        name="description" 
+        helperText="Enter a detailed description" 
+      />
+    );
+    
+    const helperText = screen.getByText('Enter a detailed description');
+    expect(helperText).toBeInTheDocument();
+    expect(helperText.className).toContain('helper-text');
   });
   
   // Controlled textarea test

@@ -111,13 +111,6 @@ export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
             >
               <span style={navIconStyle}>🔄</span>Refine
             </Link>
-            
-            <Link 
-              to="/gallery" 
-              style={{...activeRoute === '/gallery' ? activeNavStyle : inactiveNavStyle, textDecoration: 'none'}}
-            >
-              <span style={navIconStyle}>🖼️</span>Gallery
-            </Link>
           </nav>
         </div>
       </div>

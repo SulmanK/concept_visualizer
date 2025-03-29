@@ -1,0 +1,371 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ConceptGenerator Component > matches snapshot in initial state 1`] = `
+<div
+  class="space-y-12"
+>
+  <div
+    class="text-left mb-8"
+  >
+    <h1
+      class="text-4xl font-bold text-indigo-900 mb-4"
+    >
+      Create Visual Concepts
+    </h1>
+    <p
+      style="color: rgb(99, 102, 241); font-size: 1rem; line-height: 1.5; margin-bottom: 2rem;"
+    >
+      Describe your logo and theme to generate visual concepts. Our AI will create a logo design and color palette based on your descriptions.
+    </p>
+  </div>
+  <div
+    class="mt-8"
+    style="background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02); padding: 2rem; margin-bottom: 3rem;"
+  >
+    <h2
+      class="text-2xl font-bold text-indigo-900 mb-16"
+    >
+      How It Works
+    </h2>
+    <div
+      style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; margin-top: 2rem; position: relative;"
+    >
+      <div
+        style="position: absolute; top: 30px; left: calc(16.0% + 35px); width: calc(33.3% - 70px); height: 2px; background-color: rgb(99, 102, 241); z-index: 0;"
+      >
+        <div
+          style="position: absolute; right: -8px; top: -4px; width: 0px; height: 0px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid #6366F1;"
+        />
+      </div>
+      <div
+        style="position: absolute; top: 30px; left: calc(50% + 35px); width: calc(33.3% - 70px); height: 2px; background-color: rgb(99, 102, 241); z-index: 0;"
+      >
+        <div
+          style="position: absolute; right: -8px; top: -4px; width: 0px; height: 0px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid #6366F1;"
+        />
+      </div>
+      <div
+        style="text-align: center; position: relative; z-index: 1;"
+      >
+        <div
+          style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;"
+        >
+          1
+        </div>
+        <h3
+          style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;"
+        >
+          Describe Your Vision
+        </h3>
+        <p
+          style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;"
+        >
+          Provide detailed descriptions of your logo concept and color preferences.
+        </p>
+      </div>
+      <div
+        style="text-align: center; position: relative; z-index: 1;"
+      >
+        <div
+          style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;"
+        >
+          2
+        </div>
+        <h3
+          style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;"
+        >
+          AI Generation
+        </h3>
+        <p
+          style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;"
+        >
+          Our AI processes your description and creates unique visual concepts.
+        </p>
+      </div>
+      <div
+        style="text-align: center; position: relative; z-index: 1;"
+      >
+        <div
+          style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;"
+        >
+          3
+        </div>
+        <h3
+          style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;"
+        >
+          Refine & Download
+        </h3>
+        <p
+          style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;"
+        >
+          Refine the generated concepts and download your final designs.
+        </p>
+      </div>
+    </div>
+    <div
+      style="text-align: center; margin-top: 2rem;"
+    >
+      <button
+        style="background-color: rgb(79, 70, 229); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: background-color 0.2s;"
+      >
+        Get Started
+      </button>
+    </div>
+  </div>
+  <div
+    id="create-form"
+  >
+    <div
+      style="background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02); padding: 2rem; margin-bottom: 2rem;"
+    >
+      <h2
+        class="text-xl font-semibold text-indigo-900 mb-6"
+      >
+        Create New Concept
+      </h2>
+      <form
+        class="space-y-6"
+      >
+        <div>
+          <div
+            class="mb-6"
+          >
+            <label
+              style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;"
+            >
+              Logo Description
+            </label>
+            <textarea
+              placeholder="Describe the logo you want to generate..."
+              style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
+            />
+            <p
+              style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;"
+            >
+              Be descriptive about style, symbols, and colors you want
+            </p>
+          </div>
+          <div
+            class="mb-6"
+          >
+            <label
+              style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;"
+            >
+              Theme/Color Scheme Description
+            </label>
+            <textarea
+              placeholder="Describe the theme or color scheme..."
+              style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
+            />
+            <p
+              style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;"
+            >
+              Describe mood, colors, and style of your brand
+            </p>
+          </div>
+        </div>
+        <div
+          class="flex justify-end"
+        >
+          <button
+            style="background-color: rgb(79, 70, 229); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; margin-top: 1rem;"
+            type="submit"
+          >
+            Generate Concept
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div
+    class="mt-20"
+  >
+    <h2
+      class="text-2xl font-bold text-indigo-900 mb-10"
+    >
+      Recent Concepts
+    </h2>
+    <div
+      style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin: 2.5rem 0px 0px 0px; padding: 0px; width: 100%;"
+    >
+      <div
+        style="display: flex; flex-direction: column; background-color: white; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); height: 100%;"
+      >
+        <div
+          style="background: linear-gradient(to right, #4F46E5, #60A5FA); height: 200px; display: flex; align-items: center; justify-content: center;"
+        >
+          <div
+            style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(79, 70, 229);"
+          >
+            TC
+          </div>
+        </div>
+        <div
+          style="padding: 1.25rem 1.5rem; flex-grow: 1;"
+        >
+          <h3
+            style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;"
+          >
+            Tech Company
+          </h3>
+          <p
+            style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;"
+          >
+            Modern minimalist tech logo with abstract elements
+          </p>
+          <div
+            style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"
+          >
+            <span
+              style="background-color: rgb(79, 70, 229); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#4F46E5"
+            />
+            <span
+              style="background-color: rgb(96, 165, 250); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#60A5FA"
+            />
+            <span
+              style="background-color: rgb(30, 41, 59); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#1E293B"
+            />
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid #E2E8F0;"
+          >
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              Edit
+            </a>
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              View Details
+            </a>
+          </div>
+        </div>
+      </div>
+      <div
+        style="display: flex; flex-direction: column; background-color: white; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); height: 100%;"
+      >
+        <div
+          style="background: linear-gradient(to right, #7E22CE, #818CF8); height: 200px; display: flex; align-items: center; justify-content: center;"
+        >
+          <div
+            style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(126, 34, 206);"
+          >
+            FS
+          </div>
+        </div>
+        <div
+          style="padding: 1.25rem 1.5rem; flex-grow: 1;"
+        >
+          <h3
+            style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;"
+          >
+            Fashion Studio
+          </h3>
+          <p
+            style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;"
+          >
+            Elegant fashion brand with clean typography
+          </p>
+          <div
+            style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"
+          >
+            <span
+              style="background-color: rgb(126, 34, 206); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#7E22CE"
+            />
+            <span
+              style="background-color: rgb(129, 140, 248); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#818CF8"
+            />
+            <span
+              style="background-color: rgb(249, 168, 212); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#F9A8D4"
+            />
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid #E2E8F0;"
+          >
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              Edit
+            </a>
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              View Details
+            </a>
+          </div>
+        </div>
+      </div>
+      <div
+        style="display: flex; flex-direction: column; background-color: white; border-radius: 0.5rem; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); height: 100%;"
+      >
+        <div
+          style="background: linear-gradient(to right, #059669, #60A5FA); height: 200px; display: flex; align-items: center; justify-content: center;"
+        >
+          <div
+            style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(5, 150, 105);"
+          >
+            EP
+          </div>
+        </div>
+        <div
+          style="padding: 1.25rem 1.5rem; flex-grow: 1;"
+        >
+          <h3
+            style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;"
+          >
+            Eco Product
+          </h3>
+          <p
+            style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;"
+          >
+            Sustainable brand with natural elements
+          </p>
+          <div
+            style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"
+          >
+            <span
+              style="background-color: rgb(5, 150, 105); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#059669"
+            />
+            <span
+              style="background-color: rgb(96, 165, 250); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#60A5FA"
+            />
+            <span
+              style="background-color: rgb(16, 185, 129); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;"
+              title="#10B981"
+            />
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid #E2E8F0;"
+          >
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              Edit
+            </a>
+            <a
+              href="#"
+              style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;"
+            >
+              View Details
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

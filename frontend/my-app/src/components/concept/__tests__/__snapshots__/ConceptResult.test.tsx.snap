@@ -1,0 +1,223 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ConceptResult Component > matches snapshot 1`] = `
+<div
+  class="max-w-2xl mx-auto"
+>
+  <div
+    class="card bg-white border-none shadow-lg shadow-lg"
+  >
+    <div
+      class="px-4 py-3 sm:px-6 border-b border-indigo-200 bg-indigo-50/50"
+    >
+      <div
+        class="flex justify-between items-center"
+      >
+        <h2
+          class="text-xl font-semibold text-dark-900"
+        >
+          Generated Concept
+        </h2>
+        <span
+          class="text-sm text-dark-500"
+        >
+          4/15/2023, 8:30:45 AM
+        </span>
+      </div>
+    </div>
+    <div
+      class="p-4 sm:p-6"
+    >
+      <div
+        class="space-y-6"
+      >
+        <div
+          class="flex justify-center"
+        >
+          <div
+            class="relative overflow-hidden rounded-lg border border-dark-200 shadow-sm"
+          >
+            <img
+              alt="Generated concept"
+              class="w-full h-auto max-h-96 object-contain"
+              src="https://example.com/generated-concept.png"
+            />
+          </div>
+        </div>
+        <div>
+          <h3
+            class="text-lg font-medium text-dark-800 mb-2"
+          >
+            Color Palette
+          </h3>
+          <div
+            class="flex flex-col space-y-4 "
+          >
+            <div
+              class="flex flex-wrap gap-3"
+            >
+              <div
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="
+                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                cursor-pointer hover:scale-110 transition-transform
+                
+              "
+                  style="background-color: rgb(79, 70, 229);"
+                  title="Primary: #4F46E5"
+                />
+                <span
+                  class="mt-1 text-xs text-dark-600"
+                >
+                  Primary
+                </span>
+              </div>
+              <div
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="
+                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                cursor-pointer hover:scale-110 transition-transform
+                
+              "
+                  style="background-color: rgb(96, 165, 250);"
+                  title="Secondary: #60A5FA"
+                />
+                <span
+                  class="mt-1 text-xs text-dark-600"
+                >
+                  Secondary
+                </span>
+              </div>
+              <div
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="
+                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                cursor-pointer hover:scale-110 transition-transform
+                
+              "
+                  style="background-color: rgb(238, 242, 255);"
+                  title="Accent: #EEF2FF"
+                />
+                <span
+                  class="mt-1 text-xs text-dark-600"
+                >
+                  Accent
+                </span>
+              </div>
+              <div
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="
+                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                cursor-pointer hover:scale-110 transition-transform
+                
+              "
+                  style="background-color: rgb(255, 255, 255);"
+                  title="Background: #FFFFFF"
+                />
+                <span
+                  class="mt-1 text-xs text-dark-600"
+                >
+                  Background
+                </span>
+              </div>
+              <div
+                class="flex flex-col items-center"
+              >
+                <div
+                  class="
+                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                cursor-pointer hover:scale-110 transition-transform
+                
+              "
+                  style="background-color: rgb(30, 41, 59);"
+                  title="Text: #1E293B"
+                />
+                <span
+                  class="mt-1 text-xs text-dark-600"
+                >
+                  Text
+                </span>
+              </div>
+            </div>
+            <div
+              class="mt-2"
+            >
+              <p
+                class="text-sm text-dark-600 mb-1"
+              >
+                Additional Colors
+              </p>
+              <div
+                class="flex flex-wrap gap-2"
+              >
+                <div
+                  class="flex flex-col items-center"
+                >
+                  <div
+                    class="
+                    h-8 w-8 rounded-full shadow-sm border border-dark-200
+                    cursor-pointer hover:scale-110 transition-transform
+                    
+                  "
+                    style="background-color: rgb(129, 140, 248);"
+                    title="Additional color: #818CF8"
+                  />
+                  <span
+                    class="mt-1 text-xs text-dark-600"
+                  >
+                    A
+                    1
+                  </span>
+                </div>
+                <div
+                  class="flex flex-col items-center"
+                >
+                  <div
+                    class="
+                    h-8 w-8 rounded-full shadow-sm border border-dark-200
+                    cursor-pointer hover:scale-110 transition-transform
+                    
+                  "
+                    style="background-color: rgb(99, 102, 241);"
+                    title="Additional color: #6366F1"
+                  />
+                  <span
+                    class="mt-1 text-xs text-dark-600"
+                  >
+                    A
+                    2
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="flex flex-wrap justify-end gap-3 pt-2"
+        >
+          <button
+            class="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed bg-gradient-secondary text-white shadow-modern hover:shadow-modern-hover hover:brightness-105 text-sm px-4 py-2 rounded-lg "
+            type="button"
+          >
+            Refine This Concept
+          </button>
+          <button
+            class="inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover hover:brightness-105 text-sm px-4 py-2 rounded-lg "
+            type="button"
+          >
+            Download Image
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

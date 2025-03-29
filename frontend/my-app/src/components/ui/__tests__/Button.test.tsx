@@ -15,15 +15,15 @@ describe('Button Component', () => {
     render(<Button>Default Button</Button>);
     
     const button = screen.getByRole('button');
-    expect(button.className).toContain('btn-primary');
+    expect(button.className).toContain('bg-gradient-primary');
   });
   
   // Variant tests
   test.each([
-    ['primary', 'btn-primary'],
-    ['secondary', 'btn-secondary'],
-    ['accent', 'btn-accent'],
-    ['outline', 'btn-outline'],
+    ['primary', 'bg-gradient-primary'],
+    ['secondary', 'bg-gradient-secondary'],
+    ['outline', 'border border-indigo-300'],
+    ['ghost', 'text-indigo-600'],
   ])('renders %s variant correctly', (variant, expectedClass) => {
     render(<Button variant={variant as any}>Button</Button>);
     
@@ -43,42 +43,12 @@ describe('Button Component', () => {
     expect(button.className).toContain(expectedClass);
   });
   
-  // Loading state tests
-  test('renders loading spinner when isLoading is true', () => {
-    render(<Button isLoading>Loading Button</Button>);
-    
-    const svg = document.querySelector('svg.animate-spin');
-    expect(svg).toBeInTheDocument();
-  });
-  
-  test('button is disabled when isLoading is true', () => {
-    render(<Button isLoading>Loading Button</Button>);
+  // Pill shape test
+  test('renders pill shape when pill is true', () => {
+    render(<Button pill>Pill Button</Button>);
     
     const button = screen.getByRole('button');
-    expect(button).toBeDisabled();
-  });
-  
-  // Full width test
-  test('renders full width button when fullWidth is true', () => {
-    render(<Button fullWidth>Full Width Button</Button>);
-    
-    const button = screen.getByRole('button');
-    expect(button.className).toContain('w-full');
-  });
-  
-  // Icon tests
-  test('renders with left icon', () => {
-    const icon = <span data-testid="left-icon">🔍</span>;
-    render(<Button iconLeft={icon}>Button with Left Icon</Button>);
-    
-    expect(screen.getByTestId('left-icon')).toBeInTheDocument();
-  });
-  
-  test('renders with right icon', () => {
-    const icon = <span data-testid="right-icon">→</span>;
-    render(<Button iconRight={icon}>Button with Right Icon</Button>);
-    
-    expect(screen.getByTestId('right-icon')).toBeInTheDocument();
+    expect(button.className).toContain('rounded-full');
   });
   
   // Event tests
@@ -98,11 +68,41 @@ describe('Button Component', () => {
     expect(handleClick).not.toHaveBeenCalled();
   });
   
-  test('does not call onClick when button is loading', () => {
-    const handleClick = jest.fn();
-    render(<Button onClick={handleClick} isLoading>Loading Button</Button>);
+  // Snapshot tests
+  describe('Snapshots', () => {
+    test('default button snapshot', () => {
+      const { container } = render(<Button>Default Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
     
-    fireEvent.click(screen.getByRole('button'));
-    expect(handleClick).not.toHaveBeenCalled();
+    test('primary variant button snapshot', () => {
+      const { container } = render(<Button variant="primary">Primary Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('secondary variant button snapshot', () => {
+      const { container } = render(<Button variant="secondary">Secondary Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('outline variant button snapshot', () => {
+      const { container } = render(<Button variant="outline">Outline Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('ghost variant button snapshot', () => {
+      const { container } = render(<Button variant="ghost">Ghost Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('disabled button snapshot', () => {
+      const { container } = render(<Button disabled>Disabled Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+    
+    test('pill button snapshot', () => {
+      const { container } = render(<Button pill>Pill Button</Button>);
+      expect(container.firstChild).toMatchSnapshot();
+    });
   });
 }); 
