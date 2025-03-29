@@ -19,6 +19,7 @@
   - [x] Database schema
   - [x] Session management
   - [x] Concept storage service
+  - [x] Image storage using Supabase Storage
 
 ### Frontend Component Design
 - [x] Design document for shared components (Button, LoadingSpinner, ErrorMessage)
@@ -194,11 +195,20 @@
   - [ ] Configure database access policies
   - [ ] Create database schema (sessions, concepts, color_variations)
   - [ ] Set up indexes for query optimization
+  - [ ] Configure storage buckets for images
+    - [ ] Create `concept-images` bucket for base images
+    - [ ] Create `palette-images` bucket for color variations
+    - [ ] Set up access policies for buckets
 - [ ] Backend Supabase integration
   - [ ] Install Supabase Python client
+  - [ ] Install Pillow for image processing
   - [ ] Implement SupabaseClient class
   - [ ] Create environment configuration for Supabase credentials
   - [ ] Implement SessionService for cookie-based session management
+  - [ ] Implement ImageService for image storage and retrieval
+    - [ ] Implement function to download images from JigsawStack
+    - [ ] Implement function to upload images to Supabase Storage
+    - [ ] Implement function to apply color palettes to images
   - [ ] Implement ConceptStorageService for storing/retrieving concepts
   - [ ] Update API endpoints to use Supabase services
 - [ ] Frontend Supabase integration
@@ -212,7 +222,7 @@
   - [ ] Test session persistence in Chrome, Firefox, Safari
   - [ ] Verify cookie secure flags work correctly
   - [ ] Test session expiration handling
-- [ ] Implement image colorization service
+- [ ] Implement image processing service
   - [ ] Research approaches for applying color palettes to images
   - [ ] Implement basic solution for MVP (using same image for all palettes)
   - [ ] Plan for future enhancements with proper colorization
@@ -281,4 +291,5 @@
 - [x] Add visual regression tests
 - [x] Add accessibility testing
 - [ ] Implement Supabase integration for data persistence
+- [ ] Set up Supabase Storage for image storage
 - [ ] Add "Recent Concepts" feature to the UI 
