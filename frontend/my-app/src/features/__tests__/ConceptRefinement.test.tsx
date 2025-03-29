@@ -1,26 +1,24 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConceptRefinement } from '../ConceptRefinement';
 import * as useConceptRefinementModule from '../../hooks/useConceptRefinement';
+import { vi } from 'vitest';
+import { mockApiService } from '../../services/mocks/mockApiService';
+import { setupMockApi, resetMockApi, mockApiFailure } from '../../services/mocks/testSetup';
 
-// Mock the useConceptRefinement hook
-jest.mock('../../hooks/useConceptRefinement');
-
-// Create a mock for useNavigate
-const mockNavigate = jest.fn();
-
-// Mock the useParams and useNavigate hooks from react-router-dom
-jest.mock('react-router-dom', () => {
-  const actualReactRouterDom = jest.requireActual('react-router-dom');
+// Mock useNavigate
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal();
   return {
-    ...actualReactRouterDom,
+    ...actual,
     useNavigate: () => mockNavigate,
-    useParams: () => ({ conceptId: 'test-concept-123' }),
+    useParams: () => ({ conceptId: 'mock-concept-123' })
   };
 });
 
-// Helper function to render with router
+// Helper for renderWithRouter
 const renderWithRouter = (ui: React.ReactElement) => {
   return render(
     <BrowserRouter>
@@ -31,245 +29,196 @@ const renderWithRouter = (ui: React.ReactElement) => {
   );
 };
 
-describe('ConceptRefinement Component', () => {
-  // Mock implementation for useConceptRefinement
-  const mockRefineConcept = jest.fn();
-  const mockResetRefinement = jest.fn();
-  
-  // Set up mock response data with correct structure
-  const mockResult = {
-    imageUrl: 'https://example.com/refined-image.png',
-    generationId: 'concept-123-refined',
-    createdAt: '2023-03-01T12:00:00Z',
-    colorPalette: {
-      primary: '#4F46E5',
-      secondary: '#60A5FA',
-      accent: '#EEF2FF',
-      background: '#FFFFFF',
-      text: '#1E293B',
-      additionalColors: ['#818CF8', '#6366F1']
-    },
-    originalImageUrl: 'https://placehold.co/800x800?text=Original+Concept',
-    refinementPrompt: 'Make the logo more modern'
-  };
-  
-  beforeEach(() => {
-    // Reset all mocks
-    jest.clearAllMocks();
-    
-    // Default mock implementation
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'idle',
-      result: null,
-      error: null,
-      isLoading: false
-    }));
-  });
-  
-  // Basic rendering tests
-  test('renders the component in initial state', () => {
-    renderWithRouter(<ConceptRefinement />);
-    
-    // Check for page title
-    const title = screen.getByText('Refine Your Concept');
-    expect(title).toBeInTheDocument();
-    
-    // Check for form section - find the refinement instructions label
-    const refinementInstructionsLabel = screen.getByText('Refinement Instructions');
-    expect(refinementInstructionsLabel).toBeInTheDocument();
-    
-    // Check for the original concept display
-    const originalImageUrl = screen.getByAltText('Original concept');
-    expect(originalImageUrl).toBeInTheDocument();
-  });
-  
-  // Form submission test
-  test('submits the form and calls refineConcept', () => {
-    renderWithRouter(<ConceptRefinement />);
-    
-    // Find the form inputs - using the TextArea components' label props
-    const refinementPromptLabel = screen.getByText('Refinement Instructions');
-    const logoDescriptionLabel = screen.getByText('Updated Logo Description (Optional)');
-    const themeDescriptionLabel = screen.getByText('Updated Theme Description (Optional)');
-    
-    // Find the textareas in the parent elements of the labels
-    const refinementPromptTextarea = refinementPromptLabel.closest('div')?.querySelector('textarea');
-    const logoDescriptionTextarea = logoDescriptionLabel.closest('div')?.querySelector('textarea');
-    const themeDescriptionTextarea = themeDescriptionLabel.closest('div')?.querySelector('textarea');
-    
-    // Make sure we found all the textareas
-    expect(refinementPromptTextarea).toBeInTheDocument();
-    expect(logoDescriptionTextarea).toBeInTheDocument();
-    expect(themeDescriptionTextarea).toBeInTheDocument();
-    
-    // Find the preserve aspects checkboxes by their labels
-    const preserveColorsCheckbox = screen.getByText('Colors').previousElementSibling;
-    expect(preserveColorsCheckbox).toBeInTheDocument();
-    expect(preserveColorsCheckbox?.tagName).toBe('INPUT');
-    
-    if (refinementPromptTextarea && logoDescriptionTextarea && themeDescriptionTextarea && preserveColorsCheckbox) {
-      // Fill out the form
-      fireEvent.change(refinementPromptTextarea, { target: { value: 'Make the logo more modern' } });
-      fireEvent.change(logoDescriptionTextarea, { target: { value: 'A modern refined logo' } });
-      fireEvent.change(themeDescriptionTextarea, { target: { value: 'Blue and purple refined theme' } });
-      fireEvent.click(preserveColorsCheckbox);
-      
-      // Submit the form
-      const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
-      fireEvent.click(submitButton);
-      
-      // Check if the refineConcept function was called with correct args
-      expect(mockRefineConcept).toHaveBeenCalledWith(
-        expect.any(String), // originalImageUrl
-        'Make the logo more modern',
-        'A modern refined logo',
-        'Blue and purple refined theme',
-        ['colors']
-      );
+// Setup mockApiService for specific scenarios
+const setupSuccessScenario = () => {
+  setupMockApi({
+    responseDelay: 0,
+    customResponses: {
+      refineConcept: {
+        imageUrl: 'https://example.com/refined-concept.png',
+        colorPalette: {
+          primary: '#6366F1',
+          secondary: '#A5B4FC',
+          accent: '#E0E7FF',
+          background: '#EEF2FF',
+          text: '#312E81'
+        },
+        generationId: 'refined-concept-123',
+        createdAt: new Date().toISOString(),
+        originalImageUrl: 'https://example.com/original-concept.png',
+        refinementPrompt: 'Make it more vibrant'
+      }
     }
   });
-  
-  // Loading state test
-  test('displays loading state when refining concept', () => {
-    // Mock loading state
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'submitting',
-      result: null,
-      error: null,
-      isLoading: true
-    }));
+};
+
+describe('ConceptRefinement Component', () => {
+  beforeEach(() => {
+    resetMockApi();
+    vi.clearAllMocks();
     
-    renderWithRouter(<ConceptRefinement />);
+    // Restore the original implementation for all tests
+    vi.restoreAllMocks();
     
-    // Check for loading indicator
-    const loadingButton = screen.getByText('Refining...');
-    expect(loadingButton).toBeInTheDocument();
-    expect(loadingButton.closest('button')).toBeDisabled();
+    // Mock localStorage to provide a test concept
+    const mockLocalStorage = {
+      getItem: vi.fn().mockImplementation((key) => {
+        if (key === 'savedConcepts') {
+          return JSON.stringify([
+            {
+              imageUrl: 'https://example.com/original-concept.png',
+              colorPalette: {
+                primary: '#4F46E5',
+                secondary: '#818CF8',
+                accent: '#C4B5FD',
+                background: '#F5F3FF',
+                text: '#1E1B4B'
+              },
+              generationId: 'mock-concept-123',
+              createdAt: new Date().toISOString()
+            }
+          ]);
+        }
+        return null;
+      }),
+      setItem: vi.fn()
+    };
+    
+    Object.defineProperty(window, 'localStorage', {
+      value: mockLocalStorage,
+      writable: true
+    });
   });
   
-  // Success state test
-  test('displays result when concept refinement succeeds', () => {
-    // Mock success state
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'success',
-      result: mockResult,
-      error: null,
-      isLoading: false
-    }));
+  test('renders form with original concept data', () => {
+    renderWithRouter(<ConceptRefinement />);
+    
+    // Original concept should be displayed
+    const originalImage = screen.getByAltText(/Original concept/i);
+    expect(originalImage).toBeInTheDocument();
+    expect(originalImage).toHaveAttribute('src', 'https://example.com/original-concept.png');
+    
+    // Form elements should be present
+    expect(screen.getByLabelText(/Refinement Instructions/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refine Concept/i })).toBeInTheDocument();
+  });
+  
+  test('handles form submission for refinement', async () => {
+    // Setup mock for successful refinement
+    setupSuccessScenario();
     
     renderWithRouter(<ConceptRefinement />);
     
-    // Check for the refined image
-    const resultImages = screen.getAllByRole('img');
-    const refinedImage = resultImages.find(img => 
-      img.getAttribute('src') === mockResult.imageUrl
-    );
+    // Fill out the refinement form
+    const instructionsInput = screen.getByLabelText(/Refinement Instructions/i);
+    fireEvent.change(instructionsInput, { target: { value: 'Make it more vibrant with brighter colors' } });
+    
+    // Check some preserve aspects options
+    const colorCheckbox = screen.getByLabelText(/Preserve color scheme/i);
+    fireEvent.click(colorCheckbox);
+    
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
+    fireEvent.click(submitButton);
+    
+    // Should show loading state
+    expect(screen.getByText(/Refining your concept.../i)).toBeInTheDocument();
+    
+    // Wait for the result to appear
+    await waitFor(() => {
+      expect(screen.getByAltText(/Refined concept/i)).toBeInTheDocument();
+    });
+    
+    // Check that the refined image is displayed
+    const refinedImage = screen.getByAltText(/Refined concept/i);
     expect(refinedImage).toBeInTheDocument();
+    expect(refinedImage).toHaveAttribute('src', 'https://example.com/refined-concept.png');
     
-    // Check for comparison view headers
-    const originalLabel = screen.getByText('Original');
-    const refinedLabel = screen.getByText('Refined');
-    expect(originalLabel).toBeInTheDocument();
-    expect(refinedLabel).toBeInTheDocument();
-    
-    // Check for action buttons
-    const refineAgainButton = screen.getByRole('button', { name: /Refine Again/i });
-    const createNewButton = screen.getByRole('button', { name: /Create New Concept/i });
-    expect(refineAgainButton).toBeInTheDocument();
-    expect(createNewButton).toBeInTheDocument();
+    // Should show both original and refined concept
+    expect(screen.getByText(/Original Concept/i)).toBeInTheDocument();
+    expect(screen.getByText(/Refined Concept/i)).toBeInTheDocument();
   });
   
-  // Error state test
-  test('displays error message when concept refinement fails', () => {
-    const errorMessage = 'Failed to refine concept';
+  test('displays validation errors', () => {
+    renderWithRouter(<ConceptRefinement />);
     
-    // Mock error state
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'error',
-      result: null,
-      error: errorMessage,
-      isLoading: false
-    }));
+    // Try to submit with empty instructions
+    const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
+    fireEvent.click(submitButton);
+    
+    // Should show validation error
+    expect(screen.getByText(/Please provide refinement instructions/i)).toBeInTheDocument();
+  });
+  
+  test('handles API errors gracefully', async () => {
+    // Mock API failure
+    mockApiFailure();
     
     renderWithRouter(<ConceptRefinement />);
     
-    // Check for error message - using contains since it might be wrapped in other elements
-    const errorElement = screen.getByText(errorMessage);
-    expect(errorElement).toBeInTheDocument();
+    // Fill out the refinement form
+    const instructionsInput = screen.getByLabelText(/Refinement Instructions/i);
+    fireEvent.change(instructionsInput, { target: { value: 'Make it more vibrant' } });
+    
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
+    fireEvent.click(submitButton);
+    
+    // Wait for the error to appear
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to refine concept/i)).toBeInTheDocument();
+    });
     
     // Form should still be accessible
-    const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
-    expect(submitButton).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Refine Concept/i })).toBeInTheDocument();
   });
   
-  // Reset test
-  test('calls resetRefinement when Refine Again is clicked', () => {
-    // Mock success state
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'success',
-      result: mockResult,
-      error: null,
-      isLoading: false
-    }));
-    
+  test('navigates back to home when cancel is clicked', () => {
     renderWithRouter(<ConceptRefinement />);
     
-    // Click the Refine Again button
-    const refineAgainButton = screen.getByRole('button', { name: /Refine Again/i });
-    fireEvent.click(refineAgainButton);
-    
-    // Check if resetRefinement was called
-    expect(mockResetRefinement).toHaveBeenCalled();
-  });
-  
-  // We need to skip these tests for now since the mock navigation isn't working correctly
-  // We'll add the test_skip prefix to run them successfully
-  test.skip('navigates to home when Create New Concept is clicked', () => {
-    // Mock success state
-    jest.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
-      refineConcept: mockRefineConcept,
-      resetRefinement: mockResetRefinement,
-      status: 'success',
-      result: mockResult,
-      error: null,
-      isLoading: false
-    }));
-    
-    renderWithRouter(<ConceptRefinement />);
-    
-    // Click the Create New Concept button
-    const createNewButton = screen.getByRole('button', { name: /Create New Concept/i });
-    fireEvent.click(createNewButton);
-    
-    // Check if navigation was triggered
-    expect(mockNavigate).toHaveBeenCalledWith('/');
-  });
-  
-  // Skip this test too
-  test.skip('navigates back when Cancel is clicked', () => {
-    renderWithRouter(<ConceptRefinement />);
-    
-    // Click the Cancel button
+    // Find and click the Cancel button
     const cancelButton = screen.getByRole('button', { name: /Cancel/i });
     fireEvent.click(cancelButton);
     
-    // Check if navigation was triggered
+    // Should navigate back to home
     expect(mockNavigate).toHaveBeenCalledWith('/');
   });
   
-  // Snapshot test
-  test('matches snapshot in initial state', () => {
-    const { container } = renderWithRouter(<ConceptRefinement />);
-    expect(container.firstChild).toMatchSnapshot();
+  test('handles saving the refined concept', async () => {
+    // Setup successful refinement scenario
+    setupSuccessScenario();
+    
+    // Mock useConceptRefinement hook for success state
+    vi.spyOn(useConceptRefinementModule, 'useConceptRefinement').mockImplementation(() => ({
+      refineConcept: vi.fn(),
+      status: 'success',
+      result: {
+        imageUrl: 'https://example.com/refined-concept.png',
+        colorPalette: {
+          primary: '#6366F1',
+          secondary: '#A5B4FC',
+          accent: '#E0E7FF',
+          background: '#EEF2FF',
+          text: '#312E81'
+        },
+        generationId: 'refined-concept-123',
+        createdAt: new Date().toISOString(),
+        originalImageUrl: 'https://example.com/original-concept.png',
+        refinementPrompt: 'Make it more vibrant'
+      },
+      error: null,
+      isLoading: false,
+      clearError: vi.fn()
+    }));
+    
+    renderWithRouter(<ConceptRefinement />);
+    
+    // Find and click the Save Refined Concept button
+    const saveButton = screen.getByRole('button', { name: /Save Refined Concept/i });
+    fireEvent.click(saveButton);
+    
+    // Should save to localStorage and navigate to home
+    expect(window.localStorage.setItem).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/');
   });
 }); 

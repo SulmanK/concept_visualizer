@@ -40,6 +40,7 @@ concept_visualizer/
 │   │   ├── features/  # Feature-specific components
 │   │   ├── hooks/     # Custom React hooks
 │   │   ├── services/  # API integration
+│   │   │   └── mocks/ # Mock services for testing
 │   │   ├── styles/    # Global styles
 │   │   └── types/     # TypeScript type definitions
 ├── design/            # Design documents and assets
@@ -98,6 +99,43 @@ concept_visualizer/
    ```
    npm run dev
    ```
+
+## Testing
+
+The project uses Vitest for unit and integration testing.
+
+### Running Tests
+
+```
+cd frontend/my-app
+npm test          # Run all tests
+npm run test:watch # Run tests in watch mode
+```
+
+### Mock API Service
+
+For testing API integrations without making actual network calls, the project includes a mock API service:
+
+```typescript
+import { mockApiService, setupMockApi, resetMockApi } from '../services/mocks';
+
+// Configure mock API behavior
+setupMockApi({
+  shouldFail: false,
+  responseDelay: 10,
+  customResponses: {
+    generateConcept: {
+      imageUrl: 'https://example.com/test-image.png',
+      // other properties...
+    }
+  }
+});
+
+// Reset mock API to default state
+resetMockApi();
+```
+
+The mock service simulates the behavior of the backend API and can be configured to return custom responses or simulate errors for testing edge cases.
 
 ## License
 
