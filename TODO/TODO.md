@@ -124,15 +124,20 @@
   - [x] Test TestHeader component
   - [x] Verify navigation between components
   - [x] Test state management in feature components
-- [ ] Implement end-to-end testing
-  - [ ] Set up Playwright for E2E testing
-  - [ ] Create end-to-end test for concept generation flow
-  - [ ] Create end-to-end test for concept refinement flow
-  - [ ] Add visual regression tests for key pages
-- [ ] Verify responsive design across different viewport sizes
-  - [ ] Create viewport size testing utility
-  - [ ] Test components at mobile, tablet, and desktop sizes
-  - [ ] Verify layout shifts and responsive behaviors
+- [x] Implement end-to-end testing
+  - [x] Set up Playwright for E2E testing
+  - [x] Create end-to-end test for concept generation flow
+  - [x] Create end-to-end test for concept refinement flow
+  - [x] Add visual regression tests for key pages
+- [x] Verify responsive design across different viewport sizes
+  - [x] Create viewport size testing utility
+  - [x] Test components at mobile, tablet, and desktop sizes
+  - [x] Verify layout shifts and responsive behaviors
+- [x] Implement accessibility testing
+  - [x] Set up axe-core with Playwright
+  - [x] Create accessibility test suite for all pages
+  - [x] Check WCAG 2.0 A and AA compliance
+  - [x] Verify form elements have proper labels and ARIA attributes
 
 ## Modern Gradient Indigo Theme Implementation (URGENT)
 - [x] Update color scheme and typography
@@ -235,6 +240,7 @@
 
 ### Next Steps
 - [x] Implement API mock service for better integration tests
-- [ ] Set up end-to-end testing with Playwright
-- [ ] Add responsive design tests
-- [ ] Add visual regression tests
+- [x] Set up end-to-end testing with Playwright
+- [x] Add responsive design tests
+- [x] Add visual regression tests
+- [x] Add accessibility testing

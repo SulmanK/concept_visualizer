@@ -52,3 +52,73 @@ export default tseslint.config({
   },
 })
 ```
+
+## Testing Framework
+
+### Unit Tests
+Unit tests are written using Vitest and React Testing Library. They can be run with:
+
+```bash
+npm test
+```
+
+### End-to-End Tests
+End-to-End tests are implemented with Playwright. They simulate user interaction with the application in a real browser environment.
+
+To run the E2E tests:
+
+```bash
+npm run test:e2e
+```
+
+To run with the Playwright UI mode (for debugging):
+
+```bash
+npm run test:e2e:ui
+```
+
+### Visual Regression Tests
+Visual regression tests capture screenshots of key pages and UI elements to detect unexpected visual changes.
+
+To run visual regression tests:
+
+```bash
+npm run test:visual
+```
+
+If UI changes are intentional, update the reference screenshots:
+
+```bash
+npm run test:visual:update
+```
+
+### Accessibility Tests
+Accessibility tests verify that the application meets WCAG accessibility standards using axe-core.
+
+To run accessibility tests:
+
+```bash
+npm run test:a11y
+```
+
+To run with the Playwright UI mode (for debugging):
+
+```bash
+npm run test:a11y:ui
+```
+
+Accessibility tests check for:
+- WCAG 2.0 A and AA compliance
+- Proper labeling of form elements
+- Sufficient color contrast
+- Keyboard navigability
+
+### API Mock Service
+For integration testing, we use a mock API service that simulates backend responses. This is available in:
+
+```
+src/mocks/mockApiService.ts
+src/mocks/mockHooks.ts
+```
+
+The mock service can be imported and configured in tests to provide consistent test data without requiring a real backend connection.
