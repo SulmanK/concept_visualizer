@@ -10,7 +10,7 @@ export default {
         primary: '#4F46E5',
         'primary-dark': '#4338CA',
         secondary: '#818CF8',
-        'secondary-dark': '#6366F1',
+        'secondary-dark': '#5051DB',
         accent: '#EEF2FF',
         'accent-foreground': '#312E81',
         dark: {
