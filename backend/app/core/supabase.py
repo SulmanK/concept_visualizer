@@ -29,18 +29,15 @@ class SupabaseClient:
         Args:
             url: Supabase project URL (defaults to settings.SUPABASE_URL)
             key: Supabase API key (defaults to settings.SUPABASE_KEY)
-            session_id: Optional session ID to include in request headers
+            session_id: Optional session ID to store for later use
         """
         self.url = url or settings.SUPABASE_URL
         self.key = key or settings.SUPABASE_KEY
         self.logger = logging.getLogger("supabase_client")
+        self.session_id = session_id
         
-        # Initialize headers with session ID if provided
-        headers = {}
-        if session_id:
-            headers["x-session-id"] = session_id
-            
-        self.client = create_client(self.url, self.key, headers=headers)
+        # Initialize Supabase client (no headers parameter in v1.0.3)
+        self.client = create_client(self.url, self.key)
     
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get a session by ID.
@@ -251,16 +248,27 @@ class SupabaseClient:
         try:
             # For MVP, we'll just copy the original image
             # In a full implementation, we would apply the palette
-            original_url = self.get_image_url(image_path, "concept-images")
-            if not original_url:
+            
+            # Instead of using the public URL which seems to have issues,
+            # directly download from storage
+            image_data = self.client.storage.from_("concept-images").download(image_path)
+            if not image_data:
+                self.logger.error("Failed to download image from storage")
                 return None
                 
-            # Upload (for now, just the same image) to palette-images bucket
-            return await self.upload_image_from_url(
-                original_url, 
-                "palette-images", 
-                session_id
+            # Generate a unique filename for the palette version
+            file_ext = image_path.split(".")[-1] if "." in image_path else "png"
+            unique_filename = f"{session_id}/{uuid.uuid4()}.{file_ext}"
+            
+            # Upload the image to the palette-images bucket
+            result = self.client.storage.from_("palette-images").upload(
+                path=unique_filename,
+                file=image_data,
+                file_options={"content-type": f"image/{file_ext}"}
             )
+            
+            # Return the storage path
+            return unique_filename
         except Exception as e:
             self.logger.error(f"Error applying color palette: {e}")
             return None

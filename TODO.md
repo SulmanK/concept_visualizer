@@ -298,3 +298,37 @@
 - [ ] Implement Supabase integration for data persistence
 - [ ] Set up Supabase Storage for image storage
 - [ ] Add "Recent Concepts" feature to the UI 
+
+## Supabase Storage Integration Checklist
+
+- [x] Create Supabase project and configure API keys
+- [x] Install Supabase client libraries for Python backend
+- [x] Create storage buckets in Supabase:
+  - [x] `concept-images` bucket for base concept images
+  - [x] `palette-images` bucket for color variations
+- [x] Configure storage access policies:
+  - [x] Public read access for both buckets
+  - [x] Public write access with application-level security
+- [x] Implement `upload_image_from_url` method in `SupabaseClient`
+  - [x] Handle downloading images from JigsawStack
+  - [x] Generate unique filenames with session-based folders
+  - [x] Upload to appropriate bucket
+- [x] Implement `get_image_url` method to generate public URLs
+- [x] Implement `apply_color_palette` method for palette variations
+- [x] Update `ImageService` methods to use Supabase storage:
+  - [x] `generate_and_store_image` for base concept images
+  - [x] `create_palette_variations` for palette-specific images
+  - [x] `refine_and_store_image` for refined concepts
+- [x] Update response models to include image URLs
+- [x] Test the complete flow from API to storage and back
+
+## Integration Testing Recommendations
+
+The following tests should be performed to ensure proper storage integration:
+
+1. Generate a concept and verify images are stored in correct Supabase buckets
+2. Check that image paths follow the `{session_id}/{uuid}.{extension}` pattern
+3. Confirm that public URLs are accessible in a web browser
+4. Verify different sessions have files in separate folders
+5. Test the palette variations by checking both storage and retrieval
+6. Ensure refined images are properly stored and retrievable 
