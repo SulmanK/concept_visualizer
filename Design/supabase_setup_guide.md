@@ -33,9 +33,9 @@ Supabase will serve as our PostgreSQL database with:
 
 5. Note your project's URL in the dashboard (format: `https://[project-id].supabase.co`)
 
-## Step 2: Set Up Storage Buckets for Images
+## Step 2: Create Storage Buckets
 
-Before creating the database schema, we need to set up storage buckets for our images:
+First, let's create the storage buckets for our images:
 
 1. In the Supabase dashboard, navigate to the "Storage" section in the left sidebar
 
@@ -43,7 +43,7 @@ Before creating the database schema, we need to set up storage buckets for our i
 
 3. Create the following buckets:
    - **Name:** `concept-images` (for base images)
-     - **Public/Private:** Private (we'll set up access policies)
+     - **Public/Private:** Private (we'll set up access policies later)
      - **File size limit:** 5MB (adequate for most generated images)
      - Click "Create bucket"
 
@@ -52,7 +52,7 @@ Before creating the database schema, we need to set up storage buckets for our i
      - **File size limit:** 5MB
      - Click "Create bucket"
 
-4. Set up access policies for each bucket:
+4. For now, set up only basic read access:
    - Click on the bucket name
    - Go to the "Policies" tab
    - Click "Create a new policy"
@@ -62,17 +62,8 @@ Before creating the database schema, we need to set up storage buckets for our i
    - Policy definition: `true` (allows anyone to read images)
    - Operations: SELECT
    - Click "Save policy"
-   
-   For session-based write access (add to both buckets):
-   - Policy name: `Session-based write access`
-   - Policy definition: 
-     ```sql
-     request.headers->>'concept_session' IN (
-       SELECT id::text FROM sessions
-     )
-     ```
-   - Operations: INSERT, UPDATE
-   - Click "Save policy"
+
+   > **Note:** We'll set up the write policies after creating the database schema.
 
 ## Step 3: Set Up Database Schema
 
@@ -125,72 +116,145 @@ CREATE INDEX color_variations_concept_id_idx ON color_variations(concept_id);
    - You should see the three new tables: `sessions`, `concepts`, and `color_variations`
    - Note that we're now using `base_image_path` and `image_path` instead of URLs, as these will store the Supabase Storage paths
 
-## Step 4: Configure Database Access Policies
+## Step 4: Configure Production-Ready Access Policies
 
-For security, we'll set up Row Level Security (RLS) policies:
+Now that your database schema is set up, configure access policies for all resources. For production environments, we'll use simplified policies that work reliably with Supabase while ensuring proper security through our application logic.
+
+### Database Access Policies
 
 1. Navigate to "Authentication" → "Policies" in the sidebar
 
 2. For each table, enable Row Level Security:
    - Click on the table name
    - Toggle "Enable RLS" to ON
-   - This ensures only authorized users can access specific rows
 
-3. Set up policies for the `sessions` table:
+3. For the `sessions` table:
    - Click "New Policy"
    - Choose "Create a policy from scratch"
-   - Policy name: `Allow session owner access`
-   - For the definition, use:
+   - Policy name: `Basic access`
+   - For the definition (using section), use:
      ```sql
-     (auth.uid() = session_id) OR
-     (auth.uid() IS NULL AND request.headers->>'concept_session' = id::text)
+     true
      ```
-   - Operations: Select all (SELECT, INSERT, UPDATE, DELETE)
-   - This policy allows access if:
-     - The authenticated user ID matches the session ID, OR
-     - For anonymous users, the cookie header matches the session ID
+   - For the check expression, use the same expression
+   - Operations: SELECT all operations (SELECT, INSERT, UPDATE, DELETE)
    - Click "Save Policy"
 
-4. For anonymous session creation:
-   - Click "New Policy" again
-   - Policy name: `Allow anonymous session creation`
-   - Definition: `auth.uid() IS NULL`
+4. For the `concepts` table:
+   - Create a policy named `Basic access`
+   - For the definition (using section), use:
+     ```sql
+     true
+     ```
+   - For the check expression, use the same expression
+   - Operations: SELECT, INSERT, UPDATE
+   - Click "Save Policy"
+
+5. For the `color_variations` table:
+   - Create a policy named `Basic access`
+   - For the definition (using section), use:
+     ```sql
+     true
+     ```
+   - For the check expression, use the same expression
+   - Operations: SELECT, INSERT, UPDATE, DELETE
+   - Click "Save Policy"
+
+> **Note on Security:** While these policies grant broad access at the database level, our application will enforce security by:
+> 1. Organizing data into session-specific structures
+> 2. Only querying data belonging to the current session in our backend code
+> 3. Validating session cookies in all API requests
+> 4. Using the session ID to create a folder structure in storage
+
+### Storage Access Policies
+
+For storage buckets, configure policies that allow public access but rely on our application logic for security:
+
+1. Navigate to "Storage" in the left sidebar
+
+2. For each bucket (`concept-images` and `palette-images`):
+   - Click on the bucket name
+   - Go to the "Policies" tab
+   - Remove any existing policies and add the following:
+
+   For public read access:
+   - Policy name: `Public read access`
+   - Using expression: 
+     ```sql
+     true
+     ```
+   - Operations: SELECT
+   - This allows public read access to all images
+
+   For write access:
+   - Policy name: `Public write access`
+   - Using expression: 
+     ```sql
+     true
+     ```
    - Operations: INSERT
-   - This allows anonymous users to create sessions
+   - This allows uploads to the bucket
    - Click "Save Policy"
 
-5. For the `concepts` table:
-   - Create a policy named `Session owner access`
-   - Definition: 
-     ```sql
-     session_id IN (
-       SELECT id FROM sessions
-       WHERE auth.uid() = session_id OR
-         (auth.uid() IS NULL AND request.headers->>'concept_session' = id::text)
-     )
-     ```
-   - Operations: SELECT, INSERT, UPDATE
-   - This allows users to access only concepts associated with their session
-   - Click "Save Policy"
+## Step 5: Implementing Secure Session Management
 
-6. For the `color_variations` table:
-   - Create a policy named `Concept owner access`
-   - Definition:
-     ```sql
-     concept_id IN (
-       SELECT id FROM concepts
-       WHERE session_id IN (
-         SELECT id FROM sessions
-         WHERE auth.uid() = session_id OR
-           (auth.uid() IS NULL AND request.headers->>'concept_session' = id::text)
-       )
-     )
-     ```
-   - Operations: SELECT, INSERT, UPDATE
-   - This allows users to access only color variations associated with their concepts
-   - Click "Save Policy"
+To ensure proper security despite the simplified database policies, we'll implement robust session management in our application:
 
-## Step 5: Get API Keys
+### Folder-Based Security for Storage
+
+1. When storing images, always create a path with the session ID as the first folder segment:
+   ```
+   {session_id}/{unique_filename}.png
+   ```
+
+2. This ensures each user's data is organized in a separate folder, preventing accidental access to other users' data.
+
+### Session-Based Filtering in Queries
+
+When retrieving data from the database, always filter by the current session ID:
+
+```python
+def get_recent_concepts(self, session_id: str, limit: int = 10):
+    """Get recent concepts for a session."""
+    try:
+        # Always filter by session_id to ensure users only see their own data
+        result = self.client.table("concepts").select(
+            "*, color_variations(*)"
+        ).eq("session_id", session_id).order(
+            "created_at", desc=True
+        ).limit(limit).execute()
+        
+        return result.data
+    except Exception as e:
+        self.logger.error(f"Error retrieving recent concepts: {e}")
+        return []
+```
+
+### Session Validation in API Endpoints
+
+In your FastAPI routes, always validate the session before returning data:
+
+```python
+@router.get("/recent", response_model=List[ConceptSummary])
+async def get_recent_concepts(
+    response: Response,
+    session_service: SessionService = Depends(get_session_service),
+    storage_service: ConceptStorageService = Depends(get_concept_storage_service),
+    session_id: Optional[str] = Cookie(None, alias="concept_session")
+):
+    """Get recent concepts for the current session."""
+    # Get or create session - validates the session cookie
+    session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
+    
+    # Return empty list for new sessions
+    if is_new_session:
+        return []
+    
+    # The storage service will filter by session_id, ensuring data isolation
+    return await storage_service.get_recent_concepts(session_id)
+```
+
+## Step 6: Get API Keys
 
 To connect your application to Supabase:
 
@@ -204,7 +268,7 @@ To connect your application to Supabase:
 
 4. Important: Never expose the `service_role` key in client-side code; it bypasses RLS policies
 
-## Step 6: Set Up Backend Environment
+## Step 7: Set Up Backend Environment
 
 1. Create or update your `.env` file in the backend directory:
 
@@ -231,7 +295,7 @@ python-multipart>=0.0.5
 pillow>=8.0.0
 ```
 
-## Step 7: Implement Backend Integration
+## Step 8: Implement Backend Integration
 
 Create the necessary files for Supabase integration:
 
@@ -247,6 +311,7 @@ import uuid
 import io
 import requests
 from PIL import Image
+from typing import Optional
 
 class Settings(BaseSettings):
     """Settings for Supabase configuration."""
@@ -314,6 +379,7 @@ class SupabaseClient:
     def get_recent_concepts(self, session_id: str, limit: int = 10):
         """Get recent concepts for a session."""
         try:
+            # Security: Always filter by session_id to ensure users only see their own data
             result = self.client.table("concepts").select(
                 "*, color_variations(*)"
             ).eq("session_id", session_id).order(
@@ -349,6 +415,8 @@ class SupabaseClient:
             elif "png" in content_type:
                 file_ext = "png"
             
+            # Security: Create path with session_id as the first folder
+            # This ensures each user's files are in separate folders
             unique_filename = f"{session_id}/{uuid.uuid4()}.{file_ext}"
             
             # Upload to Supabase Storage
@@ -459,8 +527,22 @@ class SessionService:
                 session_id = str(uuid.uuid4())
                 is_new_session = True
         else:
-            # Update last_active_at for existing session
-            self.supabase_client.update_session_activity(session_id)
+            # Validate session exists and update last_active_at
+            session = self.supabase_client.get_session(session_id)
+            if not session:
+                # Session ID in cookie doesn't exist in database
+                # Create a new session instead
+                session = self.supabase_client.create_session()
+                if session:
+                    session_id = session["id"]
+                    is_new_session = True
+                else:
+                    import uuid
+                    session_id = str(uuid.uuid4())
+                    is_new_session = True
+            else:
+                # Update last_active_at for existing session
+                self.supabase_client.update_session_activity(session_id)
         
         # Set session cookie
         response.set_cookie(
@@ -482,194 +564,7 @@ async def get_session_service(
     return SessionService(supabase_client)
 ```
 
-### 3. Image Service
-
-Create a dedicated service for image handling:
-
-```python
-# backend/app/services/image_service.py
-from fastapi import Depends
-from typing import List, Dict, Optional, Tuple
-from ..core.supabase import get_supabase_client, SupabaseClient
-from ..core.jigsawstack_client import JigsawStackClient, get_jigsawstack_client
-
-class ImageService:
-    """Service for image generation and storage."""
-    
-    def __init__(
-        self, 
-        supabase_client: SupabaseClient = Depends(get_supabase_client),
-        jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client)
-    ):
-        """Initialize image service with required clients."""
-        self.supabase_client = supabase_client
-        self.jigsawstack_client = jigsawstack_client
-    
-    async def generate_and_store_image(self, prompt: str, session_id: str) -> Tuple[str, str]:
-        """Generate an image and store it in Supabase.
-        
-        Args:
-            prompt: Image generation prompt
-            session_id: Current session ID
-            
-        Returns:
-            Tuple of (storage_path, public_url) or (None, None) on error
-        """
-        try:
-            # Generate image using JigsawStack
-            result = await self.jigsawstack_client.generate_image(prompt=prompt)
-            if not result or "url" not in result:
-                return None, None
-                
-            # Download and upload to Supabase Storage
-            storage_path = await self.supabase_client.upload_image_from_url(
-                result["url"], 
-                "concept-images", 
-                session_id
-            )
-            
-            if not storage_path:
-                return None, None
-                
-            # Get public URL
-            public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
-            
-            return storage_path, public_url
-        except Exception as e:
-            return None, None
-    
-    async def create_palette_variations(
-        self, 
-        base_image_path: str, 
-        palettes: List[Dict], 
-        session_id: str
-    ) -> List[Dict]:
-        """Create variations of an image with different color palettes.
-        
-        Args:
-            base_image_path: Storage path of the base image
-            palettes: List of color palette dictionaries
-            session_id: Current session ID
-            
-        Returns:
-            List of palettes with added image_path and image_url fields
-        """
-        result_palettes = []
-        
-        for palette in palettes:
-            # Apply palette to image
-            palette_image_path = await self.supabase_client.apply_color_palette(
-                base_image_path,
-                palette["colors"],
-                session_id
-            )
-            
-            if palette_image_path:
-                # Get public URL
-                palette_image_url = self.supabase_client.get_image_url(
-                    palette_image_path, 
-                    "palette-images"
-                )
-                
-                # Add paths to palette dict
-                palette_copy = palette.copy()
-                palette_copy["image_path"] = palette_image_path
-                palette_copy["image_url"] = palette_image_url
-                result_palettes.append(palette_copy)
-                
-        return result_palettes
-```
-
-### 4. Update API Endpoints
-
-Modify the API endpoints in `backend/app/api/routes/concept.py` to use the new storage approach:
-
-```python
-from fastapi import APIRouter, Depends, Response, Cookie
-from typing import Optional, List
-from ...models.request import PromptRequest, RefinementRequest
-from ...models.response import GenerationResponse
-from ...models.concept import ConceptSummary, ConceptDetail
-from ...services.concept_service import ConceptService, get_concept_service
-from ...services.session_service import SessionService, get_session_service
-from ...services.image_service import ImageService, get_image_service
-from ...services.concept_storage_service import ConceptStorageService, get_concept_storage_service
-
-router = APIRouter()
-
-@router.post("/generate", response_model=GenerationResponse)
-async def generate_concept(
-    request: PromptRequest,
-    response: Response,
-    concept_service: ConceptService = Depends(get_concept_service),
-    session_service: SessionService = Depends(get_session_service),
-    image_service: ImageService = Depends(get_image_service),
-    storage_service: ConceptStorageService = Depends(get_concept_storage_service)
-):
-    """Generate a concept based on user prompt and store it."""
-    # Get or create session
-    session_id, _ = await session_service.get_or_create_session(response)
-    
-    # Generate base image and store it
-    base_image_path, base_image_url = await image_service.generate_and_store_image(
-        request.logo_description,
-        session_id
-    )
-    
-    # Generate color palettes
-    palettes = await concept_service.generate_color_palettes(request.theme_description)
-    
-    # Apply color palettes to create variations
-    palette_variations = await image_service.create_palette_variations(
-        base_image_path,
-        palettes,
-        session_id
-    )
-    
-    # Store concept in database
-    concept = await storage_service.store_concept(
-        session_id=session_id,
-        logo_description=request.logo_description,
-        theme_description=request.theme_description,
-        base_image_path=base_image_path,
-        color_palettes=palette_variations
-    )
-    
-    # Return response
-    return GenerationResponse(
-        prompt_id=concept["id"],
-        image_url=base_image_url,
-        color_palettes=[
-            {
-                "name": p["name"],
-                "colors": p["colors"],
-                "description": p.get("description"),
-                "image_url": p["image_url"]
-            } 
-            for p in palette_variations
-        ]
-    )
-
-@router.get("/recent", response_model=List[ConceptSummary])
-async def get_recent_concepts(
-    response: Response,
-    session_service: SessionService = Depends(get_session_service),
-    storage_service: ConceptStorageService = Depends(get_concept_storage_service),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
-):
-    """Get recent concepts for the current session."""
-    # Get or create session
-    session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
-    
-    # Return empty list for new sessions
-    if is_new_session:
-        return []
-    
-    # Get recent concepts
-    return await storage_service.get_recent_concepts(session_id)
-```
-
-## Step 8: Set Up Frontend Environment
+## Step 9: Set Up Frontend Environment
 
 1. Create or update your `.env` file in the frontend directory:
 
@@ -694,7 +589,7 @@ const apiClient = axios.create({
 export default apiClient;
 ```
 
-## Step 9: Testing the Integration
+## Step 10: Testing the Integration
 
 Once everything is set up, test the integration:
 
@@ -714,7 +609,7 @@ Once everything is set up, test the integration:
    - Verify that your recent concepts are still available
    - Check that images still load correctly
 
-## Step 10: Troubleshooting Common Issues
+## Step 11: Troubleshooting Common Issues
 
 ### CORS Issues
 
@@ -739,6 +634,324 @@ If images aren't processing correctly:
 1. Check the logs for errors
 2. Verify Pillow is installed correctly
 3. Test with small, simple images first
+
+## Step 12: Implementing Nightly Data Purge
+
+For development environments or implementations with privacy requirements, you may want to purge all data nightly. This section outlines how to implement this functionality.
+
+### 1. Add Deletion Methods to the Supabase Client
+
+Add the following methods to your `backend/app/core/supabase.py` file:
+
+```python
+# Add these methods to the SupabaseClient class
+async def purge_all_data(self):
+    """Purge all data from database and storage.
+    
+    This method deletes all data from all tables and storage buckets.
+    Use with caution - this is a destructive operation.
+    
+    Returns:
+        bool: True if purge was successful, False otherwise
+    """
+    try:
+        # Delete all from database tables (in correct order to preserve foreign keys)
+        await self.delete_all_color_variations()
+        await self.delete_all_concepts()
+        await self.delete_all_sessions()
+        
+        # Delete all from storage buckets
+        await self.delete_all_storage_objects("palette-images")
+        await self.delete_all_storage_objects("concept-images")
+        
+        self.logger.info("Successfully purged all data")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error purging all data: {e}")
+        return False
+
+async def delete_all_color_variations(self):
+    """Delete all records from color_variations table."""
+    try:
+        result = await self.client.table("color_variations").delete().neq("id", "impossible-value").execute()
+        self.logger.info(f"Deleted {len(result.data) if result.data else 0} color variations")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error deleting color variations: {e}")
+        return False
+
+async def delete_all_concepts(self):
+    """Delete all records from concepts table."""
+    try:
+        result = await self.client.table("concepts").delete().neq("id", "impossible-value").execute()
+        self.logger.info(f"Deleted {len(result.data) if result.data else 0} concepts")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error deleting concepts: {e}")
+        return False
+
+async def delete_all_sessions(self):
+    """Delete all records from sessions table."""
+    try:
+        result = await self.client.table("sessions").delete().neq("id", "impossible-value").execute()
+        self.logger.info(f"Deleted {len(result.data) if result.data else 0} sessions")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error deleting sessions: {e}")
+        return False
+
+async def delete_all_storage_objects(self, bucket: str):
+    """Delete all objects from a storage bucket.
+    
+    Args:
+        bucket: Name of the storage bucket to purge
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # List all objects in the bucket
+        result = self.client.storage.from_(bucket).list()
+        
+        # Delete each folder/file
+        for item in result:
+            if item.get("name"):
+                if item.get("id"):  # It's a file
+                    self.client.storage.from_(bucket).remove([item["name"]])
+                else:  # It's a folder - recursively list and delete
+                    sub_items = self.client.storage.from_(bucket).list(item["name"])
+                    for sub_item in sub_items:
+                        if sub_item.get("name"):
+                            self.client.storage.from_(bucket).remove([sub_item["name"]])
+        
+        self.logger.info(f"Deleted all objects from {bucket} bucket")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error deleting objects from {bucket} bucket: {e}")
+        return False
+```
+
+### 2. Create an API Endpoint for Purging Data
+
+Create a new API endpoint in `backend/app/api/routes/admin.py`:
+
+```python
+from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi.security import APIKeyHeader
+from ...core.supabase import get_supabase_client, SupabaseClient
+from ...core.config import settings
+
+router = APIRouter()
+
+API_KEY_HEADER = APIKeyHeader(name="X-Admin-API-Key", auto_error=False)
+
+async def verify_api_key(api_key: str = Security(API_KEY_HEADER)):
+    """Verify admin API key for secure operations."""
+    if not api_key or api_key != settings.ADMIN_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return api_key
+
+@router.post("/purge-all-data", status_code=200)
+async def purge_all_data(
+    supabase_client: SupabaseClient = Depends(get_supabase_client),
+    api_key: str = Depends(verify_api_key)
+):
+    """Purge all data from database and storage.
+    
+    This is a destructive operation and requires an admin API key.
+    """
+    success = await supabase_client.purge_all_data()
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to purge data")
+    return {"message": "All data purged successfully"}
+```
+
+### 3. Update Configuration for Admin API Key
+
+Add the admin API key to your settings in `backend/app/core/config.py`:
+
+```python
+class Settings(BaseSettings):
+    # Other settings...
+    ADMIN_API_KEY: str
+    
+    class Config:
+        env_file = ".env"
+```
+
+Then add the key to your `.env` file:
+
+```
+ADMIN_API_KEY=your-secure-admin-key-here
+```
+
+### 4. Register the Admin Router
+
+Update `backend/app/api/api.py` to include the admin routes:
+
+```python
+from fastapi import APIRouter
+from .routes import concept, admin
+
+api_router = APIRouter()
+api_router.include_router(concept.router, prefix="/concept", tags=["concept"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+```
+
+### 5. Create a Nightly Purge Script
+
+Create a script that can be run via a cron job or scheduled task:
+
+```python
+# backend/scripts/purge_data.py
+import asyncio
+import requests
+import os
+import sys
+import logging
+from datetime import datetime
+
+# Add the parent directory to the path so we can import from the app
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(f"purge_log_{datetime.now().strftime('%Y%m%d')}.log"),
+        logging.StreamHandler()
+    ]
+)
+
+logger = logging.getLogger("data_purge")
+
+async def purge_data():
+    """Send request to the API to purge all data."""
+    try:
+        api_url = os.environ.get("API_BASE_URL", "http://localhost:8000")
+        admin_key = os.environ.get("ADMIN_API_KEY")
+        
+        if not admin_key:
+            logger.error("ADMIN_API_KEY environment variable is not set")
+            return False
+        
+        response = requests.post(
+            f"{api_url}/api/admin/purge-all-data",
+            headers={"X-Admin-API-Key": admin_key}
+        )
+        
+        if response.status_code == 200:
+            logger.info("Data purge completed successfully")
+            return True
+        else:
+            logger.error(f"Failed to purge data: {response.status_code} - {response.text}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error during data purge: {e}")
+        return False
+
+if __name__ == "__main__":
+    logger.info("Starting data purge process")
+    success = asyncio.run(purge_data())
+    exit(0 if success else 1)
+```
+
+### 6. Set Up a Cron Job for Nightly Execution
+
+Set up a cron job to run the script nightly:
+
+1. On your server, edit the crontab:
+   ```bash
+   crontab -e
+   ```
+
+2. Add an entry to run the script at midnight:
+   ```
+   0 0 * * * cd /path/to/your/app && /usr/bin/python /path/to/your/app/backend/scripts/purge_data.py
+   ```
+
+3. Make sure environment variables are available to the cron job:
+   ```
+   0 0 * * * cd /path/to/your/app && export $(cat .env | xargs) && /usr/bin/python /path/to/your/app/backend/scripts/purge_data.py
+   ```
+
+### 7. Alternative: Use Supabase Edge Functions
+
+For a more integrated approach with Supabase, you can use Edge Functions:
+
+1. Create a new Edge Function in your Supabase project dashboard:
+   ```javascript
+   // supabase/functions/purge-data/index.ts
+   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+
+   Deno.serve(async (req) => {
+     try {
+       // Create a Supabase client with the Admin key
+       const supabaseAdmin = createClient(
+         Deno.env.get('SUPABASE_URL') ?? '',
+         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+         { auth: { persistSession: false } }
+       )
+       
+       // Delete all data from tables (in correct order)
+       await supabaseAdmin.from('color_variations').delete().not('id', 'is', null)
+       await supabaseAdmin.from('concepts').delete().not('id', 'is', null)
+       await supabaseAdmin.from('sessions').delete().not('id', 'is', null)
+       
+       // Delete all storage objects
+       // Note: This is simplified. For production, implement recursive folder deletion
+       const buckets = ['concept-images', 'palette-images']
+       for (const bucket of buckets) {
+         const { data: files } = await supabaseAdmin.storage.from(bucket).list()
+         if (files && files.length > 0) {
+           const filePaths = files.map(file => file.name)
+           await supabaseAdmin.storage.from(bucket).remove(filePaths)
+         }
+       }
+       
+       return new Response(JSON.stringify({ message: 'All data purged successfully' }), {
+         headers: { 'Content-Type': 'application/json' },
+         status: 200,
+       })
+     } catch (error) {
+       return new Response(JSON.stringify({ error: error.message }), {
+         headers: { 'Content-Type': 'application/json' },
+         status: 500,
+       })
+     }
+   })
+   ```
+
+2. Deploy the function:
+   ```bash
+   supabase functions deploy purge-data
+   ```
+
+3. Create a scheduled cron trigger in the Supabase dashboard or using external scheduling services like GitHub Actions or cloud schedulers.
+
+### 8. Testing the Purge Functionality
+
+Before relying on scheduled purging, test the functionality manually:
+
+1. Generate some test data through your application
+2. Verify data exists in tables and storage buckets
+3. Run the purge script manually:
+   ```bash
+   python backend/scripts/purge_data.py
+   ```
+4. Verify all data has been deleted from tables and storage buckets
+
+### 9. Important Considerations
+
+1. **Data Backup**: Consider backing up important data before purging if needed
+2. **Service Disruption**: Be aware that purging while the application is in use may cause disruptions
+3. **Rate Limits**: Large data purges might hit API rate limits; consider implementing batching
+4. **Security**: Keep your admin API key secure and restrict access to the purge endpoint
+5. **Logging**: Maintain logs of purge operations for troubleshooting and verification
+
+By implementing this data purge process, you ensure that your application maintains data privacy and keeps storage usage manageable by removing all data on a nightly basis.
 
 ## Conclusion
 

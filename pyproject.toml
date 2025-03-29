@@ -20,6 +20,8 @@ dependencies = [
     "python-multipart>=0.0.6",
     "pydantic-settings>=2.8.1",
     "jigsawstack>=0.1.31",
+    "supabase>=1.0.3",
+    "pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]

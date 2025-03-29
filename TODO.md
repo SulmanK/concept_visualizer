@@ -190,18 +190,20 @@
 - [ ] Create API documentation with Swagger UI
 
 ## Phase 2: Supabase Integration and Recent Concepts Feature
-- [ ] Set up Supabase project
-  - [ ] Create Supabase project for development
-  - [ ] Configure database access policies
-  - [ ] Create database schema (sessions, concepts, color_variations)
-  - [ ] Set up indexes for query optimization
-  - [ ] Configure storage buckets for images
-    - [ ] Create `concept-images` bucket for base images
-    - [ ] Create `palette-images` bucket for color variations
-    - [ ] Set up access policies for buckets
-- [ ] Backend Supabase integration
-  - [ ] Install Supabase Python client
-  - [ ] Install Pillow for image processing
+
+- [x] Set up Supabase project
+  - [x] Create Supabase project for development
+  - [x] Configure database access policies
+  - [x] Create database schema (sessions, concepts, color_variations)
+  - [x] Set up indexes for query optimization
+  - [x] Configure storage buckets for images
+    - [x] Create `concept-images` bucket for base images
+    - [x] Create `palette-images` bucket for color variations
+    - [x] Set up access policies for buckets
+- [x] Backend Supabase integration preparation
+  - [x] Install Supabase Python client
+  - [x] Install Pillow for image processing
+  - [x] Add dependencies to pyproject.toml
   - [ ] Implement SupabaseClient class
   - [ ] Create environment configuration for Supabase credentials
   - [ ] Implement SessionService for cookie-based session management

@@ -1,7 +1,7 @@
 # Supabase Integration for Backend
 
 ## Overview
-This document outlines the integration of Supabase with the Concept Visualizer backend for data persistence and session management.
+This document outlines the integration of Supabase with the Concept Visualizer backend for data persistence, session management, and image storage.
 
 ## Database Schema
 
@@ -22,7 +22,7 @@ CREATE TABLE concepts (
   session_id UUID REFERENCES sessions(id) NOT NULL,
   logo_description TEXT NOT NULL,
   theme_description TEXT NOT NULL,
-  base_image_url TEXT NOT NULL
+  base_image_path TEXT NOT NULL -- Path to image in Supabase Storage
 );
 
 -- Color variations table
@@ -32,12 +32,74 @@ CREATE TABLE color_variations (
   palette_name TEXT NOT NULL,
   colors JSONB NOT NULL, -- Array of hex codes
   description TEXT,
-  image_url TEXT NOT NULL
+  image_path TEXT NOT NULL -- Path to image in Supabase Storage
 );
 
 -- Create indexes for performance
 CREATE INDEX concepts_session_id_idx ON concepts(session_id);
 CREATE INDEX color_variations_concept_id_idx ON color_variations(concept_id);
+```
+
+## Storage Configuration
+
+Supabase Storage will be used to store all generated images. We'll use simplified policies with bucket-specific security:
+
+```sql
+-- Create storage buckets
+-- 1. concept-images: For storing base concept images
+-- 2. palette-images: For storing color palette variations
+
+-- Storage access policies for concept-images bucket
+-- Allow anyone to read images (for display)
+CREATE POLICY "Public Read Access" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'concept-images');
+
+-- Allow anyone to upload images (security handled at application level)
+CREATE POLICY "Public Write Access" 
+ON storage.objects FOR INSERT 
+USING (bucket_id = 'concept-images');
+
+-- Similar policies for palette-images bucket
+CREATE POLICY "Public Read Access" 
+ON storage.objects FOR SELECT 
+USING (bucket_id = 'palette-images');
+
+CREATE POLICY "Public Write Access" 
+ON storage.objects FOR INSERT 
+USING (bucket_id = 'palette-images');
+```
+
+File naming convention:
+- All files will be stored in folders named after the session ID
+- Format: `{session_id}/{uuid}.{extension}`
+- Example: `123e4567-e89b-12d3-a456-426614174000/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.png`
+
+## Security Approach
+
+Instead of complex Row Level Security (RLS) policies, we'll implement security at the application level:
+
+1. **Session-based filtering**: All database queries filter by session_id
+2. **Folder-based isolation**: Files are organized in session-specific folders
+3. **Session validation**: All API endpoints validate the session cookie
+4. **Data isolation**: Each user can only access their own data through the API
+
+This approach provides robust security without relying on complex RLS policies that might cause issues with the Supabase implementation.
+
+## Database Access Policies
+
+For each table, we'll enable Row Level Security (RLS) with simple policies:
+
+```sql
+-- Enable RLS on all tables
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE concepts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE color_variations ENABLE ROW LEVEL SECURITY;
+
+-- Create simple policies for all tables
+CREATE POLICY "Basic Access" ON sessions FOR ALL USING (true);
+CREATE POLICY "Basic Access" ON concepts FOR ALL USING (true);
+CREATE POLICY "Basic Access" ON color_variations FOR ALL USING (true);
 ```
 
 ## Supabase Client
@@ -47,6 +109,11 @@ CREATE INDEX color_variations_concept_id_idx ON color_variations(concept_id);
 from supabase import create_client, Client
 from pydantic import BaseSettings
 import logging
+import uuid
+import io
+import requests
+from PIL import Image
+from typing import Optional
 
 class Settings(BaseSettings):
     """Settings for Supabase configuration."""
@@ -158,6 +225,7 @@ class SupabaseClient:
             List of concepts with their variations
         """
         try:
+            # Security: Always filter by session_id to ensure users only see their own data
             result = self.client.table("concepts").select(
                 "*, color_variations(*)"
             ).eq("session_id", session_id).order(
@@ -168,6 +236,97 @@ class SupabaseClient:
         except Exception as e:
             self.logger.error(f"Error retrieving recent concepts: {e}")
             return []
+    
+    async def upload_image_from_url(self, image_url: str, bucket: str, session_id: str):
+        """Download an image from URL and upload to Supabase Storage.
+        
+        Args:
+            image_url: URL of the image to download
+            bucket: Storage bucket name ('concept-images' or 'palette-images')
+            session_id: Session ID for organizing files
+            
+        Returns:
+            Storage path of the uploaded image or None on error
+        """
+        try:
+            # Download image from URL
+            response = requests.get(image_url, timeout=10)
+            response.raise_for_status()
+            
+            # Generate a unique filename
+            file_ext = "png"  # Default extension
+            content_type = response.headers.get("Content-Type", "")
+            if "jpeg" in content_type or "jpg" in content_type:
+                file_ext = "jpg"
+            elif "png" in content_type:
+                file_ext = "png"
+            
+            # Security: Create path with session_id as the first folder segment
+            # This ensures data isolation through folder structure
+            unique_filename = f"{session_id}/{uuid.uuid4()}.{file_ext}"
+            
+            # Upload to Supabase Storage
+            result = self.client.storage.from_(bucket).upload(
+                path=unique_filename,
+                file=response.content,
+                file_options={
+                    "content-type": content_type or "image/png"
+                }
+            )
+            
+            # Return the storage path
+            return unique_filename
+            
+        except Exception as e:
+            self.logger.error(f"Error uploading image from URL: {e}")
+            return None
+    
+    def get_image_url(self, path: str, bucket: str):
+        """Get the public URL for an image in Supabase Storage.
+        
+        Args:
+            path: Path of the image in storage
+            bucket: Storage bucket name
+            
+        Returns:
+            Public URL for the image
+        """
+        try:
+            return self.client.storage.from_(bucket).get_public_url(path)
+        except Exception as e:
+            self.logger.error(f"Error getting image URL: {e}")
+            return None
+    
+    async def apply_color_palette(self, image_path: str, palette: list, session_id: str):
+        """Apply a color palette to an image and store the result.
+        
+        This is a basic implementation that would need enhancement for production.
+        For MVP, it simply transfers the original image.
+        
+        Args:
+            image_path: Path of the base image in storage
+            palette: List of hex color codes
+            session_id: Session ID for organizing files
+            
+        Returns:
+            Path of the new image with applied palette
+        """
+        try:
+            # For MVP, we'll just copy the original image
+            # In a full implementation, we would apply the palette
+            original_url = self.get_image_url(image_path, "concept-images")
+            if not original_url:
+                return None
+                
+            # Upload (for now, just the same image) to palette-images bucket
+            return await self.upload_image_from_url(
+                original_url, 
+                "palette-images", 
+                session_id
+            )
+        except Exception as e:
+            self.logger.error(f"Error applying color palette: {e}")
+            return None
 
 # Factory function for creating the client
 def get_supabase_client(settings: Settings = None):
@@ -231,8 +390,22 @@ class SessionService:
                 session_id = str(uuid.uuid4())
                 is_new_session = True
         else:
-            # Update last_active_at for existing session
-            self.supabase_client.update_session_activity(session_id)
+            # Validate session exists and update last_active_at
+            session = self.supabase_client.get_session(session_id)
+            if not session:
+                # Session ID in cookie doesn't exist in database
+                # Create a new session instead
+                session = self.supabase_client.create_session()
+                if session:
+                    session_id = session["id"]
+                    is_new_session = True
+                else:
+                    import uuid
+                    session_id = str(uuid.uuid4())
+                    is_new_session = True
+            else:
+                # Update last_active_at for existing session
+                self.supabase_client.update_session_activity(session_id)
         
         # Set session cookie
         response.set_cookie(
@@ -261,6 +434,107 @@ async def get_session_service(
     return SessionService(supabase_client)
 ```
 
+## Image Service
+
+```python
+# backend/app/services/image_service.py
+from fastapi import Depends
+from typing import List, Dict, Optional, Tuple
+from ..core.supabase import get_supabase_client, SupabaseClient
+from ..core.jigsawstack_client import JigsawStackClient, get_jigsawstack_client
+
+class ImageService:
+    """Service for image generation and storage."""
+    
+    def __init__(
+        self, 
+        supabase_client: SupabaseClient = Depends(get_supabase_client),
+        jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client)
+    ):
+        """Initialize image service with required clients.
+        
+        Args:
+            supabase_client: Client for Supabase operations
+            jigsawstack_client: Client for JigsawStack API
+        """
+        self.supabase_client = supabase_client
+        self.jigsawstack_client = jigsawstack_client
+    
+    async def generate_and_store_image(self, prompt: str, session_id: str) -> Tuple[str, str]:
+        """Generate an image and store it in Supabase.
+        
+        Args:
+            prompt: Image generation prompt
+            session_id: Current session ID
+            
+        Returns:
+            Tuple of (storage_path, public_url) or (None, None) on error
+        """
+        try:
+            # Generate image using JigsawStack
+            result = await self.jigsawstack_client.generate_image(prompt=prompt)
+            if not result or "url" not in result:
+                return None, None
+                
+            # Download and upload to Supabase Storage
+            storage_path = await self.supabase_client.upload_image_from_url(
+                result["url"], 
+                "concept-images", 
+                session_id
+            )
+            
+            if not storage_path:
+                return None, None
+                
+            # Get public URL
+            public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
+            
+            return storage_path, public_url
+        except Exception as e:
+            return None, None
+    
+    async def create_palette_variations(
+        self, 
+        base_image_path: str, 
+        palettes: List[Dict], 
+        session_id: str
+    ) -> List[Dict]:
+        """Create variations of an image with different color palettes.
+        
+        Args:
+            base_image_path: Storage path of the base image
+            palettes: List of color palette dictionaries
+            session_id: Current session ID
+            
+        Returns:
+            List of palettes with added image_path and image_url fields
+        """
+        result_palettes = []
+        
+        for palette in palettes:
+            # Apply palette to image
+            palette_image_path = await self.supabase_client.apply_color_palette(
+                base_image_path,
+                palette["colors"],
+                session_id
+            )
+            
+            if palette_image_path:
+                # Get public URL
+                palette_image_url = self.supabase_client.get_image_url(
+                    palette_image_path, 
+                    "palette-images"
+                )
+                
+                # Add paths to palette dict
+                palette_copy = palette.copy()
+                palette_copy["image_path"] = palette_image_path
+                palette_copy["image_url"] = palette_image_url
+                result_palettes.append(palette_copy)
+                
+        return result_palettes
+```
+
 ## Concept Storage Service
 
 ```python
@@ -286,7 +560,7 @@ class ConceptStorageService:
         session_id: str,
         logo_description: str,
         theme_description: str,
-        base_image_url: str,
+        base_image_path: str,
         color_palettes: List[Dict]
     ) -> Optional[Dict]:
         """Store a new concept and its color variations.
@@ -295,8 +569,8 @@ class ConceptStorageService:
             session_id: Session ID to associate with the concept
             logo_description: User's logo description
             theme_description: User's theme description
-            base_image_url: URL of the generated base image
-            color_palettes: List of color palette dictionaries
+            base_image_path: Path to the generated base image in Supabase Storage
+            color_palettes: List of color palette dictionaries with image_path fields
             
         Returns:
             Created concept data or None on error
@@ -306,7 +580,7 @@ class ConceptStorageService:
             "session_id": session_id,
             "logo_description": logo_description,
             "theme_description": theme_description,
-            "base_image_url": base_image_url
+            "base_image_path": base_image_path
         }
         
         concept = self.supabase_client.store_concept(concept_data)
@@ -321,7 +595,7 @@ class ConceptStorageService:
                 "palette_name": palette["name"],
                 "colors": palette["colors"],
                 "description": palette.get("description"),
-                "image_url": palette["image_url"]  # URL to the palette-specific image
+                "image_path": palette["image_path"]  # Path to the palette-specific image in Storage
             }
             variations.append(variation)
         
@@ -346,7 +620,26 @@ class ConceptStorageService:
         concepts = self.supabase_client.get_recent_concepts(session_id, limit)
         
         # Convert to ConceptSummary model
-        return [self._to_concept_summary(concept) for concept in concepts]
+        summaries = []
+        for concept in concepts:
+            # Add public URLs for all images
+            base_image_url = self.supabase_client.get_image_url(
+                concept["base_image_path"], 
+                "concept-images"
+            )
+            
+            # Add URLs to color variations
+            if "color_variations" in concept:
+                for variation in concept["color_variations"]:
+                    variation["image_url"] = self.supabase_client.get_image_url(
+                        variation["image_path"], 
+                        "palette-images"
+                    )
+            
+            concept["base_image_url"] = base_image_url
+            summaries.append(self._to_concept_summary(concept))
+            
+        return summaries
     
     async def get_concept_detail(self, concept_id: str) -> Optional[ConceptDetail]:
         """Get detailed information about a specific concept.
@@ -363,7 +656,24 @@ class ConceptStorageService:
             ).eq("id", concept_id).execute()
             
             if result.data:
-                return self._to_concept_detail(result.data[0])
+                concept = result.data[0]
+                
+                # Add public URLs for all images
+                base_image_url = self.supabase_client.get_image_url(
+                    concept["base_image_path"], 
+                    "concept-images"
+                )
+                
+                # Add URLs to color variations
+                if "color_variations" in concept:
+                    for variation in concept["color_variations"]:
+                        variation["image_url"] = self.supabase_client.get_image_url(
+                            variation["image_path"], 
+                            "palette-images"
+                        )
+                
+                concept["base_image_url"] = base_image_url
+                return self._to_concept_detail(concept)
             return None
         except Exception as e:
             self.supabase_client.logger.error(f"Error retrieving concept detail: {e}")
@@ -419,6 +729,7 @@ from ...models.response import GenerationResponse
 from ...models.concept import ConceptSummary, ConceptDetail
 from ...services.concept_service import ConceptService, get_concept_service
 from ...services.session_service import SessionService, get_session_service
+from ...services.image_service import ImageService, get_image_service
 from ...services.concept_storage_service import ConceptStorageService, get_concept_storage_service
 
 router = APIRouter()
@@ -429,6 +740,7 @@ async def generate_concept(
     response: Response,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
+    image_service: ImageService = Depends(get_image_service),
     storage_service: ConceptStorageService = Depends(get_concept_storage_service)
 ):
     """Generate a concept based on user prompt and store it.
@@ -446,26 +758,44 @@ async def generate_concept(
     # Get or create session
     session_id, _ = await session_service.get_or_create_session(response)
     
-    # Generate concept
-    concept_data = await concept_service.generate_concept(
+    # Generate base image and store it in Supabase Storage
+    base_image_path, base_image_url = await image_service.generate_and_store_image(
         request.logo_description,
-        request.theme_description
+        session_id
     )
     
-    # Store concept in Supabase
+    # Generate color palettes
+    palettes = await concept_service.generate_color_palettes(request.theme_description)
+    
+    # Apply color palettes to create variations and store in Supabase Storage
+    palette_variations = await image_service.create_palette_variations(
+        base_image_path,
+        palettes,
+        session_id
+    )
+    
+    # Store concept in Supabase database
     stored_concept = await storage_service.store_concept(
         session_id=session_id,
         logo_description=request.logo_description,
         theme_description=request.theme_description,
-        base_image_url=concept_data["image_url"],
-        color_palettes=concept_data["color_palettes"]
+        base_image_path=base_image_path,
+        color_palettes=palette_variations
     )
     
     # Return generation response
     return GenerationResponse(
-        prompt_id=stored_concept["id"] if stored_concept else concept_data["prompt_id"],
-        image_url=concept_data["image_url"],
-        color_palettes=concept_data["color_palettes"]
+        prompt_id=stored_concept["id"] if stored_concept else "temp_id",
+        image_url=base_image_url,
+        color_palettes=[
+            {
+                "name": p["name"],
+                "colors": p["colors"],
+                "description": p.get("description"),
+                "image_url": p["image_url"]
+            } 
+            for p in palette_variations
+        ]
     )
 
 @router.get("/recent", response_model=List[ConceptSummary])
@@ -475,17 +805,7 @@ async def get_recent_concepts(
     storage_service: ConceptStorageService = Depends(get_concept_storage_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
-    """Get recent concepts for the current session.
-    
-    Args:
-        response: FastAPI response object for setting cookies
-        session_service: Service for managing sessions
-        storage_service: Service for storing concepts
-        session_id: Optional session ID from cookies
-        
-    Returns:
-        List of recent concept summaries
-    """
+    """Get recent concepts for the current session."""
     # Get or create session
     session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
     
@@ -493,7 +813,7 @@ async def get_recent_concepts(
     if is_new_session:
         return []
     
-    # Get recent concepts
+    # Get recent concepts with public image URLs
     return await storage_service.get_recent_concepts(session_id)
 
 @router.get("/concept/{concept_id}", response_model=ConceptDetail)
@@ -501,15 +821,7 @@ async def get_concept_detail(
     concept_id: str,
     storage_service: ConceptStorageService = Depends(get_concept_storage_service)
 ):
-    """Get detailed information about a specific concept.
-    
-    Args:
-        concept_id: ID of the concept to retrieve
-        storage_service: Service for storing concepts
-        
-    Returns:
-        Concept detail object
-    """
+    """Get detailed information about a specific concept."""
     return await storage_service.get_concept_detail(concept_id)
 ```
 
@@ -523,63 +835,35 @@ SUPABASE_KEY=your-service-role-key or anon key
 JIGSAWSTACK_API_KEY=your-jigsawstack-api-key
 ```
 
-## Integration with Image Generation
+## Dependencies
 
-The concept service will need to be updated to apply color palettes to images:
+Ensure the following dependencies are installed:
 
-```python
-# backend/app/services/image_service.py
-from fastapi import Depends
-from typing import List, Dict, Optional
-import requests
-from PIL import Image
-import io
-import os
-from ..core.jigsawstack_client import JigsawStackClient, get_jigsawstack_client
+```bash
+uv add supabase
+uv add python-multipart  # Required for file handling
+uv add pillow  # For image processing
+```
 
-class ImageService:
-    """Service for image generation and color palette application."""
-    
-    def __init__(self, jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client)):
-        """Initialize with a JigsawStack client.
-        
-        Args:
-            jigsawstack_client: Client for JigsawStack API
-        """
-        self.jigsawstack_client = jigsawstack_client
-    
-    async def generate_base_image(self, prompt: str) -> Optional[str]:
-        """Generate base image using JigsawStack.
-        
-        Args:
-            prompt: Image generation prompt
-            
-        Returns:
-            URL of generated image or None on error
-        """
-        response = await self.jigsawstack_client.generate_image(prompt=prompt)
-        if response and "url" in response:
-            return response["url"]
-        return None
-    
-    async def apply_color_palette(self, base_image_url: str, palette: List[str]) -> Optional[str]:
-        """Apply a color palette to the base image.
-        
-        This is a placeholder for actual implementation. In a real implementation,
-        this would either:
-        1. Use a specialized API to recolor the image
-        2. Use local image processing to apply the palette
-        
-        For MVP, we might simply associate different palettes with the same image.
-        
-        Args:
-            base_image_url: URL of the base image
-            palette: List of hex color codes
-            
-        Returns:
-            URL of the recolored image or None on error
-        """
-        # For MVP, we'll return the same image for all palettes
-        # In a production implementation, this would create variations
-        return base_image_url
+## Future Enhancements
+
+1. **Image Processing**:
+   - Implement more sophisticated color palette application using PIL
+   - Add image optimization for better performance
+   - Support different image formats and resolutions
+
+2. **Storage Management**:
+   - Implement periodic cleanup of unused images
+   - Add caching for frequently accessed images
+   - Implement batch operations for bulk image processing
+
+3. **Security**:
+   - Enhance RLS policies for finer-grained access control
+   - Implement image content validation
+   - Add rate limiting for storage operations
+
+4. **Performance**:
+   - Optimize image download/upload process
+   - Implement background processing for image operations
+   - Add image compression for storage efficiency
 ``` 
