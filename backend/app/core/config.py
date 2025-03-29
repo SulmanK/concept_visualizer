@@ -32,6 +32,8 @@ class Settings(BaseSettings):
         CORS_ORIGINS: List of allowed origins for CORS
         JIGSAWSTACK_API_KEY: API key for JigsawStack
         JIGSAWSTACK_API_URL: Base URL for JigsawStack API
+        SUPABASE_URL: URL for Supabase project
+        SUPABASE_KEY: API key (anon or service role) for Supabase
         LOG_LEVEL: Log level for the application
     """
     
@@ -47,6 +49,10 @@ class Settings(BaseSettings):
     # JigsawStack API settings
     JIGSAWSTACK_API_KEY: str = "dummy_key"
     JIGSAWSTACK_API_URL: str = "https://api.jigsawstack.com"
+    
+    # Supabase settings
+    SUPABASE_URL: str = "https://your-project-id.supabase.co"
+    SUPABASE_KEY: str = "your-api-key"
     
     # Logging settings
     LOG_LEVEL: str = "INFO"
@@ -65,4 +71,8 @@ settings = Settings()
 
 # Log the API key for debugging (first 10 chars only)
 api_key_prefix = settings.JIGSAWSTACK_API_KEY[:10]
-logger.info(f"JigsawStack API key prefix: {api_key_prefix}...") 
+logger.info(f"JigsawStack API key prefix: {api_key_prefix}...")
+
+# Log the Supabase URL for debugging
+supabase_url = settings.SUPABASE_URL
+logger.info(f"Supabase URL: {supabase_url}") 

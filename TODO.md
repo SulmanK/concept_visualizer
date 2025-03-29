@@ -204,15 +204,18 @@
   - [x] Install Supabase Python client
   - [x] Install Pillow for image processing
   - [x] Add dependencies to pyproject.toml
-  - [ ] Implement SupabaseClient class
-  - [ ] Create environment configuration for Supabase credentials
-  - [ ] Implement SessionService for cookie-based session management
-  - [ ] Implement ImageService for image storage and retrieval
-    - [ ] Implement function to download images from JigsawStack
-    - [ ] Implement function to upload images to Supabase Storage
-    - [ ] Implement function to apply color palettes to images
-  - [ ] Implement ConceptStorageService for storing/retrieving concepts
-  - [ ] Update API endpoints to use Supabase services
+  - [x] Implement SupabaseClient class
+  - [x] Create environment configuration for Supabase credentials
+  - [x] Implement SessionService for cookie-based session management
+  - [x] Implement ImageService for image storage and retrieval
+    - [x] Implement function to download images from JigsawStack
+    - [x] Implement function to upload images to Supabase Storage
+    - [x] Implement function to apply color palettes to images
+  - [x] Implement ConceptStorageService for storing/retrieving concepts
+  - [x] Update API endpoints to use Supabase services
+    - [x] Update existing concept generation and refinement endpoints
+    - [x] Add new endpoints for retrieving recent concepts
+    - [x] Add endpoint for retrieving concept details
 - [ ] Frontend Supabase integration
   - [ ] Configure API client to support cookie-based authentication
   - [ ] Implement ConceptContext for global state management

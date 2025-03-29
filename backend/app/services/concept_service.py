@@ -9,11 +9,11 @@ import datetime
 import logging
 import uuid
 from functools import lru_cache
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Tuple
 
 from fastapi import Depends
 
-from backend.app.models.response import ColorPalette, GenerationResponse
+from backend.app.models.response import ColorPalette, GenerationResponse, PaletteVariation
 from backend.app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ class ConceptService:
             client: The JigsawStack API client
         """
         self.client = client
+        self.logger = logging.getLogger("concept_service")
 
     async def generate_concept(
         self, logo_description: str, theme_description: str
@@ -76,13 +77,80 @@ class ConceptService:
             
             # Create the response
             return GenerationResponse(
+                prompt_id=str(uuid.uuid4()),
+                logo_description=logo_description,
+                theme_description=theme_description,
                 image_url=image_url,
                 color_palette=palette,
-                generation_id=str(uuid.uuid4()),
                 created_at=datetime.datetime.utcnow().isoformat()
             )
         except Exception as e:
             logger.error(f"Error generating concept: {str(e)}")
+            raise
+
+    async def generate_concept_with_palettes(
+        self, logo_description: str, theme_description: str, num_palettes: int = 3
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Generate a concept with multiple palette variations, each with its own image.
+        
+        Args:
+            logo_description: Description of the logo to generate
+            theme_description: Description of the theme/color scheme
+            num_palettes: Number of palette variations to generate
+            
+        Returns:
+            Tuple of (palettes, variation_images): 
+            - palettes: List of palette dictionaries with name, colors, description
+            - variation_images: List of dictionaries with palette info and image URL
+            
+        Raises:
+            Exception: If there is an error during generation
+        """
+        self.logger.info(f"Generating concept with {num_palettes} palette variations")
+        
+        try:
+            # 1. Generate multiple distinct color palettes
+            palettes = await self.client.generate_multiple_palettes(
+                prompt=theme_description,
+                num_palettes=num_palettes
+            )
+            self.logger.info(f"Generated {len(palettes)} distinct color palettes")
+            
+            # 2. Generate a separate image for each palette
+            variation_images = []
+            
+            for palette in palettes:
+                name = palette["name"]
+                colors = palette["colors"]
+                description = palette["description"]
+                
+                try:
+                    # Generate image with this specific palette
+                    image_url = await self.client.generate_image_with_palette(
+                        logo_prompt=logo_description,
+                        palette=colors,
+                        palette_name=name
+                    )
+                    
+                    # Add the image URL to the palette info
+                    variation = {
+                        "name": name,
+                        "colors": colors,
+                        "description": description,
+                        "image_url": image_url
+                    }
+                    variation_images.append(variation)
+                    
+                    self.logger.info(f"Generated image for palette '{name}' successfully")
+                except Exception as e:
+                    self.logger.error(f"Error generating image for palette '{name}': {e}")
+                    # Continue with other palettes even if one fails
+            
+            return palettes, variation_images
+            
+        except Exception as e:
+            self.logger.error(f"Error in generate_concept_with_palettes: {e}")
             raise
 
     async def refine_concept(
@@ -152,9 +220,11 @@ class ConceptService:
             
             # Create the response
             return GenerationResponse(
+                prompt_id=str(uuid.uuid4()),
+                logo_description=logo_description or "Refined logo",
+                theme_description=theme_description or "Refined theme",
                 image_url=image_url,
                 color_palette=palette,
-                generation_id=str(uuid.uuid4()),
                 created_at=datetime.datetime.utcnow().isoformat(),
                 original_image_url=original_image_url,
                 refinement_prompt=refinement_prompt
@@ -162,6 +232,65 @@ class ConceptService:
         except Exception as e:
             logger.error(f"Error refining concept: {str(e)}")
             raise
+            
+    async def generate_color_palettes(self, theme_description: str, num_palettes: int = 5) -> List[Dict[str, Any]]:
+        """
+        Generate color palettes based on a theme description.
+        
+        Args:
+            theme_description: Description of the theme/color scheme
+            num_palettes: Number of different palettes to generate
+            
+        Returns:
+            List of color palette dictionaries, each with:
+                - name: Name of the palette
+                - colors: List of hex color codes
+                - description: Description of the palette
+        """
+        self.logger.info(f"Generating {num_palettes} color palettes for theme: {theme_description}")
+        
+        palettes = []
+        palette_names = [
+            "Primary Palette",
+            "Secondary Palette",
+            "Accent Palette",
+            "Complementary Palette",
+            "Analogous Palette",
+            "Neutral Palette",
+            "Vibrant Palette",
+            "Muted Palette"
+        ]
+        
+        try:
+            for i in range(min(num_palettes, len(palette_names))):
+                # Generate palette with slightly different prompts for variety
+                palette_type = palette_names[i]
+                prompt = f"{theme_description} - {palette_type}"
+                
+                # Get colors from JigsawStack
+                colors = await self.client.generate_color_palette(
+                    prompt=prompt,
+                    num_colors=5  # Limit to 5 colors per palette
+                )
+                
+                # Create palette object
+                palette = {
+                    "name": palette_type,
+                    "colors": colors,
+                    "description": f"A {palette_type.lower()} inspired by: {theme_description}"
+                }
+                palettes.append(palette)
+                
+            self.logger.info(f"Generated {len(palettes)} color palettes successfully")
+            return palettes
+        except Exception as e:
+            self.logger.error(f"Error generating color palettes: {e}")
+            # Return a default palette in case of error
+            return [{
+                "name": "Default Palette",
+                "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
+                "description": f"Default palette for: {theme_description}"
+            }]
 
 
 @lru_cache()
