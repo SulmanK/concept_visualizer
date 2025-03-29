@@ -13,6 +13,7 @@
 - Generate multiple hex color palette variations based on the theme
 - Provide ability to refine results by adding more details to the original prompt
 - Display results visually in an intuitive interface
+- Store recent concepts for users to review later
 
 ### Non-Functional Requirements
 - Responsive web interface that works on both desktop and mobile
@@ -49,6 +50,20 @@ Will primarily use JigsawStack's Text Generation API for color palette generatio
 Secondary approaches that may complement the primary method:
 - Optional fallback to algorithmic generation for complementary colors
 - User customization of AI-generated palettes
+
+### 4. Database and State Management
+Will use Supabase (PostgreSQL as a service) for storage and state management because:
+- Provides PostgreSQL database with robust relational data capabilities
+- Offers seamless integration with Vercel deployments
+- Provides RESTful and real-time APIs out of the box
+- Includes authentication services for future expansion
+- Has a generous free tier for development and small applications
+
+Key components for database design:
+- Anonymous session tracking via cookies
+- Storage of concepts linked to sessions
+- Storage of color palette variations for each concept
+- Storage of generated images for each color palette
 
 ## Technical Design
 
@@ -150,17 +165,54 @@ interface ApiError {
 - Frontend to Backend API:
   - POST /api/generate - Send prompt and receive generated content
   - POST /api/refine - Send refinement request for existing prompt
+  - GET /api/recent - Get recent concepts for the current session
   
 - Backend to JigsawStack APIs:
   - Image generation endpoint for logo creation
   - Text generation endpoint for color palette generation
   
+- Backend to Supabase:
+  - Tables for sessions, concepts, and color variations
+  - APIs for storing and retrieving concept data
+  
 - Data flow:
   1. User submits prompt via React UI
   2. Backend receives request and calls JigsawStack Image API for logo
   3. Backend calls JigsawStack Text API for color palette generation
-  4. Results combined and returned to frontend for display
-  5. User can refine results via additional prompts
+  4. Backend applies color palettes to create variations of the base image
+  5. Results are stored in Supabase and returned to frontend for display
+  6. User can refine results via additional prompts
+  7. User can view recent concepts from their session
+
+### 4. Supabase Schema
+```sql
+-- Sessions table to track anonymous users
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_active_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Concepts table
+CREATE TABLE concepts (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  session_id UUID REFERENCES sessions(id) NOT NULL,
+  logo_description TEXT NOT NULL,
+  theme_description TEXT NOT NULL,
+  base_image_url TEXT NOT NULL
+);
+
+-- Color variations table
+CREATE TABLE color_variations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  concept_id UUID REFERENCES concepts(id) NOT NULL,
+  palette_name TEXT NOT NULL,
+  colors JSONB NOT NULL, -- Array of hex codes
+  description TEXT,
+  image_url TEXT NOT NULL
+);
+```
 
 ## Implementation Plan
 
@@ -173,10 +225,12 @@ interface ApiError {
    - Expected timeline: 2 weeks
 
 2. Phase 2: Enhancement
+   - Add Supabase integration for data persistence
+   - Add anonymous session management with cookies
+   - Implement "Recent Concepts" feature using stored data
    - Add refinement functionality
    - Implement error handling and fallback mechanisms
    - Enhance UI with better visualization of results
-   - Add result caching mechanism
    - Expected timeline: 1 week
 
 3. Phase 3: Production Readiness
@@ -223,6 +277,7 @@ interface ApiError {
 - Ensure responsive design works on mobile devices
 - Implement keyboard accessibility
 - Enable color palette comparison and selection
+- Display recent concepts for easy reference
 
 ## Future Considerations
 
@@ -236,7 +291,7 @@ interface ApiError {
 
 ### Known Limitations
 - Limited to JigsawStack API capabilities
-- No persistent storage in initial version
+- Anonymous sessions will eventually expire
 - Limited refinement options in first iteration
 - Potential for rate limits or cost constraints with external APIs
 
@@ -251,6 +306,7 @@ interface ApiError {
 - Pydantic
 - Python-dotenv
 - Pillow (for image processing)
+- Supabase Python client
 
 #### Frontend
 - React 19+
@@ -273,6 +329,7 @@ interface ApiError {
 - Rate limiting to prevent abuse
 - CORS configuration to restrict unauthorized access
 - Content moderation for user-generated prompts
+- Secure cookie handling for session management
 
 ## Rollout Strategy
 1. Development phase - local development and testing
@@ -287,4 +344,5 @@ interface ApiError {
 - React documentation
 - FastAPI documentation
 - Vercel deployment guides
-- UV documentation (https://github.com/astral-sh/uv) 
+- UV documentation (https://github.com/astral-sh/uv)
+- Supabase documentation (https://supabase.com/docs) 

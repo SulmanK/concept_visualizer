@@ -4,9 +4,23 @@ Application configuration module.
 This module defines the settings for the Concept Visualizer API.
 """
 
+import logging
 from typing import List
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+# Get the path to the .env file
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = BACKEND_DIR / ".env"
+
+# Log the env file path and check if it exists
+logger.info(f"Looking for .env file at: {ENV_FILE}")
+logger.info(f".env file exists: {ENV_FILE.exists()}")
 
 
 class Settings(BaseSettings):
@@ -39,7 +53,7 @@ class Settings(BaseSettings):
     
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE),
         env_file_encoding="utf-8",
         env_prefix="CONCEPT_",
         case_sensitive=True,
@@ -47,4 +61,8 @@ class Settings(BaseSettings):
 
 
 # Create a settings instance
-settings = Settings() 
+settings = Settings()
+
+# Log the API key for debugging (first 10 chars only)
+api_key_prefix = settings.JIGSAWSTACK_API_KEY[:10]
+logger.info(f"JigsawStack API key prefix: {api_key_prefix}...") 

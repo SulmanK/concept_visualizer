@@ -52,8 +52,8 @@ export function useConceptGeneration() {
       });
 
       const request: PromptRequest = {
-        logoDescription,
-        themeDescription,
+        logo_description: logoDescription,
+        theme_description: themeDescription,
       };
 
       const response = await post<GenerationResponse>('/concepts/generate', request);

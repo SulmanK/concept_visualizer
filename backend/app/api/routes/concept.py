@@ -6,9 +6,9 @@ This module provides endpoints for generating and refining visual concepts.
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.models.request import PromptRequest, RefinementRequest
-from app.models.response import GenerationResponse
-from app.services.concept_service import ConceptService, get_concept_service
+from backend.app.models.request import PromptRequest, RefinementRequest
+from backend.app.models.response import GenerationResponse
+from backend.app.services.concept_service import ConceptService, get_concept_service
 
 router = APIRouter()
 

@@ -125,6 +125,15 @@ export const Footer: React.FC<FooterProps> = ({
             <p style={descriptionStyle}>
               Create and refine visual concepts with AI
             </p>
+            <div style={{ marginTop: '1rem' }}>
+              <a href="https://jigsawstack.com/?ref=powered-by" rel="follow">
+                <img
+                  src="https://jigsawstack.com/badge.svg"
+                  alt="Powered by JigsawStack. The One API for your next big thing."
+                  style={{ height: '60px', maxWidth: '100%' }}
+                />
+              </a>
+            </div>
           </div>
           
           {/* Middle section - Features */}

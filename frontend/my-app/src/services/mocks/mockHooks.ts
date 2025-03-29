@@ -210,11 +210,11 @@ export function useMockConceptRefinement() {
       });
       
       const request: RefinementRequest = {
-        originalImageUrl,
-        refinementPrompt,
-        logoDescription,
-        themeDescription,
-        preserveAspects
+        original_image_url: originalImageUrl,
+        refinement_prompt: refinementPrompt,
+        logo_description: logoDescription,
+        theme_description: themeDescription,
+        preserve_aspects: preserveAspects
       };
       
       const response = await post<GenerationResponse>('/concepts/refine', request);

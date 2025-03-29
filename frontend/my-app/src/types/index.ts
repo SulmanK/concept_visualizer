@@ -30,19 +30,19 @@ export interface GenerationResponse {
  * Request model for concept generation
  */
 export interface PromptRequest {
-  logoDescription: string;
-  themeDescription: string;
+  logo_description: string;
+  theme_description: string;
 }
 
 /**
  * Request model for concept refinement
  */
 export interface RefinementRequest {
-  originalImageUrl: string;
-  logoDescription?: string;
-  themeDescription?: string;
-  refinementPrompt: string;
-  preserveAspects: string[];
+  original_image_url: string;
+  logo_description?: string;
+  theme_description?: string;
+  refinement_prompt: string;
+  preserve_aspects: string[];
 }
 
 /**

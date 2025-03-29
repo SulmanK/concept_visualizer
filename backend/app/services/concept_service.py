@@ -13,9 +13,8 @@ from typing import List, Optional
 
 from fastapi import Depends
 
-from app.core.config import settings
-from app.models.response import ColorPalette, GenerationResponse
-from app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
+from backend.app.models.response import ColorPalette, GenerationResponse
+from backend.app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 
 logger = logging.getLogger(__name__)
 
