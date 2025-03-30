@@ -2,8 +2,9 @@
  * Custom hook for making API requests to the Concept Visualizer backend.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ApiError, ApiResponse } from '../types';
+import { ensureSession } from '../services/sessionManager';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -11,6 +12,7 @@ interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   headers?: Record<string, string>;
   body?: any;
+  withCredentials?: boolean;
 }
 
 /**
@@ -19,6 +21,21 @@ interface RequestOptions {
 export function useApi() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
+  const [sessionInitialized, setSessionInitialized] = useState<boolean>(false);
+  
+  // Ensure session is initialized
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        await ensureSession();
+        setSessionInitialized(true);
+      } catch (error) {
+        console.error('Error initializing session:', error);
+      }
+    };
+    
+    initSession();
+  }, []);
   
   /**
    * Reset the error state
@@ -34,7 +51,12 @@ export function useApi() {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> => {
-    const { method = 'GET', headers = {}, body } = options;
+    const { 
+      method = 'GET', 
+      headers = {}, 
+      body,
+      withCredentials = true  // Default to true for cookie support
+    } = options;
     
     try {
       setLoading(true);
@@ -51,6 +73,7 @@ export function useApi() {
         method,
         headers: requestHeaders,
         body: body ? JSON.stringify(body) : undefined,
+        credentials: withCredentials ? 'include' : 'same-origin', // Include cookies
       };
       
       const response = await fetch(url, requestOptions);
@@ -93,8 +116,12 @@ export function useApi() {
   /**
    * GET request helper
    */
-  const get = useCallback(<T>(endpoint: string, headers?: Record<string, string>) => {
-    return request<T>(endpoint, { method: 'GET', headers });
+  const get = useCallback(<T>(
+    endpoint: string, 
+    headers?: Record<string, string>,
+    withCredentials: boolean = true
+  ) => {
+    return request<T>(endpoint, { method: 'GET', headers, withCredentials });
   }, [request]);
   
   /**
@@ -103,9 +130,10 @@ export function useApi() {
   const post = useCallback(<T>(
     endpoint: string,
     body: any,
-    headers?: Record<string, string>
+    headers?: Record<string, string>,
+    withCredentials: boolean = true
   ) => {
-    return request<T>(endpoint, { method: 'POST', body, headers });
+    return request<T>(endpoint, { method: 'POST', body, headers, withCredentials });
   }, [request]);
   
   return {
@@ -115,5 +143,6 @@ export function useApi() {
     loading,
     error,
     clearError,
+    sessionInitialized,
   };
 } 

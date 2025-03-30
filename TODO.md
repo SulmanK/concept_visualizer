@@ -216,21 +216,21 @@
     - [x] Update existing concept generation and refinement endpoints
     - [x] Add new endpoints for retrieving recent concepts
     - [x] Add endpoint for retrieving concept details
-- [ ] Frontend Supabase integration
-  - [ ] Configure API client to support cookie-based authentication
-  - [ ] Implement ConceptContext for global state management
-  - [ ] Create RecentConcepts component for displaying stored concepts
-  - [ ] Update useConceptGeneration hook to refresh recent concepts
-  - [ ] Create ConceptDetail page for viewing stored concepts
-  - [ ] Add route for concept detail page
+- [x] Frontend Supabase integration
+  - [x] Configure API client to support cookie-based authentication
+  - [x] Implement ConceptContext for global state management
+  - [x] Create RecentConcepts component for displaying stored concepts
+  - [x] Update useConceptGeneration hook to refresh recent concepts
+  - [x] Create ConceptDetail page for viewing stored concepts
+  - [x] Add route for concept detail page
 - [ ] Cross-browser testing for cookie handling
   - [ ] Test session persistence in Chrome, Firefox, Safari
   - [ ] Verify cookie secure flags work correctly
   - [ ] Test session expiration handling
-- [ ] Implement image processing service
+<!-- - [ ] Implement image processing service (not doing this for now)
   - [ ] Research approaches for applying color palettes to images
   - [ ] Implement basic solution for MVP (using same image for all palettes)
-  - [ ] Plan for future enhancements with proper colorization
+  - [ ] Plan for future enhancements with proper colorization -->
 
 ## Phase 3: Enhanced Features and Polish
 - [ ] Add user authentication for saving concepts

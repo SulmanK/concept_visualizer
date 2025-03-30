@@ -102,7 +102,7 @@ class ConceptService:
         Returns:
             Tuple of (palettes, variation_images): 
             - palettes: List of palette dictionaries with name, colors, description
-            - variation_images: List of dictionaries with palette info and image URL
+            - variation_images: List of dictionaries with palette info and image data
             
         Raises:
             Exception: If there is an error during generation
@@ -127,18 +127,18 @@ class ConceptService:
                 
                 try:
                     # Generate image with this specific palette
-                    image_url = await self.client.generate_image_with_palette(
+                    image_data = await self.client.generate_image_with_palette(
                         logo_prompt=logo_description,
                         palette=colors,
                         palette_name=name
                     )
                     
-                    # Add the image URL to the palette info
+                    # Store binary image data in the variation info
                     variation = {
                         "name": name,
                         "colors": colors,
                         "description": description,
-                        "image_url": image_url
+                        "image_data": image_data  # This now contains binary data, not a URL
                     }
                     variation_images.append(variation)
                     

@@ -24,6 +24,12 @@ export interface GenerationResponse {
   createdAt: string;
   originalImageUrl?: string;
   refinementPrompt?: string;
+  variations?: Array<{
+    name: string;
+    colors: string[];
+    image_url: string;
+    description?: string;
+  }>;
 }
 
 /**

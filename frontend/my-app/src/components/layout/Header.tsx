@@ -42,10 +42,17 @@ export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
             </Link>
             
             <Link 
-              to="/refine" 
-              className={activeRoute === '/refine' ? styles.activeNavLink : styles.inactiveNavLink}
+              to="/concepts/refine" 
+              className={activeRoute.includes('/concepts/refine') ? styles.activeNavLink : styles.inactiveNavLink}
             >
               <span className={styles.navIcon}>🔄</span>Refine
+            </Link>
+            
+            <Link 
+              to="/recent" 
+              className={activeRoute === '/recent' ? styles.activeNavLink : styles.inactiveNavLink}
+            >
+              <span className={styles.navIcon}>📚</span>Recent
             </Link>
           </nav>
         </div>

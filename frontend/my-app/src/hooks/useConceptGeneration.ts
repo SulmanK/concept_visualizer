@@ -9,6 +9,7 @@ import {
   PromptRequest,
   FormStatus
 } from '../types';
+import { useConceptContext } from '../contexts/ConceptContext';
 
 export interface ConceptGenerationState {
   status: FormStatus;
@@ -21,6 +22,8 @@ export interface ConceptGenerationState {
  */
 export function useConceptGeneration() {
   const { post, loading, error, clearError } = useApi();
+  const { refreshConcepts } = useConceptContext();
+  
   const [generationState, setGenerationState] = useState<ConceptGenerationState>({
     status: 'idle',
     result: null,
@@ -56,7 +59,8 @@ export function useConceptGeneration() {
         theme_description: themeDescription,
       };
 
-      const response = await post<GenerationResponse>('/concepts/generate', request);
+      // Use the generate-with-palettes endpoint to get variations
+      const response = await post<GenerationResponse>('/concepts/generate-with-palettes', request);
 
       if (response.error) {
         setGenerationState({
@@ -68,11 +72,22 @@ export function useConceptGeneration() {
       }
 
       if (response.data) {
+        // Make sure the variations array is included in the result
+        const result = {
+          ...response.data,
+          variations: response.data.variations || []
+        };
+        
+        console.log('Generated concept with variations:', result);
+        
         setGenerationState({
           status: 'success',
-          result: response.data,
+          result,
           error: null,
         });
+        
+        // Refresh the recent concepts list after successful generation
+        await refreshConcepts();
       }
     } catch (err) {
       setGenerationState({
@@ -81,7 +96,7 @@ export function useConceptGeneration() {
         error: err instanceof Error ? err.message : 'Failed to generate concept',
       });
     }
-  }, [post]);
+  }, [post, refreshConcepts]);
 
   /**
    * Reset the generation state

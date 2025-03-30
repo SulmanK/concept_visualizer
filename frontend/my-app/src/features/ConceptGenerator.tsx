@@ -330,6 +330,17 @@ export const ConceptGenerator: React.FC = () => {
               console.log('Navigate to refinement with:', result.generationId);
             }}
             onColorSelect={(color) => handleColorSelect(color)}
+            variations={result.variations?.map((variation: {
+              name: string;
+              colors: string[];
+              image_url: string;
+              description?: string;
+            }) => ({
+              name: variation.name,
+              colors: variation.colors,
+              image_url: variation.image_url,
+              description: variation.description
+            })) || []}
           />
           
           {selectedColor && (

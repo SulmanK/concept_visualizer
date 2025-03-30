@@ -9,6 +9,7 @@ import httpx
 import json
 from functools import lru_cache
 from typing import List, Dict, Any, Optional
+import uuid
 
 from jigsawstack import JigsawStack
 
@@ -41,7 +42,7 @@ class JigsawStackClient:
     
     async def generate_image(
         self, prompt: str, width: int = 512, height: int = 512, model: str = "stable-diffusion-xl"
-    ) -> str:
+    ) -> bytes:
         """
         Generate an image using the JigsawStack API.
         
@@ -52,7 +53,7 @@ class JigsawStackClient:
             model: The model to use for generation
             
         Returns:
-            str: URL of the generated image
+            bytes: Binary image data that can be uploaded to storage
             
         Raises:
             Exception: If the API request fails
@@ -66,18 +67,35 @@ class JigsawStackClient:
                 aspect_ratio = "16:9"
             elif height > width:
                 aspect_ratio = "9:16"
-                
-            result = self.client.image_generation({
+            
+            # Use the correct endpoint according to API reference
+            endpoint = f"{self.api_url}/v1/ai/image_generation"
+            payload = {
                 "prompt": prompt,
-                "aspect_ratio": aspect_ratio
-            })
+                "aspect_ratio": aspect_ratio,
+                "steps": 30,
+                "advance_config": {
+                    "negative_prompt": "blurry, low quality",
+                    "guidance": 7.5
+                }
+            }
             
-            # Process the response according to JigsawStack documentation
-            data = result.json()
-            
-            logger.info("Image generation successful")
-            # Return the image URL from the response
-            return data["url"]
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    endpoint, 
+                    headers=self.headers, 
+                    json=payload, 
+                    timeout=30.0
+                )
+                
+                if response.status_code != 200:
+                    error_details = f"Status: {response.status_code}, Response: {response.text}"
+                    logger.error(f"Image generation API error: {error_details}")
+                    raise Exception(f"Image generation failed: {error_details}")
+                
+                logger.info("Image generation successful, returning binary data")
+                # Return the binary image data 
+                return response.content
             
         except Exception as e:
             logger.error(f"Error generating image: {str(e)}")
@@ -85,7 +103,7 @@ class JigsawStackClient:
     
     async def generate_image_with_palette(
         self, logo_prompt: str, palette: List[str], palette_name: str = "Custom Palette"
-    ) -> str:
+    ) -> bytes:
         """
         Generate an image using a specific color palette.
         
@@ -95,7 +113,7 @@ class JigsawStackClient:
             palette_name: Optional name of the palette for logging
             
         Returns:
-            str: URL of the generated image
+            bytes: Binary image data that can be uploaded to storage
             
         Raises:
             Exception: If the API request fails
@@ -133,15 +151,9 @@ class JigsawStackClient:
                     logger.error(f"Image generation API error: {error_details}")
                     raise Exception(f"Image generation failed: {error_details}")
                 
-                # For binary response, save to BytesIO and return URL from upload
-                image_data = response.content
-                
-                # Use jigsawstack's URL response
-                # In a real implementation, you might need to parse this differently
-                image_url = f"https://storage.jigsawstack.com/images/{response.headers.get('x-image-id', 'default')}.png"
-                
                 logger.info(f"Image generation with palette '{palette_name}' successful")
-                return image_url
+                # Return the binary image data
+                return response.content
                 
         except Exception as e:
             logger.error(f"Error generating image with palette: {str(e)}")
@@ -153,7 +165,7 @@ class JigsawStackClient:
         image_url: str, 
         strength: float = 0.7,
         model: str = "stable-diffusion-xl"
-    ) -> str:
+    ) -> bytes:
         """
         Refine an existing image using the JigsawStack API.
         
@@ -164,7 +176,7 @@ class JigsawStackClient:
             model: The model to use for refinement
             
         Returns:
-            str: URL of the refined image
+            bytes: Binary image data that can be uploaded to storage
             
         Raises:
             Exception: If the API request fails
@@ -172,13 +184,17 @@ class JigsawStackClient:
         try:
             logger.info(f"Refining image with prompt: {prompt}")
             
-            # Since JigsawStack SDK doesn't have image editing, use direct HTTP
-            endpoint = f"{self.api_url}/v1/images/generations"
+            # Use the correct endpoint for image refinement/variation
+            endpoint = f"{self.api_url}/v1/ai/image_variation"
             payload = {
                 "prompt": prompt,
-                "image": image_url,
+                "image_url": image_url,
                 "strength": strength,
-                "model": model
+                "steps": 30,
+                "advance_config": {
+                    "negative_prompt": "blurry, low quality",
+                    "guidance": 7.5
+                }
             }
             
             async with httpx.AsyncClient() as client:
@@ -188,12 +204,15 @@ class JigsawStackClient:
                     json=payload, 
                     timeout=30.0
                 )
-                response.raise_for_status()
-                data = response.json()
                 
-                logger.info("Image refinement successful")
-                # Return the image URL from the response
-                return data["data"][0]["url"]
+                if response.status_code != 200:
+                    error_details = f"Status: {response.status_code}, Response: {response.text}"
+                    logger.error(f"Image refinement API error: {error_details}")
+                    raise Exception(f"Image refinement failed: {error_details}")
+                
+                logger.info("Image refinement successful, returning binary data")
+                # Return the binary image data 
+                return response.content
                 
         except Exception as e:
             logger.error(f"Error refining image: {str(e)}")
@@ -216,42 +235,76 @@ class JigsawStackClient:
         try:
             logger.info(f"Generating color palette with prompt: {prompt}")
             
-            # Use the SDK's prompt_engine to generate color codes
-            result = self.client.prompt_engine.run_prompt_direct({
+            # Use direct HTTP request instead of SDK
+            endpoint = f"{self.api_url}/v1/prompt_engine/run"
+            payload = {
                 "prompt": f"Generate {num_colors} hex color codes for a color palette described as: {prompt}. Return only as a JSON array of hex color codes.",
                 "inputs": [],
                 "return_prompt": "Return a valid JSON array of hex color codes only"
-            })
+            }
             
-            # Process the response using json() instead of blob()
-            data = result.json()
-            
-            # Try to parse the color codes from the response
-            try:
-                # If response is already a JSON array of colors
-                if isinstance(data, list):
-                    return data[:num_colors]
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    endpoint, 
+                    headers=self.headers, 
+                    json=payload, 
+                    timeout=30.0
+                )
                 
-                # If response has colors in a nested structure
-                if "colors" in data:
-                    return data["colors"][:num_colors]
-                    
-                # Return the response as text and extract anything that looks like a hex code
+                if response.status_code != 200:
+                    error_details = f"Status: {response.status_code}, Response: {response.text}"
+                    logger.error(f"Color palette generation API error: {error_details}")
+                    # Return default colors instead of failing
+                    return ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"]
+            
+            # Try to parse the response
+            try:
+                data = response.json()
+                
+                # Try different ways to extract the color codes
+                if isinstance(data, list) and len(data) > 0:
+                    # Direct array of colors
+                    if isinstance(data[0], str) and data[0].startswith('#'):
+                        return data[:num_colors]
+                
+                if isinstance(data, dict):
+                    # Check for colors in a nested structure
+                    if "colors" in data:
+                        return data["colors"][:num_colors]
+                    elif "result" in data:
+                        # Try to parse the result field as JSON
+                        try:
+                            result = data["result"]
+                            if isinstance(result, list):
+                                return result[:num_colors]
+                            if isinstance(result, str):
+                                # Try to parse string as JSON
+                                try:
+                                    colors = json.loads(result)
+                                    if isinstance(colors, list):
+                                        return colors[:num_colors]
+                                except json.JSONDecodeError:
+                                    pass
+                        except Exception:
+                            pass
+                
+                # Last resort: extract anything that looks like a hex code
                 response_text = str(data)
                 import re
                 hex_codes = re.findall(r'#[0-9A-Fa-f]{6}', response_text)
                 if hex_codes:
                     return hex_codes[:num_colors]
-            except Exception:
-                # Fallback: Generate some default colors
-                logger.warning("Failed to parse color palette, using defaults")
-                return ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"]
-                
-            logger.info("Color palette generation successful")
             
+            except Exception as e:
+                logger.error(f"Error parsing color palette response: {str(e)}")
+            
+            # Fallback: Generate some default colors
+            logger.warning("Failed to parse color palette, using defaults")
+            return ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"]
+                
         except Exception as e:
             logger.error(f"Error generating color palette: {str(e)}")
-            # Fallback: Return some default colors
+            # Return default colors as fallback
             return ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"]
             
     async def generate_multiple_palettes(self, prompt: str, num_palettes: int = 3) -> List[Dict[str, Any]]:
@@ -279,18 +332,32 @@ class JigsawStackClient:
                 f"Return as a JSON array of objects with 'name', 'description', and 'colors' (array of hex codes)."
             )
             
-            # Use the SDK's prompt_engine to generate palettes
-            result = self.client.prompt_engine.run_prompt_direct({
+            # Use direct HTTP request instead of SDK
+            endpoint = f"{self.api_url}/v1/prompt_engine/run"
+            payload = {
                 "prompt": detailed_prompt,
                 "inputs": [],
                 "return_prompt": "Return a valid JSON array of objects only"
-            })
+            }
             
-            # Process the response
-            response_data = result.json()
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    endpoint, 
+                    headers=self.headers, 
+                    json=payload, 
+                    timeout=30.0
+                )
+                
+                if response.status_code != 200:
+                    error_details = f"Status: {response.status_code}, Response: {response.text}"
+                    logger.error(f"Color palette generation API error: {error_details}")
+                    # Return default palettes instead of failing
+                    return self._get_default_palettes(num_palettes, prompt)
             
-            # Parse the response
+            # Try to parse the response
             try:
+                response_data = response.json()
+                
                 # If it's already a list of palette objects
                 if isinstance(response_data, list) and len(response_data) > 0:
                     palettes = response_data[:num_palettes]
@@ -322,67 +389,48 @@ class JigsawStackClient:
                 
                 # Fallback: Generate default palettes
                 logger.warning("Failed to parse multiple palettes, using defaults")
-                return [
-                    {
-                        "name": "Primary Palette",
-                        "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
-                        "description": f"A primary palette for: {prompt}"
-                    },
-                    {
-                        "name": "Accent Palette",
-                        "colors": ["#EF4444", "#F87171", "#FCA5A5", "#FEE2E2", "#7F1D1D"],
-                        "description": f"An accent palette for: {prompt}"
-                    },
-                    {
-                        "name": "Neutral Palette",
-                        "colors": ["#1F2937", "#4B5563", "#9CA3AF", "#E5E7EB", "#F9FAFB"],
-                        "description": f"A neutral palette for: {prompt}"
-                    }
-                ][:num_palettes]
+                return self._get_default_palettes(num_palettes, prompt)
                 
             except Exception as e:
                 logger.error(f"Error parsing multiple palettes response: {e}")
                 # Fallback: Generate default palettes
-                return [
-                    {
-                        "name": "Primary Palette",
-                        "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
-                        "description": f"A primary palette for: {prompt}"
-                    },
-                    {
-                        "name": "Accent Palette",
-                        "colors": ["#EF4444", "#F87171", "#FCA5A5", "#FEE2E2", "#7F1D1D"],
-                        "description": f"An accent palette for: {prompt}"
-                    },
-                    {
-                        "name": "Neutral Palette",
-                        "colors": ["#1F2937", "#4B5563", "#9CA3AF", "#E5E7EB", "#F9FAFB"],
-                        "description": f"A neutral palette for: {prompt}"
-                    }
-                ][:num_palettes]
+                return self._get_default_palettes(num_palettes, prompt)
                 
             logger.info(f"Generated {num_palettes} color palettes successfully")
             
         except Exception as e:
             logger.error(f"Error generating multiple color palettes: {str(e)}")
             # Fallback: Generate default palettes
-            return [
-                {
-                    "name": "Primary Palette",
-                    "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
-                    "description": f"A primary palette for: {prompt}"
-                },
-                {
-                    "name": "Accent Palette",
-                    "colors": ["#EF4444", "#F87171", "#FCA5A5", "#FEE2E2", "#7F1D1D"],
-                    "description": f"An accent palette for: {prompt}"
-                },
-                {
-                    "name": "Neutral Palette",
-                    "colors": ["#1F2937", "#4B5563", "#9CA3AF", "#E5E7EB", "#F9FAFB"],
-                    "description": f"A neutral palette for: {prompt}"
-                }
-            ][:num_palettes]
+            return self._get_default_palettes(num_palettes, prompt)
+    
+    def _get_default_palettes(self, num_palettes: int, prompt: str) -> List[Dict[str, Any]]:
+        """
+        Generate default color palettes as a fallback.
+        
+        Args:
+            num_palettes: Number of palettes to generate
+            prompt: The original prompt for context in descriptions
+            
+        Returns:
+            List of default palette dictionaries
+        """
+        return [
+            {
+                "name": "Primary Palette",
+                "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
+                "description": f"A primary palette for: {prompt}"
+            },
+            {
+                "name": "Accent Palette",
+                "colors": ["#EF4444", "#F87171", "#FCA5A5", "#FEE2E2", "#7F1D1D"],
+                "description": f"An accent palette for: {prompt}"
+            },
+            {
+                "name": "Neutral Palette",
+                "colors": ["#1F2937", "#4B5563", "#9CA3AF", "#E5E7EB", "#F9FAFB"],
+                "description": f"A neutral palette for: {prompt}"
+            }
+        ][:num_palettes]
 
 
 @lru_cache()

@@ -47,26 +47,41 @@ class ImageService:
         try:
             # Generate image using JigsawStack
             self.logger.info(f"Generating image with prompt: {prompt}")
-            result = await self.jigsawstack_client.generate_image(prompt=prompt)
+            image_data = await self.jigsawstack_client.generate_image(prompt=prompt)
             
-            if not result:
-                self.logger.error("Failed to generate image: No URL returned")
+            if not image_data:
+                self.logger.error("Failed to generate image: No binary data returned")
                 return None, None
             
-            image_url = result
-            self.logger.info(f"Image generated successfully. URL: {image_url}")
+            self.logger.info(f"Image generated successfully. Binary data received: {len(image_data)} bytes")
                 
-            # Download and upload to Supabase Storage
+            # Generate a unique filename and upload to Supabase Storage
             self.logger.info(f"Uploading image to Supabase Storage, bucket: concept-images, session: {session_id}")
-            storage_path = await self.supabase_client.upload_image_from_url(
-                image_url, 
-                "concept-images", 
-                session_id
+            
+            import uuid
+            from io import BytesIO
+            from PIL import Image
+            
+            # Determine image format
+            img = Image.open(BytesIO(image_data))
+            format_ext = img.format.lower() if img.format else "png"
+            
+            # Generate a unique filename with the correct extension
+            unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
+            
+            # Upload to Supabase Storage
+            result = self.supabase_client.client.storage.from_("concept-images").upload(
+                path=unique_filename,
+                file=image_data,
+                file_options={"content-type": f"image/{format_ext}"}
             )
             
-            if not storage_path:
+            if not result:
                 self.logger.error("Failed to upload image to Supabase Storage")
                 return None, None
+                
+            # Set the storage path
+            storage_path = unique_filename
                 
             # Get public URL
             self.logger.info(f"Getting public URL for image: {storage_path}")
@@ -98,27 +113,45 @@ class ImageService:
         try:
             # Refine image using JigsawStack
             self.logger.info(f"Refining image with prompt: {prompt}")
-            refined_url = await self.jigsawstack_client.refine_image(
+            image_data = await self.jigsawstack_client.refine_image(
                 prompt=prompt,
                 image_url=original_image_url,
                 strength=strength
             )
             
-            if not refined_url:
-                self.logger.error("Failed to refine image: No URL returned")
+            if not image_data:
+                self.logger.error("Failed to refine image: No binary data returned")
                 return None, None
+            
+            self.logger.info(f"Image refined successfully. Binary data received: {len(image_data)} bytes")
                 
-            # Download and upload to Supabase Storage
+            # Generate a unique filename and upload to Supabase Storage
             self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {session_id}")
-            storage_path = await self.supabase_client.upload_image_from_url(
-                refined_url, 
-                "concept-images", 
-                session_id
+            
+            import uuid
+            from io import BytesIO
+            from PIL import Image
+            
+            # Determine image format
+            img = Image.open(BytesIO(image_data))
+            format_ext = img.format.lower() if img.format else "png"
+            
+            # Generate a unique filename with the correct extension
+            unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
+            
+            # Upload to Supabase Storage
+            result = self.supabase_client.client.storage.from_("concept-images").upload(
+                path=unique_filename,
+                file=image_data,
+                file_options={"content-type": f"image/{format_ext}"}
             )
             
-            if not storage_path:
+            if not result:
                 self.logger.error("Failed to upload refined image to Supabase Storage")
                 return None, None
+                
+            # Set the storage path
+            storage_path = unique_filename
                 
             # Get public URL
             self.logger.info(f"Getting public URL for refined image: {storage_path}")

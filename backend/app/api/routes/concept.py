@@ -4,8 +4,13 @@ Concept generation and refinement endpoints.
 This module provides endpoints for generating and refining visual concepts.
 """
 
+import logging
+import traceback
+import uuid
+from typing import Dict, List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
-from typing import Optional, List
+from pydantic import ValidationError
 
 from backend.app.models.request import PromptRequest, RefinementRequest
 from backend.app.models.response import GenerationResponse, PaletteVariation
@@ -13,6 +18,9 @@ from backend.app.services.concept_service import ConceptService, get_concept_ser
 from backend.app.services.session_service import SessionService, get_session_service
 from backend.app.services.image_service import ImageService, get_image_service
 from backend.app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
+
+# Configure logging
+logger = logging.getLogger("concept_api")
 
 router = APIRouter()
 
@@ -105,9 +113,10 @@ async def generate_concept(
 async def generate_concept_with_palettes(
     request: PromptRequest,
     response: Response,
-    num_palettes: int = 3,
+    num_palettes: int = 5,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
+    image_service: ImageService = Depends(get_image_service),
     storage_service: ConceptStorageService = Depends(get_concept_storage_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
@@ -118,9 +127,10 @@ async def generate_concept_with_palettes(
     Args:
         request: The prompt request containing logo and theme descriptions
         response: FastAPI response object for setting cookies
-        num_palettes: Number of distinct palette variations to generate (default: 3)
+        num_palettes: Number of distinct palette variations to generate (default: 5)
         concept_service: The concept generation service
         session_service: Service for managing sessions
+        image_service: Service for image handling
         storage_service: Service for storing concepts
         session_id: Optional session ID from cookies
     
@@ -144,25 +154,70 @@ async def generate_concept_with_palettes(
         if not variation_images:
             raise HTTPException(status_code=500, detail="Failed to generate images for any palette")
         
-        # Convert URLs to storage paths (for database storage)
+        # Convert binary images to storage paths and URLs
         palette_for_storage = []
-        for variation in variation_images:
-            # In a real implementation, you'd need to download the image and upload to Supabase
-            # For this example, we'll assume the image_url is already a valid path
-            image_url = variation["image_url"]
-            image_path = f"{session_id}/{image_url.split('/')[-1]}" 
-            
-            palette_for_storage.append({
-                "name": variation["name"],
-                "colors": variation["colors"],
-                "description": variation.get("description", ""),
-                "image_path": image_path,
-                "image_url": image_url
-            })
+        variations_with_urls = []
         
+        for variation in variation_images:
+            # Upload binary image data to Supabase Storage
+            image_data = variation.get("image_data")
+            if not image_data:
+                continue
+                
+            # Upload the image and get its path
+            from io import BytesIO
+            from PIL import Image
+            
+            try:
+                # Process the binary data
+                img = Image.open(BytesIO(image_data))
+                format_ext = img.format.lower() if img.format else "png"
+                
+                # Generate a unique filename
+                unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
+                
+                # Upload to Supabase Storage
+                from backend.app.core.supabase import get_supabase_client
+                supabase_client = get_supabase_client()
+                
+                # Upload to storage
+                supabase_client.client.storage.from_("concept-images").upload(
+                    path=unique_filename,
+                    file=image_data,
+                    file_options={"content-type": f"image/{format_ext}"}
+                )
+                
+                # Get public URL
+                image_url = supabase_client.get_image_url(unique_filename, "concept-images")
+                
+                # Create variation with URL for response
+                variation_with_url = {
+                    "name": variation["name"],
+                    "colors": variation["colors"],
+                    "description": variation.get("description", ""),
+                    "image_url": image_url
+                }
+                variations_with_urls.append(variation_with_url)
+                
+                # Create palette info for storage
+                palette_for_storage.append({
+                    "name": variation["name"],
+                    "colors": variation["colors"],
+                    "description": variation.get("description", ""),
+                    "image_path": unique_filename,
+                    "image_url": image_url
+                })
+            except Exception as e:
+                # Log the error but continue with other variations
+                logger.error(f"Error processing variation image: {e}")
+                continue
+        
+        if not variations_with_urls:
+            raise HTTPException(status_code=500, detail="Failed to process any variation images")
+            
         # Store the first image as the "base" concept
-        base_variation = variation_images[0]
-        base_image_path = f"{session_id}/{base_variation['image_url'].split('/')[-1]}"
+        base_variation = palette_for_storage[0]
+        base_image_path = base_variation["image_path"]
         
         # Store concept in Supabase
         stored_concept = await storage_service.store_concept(
@@ -183,7 +238,7 @@ async def generate_concept_with_palettes(
             theme_description=request.theme_description,
             created_at=stored_concept.get("created_at", ""),
             # Default image is the first variation
-            image_url=variation_images[0]["image_url"],
+            image_url=variations_with_urls[0]["image_url"],
             # Include all variations
             variations=[
                 PaletteVariation(
@@ -192,10 +247,12 @@ async def generate_concept_with_palettes(
                     description=v.get("description", ""),
                     image_url=v["image_url"]
                 )
-                for v in variation_images
+                for v in variations_with_urls
             ]
         )
     except Exception as e:
+        logger.error(f"Error in generate_concept_with_palettes: {str(e)}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 

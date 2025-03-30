@@ -7,6 +7,7 @@ A web application for generating and refining visual concepts with AI assistance
 - **Concept Generation**: Create logos and color palettes from text descriptions
 - **Concept Refinement**: Refine existing designs by specifying modifications
 - **Color Palette Generation**: Get harmonious color palettes for your brand
+- **Concept Storage**: Save and view your generated concepts
 
 ## Tech Stack
 
@@ -15,12 +16,14 @@ A web application for generating and refining visual concepts with AI assistance
 - FastAPI 
 - Pydantic
 - JigsawStack API integration
+- Supabase for storage and database
 
 ### Frontend
 - React 19
 - TypeScript
 - Tailwind CSS
 - React Router
+- Supabase JS client
 
 ## Project Structure
 
@@ -37,9 +40,10 @@ concept_visualizer/
 │   ├── public/        # Static assets
 │   ├── src/
 │   │   ├── components/# Reusable UI components
+│   │   ├── contexts/  # Context providers for state management
 │   │   ├── features/  # Feature-specific components
 │   │   ├── hooks/     # Custom React hooks
-│   │   ├── services/  # API integration
+│   │   ├── services/  # API integration and external services
 │   │   │   └── mocks/ # Mock services for testing
 │   │   ├── styles/    # Global styles
 │   │   └── types/     # TypeScript type definitions
@@ -55,6 +59,7 @@ concept_visualizer/
 - Node.js 18+
 - npm or yarn
 - JigsawStack API key
+- Supabase account and project
 
 ### Backend Setup
 
@@ -68,9 +73,11 @@ concept_visualizer/
    pip install -e .
    ```
 
-3. Create a `.env` file with your JigsawStack API key:
+3. Create a `.env` file with your API keys:
    ```
-   CONCEPT_JIGSAWSTACK_API_KEY=your_api_key_here
+   CONCEPT_JIGSAWSTACK_API_KEY=your_jigsaw_api_key_here
+   CONCEPT_SUPABASE_URL=your_supabase_url_here
+   CONCEPT_SUPABASE_KEY=your_supabase_api_key_here
    ```
 
 4. Run the development server:
@@ -88,17 +95,36 @@ concept_visualizer/
 2. Install dependencies:
    ```
    npm install
+   npm install @supabase/supabase-js js-cookie
+   npm install --save-dev @types/js-cookie
    ```
 
 3. Create a `.env` file:
    ```
    VITE_API_BASE_URL=http://localhost:8000/api
+   VITE_SUPABASE_URL=your_supabase_url_here
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
    ```
 
 4. Start the development server:
    ```
    npm run dev
    ```
+
+### Supabase Setup
+
+1. Create a new Supabase project
+
+2. Set up the database tables:
+   - `sessions`: Stores user sessions
+   - `concepts`: Stores generated concepts
+   - `color_variations`: Stores color variations for concepts
+
+3. Set up storage buckets:
+   - `concept-images`: For storing base concept images
+   - `palette-images`: For storing color variation images
+
+See `design/supabase_setup_guide.md` for detailed instructions.
 
 ## Testing
 

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Variations - Layout 2</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f5f7ff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .tab {
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 2px solid transparent;
+    }
+    .tab:hover {
+      background-color: #EEF2FF;
+    }
+    .tab.active {
+      border-bottom: 2px solid #4F46E5;
+      color: #4F46E5;
+      font-weight: 600;
+    }
+    .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="card p-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-900">Generated Concept</h2>
+        <span class="text-sm text-gray-500">August 25, 2023</span>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="border-b border-gray-200 mb-6">
+        <div class="flex space-x-2 overflow-x-auto">
+          <div class="tab active px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-indigo-600"></span>
+              Original
+            </div>
+          </div>
+          <div class="tab px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-blue-600"></span>
+              Primary Palette
+            </div>
+          </div>
+          <div class="tab px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-violet-600"></span>
+              Secondary Palette
+            </div>
+          </div>
+          <div class="tab px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-sky-500"></span>
+              Accent Palette
+            </div>
+          </div>
+          <div class="tab px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-emerald-500"></span>
+              Complementary
+            </div>
+          </div>
+          <div class="tab px-4 py-2 whitespace-nowrap">
+            <div class="flex items-center">
+              <span class="color-dot bg-amber-500"></span>
+              Analogous
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Image Display -->
+      <div class="flex justify-center mb-6">
+        <div class="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+          <img src="https://via.placeholder.com/800x600/4F46E5/FFFFFF?text=Original+Concept" alt="Main concept" class="w-full max-h-96 object-contain">
+        </div>
+      </div>
+      
+      <!-- Selected Variation Info -->
+      <div class="mb-6 p-4 bg-indigo-50 rounded-lg">
+        <h3 class="text-lg font-medium text-indigo-900 mb-2">Original Color Scheme</h3>
+        <p class="text-sm text-indigo-700 mb-3">
+          This is the original color scheme generated based on your description.
+        </p>
+        
+        <!-- Color Palette -->
+        <div class="mt-4">
+          <h4 class="text-sm font-medium text-indigo-900 mb-3">Color Palette</h4>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-full bg-indigo-600 shadow-sm"></div>
+              <span class="text-xs mt-1 text-indigo-800">#4F46E5</span>
+              <span class="text-xs mt-0.5 text-indigo-700">Primary</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-full bg-indigo-400 shadow-sm"></div>
+              <span class="text-xs mt-1 text-indigo-800">#818CF8</span>
+              <span class="text-xs mt-0.5 text-indigo-700">Secondary</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-full bg-purple-400 shadow-sm"></div>
+              <span class="text-xs mt-1 text-indigo-800">#C084FC</span>
+              <span class="text-xs mt-0.5 text-indigo-700">Accent</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-full bg-gray-100 shadow-sm"></div>
+              <span class="text-xs mt-1 text-indigo-800">#F3F4F6</span>
+              <span class="text-xs mt-0.5 text-indigo-700">Background</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-full bg-gray-900 shadow-sm"></div>
+              <span class="text-xs mt-1 text-indigo-800">#111827</span>
+              <span class="text-xs mt-0.5 text-indigo-700">Text</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Preview All Variations -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Quick Preview</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/4F46E5/FFFFFF?text=O" alt="Original thumbnail" class="w-full h-auto">
+          </div>
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/2563EB/FFFFFF?text=P" alt="Primary thumbnail" class="w-full h-auto">
+          </div>
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/7C3AED/FFFFFF?text=S" alt="Secondary thumbnail" class="w-full h-auto">
+          </div>
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/0EA5E9/FFFFFF?text=A" alt="Accent thumbnail" class="w-full h-auto">
+          </div>
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/10B981/FFFFFF?text=C" alt="Complementary thumbnail" class="w-full h-auto">
+          </div>
+          <div class="border p-1 rounded-md cursor-pointer hover:bg-indigo-50">
+            <img src="https://via.placeholder.com/100x100/F59E0B/FFFFFF?text=A" alt="Analogous thumbnail" class="w-full h-auto">
+          </div>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <button class="px-4 py-2 bg-white text-indigo-600 font-medium border border-indigo-600 rounded hover:bg-indigo-50">
+          Refine This Concept
+        </button>
+        <button class="px-4 py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700">
+          Download Image
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 
