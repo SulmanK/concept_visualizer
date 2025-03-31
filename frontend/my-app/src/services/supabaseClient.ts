@@ -9,19 +9,115 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://pstdcfittpjhx
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdGRjZml0dHBqaHh6eW5iZGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyNzIxNTgsImV4cCI6MjA1ODg0ODE1OH0.u2FM0VaV_XUGmmtwhdkV2vbtKGXST25VJkJCYH9SXSI';
 
 /**
- * Initialize and export the Supabase client
+ * Initialize and export the Supabase client with storage options
  */
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`
+    },
+  }
+});
 
 /**
- * Get a public URL for an image in Supabase Storage
+ * Get a URL for an image in Supabase Storage
+ * Works for both public and private buckets
+ * 
+ * @param path Path to the image in storage
+ * @param bucket Storage bucket name
+ * @returns URL for the image
+ */
+export const getImageUrl = async (path: string, bucket: string): Promise<string> => {
+  // If path is empty or null, return empty string
+  if (!path) {
+    console.error('No path provided to getImageUrl');
+    return '';
+  }
+  
+  // Clean up the path - remove any Supabase URL prefix
+  let cleanPath = path;
+  
+  // If the path includes the full supabase URL, extract just the filename
+  if (path.includes('supabase.co/storage')) {
+    const parts = path.split('/');
+    cleanPath = parts[parts.length - 1].split('?')[0]; // Get filename without query params
+    console.log(`Extracted filename from path: ${cleanPath}`);
+  }
+  
+  try {
+    // Try signed URL first (for private buckets) with a 1-hour expiry
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(cleanPath, 3600);
+    
+    if (signedData && signedData.signedUrl) {
+      console.log(`Generated signed URL for ${cleanPath}`);
+      return signedData.signedUrl;
+    }
+    
+    // If signed URL fails, try public URL as fallback
+    console.log(`Falling back to public URL for ${cleanPath} due to: ${signedError?.message}`);
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(cleanPath);
+    
+    if (!data || !data.publicUrl) {
+      console.error(`Failed to get URL for ${cleanPath} in bucket ${bucket}`);
+      return '';
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error(`Error getting URL for ${cleanPath}:`, error);
+    return '';
+  }
+};
+
+/**
+ * Synchronous version of getImageUrl that returns public URL only
+ * Use this when async/await is not feasible
  * 
  * @param path Path to the image in storage
  * @param bucket Storage bucket name
  * @returns Public URL for the image
  */
-export const getImageUrl = (path: string, bucket: string): string => {
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+export const getPublicImageUrl = (path: string, bucket: string): string => {
+  // If path is empty or null, return empty string
+  if (!path) {
+    console.error('No path provided to getPublicImageUrl');
+    return '';
+  }
+  
+  // Clean up the path - remove any Supabase URL prefix
+  let cleanPath = path;
+  
+  // If the path includes the full supabase URL, extract just the filename
+  if (path.includes('supabase.co/storage')) {
+    const parts = path.split('/');
+    cleanPath = parts[parts.length - 1].split('?')[0]; // Get filename without query params
+  }
+  
+  try {
+    // Get public URL (no auth required)
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(cleanPath);
+    
+    if (!data || !data.publicUrl) {
+      console.error(`Failed to get public URL for ${cleanPath} in bucket ${bucket}`);
+      return '';
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error(`Error getting public URL for ${cleanPath}:`, error);
+    return '';
+  }
 };
 
 /**
@@ -77,7 +173,7 @@ export const fetchRecentConcepts = async (
     // Process retrieved data to add proper image URLs
     const processedConcepts = (data || []).map(concept => {
       // Generate base image URL for the concept
-      const base_image_url = getImageUrl(concept.base_image_path, 'concept-images');
+      const base_image_url = getPublicImageUrl(concept.base_image_path, 'concept-images');
       
       // Process variation images if they exist
       let variations = concept.color_variations || [];
@@ -92,7 +188,7 @@ export const fetchRecentConcepts = async (
             // Ensure critical fields have default values
             palette_name: variation.palette_name || 'Color Palette',
             colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-            image_url: getImageUrl(variation.image_path, 'palette-images')
+            image_url: getPublicImageUrl(variation.image_path, 'palette-images')
           };
         });
       }
@@ -140,7 +236,7 @@ export const fetchConceptDetail = async (
     if (!data) return null;
 
     // Process the concept to add proper image URLs
-    const base_image_url = getImageUrl(data.base_image_path, 'concept-images');
+    const base_image_url = getPublicImageUrl(data.base_image_path, 'concept-images');
     
     // Process variation images if they exist
     let variations = data.color_variations || [];
@@ -155,7 +251,7 @@ export const fetchConceptDetail = async (
           // Ensure critical fields have default values
           palette_name: variation.palette_name || 'Color Palette',
           colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-          image_url: getImageUrl(variation.image_path, 'palette-images')
+          image_url: getPublicImageUrl(variation.image_path, 'palette-images')
         };
       });
     }
