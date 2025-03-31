@@ -9,7 +9,6 @@ import httpx
 import json
 from functools import lru_cache
 from typing import List, Dict, Any
-import re
 
 from backend.app.core.config import settings
 
@@ -154,12 +153,12 @@ class JigsawStackClient:
             logger.error(f"Error refining image: {str(e)}")
             raise
     
-    async def generate_multiple_palettes(self, prompt: str, num_palettes: int = 5) -> List[Dict[str, Any]]:
-        """
-        Generate multiple color palettes in a single LLM call.
+    async def generate_multiple_palettes(self, logo_description: str, theme_description: str, num_palettes: int = 5) -> List[Dict[str, Any]]:
+        """Generate multiple color palettes in a single LLM call.
         
         Args:
-            prompt: Text description of the desired theme
+            logo_description: Text description of the logo
+            theme_description: Text description of the desired theme
             num_palettes: Number of palettes to generate
             
         Returns:
@@ -169,84 +168,128 @@ class JigsawStackClient:
             Exception: If the API request fails
         """
         try:
-            logger.info(f"Generating {num_palettes} color palettes in a single call")
+            logger.info(f"Generating {num_palettes} color palettes based on logo and theme descriptions")
             
-            # Create a structured prompt for the LLM to generate multiple palettes at once
-            detailed_prompt = (
-                f"Generate {num_palettes} distinctly different color palettes based on the theme: '{prompt}'. "
-                f"Each palette should have 5 hex color codes. Make the palettes visually distinct from each other. "
-                f"For each palette, provide a name, description, and the color codes. "
-                f"Return as a JSON array of objects with 'name', 'description', and 'colors' (array of hex codes)."
-            )
+            # Combine both descriptions for a more complete context
+            combined_prompt = f"Logo: {logo_description}. Theme: {theme_description}"
             
-            # Use direct HTTP request to the prompt engine
-            endpoint = f"{self.api_url}/v1/prompt_engine/run"
+            # Create payload using the structure from the working example
             payload = {
-                "prompt": detailed_prompt,
-                "inputs": [],
-                "return_prompt": "Return a valid JSON array of palette objects only",
-                "model": "gpt-4-turbo"  # Use the most capable model for structured output
+                "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
+                "inputs": [
+                    {
+                        "key": "theme",
+                        "optional": False,
+                        "initial_value": "brand concept"
+                    },
+                    {
+                        "key": "num_palettes", 
+                        "optional": True,
+                        "initial_value": "5"
+                    }
+                ],
+                "return_prompt": [
+                    {
+                        "name": "Name of the palette",
+                        "colors": [
+                            {
+                                "0": "#colorhex1",
+                                "1": "#colorhex2",
+                                "2": "#colorhex3",
+                                "3": "#colorhex4",
+                                "4": "#colorhex5"
+                            }
+                        ],
+                        "description": "Description of how the palette relates to the brand identity"
+                    }
+                ],
+                "prompt_guard": ["hate", "sexual_content"],
+                "input_values": {
+                    "theme": combined_prompt,
+                    "num_palettes": str(num_palettes)
+                },
+                "optimize_prompt": True
             }
+            
+            # Log the exact payload being sent for debugging
+            logger.info("Sending request to prompt engine with combined logo and theme description")
+            
+            endpoint = f"{self.api_url}/v1/prompt_engine/run"
             
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     endpoint, 
                     headers=self.headers, 
                     json=payload, 
-                    timeout=40.0  # Longer timeout for complex generation
+                    timeout=40.0
                 )
+                
+                logger.info(f"Response status code: {response.status_code}")
                 
                 if response.status_code != 200:
                     error_details = f"Status: {response.status_code}, Response: {response.text}"
                     logger.error(f"Color palette generation API error: {error_details}")
-                    # Return default palettes instead of failing
-                    return self._get_default_palettes(num_palettes, prompt)
-            
-            # Parse the response
-            try:
-                response_data = response.json()
+                    return self._get_default_palettes(num_palettes, combined_prompt)
                 
-                # The data could be in different formats depending on the LLM response
-                if "result" in response_data:
-                    # If the result is a JSON string, parse it
-                    if isinstance(response_data["result"], str):
-                        try:
-                            palettes = json.loads(response_data["result"])
-                            if isinstance(palettes, list):
-                                return self._validate_and_clean_palettes(palettes, num_palettes, prompt)
-                        except json.JSONDecodeError:
-                            logger.error("Failed to parse JSON from result string")
+                # Parse the response
+                try:
+                    response_data = response.json()
+                    logger.info(f"Raw API response structure: {list(response_data.keys()) if isinstance(response_data, dict) else type(response_data)}")
                     
-                    # If result is already a list
-                    elif isinstance(response_data["result"], list):
-                        return self._validate_and_clean_palettes(response_data["result"], num_palettes, prompt)
-                
-                # If the response is already the list we want
-                elif isinstance(response_data, list):
-                    return self._validate_and_clean_palettes(response_data, num_palettes, prompt)
-                
-                # Extract any JSON-like content from the response
-                response_text = str(response_data)
-                json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
-                if json_match:
-                    try:
-                        json_data = json.loads(json_match.group(0))
-                        if isinstance(json_data, list):
-                            return self._validate_and_clean_palettes(json_data, num_palettes, prompt)
-                    except json.JSONDecodeError:
-                        pass
-                
-                # If we can't parse anything useful, use defaults
-                logger.warning("Failed to parse multiple palettes response, using defaults")
-                return self._get_default_palettes(num_palettes, prompt)
-                
-            except Exception as e:
-                logger.error(f"Error processing multiple palettes response: {e}")
-                return self._get_default_palettes(num_palettes, prompt)
+                    # Check if we have a successful result
+                    if isinstance(response_data, dict) and response_data.get("success") is True and "result" in response_data:
+                        raw_palettes = response_data["result"]
+                        if isinstance(raw_palettes, list) and raw_palettes:
+                            # Process each palette to extract colors properly
+                            processed_palettes = [self._process_palette_colors(palette) for palette in raw_palettes]
+                            return self._validate_and_clean_palettes(processed_palettes, num_palettes, combined_prompt)
+                    
+                    # If we couldn't get proper palettes from the response
+                    logger.warning("Invalid response format from JigsawStack API")
+                    return self._get_default_palettes(num_palettes, combined_prompt)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing response: {e}")
+                    return self._get_default_palettes(num_palettes, combined_prompt)
             
         except Exception as e:
             logger.error(f"Error generating multiple color palettes: {str(e)}")
-            return self._get_default_palettes(num_palettes, prompt)
+            return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+    
+    def _process_palette_colors(self, palette: Dict[str, Any]) -> Dict[str, Any]:
+        """Process the color structure from JigsawStack API to create a list of hex colors.
+        
+        Args:
+            palette: A palette dictionary from the API response
+            
+        Returns:
+            A palette dictionary with simplified colors list
+        """
+        processed_palette = palette.copy()
+        hex_colors = []
+        
+        # Handle different possible color structure formats in the API response
+        if isinstance(palette.get("colors"), list):
+            color_list = palette["colors"]
+            
+            for color_item in color_list:
+                # Case 1: Direct list of hex colors
+                if isinstance(color_item, str) and color_item.startswith("#"):
+                    hex_colors.append(color_item)
+                
+                # Case 2: Dictionary with numeric keys
+                elif isinstance(color_item, dict):
+                    for _, hex_value in color_item.items():
+                        if isinstance(hex_value, str) and hex_value.startswith("#"):
+                            hex_colors.append(hex_value)
+        
+        # If we have colors, use them; otherwise, use defaults
+        if hex_colors:
+            processed_palette["colors"] = hex_colors[:5]  # Limit to 5 colors
+        else:
+            processed_palette["colors"] = ["#333333", "#666666", "#999999", "#CCCCCC", "#FFFFFF"]
+        
+        return processed_palette
     
     def _validate_and_clean_palettes(self, palettes: List[Dict[str, Any]], num_palettes: int, prompt: str) -> List[Dict[str, Any]]:
         """
@@ -279,14 +322,8 @@ class JigsawStackClient:
                     clean_palette["description"] = palette["description"]
                 
                 if "colors" in palette and isinstance(palette["colors"], list):
-                    # Validate colors (must be valid hex codes)
-                    valid_colors = []
-                    for color in palette["colors"]:
-                        if isinstance(color, str) and color.startswith("#") and len(color) in [4, 7, 9]:
-                            valid_colors.append(color)
-                    
-                    if valid_colors:
-                        clean_palette["colors"] = valid_colors[:5]  # Limit to 5 colors
+                    if palette["colors"]:
+                        clean_palette["colors"] = palette["colors"][:5]  # Limit to 5 colors
             
             valid_palettes.append(clean_palette)
         

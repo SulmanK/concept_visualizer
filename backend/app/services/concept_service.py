@@ -233,12 +233,18 @@ class ConceptService:
             logger.error(f"Error refining concept: {str(e)}")
             raise
             
-    async def generate_color_palettes(self, theme_description: str, num_palettes: int = 5) -> List[Dict[str, Any]]:
+    async def generate_color_palettes(
+            self, 
+            theme_description: str, 
+            logo_description: Optional[str] = None,
+            num_palettes: int = 5
+    ) -> List[Dict[str, Any]]:
         """
-        Generate color palettes based on a theme description.
+        Generate color palettes based on a theme description and logo description.
         
         Args:
             theme_description: Description of the theme/color scheme
+            logo_description: Description of the logo (optional)
             num_palettes: Number of different palettes to generate
             
         Returns:
@@ -247,40 +253,37 @@ class ConceptService:
                 - colors: List of hex color codes
                 - description: Description of the palette
         """
-        self.logger.info(f"Generating {num_palettes} color palettes for theme: {theme_description}")
+        self.logger.info(f"Generating {num_palettes} color palettes")
         
+        # Define some common palette names for better results
         palette_names = [
-            "Primary Palette",
-            "Secondary Palette",
-            "Accent Palette",
-            "Complementary Palette",
-            "Analogous Palette",
-            "Neutral Palette",
-            "Vibrant Palette",
-            "Muted Palette"
+            "Primary Palette", "Accent Palette", "Neutral Palette", 
+            "Vibrant Palette", "Complementary Palette", "Monochromatic Palette", 
+            "Analogous Palette", "Triadic Palette", "Modern Palette"
         ]
         
         try:
-            # Create structured prompt for the client
-            prompt = f"""Generate {num_palettes} distinct color palettes for the theme: '{theme_description}'.
-            
-            For each palette, provide:
-            1. A name (choose from: {', '.join(palette_names[:num_palettes])})
-            2. A list of exactly 5 hex color codes (including the '#' symbol)
-            3. A brief description of the palette's mood and style
-            
-            Make each palette unique and suitable for the theme.
-            Format your response as a valid JSON array of objects, each with 'name', 'colors' (array of hex codes), and 'description' fields.
-            """
-            
             # Get multiple palettes in a single call to JigsawStack
             self.logger.info(f"Making a single LLM call to generate {num_palettes} color palettes")
+            
+            # Use the logo description if provided
+            logo_desc = logo_description or "generic logo"
+                
+            # Generate palettes with suggested names
+            suggested_names = ", ".join(palette_names[:num_palettes])
             palettes = await self.client.generate_multiple_palettes(
-                prompt=theme_description,
+                logo_description=logo_desc,
+                theme_description=f"{theme_description}. Suggested palette names: {suggested_names}",
                 num_palettes=num_palettes
             )
             
             self.logger.info(f"Generated {len(palettes)} color palettes successfully in a single call")
+            
+            # Ensure we have the expected palette names if possible
+            for i, palette in enumerate(palettes):
+                if i < len(palette_names) and palette["name"] == "Unnamed Palette":
+                    palette["name"] = palette_names[i]
+                    
             return palettes
             
         except Exception as e:

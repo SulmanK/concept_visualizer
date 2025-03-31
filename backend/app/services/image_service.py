@@ -9,9 +9,13 @@ and applying color palettes.
 import logging
 from fastapi import Depends
 from typing import List, Dict, Optional, Tuple, Any
+import uuid
+from io import BytesIO
+from PIL import Image
 
 from ..core.supabase import get_supabase_client, SupabaseClient
 from .jigsawstack.client import JigsawStackClient, get_jigsawstack_client
+from .image_processing import apply_palette_with_masking_optimized
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -57,10 +61,6 @@ class ImageService:
                 
             # Generate a unique filename and upload to Supabase Storage
             self.logger.info(f"Uploading image to Supabase Storage, bucket: concept-images, session: {session_id}")
-            
-            import uuid
-            from io import BytesIO
-            from PIL import Image
             
             # Determine image format
             img = Image.open(BytesIO(image_data))
@@ -128,10 +128,6 @@ class ImageService:
             # Generate a unique filename and upload to Supabase Storage
             self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {session_id}")
             
-            import uuid
-            from io import BytesIO
-            from PIL import Image
-            
             # Determine image format
             img = Image.open(BytesIO(image_data))
             format_ext = img.format.lower() if img.format else "png"
@@ -166,7 +162,8 @@ class ImageService:
         self, 
         base_image_path: str, 
         palettes: List[Dict[str, Any]], 
-        session_id: str
+        session_id: str,
+        blend_strength: float = 0.75
     ) -> List[Dict[str, Any]]:
         """Create variations of an image with different color palettes.
         
@@ -174,38 +171,61 @@ class ImageService:
             base_image_path: Storage path of the base image
             palettes: List of color palette dictionaries
             session_id: Current session ID
+            blend_strength: How strongly to apply the new colors (0.0-1.0)
             
         Returns:
             List of palettes with added image_path and image_url fields
         """
         result_palettes = []
         
+        # Get image URL from storage path
+        base_image_url = self.supabase_client.get_image_url(base_image_path, "concept-images")
+        if not base_image_url:
+            self.logger.error(f"Failed to get URL for base image: {base_image_path}")
+            return []
+        
         for palette in palettes:
             self.logger.info(f"Creating palette variation for palette: {palette['name']}")
             
-            # Apply palette to image
-            palette_image_path = await self.supabase_client.apply_color_palette(
-                base_image_path,
-                palette["colors"],
-                session_id
-            )
-            
-            if palette_image_path:
+            try:
+                # Apply palette to image using the optimized masking approach
+                palette_image_data = apply_palette_with_masking_optimized(
+                    base_image_url, 
+                    palette["colors"],
+                    blend_strength=blend_strength
+                )
+                
+                # Generate a unique filename for the palette variation
+                unique_filename = f"{session_id}/palette_{uuid.uuid4()}.png"
+                
+                # Upload to Supabase Storage
+                result = self.supabase_client.client.storage.from_("palette-images").upload(
+                    path=unique_filename,
+                    file=palette_image_data,
+                    file_options={"content-type": "image/png"}
+                )
+                
+                if not result:
+                    self.logger.error(f"Failed to upload palette variation: {palette['name']}")
+                    continue
+                
                 # Get public URL
                 palette_image_url = self.supabase_client.get_image_url(
-                    palette_image_path, 
+                    unique_filename, 
                     "palette-images"
                 )
                 
-                self.logger.info(f"Created palette variation: {palette_image_path}")
+                self.logger.info(f"Created palette variation: {unique_filename}")
                 
                 # Add paths to palette dict
                 palette_copy = palette.copy()
-                palette_copy["image_path"] = palette_image_path
+                palette_copy["image_path"] = unique_filename
                 palette_copy["image_url"] = palette_image_url
                 result_palettes.append(palette_copy)
-            else:
-                self.logger.error(f"Failed to create palette variation for palette: {palette['name']}")
+                
+            except Exception as e:
+                self.logger.error(f"Error creating palette variation: {str(e)}")
+                continue
                 
         return result_palettes
 
