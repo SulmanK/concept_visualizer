@@ -235,7 +235,8 @@ class SupabaseClient:
         """Apply a color palette to an image and store the result.
         
         This method creates a new image with the specified color palette
-        by using the JigsawStack API to generate a new image variation.
+        using OpenCV color mapping techniques to transform the original image colors
+        to the new palette.
         
         Args:
             image_path: Path of the base image in storage
@@ -247,64 +248,115 @@ class SupabaseClient:
         """
         try:
             # Get the image data from storage
+            self.logger.info(f"Downloading image from storage: {image_path}")
             image_data = self.client.storage.from_("concept-images").download(image_path)
             if not image_data:
                 self.logger.error("Failed to download image from storage")
                 return None
             
-            # Temporarily save the image to disk
-            from tempfile import NamedTemporaryFile
-            import os
+            # Import necessary libraries for image processing
+            import cv2
+            import numpy as np
+            from io import BytesIO
+            from PIL import Image
+            import colorsys
             
-            # Using singleton JigsawStack client
-            from backend.app.services.jigsawstack.client import get_jigsawstack_client
-            jigsawstack_client = get_jigsawstack_client()
+            # Convert hex colors to RGB
+            def hex_to_rgb(hex_color):
+                hex_color = hex_color.lstrip('#')
+                return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+            
+            # Convert RGB to BGR (OpenCV format)
+            def rgb_to_bgr(rgb):
+                return (rgb[2], rgb[1], rgb[0])
+            
+            # Convert RGB to HSV for better color manipulation
+            def rgb_to_hsv(rgb):
+                return colorsys.rgb_to_hsv(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0)
             
             # Generate a unique filename for the palette version
             file_ext = image_path.split(".")[-1] if "." in image_path else "png"
             unique_filename = f"{session_id}/{uuid.uuid4()}.{file_ext}"
             
-            # Extract the original filename to get a hint about the content
-            original_filename = image_path.split("/")[-1]
-            content_hint = original_filename.split(".")[0]
+            # Load image with OpenCV
+            img_array = np.frombuffer(image_data, np.uint8)
+            img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
             
-            # Generate a prompt based on the image content
-            prompt = f"Create a version of this {content_hint} image using this exact color palette: {', '.join(palette[:5])}"
+            # Convert to RGB for processing (OpenCV uses BGR)
+            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             
-            # Generate new image with the palette
-            self.logger.info(f"Generating image with palette: {palette[:5]}")
+            # Extract dominant colors from the image
+            pixels = img_rgb.reshape(-1, 3)
             
-            # Use JigsawStack client to generate new image with palette
-            from io import BytesIO
-            from PIL import Image
+            # Use K-means clustering to find dominant colors
+            # Use min(5, len(palette)) clusters to match palette size
+            num_clusters = min(5, len(palette))
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 0.1)
+            flags = cv2.KMEANS_RANDOM_CENTERS
+            _, labels, centers = cv2.kmeans(pixels.astype(np.float32), num_clusters, None, criteria, 10, flags)
             
-            # Future improvement: Use actual image recoloring with the specific palette
-            # For now, we'll save the image with a color overlay
-            img = Image.open(BytesIO(image_data))
+            # Convert centers to integers
+            dominant_colors = [tuple(map(int, center)) for center in centers]
             
-            # Create a color overlay using the first color in the palette
-            overlay = Image.new('RGBA', img.size, color=palette[0])
+            # Convert palette hex values to RGB
+            palette_rgb = [hex_to_rgb(color) for color in palette[:num_clusters]]
             
-            # Apply the overlay with transparency to maintain details
-            img = img.convert('RGBA')
-            img = Image.blend(img, overlay.convert('RGBA'), alpha=0.3)
+            # Create a mapping from dominant colors to palette colors
+            # Sort both lists by perceived brightness
+            def get_brightness(rgb):
+                return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]
             
-            # Save to BytesIO
-            output = BytesIO()
-            img.save(output, format=file_ext.upper())
-            output.seek(0)
+            dominant_colors.sort(key=get_brightness)
+            palette_rgb.sort(key=get_brightness)
+            
+            # Create the color mapping
+            color_mapping = dict(zip(dominant_colors, palette_rgb))
+            
+            # Create output image
+            recolored = img_rgb.copy()
+            
+            # For each dominant color, find pixels close to that color and replace
+            for orig_color, new_color in color_mapping.items():
+                # Create a mask for pixels close to the original color
+                tolerance = 30  # Adjust as needed
+                mask = cv2.inRange(img_rgb, 
+                                np.array([c - tolerance for c in orig_color]), 
+                                np.array([c + tolerance for c in orig_color]))
+                
+                # Replace the colors in the masked region
+                recolored[mask > 0] = new_color
+            
+            # Apply color balancing and blending
+            # Convert to HSV for better control
+            hsv = cv2.cvtColor(recolored, cv2.COLOR_RGB2HSV)
+            
+            # Enhance saturation slightly
+            hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.2, 0, 255)
+            
+            # Convert back to RGB
+            enhanced = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+            
+            # Convert back to BGR for OpenCV
+            enhanced_bgr = cv2.cvtColor(enhanced, cv2.COLOR_RGB2BGR)
+            
+            # Encode the image
+            _, buffer = cv2.imencode(f'.{file_ext}', enhanced_bgr)
             
             # Upload to Supabase
+            self.logger.info(f"Uploading recolored image to palette-images bucket: {unique_filename}")
             result = self.client.storage.from_("palette-images").upload(
                 path=unique_filename,
-                file=output.getvalue(),
+                file=buffer.tobytes(),
                 file_options={"content-type": f"image/{file_ext}"}
             )
             
+            self.logger.info(f"Successfully created palette variation: {unique_filename}")
             # Return the storage path
             return unique_filename
         except Exception as e:
             self.logger.error(f"Error applying color palette: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             return None
     
     def delete_all_color_variations(self, session_id: str) -> bool:

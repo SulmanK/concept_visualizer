@@ -93,6 +93,20 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   React.useEffect(() => {
     console.log('ConceptResult - concept data:', concept);
     console.log('ConceptResult - variations data:', variations);
+    
+    // Check for the original image URL using the correct field name
+    const originalImageUrl = concept?.image_url;
+    console.log('Original image URL:', originalImageUrl);
+    
+    // Add more detailed logging specifically for debugging image display issues
+    if (originalImageUrl) {
+      console.log('Original image URL found:', originalImageUrl);
+      const formattedUrl = getFormattedUrl(originalImageUrl, 'concept-images');
+      console.log('Formatted original image URL:', formattedUrl);
+    } else {
+      console.warn('⚠️ Original image URL is missing from concept data!');
+      console.warn('Concept data structure:', concept);
+    }
   }, [concept, variations]);
   
   // Add better error listening for CORS issues
@@ -178,15 +192,17 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   // Function to extract filename from URL for download
   const getFileName = (url: string): string => {
     if (!url || url.startsWith('data:')) {
-      return `concept-${concept?.generationId?.slice(0, 8) || 'download'}.png`;
+      const id = concept?.prompt_id || concept?.generation_id || 'download';
+      return `concept-${id.slice(0, 8)}.png`;
     }
     
     try {
       const urlParts = url.split('/');
       const fileName = urlParts[urlParts.length - 1];
+      const id = concept?.prompt_id || concept?.generation_id || 'download';
       return fileName.includes('.') 
         ? fileName 
-        : `concept-${concept?.generationId?.slice(0, 8) || 'download'}.png`;
+        : `concept-${id.slice(0, 8)}.png`;
     } catch (error) {
       return `concept-download.png`;
     }
@@ -235,7 +251,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     }
     
     // For original concept
-    if (!concept || !concept.colorPalette) {
+    if (!concept || !concept.color_palette) {
       return {
         primary: '#4F46E5',
         secondary: '#818CF8',
@@ -246,18 +262,35 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
       };
     }
     
-    return concept.colorPalette;
+    return concept.color_palette;
+  };
+  
+  // Helper function to get the original image URL from the concept data
+  const getOriginalImageUrl = (): string => {
+    // Use the correct field name from the API response
+    const imageUrl = concept?.image_url;
+    
+    if (!imageUrl) {
+      console.warn('⚠️ No image URL found in concept data!');
+      return fallbackImage;
+    }
+    
+    return getFormattedUrl(imageUrl, 'concept-images');
   };
   
   // Get current image URL
   const getCurrentImageUrl = () => {
     // For selected variation
     if (selectedVariation !== null && variations[selectedVariation]) {
-      return getFormattedUrl(variations[selectedVariation].image_url, 'palette-images');
+      const variationUrl = getFormattedUrl(variations[selectedVariation].image_url, 'palette-images');
+      console.log('Using variation image URL:', variationUrl);
+      return variationUrl;
     }
     
-    // For original concept
-    return getFormattedUrl(concept?.imageUrl, 'concept-images');
+    // For original concept - ensure we're getting from the correct bucket
+    // The original image is stored in the 'concept-images' bucket
+    console.log('Loading original image from concept-images bucket');
+    return getOriginalImageUrl();
   };
   
   // Get variation name
@@ -302,7 +335,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
           <div className={styles.header}>
             <h2 className={styles.title}>Generated Concept</h2>
             <span className={styles.date}>
-              {concept?.createdAt ? new Date(concept.createdAt).toLocaleString() : 'Just now'}
+              {concept?.created_at ? new Date(concept.created_at).toLocaleString() : 'Just now'}
             </span>
           </div>
 
@@ -316,6 +349,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
                 onLoad={() => console.log('Main image loaded successfully')}
                 onError={(e) => {
                   console.error('Error loading main image:', e);
+                  console.error('Current image URL:', getCurrentImageUrl());
                   e.currentTarget.src = fallbackImage;
                   // Add class to show user there was an error
                   e.currentTarget.classList.add('image-error');
@@ -347,35 +381,40 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
             <div className="mb-6">
               <h3 className={styles.sectionTitle}>Color Variations</h3>
               <div className={styles.variationsGrid}>
-                {/* Original concept */}
+                {/* Original concept - make sure this is using the concept-images bucket */}
                 <div
                   className={`${variationItemStyles} ${selectedVariation === null ? selectedVariationStyles : nonSelectedVariationStyles}`}
                   onClick={() => setSelectedVariation(null)}
                 >
                   <div className="bg-gray-50">
                     <img 
-                      src={getFormattedUrl(concept?.imageUrl, 'concept-images')} 
+                      src={getOriginalImageUrl()} 
                       alt="Original concept" 
                       className="w-full h-32 object-contain"
-                      onLoad={() => console.log('Original concept image loaded successfully')}
+                      onLoad={() => console.log('Original concept thumbnail loaded successfully')}
                       onError={(e) => {
-                        console.error('Error loading original concept image');
+                        console.error('Error loading original concept thumbnail:', e);
+                        console.error('Original image URL attempt:', getOriginalImageUrl());
                         e.currentTarget.src = fallbackImage;
                         e.currentTarget.classList.add('image-error');
                       }}
                     />
                   </div>
                   <div className="p-1 text-center bg-white text-xs">
-                    <span className="font-medium text-gray-700">Original concept</span>
+                    <span className="font-medium text-gray-700">Original</span>
                     <div className={styles.colorDotsContainer}>
-                      {getCurrentPaletteColors().slice(0, 5).map((color, colorIndex) => (
-                        <div 
-                          key={`color-original-${colorIndex}`}
-                          className={styles.colorDot}
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
+                      {concept?.color_palette ? (
+                        getCurrentPaletteColors().slice(0, 5).map((color, colorIndex) => (
+                          <div 
+                            key={`color-original-${colorIndex}`}
+                            className={styles.colorDot}
+                            style={{ backgroundColor: color }}
+                            title={color}
+                          />
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-500">No palette</span>
+                      )}
                     </div>
                   </div>
                 </div>

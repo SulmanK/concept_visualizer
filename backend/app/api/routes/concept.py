@@ -122,7 +122,7 @@ async def generate_concept_with_palettes(
 ):
     """
     Generate a new visual concept with multiple color palette variations,
-    each with its own distinct image.
+    using a single base image and OpenCV color transformation.
     
     Args:
         request: The prompt request containing logo and theme descriptions
@@ -144,80 +144,63 @@ async def generate_concept_with_palettes(
         # Get or create session
         session_id, _ = await session_service.get_or_create_session(response, session_id)
         
-        # Generate concept with multiple palette variations
-        palettes, variation_images = await concept_service.generate_concept_with_palettes(
-            request.logo_description,
+        # First, generate color palettes based on the theme description
+        palettes = await concept_service.generate_color_palettes(
             request.theme_description,
             num_palettes
         )
         
-        if not variation_images:
-            raise HTTPException(status_code=500, detail="Failed to generate images for any palette")
+        if not palettes:
+            raise HTTPException(status_code=500, detail="Failed to generate color palettes")
         
-        # Convert binary images to storage paths and URLs
-        palette_for_storage = []
-        variations_with_urls = []
+        # Generate a single high-quality base image
+        logger.info(f"Generating base image for concept with prompt: {request.logo_description}")
+        base_image_path, base_image_url = await image_service.generate_and_store_image(
+            request.logo_description,
+            session_id
+        )
         
-        for variation in variation_images:
-            # Upload binary image data to Supabase Storage
-            image_data = variation.get("image_data")
-            if not image_data:
-                continue
-                
-            # Upload the image and get its path
-            from io import BytesIO
-            from PIL import Image
+        if not base_image_path or not base_image_url:
+            raise HTTPException(status_code=500, detail="Failed to generate or store base image")
+        
+        # Apply different color palettes using OpenCV transformation
+        logger.info(f"Creating {len(palettes)} color variations using OpenCV")
+        palette_variations = []
+        
+        for palette in palettes:
+            # Apply each palette to the base image using the new OpenCV method
+            from backend.app.core.supabase import get_supabase_client
+            supabase_client = get_supabase_client()
             
-            try:
-                # Process the binary data
-                img = Image.open(BytesIO(image_data))
-                format_ext = img.format.lower() if img.format else "png"
-                
-                # Generate a unique filename
-                unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
-                
-                # Upload to Supabase Storage
-                from backend.app.core.supabase import get_supabase_client
-                supabase_client = get_supabase_client()
-                
-                # Upload to storage
-                supabase_client.client.storage.from_("concept-images").upload(
-                    path=unique_filename,
-                    file=image_data,
-                    file_options={"content-type": f"image/{format_ext}"}
+            # Transform the image with the current palette
+            palette_image_path = await supabase_client.apply_color_palette(
+                base_image_path,
+                palette["colors"],
+                session_id
+            )
+            
+            if palette_image_path:
+                # Get public URL
+                palette_image_url = supabase_client.get_image_url(
+                    palette_image_path, 
+                    "palette-images"
                 )
                 
-                # Get public URL
-                image_url = supabase_client.get_image_url(unique_filename, "concept-images")
-                
                 # Create variation with URL for response
-                variation_with_url = {
-                    "name": variation["name"],
-                    "colors": variation["colors"],
-                    "description": variation.get("description", ""),
-                    "image_url": image_url
+                variation = {
+                    "name": palette["name"],
+                    "colors": palette["colors"],
+                    "description": palette.get("description", ""),
+                    "image_path": palette_image_path,
+                    "image_url": palette_image_url
                 }
-                variations_with_urls.append(variation_with_url)
-                
-                # Create palette info for storage
-                palette_for_storage.append({
-                    "name": variation["name"],
-                    "colors": variation["colors"],
-                    "description": variation.get("description", ""),
-                    "image_path": unique_filename,
-                    "image_url": image_url
-                })
-            except Exception as e:
-                # Log the error but continue with other variations
-                logger.error(f"Error processing variation image: {e}")
-                continue
+                palette_variations.append(variation)
+                logger.info(f"Created palette variation: {palette['name']}")
+            else:
+                logger.error(f"Failed to create variation for palette: {palette['name']}")
         
-        if not variations_with_urls:
-            raise HTTPException(status_code=500, detail="Failed to process any variation images")
-            
-        # Store the first image as the "base" concept
-        base_variation = palette_for_storage[0]
-        base_image_path = base_variation["image_path"]
+        if not palette_variations:
+            raise HTTPException(status_code=500, detail="Failed to create any color variations")
         
         # Store concept in Supabase
         stored_concept = await storage_service.store_concept(
@@ -225,7 +208,7 @@ async def generate_concept_with_palettes(
             logo_description=request.logo_description,
             theme_description=request.theme_description,
             base_image_path=base_image_path,
-            color_palettes=palette_for_storage
+            color_palettes=palette_variations
         )
         
         if not stored_concept:
@@ -237,8 +220,8 @@ async def generate_concept_with_palettes(
             logo_description=request.logo_description,
             theme_description=request.theme_description,
             created_at=stored_concept.get("created_at", ""),
-            # Default image is the first variation
-            image_url=variations_with_urls[0]["image_url"],
+            # Default image is the base image
+            image_url=base_image_url,
             # Include all variations
             variations=[
                 PaletteVariation(
@@ -247,7 +230,7 @@ async def generate_concept_with_palettes(
                     description=v.get("description", ""),
                     image_url=v["image_url"]
                 )
-                for v in variations_with_urls
+                for v in palette_variations
             ]
         )
     except Exception as e:

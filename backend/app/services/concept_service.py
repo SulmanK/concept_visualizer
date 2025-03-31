@@ -249,7 +249,6 @@ class ConceptService:
         """
         self.logger.info(f"Generating {num_palettes} color palettes for theme: {theme_description}")
         
-        palettes = []
         palette_names = [
             "Primary Palette",
             "Secondary Palette",
@@ -262,27 +261,28 @@ class ConceptService:
         ]
         
         try:
-            for i in range(min(num_palettes, len(palette_names))):
-                # Generate palette with slightly different prompts for variety
-                palette_type = palette_names[i]
-                prompt = f"{theme_description} - {palette_type}"
-                
-                # Get colors from JigsawStack
-                colors = await self.client.generate_color_palette(
-                    prompt=prompt,
-                    num_colors=5  # Limit to 5 colors per palette
-                )
-                
-                # Create palette object
-                palette = {
-                    "name": palette_type,
-                    "colors": colors,
-                    "description": f"A {palette_type.lower()} inspired by: {theme_description}"
-                }
-                palettes.append(palette)
-                
-            self.logger.info(f"Generated {len(palettes)} color palettes successfully")
+            # Create structured prompt for the client
+            prompt = f"""Generate {num_palettes} distinct color palettes for the theme: '{theme_description}'.
+            
+            For each palette, provide:
+            1. A name (choose from: {', '.join(palette_names[:num_palettes])})
+            2. A list of exactly 5 hex color codes (including the '#' symbol)
+            3. A brief description of the palette's mood and style
+            
+            Make each palette unique and suitable for the theme.
+            Format your response as a valid JSON array of objects, each with 'name', 'colors' (array of hex codes), and 'description' fields.
+            """
+            
+            # Get multiple palettes in a single call to JigsawStack
+            self.logger.info(f"Making a single LLM call to generate {num_palettes} color palettes")
+            palettes = await self.client.generate_multiple_palettes(
+                prompt=theme_description,
+                num_palettes=num_palettes
+            )
+            
+            self.logger.info(f"Generated {len(palettes)} color palettes successfully in a single call")
             return palettes
+            
         except Exception as e:
             self.logger.error(f"Error generating color palettes: {e}")
             # Return a default palette in case of error
