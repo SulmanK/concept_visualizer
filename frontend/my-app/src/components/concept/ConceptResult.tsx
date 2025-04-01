@@ -5,23 +5,180 @@ import { Button } from '../ui/Button';
 import { ColorPalette } from '../ui/ColorPalette';
 import { supabase, getPublicImageUrl } from '../../services/supabaseClient';
 
-// Custom styles for the component to match the mockup
-const styles = {
-  container: "max-w-6xl mx-auto",
-  card: "bg-white shadow-lg rounded-xl overflow-hidden",
-  header: "flex justify-between items-center mb-6",
-  title: "text-xl font-bold text-gray-900",
-  date: "text-sm text-gray-500",
-  mainImage: "flex justify-center mb-8",
-  imageContainer: "overflow-hidden rounded-lg border border-gray-200 shadow-sm",
-  image: "w-full max-h-96 object-contain",
-  sectionTitle: "text-lg font-medium text-gray-800 mb-3",
-  variationsGrid: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3",
-  colorDot: "w-2 h-2 rounded-full inline-block",
-  colorDotsContainer: "flex justify-center space-x-1 mt-1",
-  actions: "flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4",
-  colorSwatch: "w-16 h-16 rounded-full",
-  colorItem: "flex flex-col items-center"
+// Define styles using JavaScript objects like in ConceptForm.tsx
+const containerStyle = {
+  width: '100%', // Full width to match other sections
+  margin: '0 auto',
+  backgroundColor: 'white',
+  borderRadius: '0.75rem',
+  padding: '1.5rem',
+};
+
+const pageHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '1.5rem',
+};
+
+const titleStyle = {
+  fontSize: '1.5rem',
+  fontWeight: 'bold',
+  color: '#111827',
+};
+
+const dateStyle = {
+  fontSize: '0.875rem',
+  color: '#6B7280',
+};
+
+const sectionStyle = {
+  marginBottom: '1.5rem',
+};
+
+const sectionTitleStyle = {
+  fontSize: '1.25rem',
+  fontWeight: '600',
+  color: '#111827',
+  marginBottom: '1rem',
+  textAlign: 'center' as const,
+};
+
+const cardStyle = {
+  backgroundColor: '#EEF2FF', // Light indigo background
+  borderRadius: '0.75rem',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+  border: '1px solid #E5E7EB',
+  padding: '1.5rem',
+};
+
+const mainImageContainerStyle = {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: '100%',
+  padding: '1rem',
+  backgroundColor: '#EEF2FF', // Match section card background color
+  borderRadius: '0.75rem',
+  border: '1px solid #E5E7EB',
+  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+};
+
+const imageStyle = {
+  maxWidth: '100%',
+  maxHeight: '350px',
+  objectFit: 'contain' as const,
+};
+
+const colorPaletteContainerStyle = {
+  display: 'flex',
+  flexWrap: 'wrap' as const,
+  justifyContent: 'center',
+  gap: '1.5rem',
+};
+
+const colorItemStyle = {
+  display: 'flex',
+  flexDirection: 'column' as const,
+  alignItems: 'center',
+  marginBottom: '0.5rem',
+};
+
+const colorSwatchStyle = {
+  width: '48px',
+  height: '48px',
+  borderRadius: '50%',
+  cursor: 'pointer',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+};
+
+const colorLabelStyle = {
+  marginTop: '0.5rem',
+  fontSize: '0.75rem',
+  color: '#4B5563',
+  textAlign: 'center' as const,
+};
+
+const variationsGridStyle = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+  gap: '0.75rem',
+};
+
+const variationCardStyle = (isSelected: boolean) => ({
+  backgroundColor: 'white',
+  borderRadius: '0.5rem',
+  overflow: 'hidden',
+  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+  border: isSelected ? '2px solid #4F46E5' : '1px solid #E5E7EB',
+  cursor: 'pointer',
+  transition: 'transform 0.2s, box-shadow 0.2s',
+});
+
+const variationHeaderStyle = {
+  padding: '0.5rem',
+  borderBottom: '1px solid #F3F4F6',
+  textAlign: 'center' as const,
+  backgroundColor: '#F9FAFB',
+};
+
+const variationTitleStyle = {
+  fontWeight: '500',
+  fontSize: '0.75rem',
+  color: '#111827',
+};
+
+const variationContentStyle = {
+  padding: '0.5rem',
+};
+
+const variationImageStyle = {
+  width: '100%',
+  height: '100px',
+  objectFit: 'contain' as const,
+  marginBottom: '0.5rem',
+};
+
+const colorDotsContainerStyle = {
+  display: 'flex',
+  justifyContent: 'center',
+  gap: '0.25rem',
+  paddingBottom: '0.25rem',
+};
+
+const colorDotStyle = {
+  width: '12px',
+  height: '12px',
+  borderRadius: '50%',
+};
+
+const actionsContainerStyle = {
+  display: 'flex',
+  justifyContent: 'center',
+  gap: '1rem',
+  marginTop: '1.5rem',
+};
+
+const buttonBaseStyle = {
+  padding: '0.75rem 1.25rem',
+  borderRadius: '0.5rem',
+  fontWeight: '500',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s',
+};
+
+const primaryButtonStyle = {
+  ...buttonBaseStyle,
+  backgroundColor: '#4F46E5',
+  color: 'white',
+  border: 'none',
+};
+
+const secondaryButtonStyle = {
+  ...buttonBaseStyle,
+  backgroundColor: 'white',
+  color: '#4F46E5',
+  border: '1px solid #4F46E5',
 };
 
 export interface ConceptResultProps {
@@ -55,26 +212,6 @@ export interface ConceptResultProps {
     description?: string;
   }>;
 }
-
-// Styles for variation items
-const variationItemStyles = `
-  cursor-pointer 
-  rounded-lg 
-  overflow-hidden 
-  border
-  transition-all 
-  duration-200 
-  hover:shadow-md 
-  hover:-translate-y-0.5
-`;
-
-const selectedVariationStyles = `
-  border-2 border-indigo-500
-`;
-
-const nonSelectedVariationStyles = `
-  border border-gray-200
-`;
 
 /**
  * Component for displaying generated concept results
@@ -140,16 +277,19 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   // Display placeholder if no concept data
   if (!hasValidData && variations.length === 0) {
     return (
-      <div className={styles.container}>
-        <div className={styles.card}>
-          <div className="p-6">
-            <div className={styles.header}>
-              <h2 className={styles.title}>Generated Concept</h2>
-              <span className={styles.date}>No data available</span>
-            </div>
-            <div className="flex justify-center items-center h-64">
-              <p className="text-gray-500">Waiting for generation results...</p>
-            </div>
+      <div style={containerStyle}>
+        <div style={cardStyle}>
+          <div style={pageHeaderStyle}>
+            <h2 style={titleStyle}>Generated Concept</h2>
+            <span style={dateStyle}>No data available</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '16rem',
+          }}>
+            <p style={{ color: '#6B7280' }}>Waiting for generation results...</p>
           </div>
         </div>
       </div>
@@ -324,159 +464,148 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     ];
   };
 
-  // Get current palette labels
+  // Labels for the color palette
   const paletteLabels = ['Primary', 'Secondary', 'Accent', 'Background', 'Text'];
   
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
-        {/* Header */}
-        <div className="p-6">
-          <div className={styles.header}>
-            <h2 className={styles.title}>Generated Concept</h2>
-            <span className={styles.date}>
-              {concept?.created_at ? new Date(concept.created_at).toLocaleString() : 'Just now'}
-            </span>
-          </div>
+    <div style={containerStyle}>
+      {/* Page Header */}
+      <div style={pageHeaderStyle}>
+        <h1 style={titleStyle}>Generated Concept</h1>
+        <span style={dateStyle}>
+          {concept?.created_at ? new Date(concept.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }) : 'March 31, 2023'}
+        </span>
+      </div>
 
-          {/* Main image display */}
-          <div className={styles.mainImage}>
-            <div className={styles.imageContainer}>
-              <img 
-                src={getCurrentImageUrl()} 
-                alt="Generated concept" 
-                className={styles.image}
-                onLoad={() => console.log('Main image loaded successfully')}
-                onError={(e) => {
-                  console.error('Error loading main image:', e);
-                  console.error('Current image URL:', getCurrentImageUrl());
-                  e.currentTarget.src = fallbackImage;
-                  // Add class to show user there was an error
-                  e.currentTarget.classList.add('image-error');
-                }}
-              />
-            </div>
+      {/* Main Content */}
+      <div style={sectionStyle}>
+        <h2 style={sectionTitleStyle}>Concept</h2>
+        <div style={mainImageContainerStyle}>
+          <img 
+            src={getCurrentImageUrl()} 
+            alt="Generated concept" 
+            style={imageStyle}
+            onLoad={() => console.log('Main image loaded successfully')}
+            onError={(e) => {
+              console.error('Error loading main image:', e);
+              console.error('Current image URL:', getCurrentImageUrl());
+              e.currentTarget.src = fallbackImage;
+            }}
+          />
+        </div>
+      </div>
+      
+      {/* Color Palette Section */}
+      <div style={sectionStyle}>
+        <h2 style={sectionTitleStyle}>Color Palette</h2>
+        <div style={cardStyle}>
+          <div style={colorPaletteContainerStyle}>
+            {getCurrentPaletteColors().slice(0, 5).map((color, index) => (
+              <div key={`color-${index}`} style={colorItemStyle}>
+                <div 
+                  style={{ ...colorSwatchStyle, backgroundColor: color }}
+                  onClick={() => handleColorSelect(color)}
+                  title={color}
+                ></div>
+                <span style={colorLabelStyle}>{paletteLabels[index]}</span>
+              </div>
+            ))}
           </div>
-          
-          {/* Color palette for selected/main image */}
-          <div className="mb-6">
-            <h3 className={styles.sectionTitle}>Color Palette</h3>
-            <div className="flex flex-wrap gap-3">
-              {getCurrentPaletteColors().slice(0, 5).map((color, index) => (
-                <div key={`color-${index}`} className={styles.colorItem}>
-                  <div 
-                    className={styles.colorSwatch} 
-                    style={{ backgroundColor: color }}
-                    onClick={() => handleColorSelect(color)}
-                    title={color}
-                  ></div>
-                  <span className="text-xs mt-1 text-gray-600">{paletteLabels[index]}</span>
+        </div>
+      </div>
+      
+      {/* Color Variations Section */}
+      {variations.length > 0 && (
+        <div style={sectionStyle}>
+          <h2 style={sectionTitleStyle}>Color Variations</h2>
+          <div style={cardStyle}>
+            <div style={variationsGridStyle}>
+              {/* Original variation */}
+              <div 
+                style={variationCardStyle(selectedVariation === null)}
+                onClick={() => setSelectedVariation(null)}
+              >
+                <div style={variationHeaderStyle}>
+                  <span style={variationTitleStyle}>Original</span>
+                </div>
+                <div style={variationContentStyle}>
+                  <img 
+                    src={getOriginalImageUrl()} 
+                    alt="Original concept" 
+                    style={variationImageStyle}
+                    onError={(e) => {
+                      e.currentTarget.src = fallbackImage;
+                    }}
+                  />
+                  <div style={colorDotsContainerStyle}>
+                    {getCurrentPaletteColors().slice(0, 5).map((color, colorIndex) => (
+                      <div 
+                        key={`color-original-${colorIndex}`}
+                        style={{ ...colorDotStyle, backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Other variations */}
+              {variations.map((variation, index) => (
+                <div
+                  key={`variation-${index}`}
+                  style={variationCardStyle(selectedVariation === index)}
+                  onClick={() => setSelectedVariation(index)}
+                >
+                  <div style={variationHeaderStyle}>
+                    <span style={variationTitleStyle}>{variation.name}</span>
+                  </div>
+                  <div style={variationContentStyle}>
+                    <img 
+                      src={getFormattedUrl(variation.image_url, 'palette-images')} 
+                      alt={`${variation.name}`} 
+                      style={variationImageStyle}
+                      onError={(e) => {
+                        e.currentTarget.src = fallbackImage;
+                      }}
+                    />
+                    <div style={colorDotsContainerStyle}>
+                      {variation.colors.slice(0, 5).map((color, colorIndex) => (
+                        <div 
+                          key={`color-${index}-${colorIndex}`}
+                          style={{ ...colorDotStyle, backgroundColor: color }}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-          
-          {/* Color variations display */}
-          {variations.length > 0 && (
-            <div className="mb-6">
-              <h3 className={styles.sectionTitle}>Color Variations</h3>
-              <div className={styles.variationsGrid}>
-                {/* Original concept - make sure this is using the concept-images bucket */}
-                <div
-                  className={`${variationItemStyles} ${selectedVariation === null ? selectedVariationStyles : nonSelectedVariationStyles}`}
-                  onClick={() => setSelectedVariation(null)}
-                >
-                  <div className="bg-gray-50">
-                    <img 
-                      src={getOriginalImageUrl()} 
-                      alt="Original concept" 
-                      className="w-full h-32 object-contain"
-                      onLoad={() => console.log('Original concept thumbnail loaded successfully')}
-                      onError={(e) => {
-                        console.error('Error loading original concept thumbnail:', e);
-                        console.error('Original image URL attempt:', getOriginalImageUrl());
-                        e.currentTarget.src = fallbackImage;
-                        e.currentTarget.classList.add('image-error');
-                      }}
-                    />
-                  </div>
-                  <div className="p-1 text-center bg-white text-xs">
-                    <span className="font-medium text-gray-700">Original</span>
-                    <div className={styles.colorDotsContainer}>
-                      {concept?.color_palette ? (
-                        getCurrentPaletteColors().slice(0, 5).map((color, colorIndex) => (
-                          <div 
-                            key={`color-original-${colorIndex}`}
-                            className={styles.colorDot}
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-500">No palette</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Color variations */}
-                {variations.map((variation, index) => (
-                  <div
-                    key={`variation-${index}`}
-                    className={`${variationItemStyles} ${selectedVariation === index ? selectedVariationStyles : nonSelectedVariationStyles}`}
-                    onClick={() => setSelectedVariation(index)}
-                  >
-                    <div className="bg-gray-50">
-                      <img 
-                        src={getFormattedUrl(variation.image_url, 'palette-images')} 
-                        alt={`Color variation: ${variation.name}`} 
-                        className="w-full h-32 object-contain"
-                        onLoad={() => console.log(`Variation image ${index} loaded successfully`)}
-                        onError={(e) => {
-                          console.error(`Error loading variation image ${index}`);
-                          e.currentTarget.src = fallbackImage;
-                          e.currentTarget.classList.add('image-error');
-                        }}
-                      />
-                    </div>
-                    <div className="p-1 text-center bg-white text-xs">
-                      <span className="font-medium text-gray-700">{variation.name}</span>
-                      <div className={styles.colorDotsContainer}>
-                        {variation.colors.slice(0, 5).map((color, colorIndex) => (
-                          <div 
-                            key={`color-${index}-${colorIndex}`}
-                            className={styles.colorDot}
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {/* Actions */}
-          <div className={styles.actions}>
-            {onRefineRequest && (
-              <button 
-                className="px-4 py-2 bg-white text-indigo-600 font-medium border border-indigo-600 rounded hover:bg-indigo-50"
-                onClick={onRefineRequest}
-              >
-                Refine This Concept
-              </button>
-            )}
-            
-            <button 
-              className="px-4 py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700"
-              onClick={handleDownload}
-            >
-              Download Image
-            </button>
-          </div>
         </div>
+      )}
+      
+      {/* Actions */}
+      <div style={actionsContainerStyle}>
+        {onRefineRequest && (
+          <button 
+            style={secondaryButtonStyle}
+            onClick={onRefineRequest}
+          >
+            Refine This Concept
+          </button>
+        )}
+        
+        <button 
+          style={primaryButtonStyle}
+          onClick={handleDownload}
+        >
+          Download Image
+        </button>
       </div>
     </div>
   );
