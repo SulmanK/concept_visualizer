@@ -305,13 +305,8 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     const imageUrl = getCurrentImageUrl();
     if (!imageUrl) return;
     
-    // Create a link and trigger download
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = getFileName(imageUrl) || 'concept-image.png';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Open the image in a new tab instead of direct download
+    window.open(imageUrl, '_blank');
   };
   
   const getCurrentPalette = (): ColorPalette | string[] => {

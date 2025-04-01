@@ -27,9 +27,10 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({ concept }) => {
   
   // Get current color variation or default to first one
   const hasVariations = concept.color_variations && concept.color_variations.length > 0;
-  const currentVariation = hasVariations ? concept.color_variations[selectedVariationIndex] : null;
+  const currentVariation = hasVariations ? concept.color_variations?.[selectedVariationIndex] : null;
   
   // Get main color for concept (use selected variation or default to indigo)
+  // This is used for the color buttons, but not for the background anymore
   const mainColor = currentVariation && currentVariation.colors && currentVariation.colors.length > 0
     ? currentVariation.colors[0]
     : '#4F46E5';
@@ -38,13 +39,16 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({ concept }) => {
   
   // Handle color palette click - switch between variations
   const handlePaletteClick = (index: number) => {
-    if (hasVariations && index < concept.color_variations!.length) {
+    if (hasVariations && index < (concept.color_variations?.length || 0)) {
       setSelectedVariationIndex(index);
     }
   };
   
   // Get the current image URL based on selection
   const currentImageUrl = currentVariation?.image_url || concept.base_image_url;
+  
+  // Use a consistent neutral background color
+  const neutralBackgroundColor = '#f0f0f5';
   
   return (
     <Link 
@@ -54,7 +58,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({ concept }) => {
       <div className="flex flex-col bg-indigo-50/90 rounded-lg overflow-hidden shadow-sm border border-indigo-100 h-full transition-all duration-300 hover:shadow-md">
         <div 
           className="h-48 flex items-center justify-center"
-          style={{ background: mainColor }}
+          style={{ background: neutralBackgroundColor }}
         >
           {/* Show the selected variation image or base image */}
           <img
@@ -70,13 +74,13 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({ concept }) => {
           </h3>
           
           <p className="text-sm text-dark-600 line-clamp-2 mb-4">
-            {concept.description || concept.logo_description || 'No description available'}
+            {concept.logo_description || 'No description available'}
           </p>
           
           {hasVariations && (
             <div className="mt-3 mb-3">
               <div className="flex space-x-2">
-                {concept.color_variations!.map((variation, index) => (
+                {concept.color_variations?.map((variation, index) => (
                   <button 
                     key={index}
                     onClick={(e) => {

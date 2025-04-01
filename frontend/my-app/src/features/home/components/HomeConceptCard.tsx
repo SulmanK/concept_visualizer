@@ -62,9 +62,10 @@ export const HomeConceptCard: React.FC<HomeConceptCardProps> = ({
   
   // Get current color variation or default to first one
   const hasVariations = concept.color_variations && concept.color_variations.length > 0;
-  const currentVariation = hasVariations ? concept.color_variations[selectedVariationIndex] : null;
+  const currentVariation = hasVariations ? concept.color_variations?.[selectedVariationIndex] : null;
   
   // Get main color for concept (use selected variation or default to indigo)
+  // This is used for the color buttons and fallback initials, but not for the background
   const mainColor = currentVariation && currentVariation.colors && currentVariation.colors.length > 0
     ? currentVariation.colors[0]
     : '#4F46E5';
@@ -74,7 +75,7 @@ export const HomeConceptCard: React.FC<HomeConceptCardProps> = ({
   // Handle color palette click - switch between variations
   const handlePaletteClick = (index: number, e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigation when clicking on color circles
-    if (hasVariations && index < concept.color_variations!.length) {
+    if (hasVariations && index < (concept.color_variations?.length || 0)) {
       setSelectedVariationIndex(index);
       setImageLoaded(false); // Reset image loaded state when switching variations
       setImageError(false);  // Reset error state
@@ -84,6 +85,9 @@ export const HomeConceptCard: React.FC<HomeConceptCardProps> = ({
   
   // Get the current image URL based on selection
   const currentImageUrl = currentVariation?.image_url || concept.base_image_url;
+  
+  // Use a consistent neutral background color
+  const neutralBackgroundColor = '#f0f0f5';
   
   const handleImageLoad = () => {
     console.log(`✅ Image loaded successfully for ${concept.logo_description}: ${currentImageUrl}`);
@@ -102,7 +106,7 @@ export const HomeConceptCard: React.FC<HomeConceptCardProps> = ({
     <div className="flex flex-col bg-indigo-50/90 rounded-lg overflow-hidden shadow-sm border border-indigo-100 h-full transition-all duration-300 hover:shadow-md">
       <div 
         className="h-48 flex items-center justify-center"
-        style={{ background: mainColor }}
+        style={{ background: neutralBackgroundColor }}
       >
         {imageError || !currentImageUrl ? (
           // Show initials if image fails to load or no URL is provided
@@ -136,7 +140,7 @@ export const HomeConceptCard: React.FC<HomeConceptCardProps> = ({
         {hasVariations && (
           <div className="mt-3 mb-3">
             <div className="flex space-x-2">
-              {concept.color_variations!.map((variation, index) => (
+              {concept.color_variations?.map((variation, index) => (
                 <button 
                   key={index}
                   onClick={(e) => handlePaletteClick(index, e)}
