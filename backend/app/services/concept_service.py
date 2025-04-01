@@ -238,7 +238,7 @@ class ConceptService:
             self, 
             theme_description: str, 
             logo_description: Optional[str] = None,
-            num_palettes: int = 5
+            num_palettes: int = 8
     ) -> List[Dict[str, Any]]:
         """
         Generate color palettes based on a theme description and logo description.
@@ -260,7 +260,8 @@ class ConceptService:
         palette_names = [
             "Primary Palette", "Accent Palette", "Neutral Palette", 
             "Vibrant Palette", "Complementary Palette", "Monochromatic Palette", 
-            "Analogous Palette", "Triadic Palette", "Modern Palette"
+            "Analogous Palette", "Triadic Palette", "Modern Palette",
+            "Earthy Palette", "Pastel Palette", "Bold Palette"
         ]
         
         try:
@@ -271,8 +272,6 @@ class ConceptService:
             logo_desc = logo_description or "generic logo"
                 
             # Generate palettes with suggested names
-            suggested_names = ", ".join(palette_names[:num_palettes])
-            enhanced_theme = f"{theme_description}. Suggested palette names: {suggested_names}"
             
             palettes = await self.client.generate_multiple_palettes(
                 logo_description=logo_desc,

@@ -163,38 +163,55 @@ export const ConceptDetailPage: React.FC = () => {
               />
             </div>
             
+            {/* Divider with label */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-indigo-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-indigo-600 text-sm font-medium">Color Variations</span>
+              </div>
+            </div>
+            
             {/* Variations thumbnails */}
             {concept.color_variations && concept.color_variations.length > 0 && (
               <div>
-                <h3 className="text-sm text-indigo-500 font-medium mb-2">
-                  Color Variations
+                <h3 className="text-md font-semibold text-indigo-700 mb-4">
+                  Select a Color Palette ({concept.color_variations.length} options)
                 </h3>
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
                   {/* Base image thumbnail */}
-                  <button 
-                    onClick={() => setSelectedVariation(null)}
-                    className={`w-16 h-16 rounded overflow-hidden flex-shrink-0 border-2 ${!selectedVariation ? 'border-indigo-600' : 'border-transparent'}`}
-                  >
-                    <img 
-                      src={concept.base_image_url} 
-                      alt="Original" 
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                  
-                  {/* Variation thumbnails */}
-                  {concept.color_variations.map((variation) => (
-                    <button
-                      key={variation.id}
-                      onClick={() => setSelectedVariation(variation)}
-                      className={`w-16 h-16 rounded overflow-hidden flex-shrink-0 border-2 ${selectedVariation?.id === variation.id ? 'border-indigo-600' : 'border-transparent'}`}
+                  <div className="flex flex-col items-center">
+                    <button 
+                      onClick={() => setSelectedVariation(null)}
+                      className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-3 ${!selectedVariation ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-transparent'} hover:shadow-lg transition duration-200 ease-in-out transform hover:scale-105`}
+                      title="Original image without color transformation"
                     >
                       <img 
-                        src={variation.image_url} 
-                        alt={variation.palette_name} 
+                        src={concept.base_image_url} 
+                        alt="Original" 
                         className="w-full h-full object-cover"
                       />
                     </button>
+                    <span className="text-xs font-medium text-indigo-800 mt-2 text-center bg-indigo-50 px-2 py-1 rounded-md w-full">Original</span>
+                  </div>
+                  
+                  {/* Variation thumbnails */}
+                  {concept.color_variations.map((variation) => (
+                    <div key={variation.id} className="flex flex-col items-center">
+                      <button
+                        onClick={() => setSelectedVariation(variation)}
+                        className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-3 ${selectedVariation?.id === variation.id ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-transparent'} hover:shadow-lg transition duration-200 ease-in-out transform hover:scale-105`}
+                        title={variation.palette_name}
+                      >
+                        <img 
+                          src={variation.image_url} 
+                          alt={variation.palette_name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                      <span className="text-xs font-medium text-indigo-800 mt-2 text-center truncate px-1 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem]">{variation.palette_name}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -204,43 +221,106 @@ export const ConceptDetailPage: React.FC = () => {
           {/* Right column - Details */}
           <div className="w-full md:w-1/2">
             {/* Concept descriptions */}
-            <div className="mb-8">
-              <div className="text-indigo-800 font-medium mb-2">Logo Description</div>
-              <p className="text-gray-600 mb-4">{concept.logo_description}</p>
+            <div className="mb-8 bg-white rounded-xl shadow-sm p-5 border border-indigo-100">
+              <h3 className="text-lg font-semibold text-indigo-800 mb-4">Concept Information</h3>
               
-              <div className="text-indigo-800 font-medium mb-2">Theme Description</div>
-              <p className="text-gray-600">{concept.theme_description}</p>
+              <div className="mb-4">
+                <div className="text-indigo-800 font-medium mb-2 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                  </svg>
+                  Logo Description
+                </div>
+                <p className="text-gray-700 bg-indigo-50 p-3 rounded-md leading-relaxed">{concept.logo_description}</p>
+              </div>
+              
+              <div>
+                <div className="text-indigo-800 font-medium mb-2 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v11a3 3 0 106 0V4a2 2 0 00-2-2H4zm1 14a1 1 0 100-2 1 1 0 000 2zm5-1.757l4.9-4.9a2 2 0 000-2.828L13.485 5.1a2 2 0 00-2.828 0L10 5.757v8.486zM16 18H9.071l6-6H16a2 2 0 012 2v2a2 2 0 01-2 2z" clipRule="evenodd" />
+                  </svg>
+                  Theme Description
+                </div>
+                <p className="text-gray-700 bg-indigo-50 p-3 rounded-md leading-relaxed">{concept.theme_description}</p>
+              </div>
             </div>
             
             {/* Selected color palette */}
             {selectedVariation ? (
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-indigo-800 mb-3">
-                  {selectedVariation.palette_name}
-                </h3>
-                <ColorPalette 
-                  palette={{
-                    primary: selectedVariation.colors[0] || '#4F46E5',
-                    secondary: selectedVariation.colors[1] || '#818CF8',
-                    accent: selectedVariation.colors[2] || '#C7D2FE',
-                    background: selectedVariation.colors[3] || '#EEF2FF',
-                    text: selectedVariation.colors[4] || '#312E81',
-                    additionalColors: selectedVariation.colors.slice(5) || []
-                  }}
-                  showLabels={true}
-                  size="lg"
-                />
+              <div className="mb-6 bg-white rounded-xl shadow-sm p-4 border border-indigo-100">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold text-indigo-800">
+                    {selectedVariation.palette_name}
+                  </h3>
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Selected
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <ColorPalette 
+                    palette={{
+                      primary: selectedVariation.colors[0] || '#4F46E5',
+                      secondary: selectedVariation.colors[1] || '#818CF8',
+                      accent: selectedVariation.colors[2] || '#C7D2FE',
+                      background: selectedVariation.colors[3] || '#EEF2FF',
+                      text: selectedVariation.colors[4] || '#312E81',
+                      additionalColors: selectedVariation.colors.slice(5) || []
+                    }}
+                    showLabels={true}
+                    size="lg"
+                    className="mb-3"
+                  />
+                  
+                  {/* Color hex codes */}
+                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[0] || '#4F46E5' }}></div>
+                      <span className="font-mono">Primary: {selectedVariation.colors[0] || '#4F46E5'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[1] || '#818CF8' }}></div>
+                      <span className="font-mono">Secondary: {selectedVariation.colors[1] || '#818CF8'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[2] || '#C7D2FE' }}></div>
+                      <span className="font-mono">Accent: {selectedVariation.colors[2] || '#C7D2FE'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[3] || '#EEF2FF' }}></div>
+                      <span className="font-mono">Background: {selectedVariation.colors[3] || '#EEF2FF'}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[4] || '#312E81' }}></div>
+                      <span className="font-mono">Text: {selectedVariation.colors[4] || '#312E81'}</span>
+                    </div>
+                  </div>
+                </div>
+                
                 {selectedVariation.description && (
-                  <p className="text-gray-600 mt-3">{selectedVariation.description}</p>
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-indigo-700 mb-2">Palette Description</h4>
+                    <p className="text-gray-700 p-3 bg-indigo-50 rounded-md leading-relaxed">{selectedVariation.description}</p>
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-indigo-800 mb-3">
-                  Original Concept
-                </h3>
-                <p className="text-gray-600">
-                  This is the original concept without any color variations applied.
+              <div className="mb-6 bg-white rounded-xl shadow-sm p-4 border border-indigo-100">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold text-indigo-800">
+                    Original Concept
+                  </h3>
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-800 text-sm font-medium rounded-full flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Base Image
+                  </span>
+                </div>
+                <p className="text-gray-700 p-3 bg-indigo-50 rounded-md leading-relaxed">
+                  This is the original concept without any color variations applied. Select one of the color variations above to see how different color palettes affect the design.
                 </p>
               </div>
             )}

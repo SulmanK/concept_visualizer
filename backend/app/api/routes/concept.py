@@ -116,7 +116,7 @@ async def generate_concept(
 async def generate_concept_with_palettes(
     request: PromptRequest,
     response: Response,
-    num_palettes: int = 5,
+    num_palettes: int = 8,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
     image_service: ImageService = Depends(get_image_service),
@@ -130,7 +130,7 @@ async def generate_concept_with_palettes(
     Args:
         request: The prompt request containing logo and theme descriptions
         response: FastAPI response object for setting cookies
-        num_palettes: Number of distinct palette variations to generate (default: 5)
+        num_palettes: Number of distinct palette variations to generate (default: 8)
         concept_service: The concept generation service
         session_service: Service for managing sessions
         image_service: Service for image handling
