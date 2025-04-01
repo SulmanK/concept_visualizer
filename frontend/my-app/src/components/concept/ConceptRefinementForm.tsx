@@ -58,7 +58,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   const [logoDescription, setLogoDescription] = useState(initialLogoDescription);
   const [themeDescription, setThemeDescription] = useState(initialThemeDescription);
   const [preserveAspects, setPreserveAspects] = useState<string[]>([]);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | undefined>(undefined);
   
   const aspectOptions = [
     { id: 'layout', label: 'Layout' },
@@ -82,7 +82,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
       return false;
     }
     
-    setValidationError(null);
+    setValidationError(undefined);
     return true;
   };
   
@@ -107,13 +107,13 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
       variant="gradient"
       className="max-w-xl mx-auto"
       header={
-        <h2 className="text-xl font-semibold text-dark-900">Refine Concept</h2>
+        <h2 className="text-xl font-semibold text-indigo-900">Refine Concept</h2>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Original image thumbnail */}
         <div className="flex justify-center mb-4">
-          <div className="w-40 h-40 border border-dark-200 rounded-lg overflow-hidden shadow-sm">
+          <div className="w-40 h-40 border border-indigo-200 rounded-lg overflow-hidden shadow-sm">
             <img 
               src={originalImageUrl} 
               alt="Original concept" 
@@ -167,7 +167,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
         
         {/* Preserve aspects checkboxes */}
         <div>
-          <p className="label mb-2">Preserve Aspects (Optional)</p>
+          <p className="block text-sm font-medium text-indigo-700 mb-2">Preserve Aspects (Optional)</p>
           <div className="flex flex-wrap gap-3">
             {aspectOptions.map(aspect => (
               <label 
@@ -179,16 +179,16 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
                   checked={preserveAspects.includes(aspect.id)}
                   onChange={() => toggleAspect(aspect.id)}
                   disabled={isSubmitting || isSuccess}
-                  className="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                  className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
-                <span className="text-sm text-dark-700">{aspect.label}</span>
+                <span className="text-sm text-indigo-700">{aspect.label}</span>
               </label>
             ))}
           </div>
         </div>
         
         {error && (
-          <div className="p-3 bg-accent-50 border border-accent-200 rounded text-accent-800 text-sm">
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
             {error}
           </div>
         )}
@@ -208,7 +208,6 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           <Button
             variant="primary"
             type="submit"
-            isLoading={isSubmitting}
             disabled={isSubmitting || isSuccess}
           >
             {isSubmitting ? 'Refining...' : 'Refine Concept'}

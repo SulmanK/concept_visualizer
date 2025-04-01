@@ -41,15 +41,12 @@ export const Card: React.FC<CardProps> = ({
   ...props
 }) => {
   const baseClasses = {
-    default: 'card',
-    gradient: 'card-gradient',
-    elevated: 'card bg-white border-none shadow-lg',
+    default: 'bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden',
+    gradient: 'bg-gradient-to-br from-indigo-50/90 to-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden',
+    elevated: 'bg-white border-none rounded-lg shadow-lg overflow-hidden',
   };
   
-  const cardClass = [
-    baseClasses[variant],
-    className
-  ].join(' ').trim();
+  const cardClass = `${baseClasses[variant]} ${className}`.trim();
   
   const contentClass = padded ? 'p-4 sm:p-6' : '';
   
@@ -64,7 +61,7 @@ export const Card: React.FC<CardProps> = ({
       <div className={contentClass}>
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : (
           children

@@ -153,7 +153,7 @@ export const ConceptDetail: React.FC = () => {
         
         {/* Title */}
         <h1 className="text-2xl font-bold text-indigo-800 mb-8">
-          {concept.logo_description}
+          Concept
         </h1>
         
         {/* Concept details */}

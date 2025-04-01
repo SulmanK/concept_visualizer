@@ -44,11 +44,11 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/50 disabled:opacity-60 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed';
   
   const variantClasses = {
-    primary: 'bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover hover:brightness-105',
-    secondary: 'bg-gradient-secondary text-white shadow-modern hover:shadow-modern-hover hover:brightness-105',
+    primary: 'bg-gradient-to-r from-primary to-primary-dark text-white shadow-modern hover:shadow-modern-hover hover:brightness-105',
+    secondary: 'bg-gradient-to-r from-secondary to-secondary-dark text-white shadow-modern hover:shadow-modern-hover hover:brightness-105',
     outline: 'border border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 hover:text-primary-dark',
     ghost: 'text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50',
   };
@@ -61,10 +61,12 @@ export const Button: React.FC<ButtonProps> = ({
   
   const roundedClasses = pill ? 'rounded-full' : 'rounded-lg';
   
+  const buttonClasses = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${roundedClasses} ${className}`;
+  
   return (
     <button
       type={type}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${roundedClasses} ${className}`}
+      className={buttonClasses}
       {...props}
     >
       {children}

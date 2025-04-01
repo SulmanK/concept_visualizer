@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { GenerationResponse } from '../../types';
+import { GenerationResponse, ColorPalette } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { ColorPalette } from '../ui/ColorPalette';
+import { ColorPalette as ColorPaletteComponent } from '../ui/ColorPalette';
 import { supabase, getPublicImageUrl } from '../../services/supabaseClient';
 
 // Define styles using JavaScript objects like in ConceptForm.tsx
@@ -248,152 +248,144 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     }
   }, [concept, variations]);
   
-  // Add better error listening for CORS issues
-  React.useEffect(() => {
-    const corsErrorHandler = (event: Event) => {
-      // Check if it's a CORS error
-      if (event instanceof ErrorEvent && 
-          (event.message.includes('CORS') || 
-           event.message.includes('cross-origin') || 
-           event.message.includes('OpaqueResponseBlocking'))) {
-        console.error('CORS error detected:', event.message);
-        console.log('If you continue to see CORS errors, check these common solutions:');
-        console.log('1. Ensure your Storage bucket CORS settings allow access from your app domain');
-        console.log('2. Check if your bucket is public or if private, use signed URLs');
-        console.log('3. Verify image paths are correct in your database');
-      }
-    };
+  // Image error handler
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    // Get the target element and its src attribute
+    const imgElement = event.currentTarget;
+    const imgSrc = imgElement.src;
     
-    // Add global error listener
-    window.addEventListener('error', corsErrorHandler);
+    console.error(`Image failed to load: ${imgSrc}`, event);
     
-    // Cleanup
-    return () => {
-      window.removeEventListener('error', corsErrorHandler);
-    };
-  }, []);
+    // Mark this image URL as failed in our state
+    setImageLoadErrors(prev => ({
+      ...prev,
+      [imgSrc]: true
+    }));
+  };
   
-  // Handle case where concept is undefined or null
-  const hasValidData = !!concept;
-
-  // Display placeholder if no concept data
-  if (!hasValidData && variations.length === 0) {
-    return (
-      <div style={containerStyle}>
-        <div style={cardStyle}>
-          <div style={pageHeaderStyle}>
-            <h2 style={titleStyle}>Generated Concept</h2>
-            <span style={dateStyle}>No data available</span>
-          </div>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '16rem',
-          }}>
-            <p style={{ color: '#6B7280' }}>Waiting for generation results...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Default fallback image
-  const fallbackImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmZiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiM5OTk5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIj5JbWFnZSBOb3QgTG9hZGVkPC90ZXh0Pjwvc3ZnPg==';
-  
-  // Helper function to ensure URL is properly formatted for Supabase storage
   const getFormattedUrl = (url: string | undefined, bucketName = 'concept-images') => {
-    if (!url) {
-      console.log('No URL provided, using fallback image');
-      return fallbackImage;
-    }
+    if (!url) return '';
     
-    console.log('Original URL:', url);
-    
-    // If it's already a full URL (which it should be now that buckets are public), use it directly
+    // If the URL already has the domain in it, return it as is
     if (url.startsWith('http')) {
-      // Clean up the URL by removing any trailing question mark
-      const cleanUrl = url.endsWith('?') ? url.slice(0, -1) : url;
-      return cleanUrl;
+      return url;
     }
     
-    // If it's not a full URL, construct it (fallback)
+    // Otherwise, assume it's a path/key and format it appropriately for Supabase
     try {
-      // Construct direct public URL (now that buckets are public)
-      // Remove any trailing question marks from the filename
-      const cleanFilename = url.endsWith('?') ? url.slice(0, -1) : url;
-      const publicUrl = `https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/${bucketName}/${cleanFilename}`;
-      console.log('Constructed URL:', publicUrl);
-      return publicUrl;
+      // Assume the URL is a path in the Supabase bucket
+      return getPublicImageUrl(bucketName, url) || '';
     } catch (error) {
       console.error('Error formatting URL:', error);
-      return fallbackImage;
+      return '';
     }
   };
   
-  // Function to extract filename from URL for download
   const getFileName = (url: string): string => {
-    if (!url || url.startsWith('data:')) {
-      const id = concept?.prompt_id || concept?.generation_id || 'download';
-      return `concept-${id.slice(0, 8)}.png`;
+    if (!url) return '';
+    
+    // Extract the file name from the URL
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1];
+    
+    // If the file name contains a query string, remove it
+    if (fileName.includes('?')) {
+      return fileName.split('?')[0];
     }
     
-    try {
-      const urlParts = url.split('/');
-      const fileName = urlParts[urlParts.length - 1];
-      const id = concept?.prompt_id || concept?.generation_id || 'download';
-      return fileName.includes('.') 
-        ? fileName 
-        : `concept-${id.slice(0, 8)}.png`;
-    } catch (error) {
-      return `concept-download.png`;
+    return fileName;
+  };
+  
+  const handleDownload = () => {
+    if (onDownload) {
+      onDownload();
+      return;
+    }
+    
+    const imageUrl = getCurrentImageUrl();
+    if (!imageUrl) return;
+    
+    // Create a link and trigger download
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = getFileName(imageUrl) || 'concept-image.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
+  const getCurrentPalette = (): ColorPalette | string[] => {
+    // If a variation is selected, return its colors
+    if (selectedVariation !== null && variations[selectedVariation]) {
+      return variations[selectedVariation].colors;
+    }
+    
+    // Otherwise, fallback to the original concept's color palette
+    if (concept && concept.color_palette) {
+      return concept.color_palette;
+    }
+    
+    // If no colors are available, return an empty array
+    return [];
+  };
+  
+  const getOriginalImageUrl = (): string => {
+    if (!concept || !concept.image_url) {
+      console.warn('Original image URL is missing in concept data', concept);
+      return '';
+    }
+    
+    return getFormattedUrl(concept.image_url, 'concept-images');
+  };
+  
+  const getCurrentImageUrl = () => {
+    // If a variation is selected, return its image URL
+    if (selectedVariation !== null && variations[selectedVariation]) {
+      const variationUrl = variations[selectedVariation].image_url;
+      return getFormattedUrl(variationUrl, 'palette-images');
+    }
+    
+    // Otherwise, return the original image URL
+    return getOriginalImageUrl();
+  };
+  
+  const getCurrentVariationName = () => {
+    if (selectedVariation !== null && variations[selectedVariation]) {
+      return variations[selectedVariation].name;
+    }
+    return 'Original';
+  };
+  
+  const handleColorSelect = (color: string) => {
+    if (onColorSelect) {
+      onColorSelect(color);
     }
   };
   
-  // Handle download click
-  const handleDownload = () => {
-    try {
-      if (onDownload) {
-        onDownload();
-        return;
-      }
-      
-      // Get the URL to download
-      const imageUrl = getCurrentImageUrl();
-      if (!imageUrl || imageUrl.startsWith('data:')) {
-        console.error('Cannot download image: Invalid image URL');
-        return;
-      }
-      
-      // Default download behavior
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = getFileName(imageUrl);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error downloading image:', error);
-    }
+  const getCurrentPaletteColors = () => {
+    return getCurrentPalette();
   };
-
-  // Get current palette based on selection
-  const getCurrentPalette = () => {
-    // For selected variation
-    if (selectedVariation !== null && variations[selectedVariation]) {
-      const colors = variations[selectedVariation].colors || [];
-      return {
-        primary: colors[0] || '#4F46E5',
-        secondary: colors[1] || '#818CF8',
-        accent: colors[2] || '#C7D2FE',
-        background: colors[3] || '#EEF2FF',
-        text: colors[4] || '#312E81',
-        additionalColors: colors.slice(5) || []
-      };
-    }
+  
+  const getImageElements = () => {
+    const imageUrl = getCurrentImageUrl();
+    const palette = getCurrentPaletteColors();
     
-    // For original concept
-    if (!concept || !concept.color_palette) {
+    // Create a valid ColorPalette object
+    const createColorPaletteObject = (colors: string[] | ColorPalette): ColorPalette => {
+      if (Array.isArray(colors)) {
+        return {
+          primary: colors[0] || '#4F46E5',
+          secondary: colors[1] || '#818CF8',
+          accent: colors[2] || '#C7D2FE',
+          background: colors[3] || '#EEF2FF',
+          text: colors[4] || '#312E81',
+          additionalColors: colors.slice(5) || []
+        };
+      } else if (colors && typeof colors === 'object') {
+        return colors;
+      }
+      
+      // Default palette if nothing valid is provided
       return {
         primary: '#4F46E5',
         secondary: '#818CF8',
@@ -402,212 +394,127 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         text: '#312E81',
         additionalColors: []
       };
-    }
+    };
     
-    return concept.color_palette;
-  };
-  
-  // Helper function to get the original image URL from the concept data
-  const getOriginalImageUrl = (): string => {
-    // Use the correct field name from the API response
-    const imageUrl = concept?.image_url;
-    
-    if (!imageUrl) {
-      console.warn('⚠️ No image URL found in concept data!');
-      return fallbackImage;
-    }
-    
-    return getFormattedUrl(imageUrl, 'concept-images');
-  };
-  
-  // Get current image URL
-  const getCurrentImageUrl = () => {
-    // For selected variation
-    if (selectedVariation !== null && variations[selectedVariation]) {
-      const variationUrl = getFormattedUrl(variations[selectedVariation].image_url, 'palette-images');
-      console.log('Using variation image URL:', variationUrl);
-      return variationUrl;
-    }
-    
-    // For original concept - ensure we're getting from the correct bucket
-    // The original image is stored in the 'concept-images' bucket
-    console.log('Loading original image from concept-images bucket');
-    return getOriginalImageUrl();
-  };
-  
-  // Get variation name
-  const getCurrentVariationName = () => {
-    return selectedVariation !== null && variations[selectedVariation]
-      ? variations[selectedVariation].name
-      : "Original";
-  };
-
-  // Handle color selection
-  const handleColorSelect = (color: string) => {
-    if (onColorSelect) {
-      onColorSelect(color);
-    }
-  };
-  
-  // Get current palette colors as array
-  const getCurrentPaletteColors = () => {
-    const palette = getCurrentPalette();
-    if (!palette) {
-      // Return default colors if palette is undefined
-      return ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'];
-    }
-    return [
-      palette.primary || '#4F46E5',
-      palette.secondary || '#818CF8',
-      palette.accent || '#C7D2FE',
-      palette.background || '#EEF2FF',
-      palette.text || '#312E81',
-      ...(Array.isArray(palette.additionalColors) ? palette.additionalColors : [])
-    ];
-  };
-
-  // Labels for the color palette
-  const paletteLabels = ['Primary', 'Secondary', 'Accent', 'Background', 'Text'];
-  
-  return (
-    <div style={containerStyle}>
-      {/* Page Header */}
-      <div style={pageHeaderStyle}>
-        <h1 style={titleStyle}>Generated Concept</h1>
-        <span style={dateStyle}>
-          {concept?.created_at ? new Date(concept.created_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }) : 'March 31, 2023'}
-        </span>
-      </div>
-
-      {/* Main Content */}
-      <div style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Concept</h2>
-        <div style={mainImageContainerStyle}>
-          <img 
-            src={getCurrentImageUrl()} 
-            alt="Generated concept" 
-            style={imageStyle}
-            onLoad={() => console.log('Main image loaded successfully')}
-            onError={(e) => {
-              console.error('Error loading main image:', e);
-              console.error('Current image URL:', getCurrentImageUrl());
-              e.currentTarget.src = fallbackImage;
-            }}
-          />
+    return (
+      <div className="space-y-6">
+        <div className="rounded-lg p-4 bg-indigo-50 border border-gray-200 shadow-sm flex justify-center items-center">
+          {imageUrl ? (
+            <img 
+              src={imageUrl} 
+              alt={`${concept.prompt_id || 'Logo'} concept`}
+              className="max-w-full max-h-[350px] object-contain"
+              onError={handleImageError} 
+            />
+          ) : (
+            <div className="text-gray-500 text-center p-8">
+              Image not available
+            </div>
+          )}
         </div>
-      </div>
-      
-      {/* Color Palette Section */}
-      <div style={sectionStyle}>
-        <h2 style={sectionTitleStyle}>Color Palette</h2>
-        <div style={cardStyle}>
-          <div style={colorPaletteContainerStyle}>
-            {getCurrentPaletteColors().slice(0, 5).map((color, index) => (
-              <div key={`color-${index}`} style={colorItemStyle}>
-                <div 
-                  style={{ ...colorSwatchStyle, backgroundColor: color }}
-                  onClick={() => handleColorSelect(color)}
-                  title={color}
-                ></div>
-                <span style={colorLabelStyle}>{paletteLabels[index]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      
-      {/* Color Variations Section */}
-      {variations.length > 0 && (
-        <div style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>Color Variations</h2>
-          <div style={cardStyle}>
-            <div style={variationsGridStyle}>
-              {/* Original variation */}
-              <div 
-                style={variationCardStyle(selectedVariation === null)}
-                onClick={() => setSelectedVariation(null)}
-              >
-                <div style={variationHeaderStyle}>
-                  <span style={variationTitleStyle}>Original</span>
-                </div>
-                <div style={variationContentStyle}>
-                  <img 
-                    src={getOriginalImageUrl()} 
-                    alt="Original concept" 
-                    style={variationImageStyle}
-                    onError={(e) => {
-                      e.currentTarget.src = fallbackImage;
-                    }}
-                  />
-                  <div style={colorDotsContainerStyle}>
-                    {getCurrentPaletteColors().slice(0, 5).map((color, colorIndex) => (
-                      <div 
-                        key={`color-original-${colorIndex}`}
-                        style={{ ...colorDotStyle, backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Other variations */}
-              {variations.map((variation, index) => (
-                <div
-                  key={`variation-${index}`}
-                  style={variationCardStyle(selectedVariation === index)}
-                  onClick={() => setSelectedVariation(index)}
-                >
-                  <div style={variationHeaderStyle}>
-                    <span style={variationTitleStyle}>{variation.name}</span>
-                  </div>
-                  <div style={variationContentStyle}>
-                    <img 
-                      src={getFormattedUrl(variation.image_url, 'palette-images')} 
-                      alt={`${variation.name}`} 
-                      style={variationImageStyle}
-                      onError={(e) => {
-                        e.currentTarget.src = fallbackImage;
-                      }}
-                    />
-                    <div style={colorDotsContainerStyle}>
-                      {variation.colors.slice(0, 5).map((color, colorIndex) => (
-                        <div 
-                          key={`color-${index}-${colorIndex}`}
-                          style={{ ...colorDotStyle, backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ))}
+        
+        {palette && (Array.isArray(palette) ? palette.length > 0 : true) && (
+          <div className="mt-6">
+            <h3 className="text-xl font-semibold text-indigo-900 mb-3 text-center">
+              {getCurrentVariationName()} Color Palette
+            </h3>
+            <div className="flex justify-center">
+              <ColorPaletteComponent 
+                palette={createColorPaletteObject(palette)}
+                onColorSelect={handleColorSelect} 
+              />
             </div>
           </div>
-        </div>
-      )}
-      
-      {/* Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-        {onRefineRequest && (
-          <button 
-            style={secondaryButtonStyle}
-            onClick={onRefineRequest}
-          >
-            Refine This Concept
-          </button>
         )}
-        
-        <button 
-          style={buttonStyle}
+      </div>
+    );
+  };
+  
+  const renderVariations = () => {
+    if (!variations || variations.length === 0) return null;
+    
+    return (
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold text-indigo-900 mb-4 text-center">
+          Color Variations
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {variations.map((variation, index) => (
+            <div 
+              key={`variation-${index}`}
+              className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+                selectedVariation === index 
+                  ? 'border-2 border-primary' 
+                  : 'border border-gray-200'
+              }`}
+              onClick={() => setSelectedVariation(index)}
+            >
+              <div className="p-2 border-b border-gray-100 bg-gray-50 text-center">
+                <h4 className="text-xs font-medium text-gray-900">
+                  {variation.name}
+                </h4>
+              </div>
+              <div className="p-2">
+                <img 
+                  src={getFormattedUrl(variation.image_url, 'palette-images')}
+                  alt={`${variation.name} variation`}
+                  className="w-full h-[100px] object-contain mb-2"
+                  onError={handleImageError}
+                />
+                <div className="flex justify-center gap-1 pb-1">
+                  {variation.colors.slice(0, 5).map((color, colorIndex) => (
+                    <div 
+                      key={`dot-${index}-${colorIndex}`}
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  
+  if (!concept) {
+    return <div className="text-center p-8 text-gray-500">No concept data available</div>;
+  }
+  
+  return (
+    <div className="w-full bg-white rounded-xl p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Concept
+        </h2>
+        <div className="text-sm text-gray-500">
+          {new Date().toLocaleDateString()}
+        </div>
+      </div>
+      
+      <div className="mb-6">
+        {getImageElements()}
+      </div>
+      
+      {renderVariations()}
+      
+      <div className="flex justify-center gap-4 mt-6">
+        <Button
+          variant="primary"
           onClick={handleDownload}
         >
-          Download Image
-        </button>
+          Download
+        </Button>
+        
+        {onRefineRequest && (
+          <Button
+            variant="outline"
+            onClick={onRefineRequest}
+          >
+            Refine Concept
+          </Button>
+        )}
       </div>
     </div>
   );

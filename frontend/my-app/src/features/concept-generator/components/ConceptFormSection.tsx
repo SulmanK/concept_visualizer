@@ -20,15 +20,12 @@ export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
 }) => {
   return (
     <div id="create-form" className="mb-16">
-      <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 p-8 mb-8">
-        <h2 className="text-xl font-semibold text-indigo-900 mb-6">Create New Concept</h2>
-        <ConceptForm 
-          onSubmit={onSubmit}
-          status={status}
-          error={error}
-          onReset={onReset}
-        />
-      </div>
+      <ConceptForm 
+        onSubmit={onSubmit}
+        status={status}
+        error={error}
+        onReset={onReset}
+      />
     </div>
   );
 }; 

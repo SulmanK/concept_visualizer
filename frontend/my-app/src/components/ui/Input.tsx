@@ -49,19 +49,21 @@ export const Input: React.FC<InputProps> = ({
   // Generate a unique ID if not provided
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   
-  const inputClasses = [
-    'input',
-    error ? 'border-accent-500 focus:border-accent-500 focus:ring-accent-500' : '',
+  const inputBaseClasses = 'w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-all duration-200';
+  const inputErrorClasses = error 
+    ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+    : 'border-indigo-200 focus:border-primary focus:ring-primary/30';
+  const inputIconClasses = [
     startIcon ? 'pl-10' : '',
     endIcon ? 'pr-10' : '',
-    fullWidth ? 'w-full' : '',
-    className
   ].join(' ').trim();
+  
+  const inputClasses = `${inputBaseClasses} ${inputErrorClasses} ${inputIconClasses} ${className}`.trim();
   
   return (
     <div className={fullWidth ? 'w-full' : ''}>
       {label && (
-        <label htmlFor={inputId} className="label">
+        <label htmlFor={inputId} className="block text-sm font-medium text-indigo-700 mb-2">
           {label}
         </label>
       )}
@@ -95,13 +97,13 @@ export const Input: React.FC<InputProps> = ({
       </div>
       
       {error && (
-        <p id={`${inputId}-error`} className="mt-1 text-sm text-accent-600">
+        <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">
           {error}
         </p>
       )}
       
       {!error && helperText && (
-        <p id={`${inputId}-helper`} className="helper-text">
+        <p id={`${inputId}-helper`} className="mt-2 text-xs text-gray-500">
           {helperText}
         </p>
       )}

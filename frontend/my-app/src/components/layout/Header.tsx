@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import styles from './header.module.css';
 
 export interface HeaderProps {
   /**
@@ -10,49 +9,49 @@ export interface HeaderProps {
 }
 
 /**
- * Application header with navigation using modular CSS
+ * Application header with navigation using Tailwind CSS
  */
 export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
   // Consider both '/' and '/create' as the create route since they show the same component
   const isCreateRoute = activeRoute === '/' || activeRoute === '/create';
   
   return (
-    <header className={styles.headerContainer}>
-      <div className={styles.innerContainer}>
-        <div className={styles.headerRow}>
+    <header className="w-full bg-white/80 backdrop-blur-sm shadow-sm border-b border-indigo-100 sticky top-0 left-0 right-0 z-100 m-0 p-0">
+      <div className="w-full max-w-7xl mx-auto px-8">
+        <div className="flex justify-between items-center h-16">
           {/* Logo and title */}
-          <div className={styles.logoWrapper}>
-            <Link to="/" className={styles.logoLink}>
-              <div className={styles.logoCircle}>
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center no-underline">
+              <div className="h-10 w-10 bg-gradient-to-r from-primary to-primary-dark shadow-modern flex items-center justify-center text-white font-bold rounded-full">
                 CV
               </div>
-              <h1 className={styles.titleText}>
+              <h1 className="ml-3 text-xl font-bold gradient-text">
                 Concept Visualizer
               </h1>
             </Link>
           </div>
           
           {/* Navigation */}
-          <nav className={styles.navContainer}>
+          <nav className="flex gap-4">
             <Link 
               to="/create" 
-              className={isCreateRoute ? styles.activeNavLink : styles.inactiveNavLink}
+              className={isCreateRoute ? "nav-link nav-link-active" : "nav-link nav-link-inactive"}
             >
-              <span className={styles.navIcon}>✨</span>Create
+              <span className="mr-2">✨</span>Create
             </Link>
             
             <Link 
               to="/concepts/refine" 
-              className={activeRoute.includes('/concepts/refine') ? styles.activeNavLink : styles.inactiveNavLink}
+              className={activeRoute.includes('/concepts/refine') ? "nav-link nav-link-active" : "nav-link nav-link-inactive"}
             >
-              <span className={styles.navIcon}>🔄</span>Refine
+              <span className="mr-2">🔄</span>Refine
             </Link>
             
             <Link 
               to="/recent" 
-              className={activeRoute === '/recent' ? styles.activeNavLink : styles.inactiveNavLink}
+              className={activeRoute === '/recent' ? "nav-link nav-link-active" : "nav-link nav-link-inactive"}
             >
-              <span className={styles.navIcon}>📚</span>Recent
+              <span className="mr-2">📚</span>Recent
             </Link>
           </nav>
         </div>

@@ -38,18 +38,17 @@ export const TextArea: React.FC<TextAreaProps> = ({
   // Generate a unique ID if not provided
   const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
   
-  const textareaClasses = [
-    'input',
-    'resize-y',
-    error ? 'border-accent-500 focus:border-accent-500 focus:ring-accent-500' : '',
-    fullWidth ? 'w-full' : '',
-    className
-  ].join(' ').trim();
+  const textareaBaseClasses = 'w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-all duration-200 resize-y';
+  const textareaErrorClasses = error 
+    ? 'border-red-300 focus:border-red-500 focus:ring-red-200' 
+    : 'border-indigo-200 focus:border-primary focus:ring-primary/30';
+  
+  const textareaClasses = `${textareaBaseClasses} ${textareaErrorClasses} ${className}`.trim();
   
   return (
     <div className={fullWidth ? 'w-full' : ''}>
       {label && (
-        <label htmlFor={textareaId} className="label">
+        <label htmlFor={textareaId} className="block text-sm font-medium text-indigo-700 mb-2">
           {label}
         </label>
       )}
@@ -70,13 +69,13 @@ export const TextArea: React.FC<TextAreaProps> = ({
       />
       
       {error && (
-        <p id={`${textareaId}-error`} className="mt-1 text-sm text-accent-600">
+        <p id={`${textareaId}-error`} className="mt-1 text-sm text-red-600">
           {error}
         </p>
       )}
       
       {!error && helperText && (
-        <p id={`${textareaId}-helper`} className="helper-text">
+        <p id={`${textareaId}-helper`} className="mt-2 text-xs text-gray-500">
           {helperText}
         </p>
       )}

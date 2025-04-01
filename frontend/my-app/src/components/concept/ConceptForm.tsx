@@ -80,84 +80,36 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     if (onReset) onReset();
   };
   
-  const formStyle = {
-    backgroundColor: 'white',
-    borderRadius: '0.75rem',
-    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
-    padding: '2rem',
-    marginBottom: '2rem'
-  };
-
-  const labelStyle = {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    color: '#4338CA',
-    marginBottom: '0.5rem'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '0.75rem',
-    border: '1px solid #E0E7FF',
-    borderRadius: '0.375rem',
-    fontSize: '0.875rem',
-    backgroundColor: '#F5F7FF',
-    resize: 'vertical' as const,
-    minHeight: '7rem',
-    outline: 'none',
-    transition: 'border-color 0.2s, box-shadow 0.2s'
-  };
-
-  const helperTextStyle = {
-    fontSize: '0.75rem',
-    color: '#6366F1',
-    marginTop: '0.25rem'
-  };
-
-  const buttonStyle = {
-    backgroundColor: '#4F46E5',
-    color: 'white',
-    padding: '0.75rem 1.5rem',
-    borderRadius: '0.375rem',
-    fontWeight: 600,
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-    marginTop: '1rem'
-  };
-  
   return (
-    <div style={formStyle}>
-      <h2 className="text-xl font-semibold text-indigo-900 mb-6">Create New Concept</h2>
-      
+    <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
+      <h2 className="text-2xl font-bold text-indigo-900 mb-6">Create New Concept</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <div className="mb-6">
-            <label style={labelStyle}>Logo Description</label>
+            <label className="block text-sm font-medium text-indigo-700 mb-2">Logo Description</label>
             <textarea
               placeholder="Describe the logo you want to generate..."
               value={logoDescription}
               onChange={(e) => setLogoDescription(e.target.value)}
-              style={inputStyle}
+              className="w-full px-4 py-3 border border-indigo-200 rounded-lg bg-indigo-50/50 resize-y min-h-28 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200"
               disabled={isSubmitting || isSuccess}
             />
-            <p style={helperTextStyle}>Be descriptive about style, symbols, and colors you want</p>
+            <p className="mt-1 text-xs text-indigo-600">Be descriptive about style, symbols, and colors you want</p>
             {validationErrors.logo && (
               <p className="text-red-500 text-xs mt-1">{validationErrors.logo}</p>
             )}
           </div>
           
           <div className="mb-6">
-            <label style={labelStyle}>Theme/Color Scheme Description</label>
+            <label className="block text-sm font-medium text-indigo-700 mb-2">Theme/Color Scheme Description</label>
             <textarea
               placeholder="Describe the theme or color scheme..."
               value={themeDescription}
               onChange={(e) => setThemeDescription(e.target.value)}
-              style={inputStyle}
+              className="w-full px-4 py-3 border border-indigo-200 rounded-lg bg-indigo-50/50 resize-y min-h-28 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200"
               disabled={isSubmitting || isSuccess}
             />
-            <p style={helperTextStyle}>Describe mood, colors, and style of your brand</p>
+            <p className="mt-1 text-xs text-indigo-600">Describe mood, colors, and style of your brand</p>
             {validationErrors.theme && (
               <p className="text-red-500 text-xs mt-1">{validationErrors.theme}</p>
             )}
@@ -170,14 +122,15 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
           </div>
         )}
         
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button
+        <div className="flex justify-end">
+          <Button
             type="submit"
-            style={buttonStyle}
             disabled={isSubmitting || isSuccess}
+            variant="primary"
+            size="lg"
           >
             {isSubmitting ? 'Generating...' : 'Generate Concept'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
