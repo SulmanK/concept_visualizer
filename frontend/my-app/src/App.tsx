@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
-import { ConceptDetail } from './features/ConceptDetail/ConceptDetail';
 import { ConceptProvider } from './contexts/ConceptContext';
 import { debugSessionStatus, getSessionId, ensureSession } from './services/sessionManager';
-import { HomePage } from './features/home/HomePage';
-import { ConceptGeneratorPage } from './features/concept-generator';
-import { ConceptRefinementPage } from './features/concept-refinement';
-import { RecentConceptsPage } from './features/recent-concepts';
+import { LandingPage } from './features/landing';
+import { ConceptDetailPage } from './features/concepts/detail';
+import { RecentConceptsPage } from './features/concepts/recent';
+import { CreateConceptPage } from './features/concepts/create';
+import { RefinementPage, RefinementSelectionPage } from './features/refinement';
 
 // Ensure no gaps and full width but allow MainLayout to control its content width
 const appStyle = {
@@ -82,26 +82,23 @@ export default function App() {
           <Routes>
             {/* Main application routes */}
             <Route path="/" element={<MainLayout />}>
-              {/* Make ConceptGeneratorPage the default homepage */}
-              <Route index element={<ConceptGeneratorPage />} />
+              {/* Make LandingPage the default homepage */}
+              <Route index element={<LandingPage />} />
               
-              {/* Old homepage moved to /home */}
-              <Route path="home" element={<HomePage />} />
-              
-              {/* Create concept page */}
-              <Route path="create" element={<ConceptGeneratorPage />} />
-              
-              {/* Refinement routes */}
-              <Route path="concepts/refine" element={<ConceptRefinementPage />} />
+              {/* Create page */}
+              <Route path="create" element={<CreateConceptPage />} />
               
               {/* Concept detail page */}
-              <Route path="concepts/:conceptId" element={<ConceptDetail />} />
+              <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
               
               {/* Recent concepts page */}
               <Route path="recent" element={<RecentConceptsPage />} />
               
-              {/* Gallery - shows recent concepts */}
-              <Route path="gallery" element={<RecentConceptsPage />} />
+              {/* Refinement selection page */}
+              <Route path="refine" element={<RefinementSelectionPage />} />
+              
+              {/* Refinement page with concept ID */}
+              <Route path="refine/:conceptId" element={<RefinementPage />} />
               
               {/* Fallback for unknown routes */}
               <Route path="*" element={<div>Page not found</div>} />

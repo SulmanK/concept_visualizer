@@ -20,7 +20,6 @@ mkdir -p frontend/my-app/src/features/concepts/detail/components
 mkdir -p frontend/my-app/src/features/concepts/recent/components
 mkdir -p frontend/my-app/src/features/concepts/create
 mkdir -p frontend/my-app/src/features/refinement/components
-mkdir -p frontend/my-app/src/features/legacy-home/components
 ```
 
 ## Step 2: Move and Rename Files (Landing Page)
@@ -76,18 +75,7 @@ cp -r frontend/my-app/src/features/concept-refinement/components/* frontend/my-a
 echo "export { RefinementPage } from './RefinementPage';" > frontend/my-app/src/features/refinement/index.ts
 ```
 
-## Step 7: Move HomePage to legacy-home
-
-```bash
-# Move home to legacy-home
-cp frontend/my-app/src/features/home/HomePage.tsx frontend/my-app/src/features/legacy-home/LegacyHomePage.tsx
-cp -r frontend/my-app/src/features/home/components/* frontend/my-app/src/features/legacy-home/components/
-
-# Create index.ts
-echo "export { LegacyHomePage } from './LegacyHomePage';" > frontend/my-app/src/features/legacy-home/index.ts
-```
-
-## Step 8: Update Imports in Each Moved File
+## Step 7: Update Imports in Each Moved File
 
 For each moved file, update the import paths to reflect the new structure. This is manual work that requires careful examination of each file's dependencies.
 
@@ -100,7 +88,7 @@ import { ConceptForm } from '../../../components/concept/ConceptForm';
 import { ConceptForm } from '../../../components/concept/ConceptForm';
 ```
 
-## Step 9: Update App.tsx Routes
+## Step 8: Update App.tsx Routes
 
 ```typescript
 // Update App.tsx to use the new components and routes
@@ -111,7 +99,6 @@ import { ConceptDetailPage } from './features/concepts/detail';
 import { RecentConceptsPage } from './features/concepts/recent';
 import { CreateConceptPage } from './features/concepts/create';
 import { RefinementPage } from './features/refinement';
-import { LegacyHomePage } from './features/legacy-home';
 
 // Inside the render method:
 <Router>
@@ -131,15 +118,12 @@ import { LegacyHomePage } from './features/legacy-home';
       
       {/* Refinement page */}
       <Route path="refine/:conceptId" element={<RefinementPage />} />
-      
-      {/* Legacy home */}
-      <Route path="home" element={<LegacyHomePage />} />
     </Route>
   </Routes>
 </Router>
 ```
 
-## Step 10: Update Navigation Links
+## Step 9: Update Navigation Links
 
 Ensure all navigation links throughout the application use the correct paths:
 
@@ -147,7 +131,10 @@ Ensure all navigation links throughout the application use the correct paths:
 - `/concepts/:conceptId` for concept details (not `/concept/:conceptId`)
 - `/refine/:conceptId` for refinement
 - `/recent` for recent concepts
-- `/home` for the legacy home page
+
+## Step 10: Fix Any Route-Related Issues
+
+Pay special attention to any routes that might still be using `/concept/` instead of `/concepts/`. Update them to use the correct paths to ensure consistent routing throughout the application.
 
 ## Step 11: Testing
 

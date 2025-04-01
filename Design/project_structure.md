@@ -120,17 +120,11 @@ frontend/
 │   │   │   └── create/  # Could redirect to landing if they're identical
 │   │   │       └── index.ts  # Exports from landing if they're the same
 │   │   │
-│   │   ├── refinement/  # For refining existing concepts
-│   │   │   ├── components/
-│   │   │   │   ├── RefinementForm.tsx
-│   │   │   │   └── ComparisonView.tsx
-│   │   │   ├── RefinementPage.tsx
-│   │   │   └── index.ts
-│   │   │
-│   │   └── legacy-home/ # Optional: keep the old home if needed
+│   │   └── refinement/  # For refining existing concepts
 │   │       ├── components/
-│   │       │   └── HomeFeatures.tsx
-│   │       ├── LegacyHomePage.tsx
+│   │       │   ├── RefinementForm.tsx
+│   │       │   └── ComparisonView.tsx
+│   │       ├── RefinementPage.tsx
 │   │       └── index.ts
 │   │
 │   ├── components/       # Shared components
@@ -210,9 +204,6 @@ frontend/
     
     {/* Refinement page */}
     <Route path="refine/:conceptId" element={<RefinementPage />} />
-    
-    {/* Legacy home if still needed */}
-    <Route path="home" element={<LegacyHomePage />} />
   </Route>
 </Routes>
 ```
