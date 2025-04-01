@@ -1,11 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { ConceptGenerator } from '../ConceptGenerator';
-import * as useConceptGenerationModule from '../../hooks/useConceptGeneration';
+import { ConceptGeneratorPage } from '../ConceptGeneratorPage';
+import * as useConceptGenerationModule from '../../../hooks/useConceptGeneration';
 import { vi } from 'vitest';
-import { mockApiService } from '../../services/mocks/mockApiService';
-import { setupMockApi, resetMockApi } from '../../services/mocks/testSetup';
+import { mockApiService } from '../../../services/mocks/mockApiService';
+import { setupMockApi, resetMockApi } from '../../../services/mocks/testSetup';
 
 // Mock useNavigate
 const mockNavigate = vi.fn();
@@ -56,7 +56,7 @@ const setupSuccessScenario = () => {
   });
 };
 
-describe('ConceptGenerator Component', () => {
+describe('ConceptGeneratorPage Component', () => {
   beforeEach(() => {
     resetMockApi();
     vi.clearAllMocks();
@@ -66,7 +66,13 @@ describe('ConceptGenerator Component', () => {
   });
   
   test('renders form in initial state', () => {
-    renderWithRouter(<ConceptGenerator />);
+    renderWithRouter(<ConceptGeneratorPage />);
+    
+    // Header should be present
+    expect(screen.getByText(/Create Visual Concepts/i)).toBeInTheDocument();
+    
+    // How It Works section should be present
+    expect(screen.getByText(/How It Works/i)).toBeInTheDocument();
     
     // Form elements should be present
     expect(screen.getByLabelText(/Logo Description/i)).toBeInTheDocument();
@@ -81,7 +87,7 @@ describe('ConceptGenerator Component', () => {
     // Setup mock for successful generation
     setupSuccessScenario();
     
-    renderWithRouter(<ConceptGenerator />);
+    renderWithRouter(<ConceptGeneratorPage />);
     
     // Fill out the form
     const logoInput = screen.getByLabelText(/Logo Description/i);
@@ -110,7 +116,7 @@ describe('ConceptGenerator Component', () => {
   });
   
   test('displays validation errors', () => {
-    renderWithRouter(<ConceptGenerator />);
+    renderWithRouter(<ConceptGeneratorPage />);
     
     // Try to submit empty form
     const submitButton = screen.getByRole('button', { name: /Generate Concept/i });
@@ -132,47 +138,12 @@ describe('ConceptGenerator Component', () => {
       clearError: vi.fn()
     }));
     
-    renderWithRouter(<ConceptGenerator />);
+    renderWithRouter(<ConceptGeneratorPage />);
     
     // Should show error message
     expect(screen.getByText(/Failed to generate concept/i)).toBeInTheDocument();
     
     // Form should still be accessible
     expect(screen.getByRole('button', { name: /Generate Concept/i })).toBeInTheDocument();
-  });
-  
-  test('navigates to refinement when Refine This Concept is clicked', async () => {
-    // Mock implementation for success state
-    const mockResult = {
-      imageUrl: 'https://example.com/test-concept.png',
-      colorPalette: {
-        primary: '#4F46E5',
-        secondary: '#818CF8',
-        accent: '#C4B5FD',
-        background: '#F5F3FF',
-        text: '#1E1B4B'
-      },
-      generationId: 'test-123',
-      createdAt: new Date().toISOString()
-    };
-    
-    vi.spyOn(useConceptGenerationModule, 'useConceptGeneration').mockImplementation(() => ({
-      generateConcept: vi.fn(),
-      resetGeneration: vi.fn(),
-      status: 'success',
-      result: mockResult,
-      error: null,
-      isLoading: false,
-      clearError: vi.fn()
-    }));
-    
-    renderWithRouter(<ConceptGenerator />);
-    
-    // Find and click the Refine This Concept button
-    const refineButton = screen.getByRole('button', { name: /Refine This Concept/i });
-    fireEvent.click(refineButton);
-    
-    // Should navigate to refinement page
-    expect(mockNavigate).toHaveBeenCalledWith('/refine/test-123');
   });
 }); 

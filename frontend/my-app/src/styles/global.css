@@ -1,3 +1,10 @@
+@import './variables.css';
+
+/* Tailwind directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* CSS Reset to remove default margins */
 * {
   margin: 0;
@@ -15,10 +22,6 @@ html, body {
 body {
   font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
 }
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 @layer base {
   body {
@@ -74,7 +77,7 @@ body {
     @apply text-xl font-semibold text-indigo-900 mb-6;
   }
 
-  /* Nav links - keeping these for compatibility */
+  /* Nav links */
   .nav-link {
     @apply px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200;
   }
@@ -138,7 +141,7 @@ body {
   }
 }
 
-/* Spinner animation */
+/* Animations */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -148,7 +151,6 @@ body {
   animation: spin 1s linear infinite;
 }
 
-/* Fade in animation */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -158,7 +160,6 @@ body {
   animation: fadeIn 0.5s ease-in-out;
 }
 
-/* Scale in animation */
 @keyframes scaleIn {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -166,4 +167,4 @@ body {
 
 .scale-in {
   animation: scaleIn 0.3s ease-out;
-}
+} 

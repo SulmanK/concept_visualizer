@@ -30,6 +30,65 @@
   - [x] Context for recent concepts
   - [x] Integration with API client
 
+## Frontend Structure Improvements (Clean Code)
+
+### Directory Structure and Organization
+- [x] Implement consistent feature folder structure
+- [x] Create feature-based organization for all features
+- [x] Ensure each feature follows the pattern:
+  ```
+  features/
+  ├── feature-name/
+  │   ├── components/          # Feature-specific components
+  │   ├── hooks/               # Feature-specific hooks
+  │   ├── types/               # Feature-specific types
+  │   ├── __tests__/           # Tests co-located with feature
+  │   ├── index.ts             # Exports the main component
+  │   └── FeatureName.tsx      # Main feature component
+  ```
+- [x] Move `RecentConcepts` from components to features directory
+- [ ] Ensure all shared components are in the appropriate directories
+
+### Refactor Large Components
+- [x] Refactor `ConceptGenerator.tsx` (currently 478 lines)
+  - [x] Create `features/concept-generator/` directory
+  - [x] Extract `HowItWorks` section to a separate component
+  - [x] Extract `ConceptHeader` to a separate component
+  - [x] Extract `ResultsSection` to a separate component
+  - [x] Remove all inline styles and move to CSS modules or Tailwind classes
+  - [x] Create proper index.ts export file
+  - [x] Restructure main component to use the extracted components
+
+- [x] Refactor `ConceptRefinement.tsx` into a proper feature directory
+  - [x] Create `features/concept-refinement/` directory
+  - [x] Extract components following same pattern as concept-generator
+  - [x] Remove all inline styles and use consistent styling approach
+
+### Styling Consistency
+- [x] Establish consistent styling approach
+  - [x] Either use CSS modules or Tailwind classes consistently
+  - [x] Remove all inline styles from components
+  - [x] Use design tokens from `styles/variables.css` for all styles
+  - [x] Create utility classes for common style patterns
+  - [x] Update components to use the consistent styling approach
+
+### Type Organization
+- [x] Reorganize types for better maintainability
+  - [x] Split monolithic `types/index.ts` into domain-specific files
+    - [x] Create `types/api.types.ts` for API-related types
+    - [x] Create `types/concept.types.ts` for concept-related types
+    - [x] Create `types/ui.types.ts` for UI component types
+    - [x] Create `types/form.types.ts` for form-related types
+  - [x] Move feature-specific types to their feature directories
+  - [x] Update imports across the codebase to use the new type structure
+
+### Test Organization 
+- [x] Complete test co-location with components
+  - [x] Move remaining tests from central `__tests__` directory to component directories
+  - [x] Ensure consistent test naming patterns
+  - [x] Create test utilities directory for shared test helpers
+  - [x] Update test imports across the codebase
+
 ## Theme selection and UI design
 - [x] Create theme variations
 - [x] Select Modern Gradient Violet theme as the project theme
@@ -288,6 +347,12 @@
   - [x] Combined header-fix.css and header.module.css into a single file
   - [x] Converted Header component from inline styles to CSS modules
   - [x] Improved organization and documentation in CSS files
+- [x] Structure Refactoring - Initial Improvements
+  - [x] Moved App.tsx out of App/ directory to root level
+  - [x] Created a proper styles directory with variables.css and global.css
+  - [x] Converted Home.tsx to a feature-based structure with dedicated components
+  - [x] Implemented co-location of tests with components (examples in Button and HomePage)
+  - [x] Removed redundant CSS files and consolidated styles
 
 ### Next Steps
 - [x] Implement API mock service for better integration tests
@@ -298,6 +363,12 @@
 - [ ] Implement Supabase integration for data persistence
 - [ ] Set up Supabase Storage for image storage
 - [ ] Add "Recent Concepts" feature to the UI 
+- [ ] **Implement the Frontend Structure Improvements (Clean Code)**
+  - [ ] Refactor large components (ConceptGenerator, ConceptRefinement)
+  - [ ] Establish consistent feature-based organization
+  - [ ] Consolidate styling approach (either CSS modules or Tailwind)
+  - [ ] Reorganize types for better maintainability
+  - [ ] Complete test co-location with components
 
 ## Supabase Storage Integration Checklist
 

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { MainLayout } from '../components/layout/MainLayout';
-import { ConceptGenerator } from '../features/ConceptGenerator';
-import { ConceptRefinement } from '../features/ConceptRefinement';
-import { ConceptDetail } from '../features/ConceptDetail/ConceptDetail';
-import { RecentConcepts } from '../components/RecentConcepts/RecentConcepts';
-import { ConceptProvider } from '../contexts/ConceptContext';
-import './App.css';
-import { debugSessionStatus, getSessionId, setSessionId } from '../services/sessionManager';
+import { MainLayout } from './components/layout/MainLayout';
+import { ConceptDetail } from './features/ConceptDetail/ConceptDetail';
+import { ConceptProvider } from './contexts/ConceptContext';
+import { debugSessionStatus, getSessionId, setSessionId } from './services/sessionManager';
 import { v4 as uuidv4 } from 'uuid';
+import { HomePage } from './features/home/HomePage';
+import { ConceptGeneratorPage } from './features/concept-generator';
+import { ConceptRefinementPage } from './features/concept-refinement';
+import { RecentConceptsPage } from './features/recent-concepts';
 
 // Ensure no gaps and full width but allow MainLayout to control its content width
 const appStyle = {
@@ -47,7 +47,7 @@ export default function App() {
       // Check if Supabase connection is working
       let supabaseStatus = 'unknown';
       try {
-        const { supabase } = await import('../services/supabaseClient');
+        const { supabase } = await import('./services/supabaseClient');
         const { data, error } = await supabase.from('concepts').select('count').limit(1);
         
         if (error) {
@@ -98,23 +98,23 @@ export default function App() {
           <Routes>
             {/* Main application routes */}
             <Route path="/" element={<MainLayout />}>
-              {/* Make ConceptGenerator the default homepage */}
-              <Route index element={<ConceptGenerator />} />
+              {/* Make HomePage the default homepage */}
+              <Route index element={<HomePage />} />
               
-              {/* Create concept page - same as homepage for consistent navigation */}
-              <Route path="create" element={<ConceptGenerator />} />
+              {/* Create concept page */}
+              <Route path="create" element={<ConceptGeneratorPage />} />
               
               {/* Refinement routes */}
-              <Route path="concepts/refine" element={<ConceptRefinement />} />
+              <Route path="concepts/refine" element={<ConceptRefinementPage />} />
               
               {/* Concept detail page */}
               <Route path="concepts/:conceptId" element={<ConceptDetail />} />
               
               {/* Recent concepts page */}
-              <Route path="recent" element={<RecentConcepts />} />
+              <Route path="recent" element={<RecentConceptsPage />} />
               
-              {/* Gallery - now shows recent concepts */}
-              <Route path="gallery" element={<RecentConcepts />} />
+              {/* Gallery - shows recent concepts */}
+              <Route path="gallery" element={<RecentConceptsPage />} />
               
               {/* Fallback for unknown routes */}
               <Route path="*" element={<div>Page not found</div>} />
