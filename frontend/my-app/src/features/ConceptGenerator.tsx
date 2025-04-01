@@ -357,110 +357,115 @@ export const ConceptGenerator: React.FC = () => {
       )}
 
       <div className="mt-20">
-        <h2 className="text-2xl font-bold text-indigo-900 mb-10">
-          Recent Concepts
-        </h2>
-        <div style={{...conceptGridStyle, marginTop: '2.5rem'}}>
-          {recentConcepts.map((concept) => (
-            <div key={concept.id} style={conceptCardStyle}>
-              <div style={{ 
-                background: `linear-gradient(to right, ${concept.colors[0]}, ${concept.colors[1]})`, 
-                height: '200px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
+        <div style={{...cardStyle, padding: '2rem'}}>
+          <h2 className="text-xl font-semibold text-indigo-900 mb-6">
+            Recent Concepts
+          </h2>
+          <div style={{...conceptGridStyle}}>
+            {recentConcepts.map((concept) => (
+              <div key={concept.id} style={{
+                ...conceptCardStyle,
+                backgroundColor: '#F5F7FF', // Light indigo background
               }}>
-                <div style={{
-                  width: '70px',
-                  height: '70px',
-                  backgroundColor: 'white',
-                  borderRadius: '50%',
+                <div style={{ 
+                  background: `linear-gradient(to right, ${concept.colors[0]}, ${concept.colors[1]})`, 
+                  height: '200px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '20px',
-                  color: concept.colors[0]
+                  justifyContent: 'center'
                 }}>
-                  {concept.initials}
+                  <div style={{
+                    width: '70px',
+                    height: '70px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '20px',
+                    color: concept.colors[0]
+                  }}>
+                    {concept.initials}
+                  </div>
                 </div>
-              </div>
-              <div style={{padding: '1.25rem 1.5rem', flexGrow: 1}}>
-                <h3 style={{
-                  fontWeight: 600, 
-                  fontSize: '1rem',
-                  color: '#1E293B', 
-                  marginBottom: '0.5rem'
-                }}>
-                  {concept.title}
-                </h3>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#64748B',
-                  lineHeight: '1.25rem',
-                  marginBottom: '1rem'
-                }}>
-                  {concept.description}
-                </p>
-                <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem'}}>
-                  {concept.colors.map((color, index) => (
-                    <span 
-                      key={index}
-                      style={{ 
-                        backgroundColor: color,
-                        width: '1.5rem',
-                        height: '1.5rem',
-                        borderRadius: '9999px',
-                        display: 'inline-block'
+                <div style={{padding: '1.25rem 1.5rem', flexGrow: 1}}>
+                  <h3 style={{
+                    fontWeight: 600, 
+                    fontSize: '1rem',
+                    color: '#1E293B', 
+                    marginBottom: '0.5rem'
+                  }}>
+                    {concept.title}
+                  </h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#64748B',
+                    lineHeight: '1.25rem',
+                    marginBottom: '1rem'
+                  }}>
+                    {concept.description}
+                  </p>
+                  <div style={{display: 'flex', gap: '0.5rem', marginBottom: '1.5rem'}}>
+                    {concept.colors.map((color, index) => (
+                      <span 
+                        key={index}
+                        style={{ 
+                          backgroundColor: color,
+                          width: '1.5rem',
+                          height: '1.5rem',
+                          borderRadius: '9999px',
+                          display: 'inline-block'
+                        }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    paddingTop: '1rem',
+                    borderTop: '1px solid #E2E8F0'
+                  }}>
+                    <a 
+                      href="#"
+                      style={{
+                        color: '#6366F1',
+                        fontWeight: 500,
+                        fontSize: '0.875rem',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem 0'
                       }}
-                      title={color}
-                    />
-                  ))}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  paddingTop: '1rem',
-                  borderTop: '1px solid #E2E8F0'
-                }}>
-                  <a 
-                    href="#"
-                    style={{
-                      color: '#6366F1',
-                      fontWeight: 500,
-                      fontSize: '0.875rem',
-                      textDecoration: 'none',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0'
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleEdit(concept.id);
-                    }}
-                  >
-                    Edit
-                  </a>
-                  <a 
-                    href="#"
-                    style={{
-                      color: '#6366F1',
-                      fontWeight: 500,
-                      fontSize: '0.875rem',
-                      textDecoration: 'none',
-                      cursor: 'pointer',
-                      padding: '0.25rem 0'
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleViewDetails(concept.id);
-                    }}
-                  >
-                    View Details
-                  </a>
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleEdit(concept.id);
+                      }}
+                    >
+                      Edit
+                    </a>
+                    <a 
+                      href="#"
+                      style={{
+                        color: '#6366F1',
+                        fontWeight: 500,
+                        fontSize: '0.875rem',
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        padding: '0.25rem 0'
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleViewDetails(concept.id);
+                      }}
+                    >
+                      View Details
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
