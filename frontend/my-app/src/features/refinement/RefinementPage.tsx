@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useConceptRefinement } from '../../hooks/useConceptRefinement';
 import { RefinementHeader } from './components/RefinementHeader';
 import { RefinementForm } from './components/RefinementForm';
@@ -15,6 +15,9 @@ import { getSessionId } from '../../services/sessionManager';
 export const RefinementPage: React.FC = () => {
   const { conceptId } = useParams<{ conceptId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const colorId = searchParams.get('colorId');
   
   const [originalConcept, setOriginalConcept] = useState<any>(null);
   const [isLoadingConcept, setIsLoadingConcept] = useState<boolean>(true);
@@ -46,12 +49,36 @@ export const RefinementPage: React.FC = () => {
           return;
         }
         
-        setOriginalConcept({
-          id: conceptData.id,
-          imageUrl: conceptData.base_image_url,
-          logoDescription: conceptData.logo_description,
-          themeDescription: conceptData.theme_description,
-        });
+        // If colorId is specified, find the matching color variation
+        if (colorId && conceptData.color_variations) {
+          const colorVariation = conceptData.color_variations.find(v => v.id === colorId);
+          
+          if (colorVariation) {
+            setOriginalConcept({
+              id: conceptData.id,
+              imageUrl: colorVariation.image_url,
+              logoDescription: conceptData.logo_description,
+              themeDescription: conceptData.theme_description,
+              colorVariation: colorVariation
+            });
+          } else {
+            // If color variation not found, fall back to base concept
+            setOriginalConcept({
+              id: conceptData.id,
+              imageUrl: conceptData.base_image_url,
+              logoDescription: conceptData.logo_description,
+              themeDescription: conceptData.theme_description,
+            });
+          }
+        } else {
+          // No color variation specified, use base concept
+          setOriginalConcept({
+            id: conceptData.id,
+            imageUrl: conceptData.base_image_url,
+            logoDescription: conceptData.logo_description,
+            themeDescription: conceptData.theme_description,
+          });
+        }
         
         setIsLoadingConcept(false);
       } catch (err) {
@@ -62,7 +89,7 @@ export const RefinementPage: React.FC = () => {
     };
     
     loadConcept();
-  }, [conceptId]);
+  }, [conceptId, colorId]);
   
   const { 
     refineConcept, 
@@ -148,7 +175,10 @@ export const RefinementPage: React.FC = () => {
   
   return (
     <div className="space-y-8">
-      <RefinementHeader />
+      <RefinementHeader 
+        isVariation={!!colorId} 
+        variationName={originalConcept.colorVariation?.palette_name} 
+      />
       
       {!result && (
         <RefinementForm
@@ -159,6 +189,7 @@ export const RefinementPage: React.FC = () => {
           onCancel={handleCancel}
           initialLogoDescription={originalConcept.logoDescription}
           initialThemeDescription={originalConcept.themeDescription}
+          colorVariation={originalConcept.colorVariation}
         />
       )}
       

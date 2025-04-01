@@ -19,8 +19,12 @@ export const RefinementSelectionPage: React.FC = () => {
   }, []);
   
   // Handle selecting a concept to refine
-  const handleSelectConcept = (conceptId: string) => {
-    navigate(`/refine/${conceptId}`);
+  const handleSelectConcept = (conceptId: string, colorVariationId?: string) => {
+    if (colorVariationId) {
+      navigate(`/refine/${conceptId}?colorId=${colorVariationId}`);
+    } else {
+      navigate(`/refine/${conceptId}`);
+    }
   };
   
   // Handle loading state
@@ -107,19 +111,26 @@ export const RefinementSelectionPage: React.FC = () => {
           Select a Concept to Refine
         </h1>
         <p className="text-indigo-600 max-w-2xl mx-auto">
-          Choose one of your concepts to refine and improve.
+          Choose one of your concepts to refine and improve. You can click on a concept or a specific color variation.
         </p>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-8 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {recentConcepts.map((concept) => (
-            <div 
-              key={concept.id}
-              onClick={() => handleSelectConcept(concept.id)}
-              className="cursor-pointer transform transition-transform hover:scale-105"
-            >
-              <ConceptCard concept={concept} />
+            <div key={concept.id} className="relative">
+              {/* This wrapping div captures clicks on the concept card itself */}
+              <div 
+                onClick={() => handleSelectConcept(concept.id)}
+                className="cursor-pointer transform transition-transform hover:scale-105"
+              >
+                {/* Use a custom prop to prevent default navigation */}
+                <ConceptCard 
+                  concept={concept} 
+                  preventNavigation={true}
+                  onColorClick={(variationId) => handleSelectConcept(concept.id, variationId)}
+                />
+              </div>
             </div>
           ))}
         </div>

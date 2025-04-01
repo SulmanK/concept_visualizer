@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
 import { Card } from '../ui/Card';
@@ -40,6 +40,29 @@ export interface ConceptRefinementFormProps {
    * Initial theme description
    */
   initialThemeDescription?: string;
+
+  /**
+   * Custom placeholder text for refinement prompt
+   */
+  refinementPlaceholder?: string;
+
+  /**
+   * Default preserve aspects to pre-select
+   */
+  defaultPreserveAspects?: string[];
+
+  /**
+   * Whether we're refining a color variation
+   */
+  isColorVariation?: boolean;
+
+  /**
+   * Color information for the current variation
+   */
+  colorInfo?: {
+    colors: string[];
+    name: string;
+  };
 }
 
 /**
@@ -53,12 +76,21 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   onCancel,
   initialLogoDescription = '',
   initialThemeDescription = '',
+  refinementPlaceholder = 'Describe how you want to refine this concept...',
+  defaultPreserveAspects = [],
+  isColorVariation = false,
+  colorInfo,
 }) => {
   const [refinementPrompt, setRefinementPrompt] = useState('');
   const [logoDescription, setLogoDescription] = useState(initialLogoDescription);
   const [themeDescription, setThemeDescription] = useState(initialThemeDescription);
-  const [preserveAspects, setPreserveAspects] = useState<string[]>([]);
+  const [preserveAspects, setPreserveAspects] = useState<string[]>(defaultPreserveAspects);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
+  
+  // Update preserve aspects when defaultPreserveAspects changes
+  useEffect(() => {
+    setPreserveAspects(defaultPreserveAspects);
+  }, [defaultPreserveAspects]);
   
   const aspectOptions = [
     { id: 'layout', label: 'Layout' },
@@ -66,6 +98,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
     { id: 'style', label: 'Style' },
     { id: 'symbols', label: 'Symbols/Icons' },
     { id: 'proportions', label: 'Proportions' },
+    { id: 'color_scheme', label: 'Color Scheme' },
   ];
   
   const isSubmitting = status === 'submitting';
@@ -107,7 +140,14 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
       variant="gradient"
       className="max-w-xl mx-auto"
       header={
-        <h2 className="text-xl font-semibold text-indigo-900">Refine Concept</h2>
+        <h2 className="text-xl font-semibold text-indigo-900">
+          Refine Concept
+          {isColorVariation && colorInfo && (
+            <span className="ml-2 text-sm font-normal text-indigo-600">
+              ({colorInfo.name})
+            </span>
+          )}
+        </h2>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -122,17 +162,37 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           </div>
         </div>
         
+        {/* Color palette for variations */}
+        {isColorVariation && colorInfo && colorInfo.colors.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-medium text-indigo-700 mb-2">Color Palette</p>
+            <div className="flex flex-wrap gap-2">
+              {colorInfo.colors.map((color, index) => (
+                <div 
+                  key={index}
+                  className="w-8 h-8 rounded-full border border-gray-200"
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+        
         {/* Refinement instructions */}
         <div>
           <TextArea
             label="Refinement Instructions"
-            placeholder="Describe how you want to refine this concept..."
+            placeholder={refinementPlaceholder}
             value={refinementPrompt}
             onChange={(e) => setRefinementPrompt(e.target.value)}
             error={validationError}
             fullWidth
             disabled={isSubmitting || isSuccess}
-            helperText="Be specific about what you want to change"
+            helperText={isColorVariation 
+              ? "Describe what you want to change while keeping the color scheme" 
+              : "Be specific about what you want to change"
+            }
             rows={3}
           />
         </div>
@@ -178,7 +238,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
                   type="checkbox"
                   checked={preserveAspects.includes(aspect.id)}
                   onChange={() => toggleAspect(aspect.id)}
-                  disabled={isSubmitting || isSuccess}
+                  disabled={isSubmitting || isSuccess || (isColorVariation && aspect.id === 'color_scheme')}
                   className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
                 <span className="text-sm text-indigo-700">{aspect.label}</span>
