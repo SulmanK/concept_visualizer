@@ -5,12 +5,13 @@ interface ConceptData {
   id: string;
   title: string;
   description: string;
-  colors: string[];
+  colorVariations: string[][];
   gradient: {
     from: string;
     to: string;
   };
   initials: string;
+  images?: string[];
 }
 
 interface RecentConceptsSectionProps {
@@ -37,7 +38,8 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
               key={concept.id}
               title={concept.title}
               description={concept.description}
-              colors={concept.colors}
+              colorVariations={concept.colorVariations}
+              images={concept.images}
               gradient={concept.gradient}
               initials={concept.initials}
               onEdit={() => onEdit(concept.id)}

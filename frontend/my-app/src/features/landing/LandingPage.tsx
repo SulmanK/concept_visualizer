@@ -114,10 +114,21 @@ export const LandingPage: React.FC = () => {
         ? words[0].substring(0, 2).toUpperCase()
         : (words[0][0] + words[1][0]).toUpperCase();
       
-      // Get colors from the first color variation if available
-      const colors = concept.color_variations && concept.color_variations.length > 0
-        ? concept.color_variations[0].colors.slice(0, 3)
-        : ['#4F46E5', '#60A5FA', '#1E293B']; // Fallback colors
+      // Get color variations - each variation has its own set of colors
+      // This creates a 2D array where each inner array represents a color variation
+      const colorVariations = concept.color_variations?.map(variation => variation.colors) || [];
+      
+      // If no color variations, provide a fallback
+      if (colorVariations.length === 0) {
+        colorVariations.push(['#4F46E5', '#60A5FA', '#1E293B']); // Fallback colors
+      }
+      
+      // Get images from color variations
+      const images = concept.color_variations?.map(variation => variation.image_url) || [];
+      // Add base image as fallback if no variations or fallback to empty
+      if (concept.base_image_url && (!images.length || !images[0])) {
+        images.unshift(concept.base_image_url);
+      }
       
       return {
         id: concept.id,
@@ -127,9 +138,10 @@ export const LandingPage: React.FC = () => {
         description: concept.theme_description.length > 40
           ? `${concept.theme_description.substring(0, 40)}...`
           : concept.theme_description,
-        colors,
+        colorVariations,
         gradient: { from: 'blue-400', to: 'indigo-500' },
-        initials
+        initials,
+        images
       };
     });
   };
@@ -143,25 +155,37 @@ export const LandingPage: React.FC = () => {
       id: 'sample-tc',
       title: 'Tech Company',
       description: 'Modern minimalist tech logo with abstract elements',
-      colors: ['#4F46E5', '#60A5FA', '#1E293B'],
+      colorVariations: [
+        ['#4F46E5', '#60A5FA', '#1E293B'], 
+        ['#1E40AF', '#93C5FD', '#0F172A']
+      ],
       gradient: { from: 'blue-400', to: 'indigo-500' },
       initials: 'TC',
+      images: ['/samples/tech-company.png'],
     },
     {
       id: 'sample-fs',
       title: 'Fashion Studio',
       description: 'Elegant fashion brand with clean typography',
-      colors: ['#7E22CE', '#818CF8', '#F9A8D4'],
+      colorVariations: [
+        ['#7E22CE', '#818CF8', '#F9A8D4'],
+        ['#6D28D9', '#A78BFA', '#F472B6']
+      ],
       gradient: { from: 'indigo-400', to: 'purple-500' },
       initials: 'FS',
+      images: ['/samples/fashion-studio.png'],
     },
     {
       id: 'sample-ep',
       title: 'Eco Product',
       description: 'Sustainable brand with natural elements',
-      colors: ['#059669', '#60A5FA', '#10B981'],
+      colorVariations: [
+        ['#059669', '#60A5FA', '#10B981'],
+        ['#047857', '#3B82F6', '#059669']
+      ],
       gradient: { from: 'blue-400', to: 'teal-500' },
       initials: 'EP',
+      images: ['/samples/eco-product.png'],
     },
   ];
   
