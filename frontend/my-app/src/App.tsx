@@ -3,8 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { ConceptDetail } from './features/ConceptDetail/ConceptDetail';
 import { ConceptProvider } from './contexts/ConceptContext';
-import { debugSessionStatus, getSessionId, setSessionId, migrateLegacySession, ensureSession } from './services/sessionManager';
-import { v4 as uuidv4 } from 'uuid';
+import { debugSessionStatus, getSessionId, ensureSession } from './services/sessionManager';
 import { HomePage } from './features/home/HomePage';
 import { ConceptGeneratorPage } from './features/concept-generator';
 import { ConceptRefinementPage } from './features/concept-refinement';
@@ -32,10 +31,7 @@ export default function App() {
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        // First, migrate any legacy session if needed
-        migrateLegacySession();
-        
-        // Then ensure a session exists - this will generate a UUID if needed
+        // Ensure a session exists - this will generate a UUID if needed
         // and sync with the backend
         const isNewSession = await ensureSession();
         console.log(`Session initialization completed. New session created: ${isNewSession}`);

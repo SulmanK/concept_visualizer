@@ -6,6 +6,8 @@ import Cookies from 'js-cookie';
 import { v4 as uuidv4 } from 'uuid';
 
 const SESSION_COOKIE_NAME = 'concept_session';
+// Use the API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
  * Get the current session ID from cookies
@@ -63,7 +65,7 @@ export const ensureSession = async (): Promise<boolean> => {
   
   // Sync the new session ID with the backend
   try {
-    const response = await fetch('http://localhost:8000/api/sessions/sync', {
+    const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -95,7 +97,6 @@ export const ensureSession = async (): Promise<boolean> => {
   }
 };
 
-// Add a debugging function to check session status
 /**
  * Debug function to check if the session cookie exists and print details
  * 
@@ -103,16 +104,7 @@ export const ensureSession = async (): Promise<boolean> => {
  */
 export const debugSessionStatus = (): {exists: boolean, value?: string, allCookies: Record<string, string>} => {
   const sessionId = Cookies.get(SESSION_COOKIE_NAME);
-  const oldSessionId = Cookies.get('concept_session_id'); // Check old cookie name too
   const allCookies = Cookies.get(); // Gets all cookies as object
-  
-  // If we have an old session ID but not a new one, migrate it
-  if (oldSessionId && !sessionId) {
-    console.log(`Found old session ID format (${oldSessionId}), migrating to new cookie name`);
-    setSessionId(oldSessionId);
-    // Remove the old cookie
-    Cookies.remove('concept_session_id');
-  }
   
   const status = {
     exists: !!sessionId,
@@ -141,8 +133,8 @@ export const syncSession = async (): Promise<boolean> => {
   try {
     console.log(`Attempting to sync session: ${currentSessionId}`);
     
-    // Call the special endpoint to sync the session, using the full URL
-    const response = await fetch('http://localhost:8000/api/sessions/sync', {
+    // Call the special endpoint to sync the session, using the API base URL
+    const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -175,51 +167,4 @@ export const syncSession = async (): Promise<boolean> => {
     console.error('Error syncing session:', error);
     return false;
   }
-};
-
-/**
- * Force a specific session ID to be used.
- * This is for debugging purposes to match a known database session.
- * 
- * @param forcedSessionId The session ID to force
- */
-export const forceSessionId = (forcedSessionId: string): void => {
-  console.log(`IMPORTANT: Forcing session ID to: ${forcedSessionId}`);
-  
-  // This is ONLY for debugging - should NOT be used in production
-  setSessionId(forcedSessionId);
-};
-
-/**
- * Migrate from the old cookie name (concept_session_id) 
- * to the new one (concept_session).
- * 
- * This helps during the transition period when updating the application.
- * 
- * @returns The current session ID after migration attempt
- */
-export const migrateLegacySession = (): string | null => {
-  const currentSessionId = Cookies.get(SESSION_COOKIE_NAME);
-  const oldSessionId = Cookies.get('concept_session_id');
-  
-  // If we already have the new cookie, use that
-  if (currentSessionId) {
-    // If we also have an old cookie, clean it up
-    if (oldSessionId) {
-      console.log(`Found both new and old session cookies. Keeping new: ${currentSessionId}, removing old: ${oldSessionId}`);
-      Cookies.remove('concept_session_id');
-    }
-    return currentSessionId;
-  }
-  
-  // If we only have the old cookie, migrate it
-  if (oldSessionId) {
-    console.log(`Migrating from old session cookie: ${oldSessionId}`);
-    setSessionId(oldSessionId);
-    Cookies.remove('concept_session_id');
-    return oldSessionId;
-  }
-  
-  // No session cookies found
-  return null;
 }; 

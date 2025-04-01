@@ -10,17 +10,23 @@ from typing import Optional
 
 from backend.app.services.session_service import SessionService, get_session_service
 
+
 router = APIRouter()
+
 
 class SessionSyncRequest(BaseModel):
     """Request body for session sync endpoint."""
+    
     client_session_id: str
+
 
 class SessionResponse(BaseModel):
     """Response model for session endpoints."""
+    
     session_id: str
     is_new_session: bool = False
     message: Optional[str] = None
+
 
 @router.post("/", response_model=SessionResponse)
 async def create_session(
@@ -28,8 +34,7 @@ async def create_session(
     session_service: SessionService = Depends(get_session_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
-    """
-    Create a new session or return the existing one.
+    """Create a new session or return the existing one.
     
     Args:
         response: FastAPI response object for setting cookies
@@ -49,6 +54,7 @@ async def create_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
 
+
 @router.post("/sync", response_model=SessionResponse)
 async def sync_session(
     request: SessionSyncRequest,
@@ -56,8 +62,8 @@ async def sync_session(
     session_service: SessionService = Depends(get_session_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
-    """
-    Synchronize the client session with the server.
+    """Synchronize the client session with the server.
+    
     This endpoint helps resolve mismatches between frontend and backend session IDs.
     
     Args:
@@ -74,7 +80,7 @@ async def sync_session(
         cookie_session_id = session_id
         
         # Log all session IDs for debugging
-        session_service.logger.info(f"Session sync request:")
+        session_service.logger.info("Session sync request received")
         session_service.logger.info(f"- Client session ID: {client_session_id}")
         session_service.logger.info(f"- Cookie session ID: {cookie_session_id}")
         
@@ -86,9 +92,11 @@ async def sync_session(
             client_session_id=client_session_id
         )
         
-        message = "Session synchronized successfully"
-        if is_new_session:
-            message = "New session created during synchronization"
+        message = (
+            "New session created during synchronization" 
+            if is_new_session 
+            else "Session synchronized successfully"
+        )
         
         session_service.logger.info(f"Synced session ID: {final_session_id}, is_new: {is_new_session}")
         

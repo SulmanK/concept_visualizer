@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         SUPABASE_URL: URL for Supabase project
         SUPABASE_KEY: API key (anon or service role) for Supabase
         LOG_LEVEL: Log level for the application
+        ENVIRONMENT: Environment the application is running in
     """
     
     # API settings
@@ -57,6 +58,9 @@ class Settings(BaseSettings):
     # Logging settings
     LOG_LEVEL: str = "INFO"
     
+    # Environment settings
+    ENVIRONMENT: str = "development"
+    
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
@@ -75,4 +79,7 @@ logger.info(f"JigsawStack API key prefix: {api_key_prefix}...")
 
 # Log the Supabase URL for debugging
 supabase_url = settings.SUPABASE_URL
-logger.info(f"Supabase URL: {supabase_url}") 
+logger.info(f"Supabase URL: {supabase_url}")
+
+# Log the environment
+logger.info(f"Application running in {settings.ENVIRONMENT} environment") 

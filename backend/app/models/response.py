@@ -1,7 +1,7 @@
 """
-Response models for the Concept Visualizer API.
+Response models for the API.
 
-This module defines Pydantic models for API responses.
+This module defines the response models used across the API endpoints.
 """
 
 from typing import List, Optional, Dict, Any
@@ -19,7 +19,7 @@ class ColorPalette(BaseModel):
     text: str = Field(..., description="Text color")
     additional_colors: List[str] = Field(
         default=[],
-        description="Additional complementary colors"
+        description="Additional color options"
     )
 
 
@@ -44,7 +44,7 @@ class GenerationResponse(BaseModel):
     image_url: HttpUrl = Field(..., description="URL of the default generated image")
     color_palette: Optional[ColorPalette] = Field(
         None,
-        description="Generated color palette (legacy format)"
+        description="Generated color palette (deprecated format, kept for backward compatibility)"
     )
     
     # New field for multiple variations
