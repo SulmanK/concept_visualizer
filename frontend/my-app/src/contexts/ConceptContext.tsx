@@ -3,8 +3,9 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { fetchRecentConcepts, ConceptData } from '../services/supabaseClient';
-import { getSessionId } from '../services/sessionManager';
+import { fetchRecentConcepts, ConceptData, ColorVariationData, getPublicImageUrl } from '../services/supabaseClient';
+import { getSessionId, syncSession } from '../services/sessionManager';
+import { supabase } from '../services/supabaseClient';
 
 interface ConceptContextType {
   // Recent concepts data
@@ -41,37 +42,104 @@ export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) =>
   const [loadingConcepts, setLoadingConcepts] = useState<boolean>(false);
   const [errorLoadingConcepts, setErrorLoadingConcepts] = useState<string | null>(null);
   
-  // Load recent concepts when the component mounts
+  // Sync session when component mounts
   useEffect(() => {
-    refreshConcepts();
+    const initialSync = async () => {
+      console.log('ConceptContext: Performing initial session sync');
+      const sessionId = getSessionId();
+      
+      if (!sessionId) {
+        console.error('ConceptContext: No session ID available for initial sync');
+        return;
+      }
+      
+      try {
+        const syncResult = await syncSession();
+        console.log(`ConceptContext: Initial sync ${syncResult ? 'succeeded' : 'failed'}`);
+        
+        // Only refresh concepts if the sync was successful
+        if (syncResult) {
+          refreshConcepts();
+        }
+      } catch (err) {
+        console.error('ConceptContext: Error during initial sync', err);
+      }
+    };
+    
+    initialSync();
   }, []);
   
   /**
-   * Refresh the list of recent concepts
+   * Refresh the list of concepts from the API
    */
-  const refreshConcepts = async (): Promise<void> => {
-    const sessionId = getSessionId();
+  const refreshConcepts = async () => {
+    console.log('Refreshing concepts');
+    setLoadingConcepts(true);
+    setErrorLoadingConcepts(null);
     
-    console.log('Refreshing concepts with session ID:', sessionId);
+    // Get the current session ID
+    const sessionId = getSessionId();
+    console.log(`Refreshing concepts with session ID: ${sessionId}`);
     
     if (!sessionId) {
-      console.error('No session ID found - unable to fetch concepts');
-      setErrorLoadingConcepts('No session ID found');
+      console.error('No session ID available, cannot fetch concepts');
+      setErrorLoadingConcepts('No session ID available');
+      setLoadingConcepts(false);
       return;
     }
     
     try {
-      setLoadingConcepts(true);
-      setErrorLoadingConcepts(null);
+      // First try to sync the session to ensure consistency
+      console.log(`Syncing session before fetching concepts`);
       
+      try {
+        const syncResult = await syncSession();
+        console.log(`Session sync ${syncResult ? 'succeeded' : 'failed'}`);
+        
+        // Get the session ID again in case it was updated by syncSession
+        const updatedSessionId = getSessionId(); 
+        if (updatedSessionId !== sessionId) {
+          console.log(`Session ID changed after sync: ${sessionId} → ${updatedSessionId}`);
+        }
+      } catch (syncError) {
+        console.error('Error syncing session, will try to fetch concepts anyway:', syncError);
+      }
+      
+      // Now fetch the concepts from Supabase
       console.log('Fetching recent concepts from Supabase...');
-      const concepts = await fetchRecentConcepts(sessionId);
-      console.log('Received concepts from Supabase:', concepts);
+      const { data: recentConcepts, error: fetchError } = await supabase
+        .from('concepts')
+        .select('*, color_variations(*)')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (fetchError) {
+        throw new Error(`Error fetching concepts: ${fetchError.message}`);
+      }
       
-      setRecentConcepts(concepts);
+      console.log(`Received ${recentConcepts?.length || 0} concepts from Supabase`);
+      
+      // Process concepts to add image URLs
+      if (recentConcepts && recentConcepts.length > 0) {
+        const processedConcepts = recentConcepts.map(concept => ({
+          ...concept,
+          base_image_url: getPublicImageUrl(concept.base_image_path, 'concept-images'),
+          color_variations: (concept.color_variations || []).map((variation: any) => ({
+            ...variation,
+            image_url: getPublicImageUrl(variation.image_path, 'palette-images')
+          }))
+        }));
+        
+        setRecentConcepts(processedConcepts);
+        console.log(`Processed and set ${processedConcepts.length} concepts`);
+      } else {
+        console.log('No concepts found for the current session');
+        setRecentConcepts([]);
+      }
     } catch (error) {
-      console.error('Error loading recent concepts:', error);
-      setErrorLoadingConcepts('Failed to load recent concepts');
+      console.error('Error refreshing concepts:', error);
+      setErrorLoadingConcepts(error instanceof Error ? error.message : 'Unknown error loading concepts');
     } finally {
       setLoadingConcepts(false);
     }

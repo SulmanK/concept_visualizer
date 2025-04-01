@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { ApiError, ApiResponse } from '../types';
 import { ensureSession } from '../services/sessionManager';
 
+// Use the full backend URL instead of a relative path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 interface RequestOptions {
@@ -62,7 +63,11 @@ export function useApi() {
       setLoading(true);
       setError(undefined);
       
-      const url = `${API_BASE_URL}${endpoint}`;
+      // Ensure endpoint starts with forward slash if not already
+      const sanitizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      const url = `${API_BASE_URL}${sanitizedEndpoint}`;
+      
+      console.log(`API Request: ${method} ${url}`);
       
       const requestHeaders = {
         'Content-Type': 'application/json',
@@ -75,6 +80,12 @@ export function useApi() {
         body: body ? JSON.stringify(body) : undefined,
         credentials: withCredentials ? 'include' : 'same-origin', // Include cookies
       };
+      
+      console.log('Request options:', {
+        method,
+        headers: requestHeaders,
+        withCredentials,
+      });
       
       const response = await fetch(url, requestOptions);
       
@@ -89,6 +100,8 @@ export function useApi() {
           details: errorData.detail,
         };
         
+        console.error('API error:', apiError);
+        
         setError(apiError);
         setLoading(false);
         
@@ -97,10 +110,14 @@ export function useApi() {
       
       const data = await response.json();
       
+      console.log('API Response:', data);
+      
       setLoading(false);
       
       return { data, loading: false };
     } catch (err) {
+      console.error('API request failed:', err);
+      
       const apiError: ApiError = {
         status: 500,
         message: err instanceof Error ? err.message : 'An unexpected error occurred',

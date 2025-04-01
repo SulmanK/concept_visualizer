@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { ConceptDetail } from './features/ConceptDetail/ConceptDetail';
 import { ConceptProvider } from './contexts/ConceptContext';
-import { debugSessionStatus, getSessionId, setSessionId } from './services/sessionManager';
+import { debugSessionStatus, getSessionId, setSessionId, migrateLegacySession, ensureSession } from './services/sessionManager';
 import { v4 as uuidv4 } from 'uuid';
 import { HomePage } from './features/home/HomePage';
 import { ConceptGeneratorPage } from './features/concept-generator';
@@ -26,69 +26,57 @@ const appStyle = {
 
 export default function App() {
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Create a session ID if one doesn't exist
+  // Initialize session on app load
   useEffect(() => {
-    const sessionId = getSessionId();
-    if (!sessionId) {
-      // Generate a unique ID
-      const newSessionId = uuidv4();
-      console.log('Creating new session ID:', newSessionId);
-      setSessionId(newSessionId);
-    }
-  }, []);
-
-  // Run diagnostic checks on mount
-  useEffect(() => {
-    const runDiagnostics = async () => {
-      // Check session status
-      const sessionStatus = debugSessionStatus();
-      
-      // Check if Supabase connection is working
-      let supabaseStatus = 'unknown';
+    const initializeSession = async () => {
       try {
-        const { supabase } = await import('./services/supabaseClient');
-        const { data, error } = await supabase.from('concepts').select('count').limit(1);
+        // First, migrate any legacy session if needed
+        migrateLegacySession();
         
-        if (error) {
-          supabaseStatus = `Error: ${error.message}`;
-          console.error('Supabase connection error:', error);
-        } else {
-          supabaseStatus = 'Connected';
-          console.log('Supabase connection successful:', data);
-        }
-      } catch (err) {
-        supabaseStatus = `Exception: ${err instanceof Error ? err.message : String(err)}`;
-        console.error('Exception checking Supabase:', err);
+        // Then ensure a session exists - this will generate a UUID if needed
+        // and sync with the backend
+        const isNewSession = await ensureSession();
+        console.log(`Session initialization completed. New session created: ${isNewSession}`);
+        
+        // Get the session status for debugging
+        const sessionStatus = debugSessionStatus();
+        
+        // Log general app information
+        console.log('===== DEBUG INFORMATION =====');
+        console.log({
+          timestamp: new Date().toISOString(),
+          sessionStatus,
+          sessionId: getSessionId(),
+          isNewSession,
+          supabaseStatus: 'Connected', // We assume it's connected at this point
+          routes: {
+            home: 'http://localhost:5173/',
+            recent: 'http://localhost:5173/recent',
+            concepts: 'http://localhost:5173/concepts/123' // Example
+          },
+          userAgent: navigator.userAgent,
+          screenSize: {
+            width: window.innerWidth,
+            height: window.innerHeight
+          }
+        });
+        console.log('=============================');
+        
+        setDebugInfo({
+          sessionStatus,
+          supabaseStatus: 'Connected',
+        });
+        
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing session:', error);
+        setIsInitialized(true); // Still mark as initialized to not block UI
       }
-      
-      // Store all debug info
-      const info = {
-        timestamp: new Date().toISOString(),
-        sessionStatus,
-        supabaseStatus,
-        routes: {
-          home: window.location.origin + '/',
-          recent: window.location.origin + '/recent',
-          concepts: window.location.origin + '/concepts/123',
-        },
-        userAgent: navigator.userAgent,
-        screenSize: {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        }
-      };
-      
-      console.log('===== DEBUG INFORMATION =====');
-      console.log(JSON.stringify(info, null, 2));
-      console.log('=============================');
-      
-      setDebugInfo(info);
     };
     
-    // Wait a moment to run diagnostics to ensure session ID effect completes first
-    const timer = setTimeout(runDiagnostics, 500);
-    return () => clearTimeout(timer);
+    initializeSession();
   }, []);
 
   return (
@@ -98,8 +86,11 @@ export default function App() {
           <Routes>
             {/* Main application routes */}
             <Route path="/" element={<MainLayout />}>
-              {/* Make HomePage the default homepage */}
-              <Route index element={<HomePage />} />
+              {/* Make ConceptGeneratorPage the default homepage */}
+              <Route index element={<ConceptGeneratorPage />} />
+              
+              {/* Old homepage moved to /home */}
+              <Route path="home" element={<HomePage />} />
               
               {/* Create concept page */}
               <Route path="create" element={<ConceptGeneratorPage />} />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from './Card';
 
 export interface ConceptCardProps {
@@ -14,8 +14,14 @@ export interface ConceptCardProps {
   
   /**
    * Colors to display in the palette
+   * Each element represents a color variation with an array of colors
    */
-  colors: string[];
+  colorVariations: string[][];
+  
+  /**
+   * Images for each color variation, if available
+   */
+  images?: string[];
   
   /**
    * Gradient colors for the header (from and to)
@@ -47,19 +53,55 @@ export interface ConceptCardProps {
 export const ConceptCard: React.FC<ConceptCardProps> = ({
   title,
   description,
-  colors,
+  colorVariations,
+  images,
   gradient = { from: 'blue-400', to: 'indigo-500' },
   initials,
   onEdit,
   onViewDetails,
 }) => {
+  // State to track the selected color variation
+  const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
+  
+  // Ensure we have at least one variation
+  const hasVariations = colorVariations && colorVariations.length > 0;
+  const colors = hasVariations ? colorVariations[selectedVariationIndex] : [];
+  
+  // Get the main color from the current variation
+  const mainColor = colors.length > 0 ? colors[0] : '#4F46E5';
+  
+  // Handle color variation selection
+  const handleVariationSelect = (index: number) => {
+    if (index >= 0 && index < colorVariations.length) {
+      setSelectedVariationIndex(index);
+    }
+  };
+  
   return (
     <div className="overflow-hidden rounded-lg shadow-modern border border-indigo-100 bg-white/90 backdrop-blur-sm hover-lift hover:shadow-modern-hover transition-all duration-300 scale-in">
-      {/* Gradient header with initials */}
-      <div className={`h-40 bg-gradient-to-r from-${gradient.from} to-${gradient.to} p-4 flex items-center justify-center`}>
-        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center font-bold text-indigo-600 text-xl shadow-lg">
-          {initials}
-        </div>
+      {/* Header with image or gradient + initials */}
+      <div 
+        className={`h-40 p-4 flex items-center justify-center`}
+        style={{ 
+          background: images && images[selectedVariationIndex] 
+            ? 'transparent' 
+            : `linear-gradient(to right, var(--tw-gradient-from-${gradient.from}), var(--tw-gradient-to-${gradient.to}))`
+        }}
+      >
+        {images && images[selectedVariationIndex] ? (
+          <img 
+            src={images[selectedVariationIndex]} 
+            alt={title}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div 
+            className="w-20 h-20 bg-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg"
+            style={{ color: mainColor }}
+          >
+            {initials}
+          </div>
+        )}
       </div>
       
       {/* Content area */}
@@ -67,17 +109,22 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         <h4 className="font-semibold text-indigo-900">{title}</h4>
         <p className="text-sm text-gray-600 mt-1">{description}</p>
         
-        {/* Color palette */}
-        <div className="mt-3 flex space-x-2">
-          {colors.map((color, index) => (
-            <span 
-              key={`${color}-${index}`}
-              className="inline-block w-6 h-6 rounded-full hover-scale" 
-              style={{ backgroundColor: color }}
-              title={color}
-            />
-          ))}
-        </div>
+        {/* Color palettes */}
+        {hasVariations && (
+          <div className="mt-3 flex space-x-2">
+            {colorVariations.map((variation, index) => (
+              <button 
+                key={`${variation[0]}-${index}`}
+                onClick={() => handleVariationSelect(index)}
+                className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
+                  selectedVariationIndex === index ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
+                }`}
+                style={{ backgroundColor: variation[0] || '#4F46E5' }}
+                title={`Color Palette ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
         
         {/* Actions */}
         <div className="mt-4 flex justify-between">

@@ -6,7 +6,7 @@ This module initializes the API routes package and exposes router objects.
 
 from fastapi import APIRouter
 
-from backend.app.api.routes import concept, health, concept_storage
+from backend.app.api.routes import concept, health, concept_storage, session
 
 # Create main API router
 api_router = APIRouter()
@@ -18,4 +18,7 @@ api_router.include_router(
 )
 api_router.include_router(
     concept_storage.router, prefix="/storage", tags=["storage"]
+)
+api_router.include_router(
+    session.router, prefix="/sessions", tags=["sessions"]
 ) 

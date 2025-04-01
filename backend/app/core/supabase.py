@@ -68,6 +68,41 @@ class SupabaseClient:
             self.logger.error(f"Error creating session: {e}")
             return None
     
+    def create_session_with_id(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Create a session with a specific ID.
+        
+        Args:
+            session_id: Specific UUID to use for the session
+            
+        Returns:
+            Created session data or None on error
+        """
+        try:
+            # Make sure the session_id is a valid UUID format
+            try:
+                # Validate by parsing the UUID
+                uuid_obj = uuid.UUID(session_id)
+                # Ensure it's in the standard string format
+                session_id = str(uuid_obj)
+            except ValueError:
+                self.logger.error(f"Invalid UUID format for session_id: {session_id}")
+                return None
+                
+            # Insert the session with the provided ID
+            result = self.client.table("sessions").insert({"id": session_id}).execute()
+            
+            # Log the result for debugging
+            if result.data:
+                self.logger.info(f"Created session with client-provided ID: {session_id}")
+            else:
+                self.logger.warning(f"No data returned when creating session with ID: {session_id}")
+                
+            return result.data[0] if result.data else None
+            
+        except Exception as e:
+            self.logger.error(f"Error creating session with ID {session_id}: {e}")
+            return None
+    
     def update_session_activity(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Update session's last_active_at timestamp.
         
@@ -138,12 +173,30 @@ class SupabaseClient:
             List of concepts with their variations
         """
         try:
+            # Log the session ID being used for the query
+            self.logger.info(f"Querying recent concepts with session_id: {session_id}")
+            
             # Security: Always filter by session_id to ensure users only see their own data
             result = self.client.table("concepts").select(
                 "*, color_variations(*)"
             ).eq("session_id", session_id).order(
                 "created_at", desc=True
             ).limit(limit).execute()
+            
+            # Log the results for debugging
+            if result.data:
+                self.logger.info(f"Found {len(result.data)} concepts for session ID {session_id}")
+                for i, concept in enumerate(result.data):
+                    self.logger.info(f"Concept {i+1}: ID={concept.get('id')}, session_id={concept.get('session_id')}, base_path={concept.get('base_image_path')}")
+            else:
+                self.logger.warning(f"No concepts found for session ID {session_id}")
+                
+                # Additional check: Look for all concepts without session filter
+                all_results = self.client.table("concepts").select("id, session_id").limit(5).execute()
+                if all_results.data:
+                    self.logger.info(f"Found {len(all_results.data)} total concepts in database. Sample session IDs:")
+                    for i, concept in enumerate(all_results.data):
+                        self.logger.info(f"  - Sample concept {i+1}: ID={concept.get('id')}, session_id={concept.get('session_id')}")
             
             return result.data
         except Exception as e:
