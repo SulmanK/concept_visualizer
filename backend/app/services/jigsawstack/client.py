@@ -173,14 +173,17 @@ class JigsawStackClient:
             # Combine both descriptions for a more complete context
             combined_prompt = f"Logo: {logo_description}. Theme: {theme_description}"
             
+            print(combined_prompt)
+            print(logo_description)
+            print(theme_description)
+            
             # Create payload using the structure from the working example
             payload = {
-                "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
                 "inputs": [
                     {
                         "key": "theme",
                         "optional": False,
-                        "initial_value": "brand concept"
+                        "initial_value": "color scheme"
                     },
                     {
                         "key": "num_palettes", 
@@ -188,6 +191,12 @@ class JigsawStackClient:
                         "initial_value": "5"
                     }
                 ],
+                "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
+                "prompt_guard": ["hate", "sexual_content",],
+                "input_values": {
+                    "theme": combined_prompt,
+                    "num_palettes": str(num_palettes)
+                },
                 "return_prompt": [
                     {
                         "name": "Name of the palette",
@@ -203,11 +212,6 @@ class JigsawStackClient:
                         "description": "Description of how the palette relates to the brand identity"
                     }
                 ],
-                "prompt_guard": ["hate", "sexual_content"],
-                "input_values": {
-                    "theme": combined_prompt,
-                    "num_palettes": str(num_palettes)
-                },
                 "optimize_prompt": True
             }
             

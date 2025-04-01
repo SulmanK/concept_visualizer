@@ -67,7 +67,10 @@ async def generate_concept(
             raise HTTPException(status_code=500, detail="Failed to generate or store image")
         
         # Generate color palettes
-        raw_palettes = await concept_service.generate_color_palettes(request.theme_description)
+        raw_palettes = await concept_service.generate_color_palettes(
+            theme_description=request.theme_description,
+            logo_description=request.logo_description
+        )
         
         # Apply color palettes to create variations and store in Supabase Storage
         palette_variations = await image_service.create_palette_variations(
@@ -146,8 +149,9 @@ async def generate_concept_with_palettes(
         
         # First, generate color palettes based on the theme description
         palettes = await concept_service.generate_color_palettes(
-            request.theme_description,
-            num_palettes
+            theme_description=request.theme_description,
+            logo_description=request.logo_description,
+            num_palettes=num_palettes
         )
         
         if not palettes:
@@ -289,7 +293,8 @@ async def refine_concept(
         
         # Generate color palettes
         raw_palettes = await concept_service.generate_color_palettes(
-            f"{theme_desc} {request.refinement_prompt}"
+            theme_description=f"{theme_desc} {request.refinement_prompt}",
+            logo_description=logo_desc
         )
         
         # Apply color palettes to create variations and store in Supabase Storage

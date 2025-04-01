@@ -57,7 +57,10 @@ async def generate_and_store_concept(
         
         # Generate color palettes
         # First get color palettes from JigsawStack
-        raw_palettes = await concept_service.generate_color_palettes(request.theme_description)
+        raw_palettes = await concept_service.generate_color_palettes(
+            theme_description=request.theme_description,
+            logo_description=request.logo_description
+        )
         
         # Apply color palettes to create variations and store in Supabase Storage
         palette_variations = await image_service.create_palette_variations(

@@ -13,7 +13,7 @@ from typing import List, Optional, Dict, Any, Tuple
 
 from fastapi import Depends
 
-from backend.app.models.response import ColorPalette, GenerationResponse, PaletteVariation
+from backend.app.models.response import ColorPalette, GenerationResponse
 from backend.app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 
 logger = logging.getLogger(__name__)
@@ -112,7 +112,8 @@ class ConceptService:
         try:
             # 1. Generate multiple distinct color palettes
             palettes = await self.client.generate_multiple_palettes(
-                prompt=theme_description,
+                logo_description=logo_description,
+                theme_description=theme_description,
                 num_palettes=num_palettes
             )
             self.logger.info(f"Generated {len(palettes)} distinct color palettes")
@@ -271,9 +272,11 @@ class ConceptService:
                 
             # Generate palettes with suggested names
             suggested_names = ", ".join(palette_names[:num_palettes])
+            enhanced_theme = f"{theme_description}. Suggested palette names: {suggested_names}"
+            
             palettes = await self.client.generate_multiple_palettes(
                 logo_description=logo_desc,
-                theme_description=f"{theme_description}. Suggested palette names: {suggested_names}",
+                theme_description=theme_description,
                 num_palettes=num_palettes
             )
             
