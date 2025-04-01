@@ -159,26 +159,28 @@ const actionsContainerStyle = {
   marginTop: '1.5rem',
 };
 
-const buttonBaseStyle = {
-  padding: '0.75rem 1.25rem',
-  borderRadius: '0.5rem',
-  fontWeight: '500',
-  cursor: 'pointer',
-  transition: 'background-color 0.2s',
-};
-
-const primaryButtonStyle = {
-  ...buttonBaseStyle,
+const buttonStyle = {
   backgroundColor: '#4F46E5',
   color: 'white',
+  padding: '0.75rem 1.5rem',
+  borderRadius: '0.375rem',
+  fontWeight: 600,
   border: 'none',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s',
+  marginTop: '1rem'
 };
 
 const secondaryButtonStyle = {
-  ...buttonBaseStyle,
   backgroundColor: 'white',
   color: '#4F46E5',
+  padding: '0.75rem 1.5rem',
+  borderRadius: '0.375rem',
+  fontWeight: 600,
   border: '1px solid #4F46E5',
+  cursor: 'pointer',
+  transition: 'background-color 0.2s',
+  marginTop: '1rem'
 };
 
 export interface ConceptResultProps {
@@ -590,7 +592,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
       )}
       
       {/* Actions */}
-      <div style={actionsContainerStyle}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
         {onRefineRequest && (
           <button 
             style={secondaryButtonStyle}
@@ -601,7 +603,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         )}
         
         <button 
-          style={primaryButtonStyle}
+          style={buttonStyle}
           onClick={handleDownload}
         >
           Download Image

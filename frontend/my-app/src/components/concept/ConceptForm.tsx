@@ -170,7 +170,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
           </div>
         )}
         
-        <div className="flex justify-end">
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
             type="submit"
             style={buttonStyle}
