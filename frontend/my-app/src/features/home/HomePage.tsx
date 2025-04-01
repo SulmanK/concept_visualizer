@@ -81,7 +81,7 @@ export const HomePage: React.FC = () => {
       alert('This is a sample concept. Please generate a real concept to view details.');
       return;
     }
-    navigate(`/concept/${conceptId}`);
+    navigate(`/concepts/${conceptId}`);
   };
   
   const handleGetStarted = () => {

@@ -79,7 +79,7 @@ backend/
 
 ## Frontend Structure
 
-The frontend follows a feature-based organization with shared components:
+The frontend follows a feature-based organization with shared components, aligned with the routing structure:
 
 ```
 frontend/
@@ -89,41 +89,89 @@ frontend/
 │   └── assets/
 ├── src/
 │   ├── index.tsx         # Entry point
-│   ├── App.tsx           # Root component
+│   ├── App.tsx           # Root component with routing
 │   ├── features/         # Feature-based organization
-│   │   ├── conceptCreator/
+│   │   ├── landing/      # Main landing page (formerly concept-generator)
 │   │   │   ├── components/
 │   │   │   │   ├── ConceptForm.tsx
-│   │   │   │   ├── ImageDisplay.tsx
-│   │   │   │   └── ColorPalettes.tsx
+│   │   │   │   ├── ResultsSection.tsx
+│   │   │   │   └── RecentConceptsSection.tsx
 │   │   │   ├── hooks/
 │   │   │   │   └── useConceptGeneration.ts
 │   │   │   ├── types/
 │   │   │   │   └── index.ts
-│   │   │   └── ConceptCreatorPage.tsx
-│   │   └── refinement/
+│   │   │   ├── LandingPage.tsx   # Main landing page component
+│   │   │   └── index.ts
+│   │   │
+│   │   ├── concepts/    # All concept-related features
+│   │   │   ├── detail/  # For viewing a single concept
+│   │   │   │   ├── components/
+│   │   │   │   │   └── ConceptDetails.tsx
+│   │   │   │   ├── ConceptDetailPage.tsx
+│   │   │   │   └── index.ts
+│   │   │   │
+│   │   │   ├── recent/  # For browsing recent concepts
+│   │   │   │   ├── components/
+│   │   │   │   │   ├── ConceptCard.tsx
+│   │   │   │   │   └── ConceptList.tsx
+│   │   │   │   ├── RecentConceptsPage.tsx
+│   │   │   │   └── index.ts
+│   │   │   │
+│   │   │   └── create/  # Could redirect to landing if they're identical
+│   │   │       └── index.ts  # Exports from landing if they're the same
+│   │   │
+│   │   ├── refinement/  # For refining existing concepts
+│   │   │   ├── components/
+│   │   │   │   ├── RefinementForm.tsx
+│   │   │   │   └── ComparisonView.tsx
+│   │   │   ├── RefinementPage.tsx
+│   │   │   └── index.ts
+│   │   │
+│   │   └── legacy-home/ # Optional: keep the old home if needed
 │   │       ├── components/
-│   │       │   └── RefinementForm.tsx
-│   │       └── RefinementPage.tsx
+│   │       │   └── HomeFeatures.tsx
+│   │       ├── LegacyHomePage.tsx
+│   │       └── index.ts
+│   │
 │   ├── components/       # Shared components
-│   │   ├── Button/
-│   │   │   ├── Button.tsx
-│   │   │   ├── Button.test.tsx
-│   │   │   └── Button.module.css
-│   │   ├── ColorPicker/
-│   │   ├── LoadingSpinner/
-│   │   └── ErrorMessage/
+│   │   ├── ui/           # Basic UI components
+│   │   │   ├── Button/
+│   │   │   │   ├── Button.tsx
+│   │   │   │   ├── Button.test.tsx
+│   │   │   │   └── Button.module.css
+│   │   │   ├── ColorPicker/
+│   │   │   ├── LoadingSpinner/
+│   │   │   └── Card/
+│   │   │
+│   │   ├── layout/       # Layout components
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── MainLayout.tsx
+│   │   │
+│   │   └── concept/      # Complex concept-related components
+│   │       ├── ConceptForm.tsx
+│   │       └── ConceptResult.tsx
+│   │
 │   ├── hooks/            # Shared hooks
 │   │   ├── useApi.ts
 │   │   └── useLocalStorage.ts
+│   │
+│   ├── contexts/         # React contexts
+│   │   └── ConceptContext.tsx
+│   │
 │   ├── services/         # API service layer
 │   │   ├── api.ts        # Base API configuration
-│   │   └── conceptApi.ts # Concept-specific API calls
+│   │   ├── conceptApi.ts # Concept-specific API calls
+│   │   ├── supabaseClient.ts  # Supabase client
+│   │   └── sessionManager.ts  # Session management
+│   │
 │   ├── utils/            # Utility functions
 │   │   ├── colorUtils.ts
 │   │   └── formatters.ts
+│   │
 │   ├── types/            # Shared TypeScript types
 │   │   └── index.ts
+│   │
 │   └── styles/           # Global styles
 │       ├── global.css
 │       └── variables.css
@@ -137,9 +185,37 @@ frontend/
 ### Frontend Organization Principles
 
 1. **Feature-Based Structure**: Components, hooks, and logic are grouped by feature
-2. **Shared Resources**: Common components, hooks, and utilities are in dedicated directories
-3. **Clean API Layer**: API calls are abstracted into service modules
-4. **Type Safety**: TypeScript types are defined for all data structures
+2. **Route-Aligned Features**: Feature directories reflect the application's routing structure
+3. **Shared Resources**: Common components, hooks, and utilities are in dedicated directories
+4. **Clean API Layer**: API calls are abstracted into service modules
+5. **Type Safety**: TypeScript types are defined for all data structures
+6. **Consistent Naming**: Page components use the "Page" suffix for clarity
+
+### Key Routing Structure
+
+```tsx
+<Routes>
+  <Route path="/" element={<MainLayout />}>
+    {/* Main landing page with concept generator */}
+    <Route index element={<LandingPage />} />
+    
+    {/* Create page - could redirect to landing */}
+    <Route path="create" element={<LandingPage />} />
+    
+    {/* Concept detail page */}
+    <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
+    
+    {/* Recent concepts page */}
+    <Route path="recent" element={<RecentConceptsPage />} />
+    
+    {/* Refinement page */}
+    <Route path="refine/:conceptId" element={<RefinementPage />} />
+    
+    {/* Legacy home if still needed */}
+    <Route path="home" element={<LegacyHomePage />} />
+  </Route>
+</Routes>
+```
 
 ## Testing Strategy
 
