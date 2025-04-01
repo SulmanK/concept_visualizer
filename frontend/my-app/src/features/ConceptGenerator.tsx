@@ -356,11 +356,16 @@ export const ConceptGenerator: React.FC = () => {
         </div>
       )}
 
-      <div className="mt-20">
+      <div className="mt-32">
+        <h2 style={{
+          fontSize: '1.25rem',
+          fontWeight: 'bold',
+          color: '#111827',
+          marginBottom: '1rem',
+        }}>
+          Recent Concepts
+        </h2>
         <div style={{...cardStyle, padding: '2rem'}}>
-          <h2 className="text-xl font-semibold text-indigo-900 mb-6">
-            Recent Concepts
-          </h2>
           <div style={{...conceptGridStyle}}>
             {recentConcepts.map((concept) => (
               <div key={concept.id} style={{

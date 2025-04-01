@@ -39,26 +39,37 @@ export const RecentConcepts: React.FC = () => {
       has_variations: (recentConcepts[0].color_variations?.length || 0) > 0
     } : null
   });
+
+  // Container style
+  const containerStyle = {
+    backgroundColor: 'white',
+    borderRadius: '0.75rem',
+    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
+    padding: '2rem',
+    marginBottom: '2rem',
+    marginTop: '2rem'
+  };
   
   // Define styles to match the ConceptGenerator.tsx styling
   const titleStyle = {
-    fontSize: '2rem',
-    fontWeight: 'bold',
-    color: '#312e81', // Indigo-900
-    marginBottom: '2.5rem'
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: '#4338CA', // Indigo-900
+    marginBottom: '2rem'
   };
 
   const conceptGridStyle = {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '2rem',
-    width: '100%'
+    width: '100%',
+    marginTop: '1rem'
   };
 
   const conceptCardStyle = {
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FF', // Light indigo background
     borderRadius: '0.5rem',
     overflow: 'hidden',
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -139,9 +150,9 @@ export const RecentConcepts: React.FC = () => {
   // Handle empty state
   if (!loadingConcepts && recentConcepts.length === 0) {
     return (
-      <div>
+      <div style={containerStyle}>
         <h2 style={titleStyle}>Recent Concepts</h2>
-        <div className="text-center bg-white p-6 rounded-xl shadow-md">
+        <div className="text-center">
           <h3 className="text-lg font-semibold text-indigo-800 mb-4">No concepts yet</h3>
           <p className="text-indigo-600 mb-6">
             Your recent concepts will appear here after you generate them.
@@ -160,9 +171,9 @@ export const RecentConcepts: React.FC = () => {
   // Handle loading state
   if (loadingConcepts) {
     return (
-      <div>
+      <div style={containerStyle}>
         <h2 style={titleStyle}>Recent Concepts</h2>
-        <div className="animate-pulse bg-white p-6 rounded-xl shadow-md">
+        <div className="animate-pulse">
           <div className="h-6 bg-indigo-200 rounded mb-4 w-3/4 mx-auto"></div>
           <div className="h-20 bg-indigo-100 rounded mb-4"></div>
           <div className="h-4 bg-indigo-100 rounded mb-2 w-1/2 mx-auto"></div>
@@ -175,9 +186,9 @@ export const RecentConcepts: React.FC = () => {
   // Handle error state
   if (errorLoadingConcepts) {
     return (
-      <div>
+      <div style={containerStyle}>
         <h2 style={titleStyle}>Recent Concepts</h2>
-        <div className="text-center bg-white p-6 rounded-xl shadow-md">
+        <div className="text-center">
           <h3 className="text-lg font-semibold text-red-600 mb-4">Error Loading Concepts</h3>
           <p className="text-indigo-600 mb-6">{errorLoadingConcepts}</p>
           <button 
@@ -195,9 +206,9 @@ export const RecentConcepts: React.FC = () => {
   if (!recentConcepts || !Array.isArray(recentConcepts)) {
     console.error('recentConcepts is not an array:', recentConcepts);
     return (
-      <div>
+      <div style={containerStyle}>
         <h2 style={titleStyle}>Recent Concepts</h2>
-        <div className="text-center bg-white p-6 rounded-xl shadow-md">
+        <div className="text-center">
           <h3 className="text-lg font-semibold text-red-600 mb-4">Something went wrong</h3>
           <p className="text-indigo-600 mb-6">Invalid data received from the server</p>
           <button 
@@ -213,7 +224,7 @@ export const RecentConcepts: React.FC = () => {
   
   // Render the list of concepts
   return (
-    <div>
+    <div style={containerStyle}>
       <h2 style={titleStyle}>Recent Concepts</h2>
       
       <div style={conceptGridStyle}>

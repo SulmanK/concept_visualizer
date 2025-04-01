@@ -149,22 +149,24 @@ export const Home: React.FC = () => {
       </div>
       
       {/* Recent Concepts Grid */}
-      <div>
-        <h2 className="text-xl font-semibold text-indigo-900 mb-6">Recent Concepts</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {recentConcepts.map((concept) => (
-            <ConceptCard
-              key={concept.id}
-              title={concept.title}
-              description={concept.description}
-              colors={concept.colors}
-              gradient={concept.gradient}
-              initials={concept.initials}
-              onEdit={() => handleEdit(concept.id)}
-              onViewDetails={() => handleViewDetails(concept.id)}
-            />
-          ))}
-        </div>
+      <div className="mt-40">
+        <Card className="p-8">
+          <h2 className="text-xl font-semibold text-indigo-900 mb-12">Recent Concepts</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {recentConcepts.map((concept) => (
+              <ConceptCard
+                key={concept.id}
+                title={concept.title}
+                description={concept.description}
+                colors={concept.colors}
+                gradient={concept.gradient}
+                initials={concept.initials}
+                onEdit={() => handleEdit(concept.id)}
+                onViewDetails={() => handleViewDetails(concept.id)}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
       
       {/* How It Works Section */}
