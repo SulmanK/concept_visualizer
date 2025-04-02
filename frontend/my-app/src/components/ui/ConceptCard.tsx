@@ -209,4 +209,6 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       </div>
     </div>
   );
-}; 
+};
+
+export default ConceptCard; 

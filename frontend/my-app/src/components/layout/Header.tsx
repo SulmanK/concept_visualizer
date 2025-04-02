@@ -58,4 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ activeRoute = '/' }) => {
       </div>
     </header>
   );
-}; 
+};
+
+// Add default export to fix import issue
+export default Header; 

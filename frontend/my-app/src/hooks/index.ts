@@ -1,8 +1,23 @@
 // API Hooks
-export { default as useApi } from './useApi';
-export { default as useConceptGeneration } from './useConceptGeneration';
-export { default as useConceptRefinement } from './useConceptRefinement';
+export { useApi } from './useApi';
+export { useConceptGeneration } from './useConceptGeneration';
+export { useConceptRefinement } from './useConceptRefinement';
 
 // Error and Loading Hooks
-export { default as useToast, ToastProvider } from './useToast';
-export { default as useErrorHandling } from './useErrorHandling'; 
+export { useToast, ToastProvider } from './useToast';
+export { useErrorHandling } from './useErrorHandling';
+export { useNetworkStatus } from './useNetworkStatus';
+
+// Animation Hooks
+export { 
+  useAnimatedMount, 
+  useAnimatedValue, 
+  usePrefersReducedMotion 
+} from './animation';
+
+// Animation Types (re-exported)
+export type { 
+  AnimationState,
+  AnimatedMountOptions,
+  AnimatedValueOptions 
+} from './animation'; 

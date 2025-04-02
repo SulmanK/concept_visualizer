@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Header } from './Header';
-import { Footer } from './Footer';
+import Header from './Header';
+import Footer from './Footer';
 
 export interface MainLayoutProps {
   /**
@@ -45,4 +45,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
       <Footer />
     </div>
   );
-}; 
+};
+
+export default MainLayout; 

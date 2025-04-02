@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConceptGeneration } from '../../hooks/useConceptGeneration';
 import { useConceptContext } from '../../contexts/ConceptContext';
+import { ErrorBoundary } from '../../components/ui';
 import { ConceptHeader } from './components/ConceptHeader';
 import { HowItWorks } from './components/HowItWorks';
 import { ConceptFormSection } from './components/ConceptFormSection';
@@ -9,9 +10,9 @@ import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
 
 /**
- * Main landing page component for the application
+ * Main landing page content component
  */
-export const LandingPage: React.FC = () => {
+const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
   const { 
     generateConcept, 
@@ -265,5 +266,19 @@ export const LandingPage: React.FC = () => {
         )
       )}
     </div>
+  );
+};
+
+/**
+ * Main landing page component with error boundary
+ */
+export const LandingPage: React.FC = () => {
+  return (
+    <ErrorBoundary 
+      errorMessage="We're having trouble loading the application. Please refresh the page to try again."
+      canRetry={true}
+    >
+      <LandingPageContent />
+    </ErrorBoundary>
   );
 }; 

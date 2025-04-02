@@ -141,4 +141,6 @@ export const ColorPalette: React.FC<ColorPaletteProps> = ({
       )}
     </div>
   );
-}; 
+};
+
+export default ColorPalette; 

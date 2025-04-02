@@ -164,3 +164,6 @@ export const Footer: React.FC<FooterProps> = ({
     </footer>
   );
 }; 
+
+// Add default export to fix import issue
+export default Footer;

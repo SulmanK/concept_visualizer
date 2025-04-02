@@ -103,4 +103,6 @@ export const FeatureSteps: React.FC<FeatureStepsProps> = ({
       )}
     </div>
   );
-}; 
+};
+
+export default FeatureSteps; 

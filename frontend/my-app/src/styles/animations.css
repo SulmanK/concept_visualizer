@@ -1,0 +1,350 @@
+/* Animation Utilities */
+
+/* Base transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  /* Tell browser to optimize for transform changes */
+  will-change: transform;
+}
+
+.transition-opacity {
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  /* Tell browser to optimize for opacity changes */
+  will-change: opacity;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Duration variations */
+.duration-fast {
+  transition-duration: 150ms;
+}
+
+.duration-normal {
+  transition-duration: 300ms;
+}
+
+.duration-slow {
+  transition-duration: 500ms;
+}
+
+/* Hover effects - optimized to use transform which is GPU accelerated */
+.hover-lift {
+  transition-property: transform, box-shadow;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 8px 10px -6px rgba(79, 70, 229, 0.05);
+}
+
+.hover-bright {
+  transition-property: filter;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-bright:hover {
+  filter: brightness(1.05);
+}
+
+.hover-scale {
+  transition-property: transform;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Optimized entrance animations using transform and opacity */
+.fade-in {
+  animation: fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity;
+}
+
+.slide-in-up {
+  animation: slide-in-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.slide-in-down {
+  animation: slide-in-down 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.slide-in-left {
+  animation: slide-in-left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.slide-in-right {
+  animation: slide-in-right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+.scale-in {
+  animation: scale-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, opacity;
+}
+
+/* Performance-optimized keyframes using transform and opacity */
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    visibility: hidden;
+  }
+  1% {
+    visibility: visible;
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@keyframes slide-in-up {
+  0% {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+  }
+  1% {
+    visibility: visible;
+  }
+  100% {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-left {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Special effect animations */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.bounce {
+  animation: bounce 1s infinite;
+  will-change: transform;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(-10px);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+/* Focus animations - for form elements */
+.focus-ring {
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.45);
+}
+
+/* Performance optimized hover class for buttons */
+.btn-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.btn-hover:hover::after {
+  opacity: 1;
+}
+
+/* For mobile devices - reduce motion/animations to improve performance */
+@media screen and (max-width: 768px) {
+  .transition-all,
+  .transition-transform,
+  .transition-opacity,
+  .transition-colors {
+    transition-duration: 200ms; /* Faster transitions on mobile */
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px); /* Smaller transform on mobile */
+  }
+  
+  .hover-scale:hover {
+    transform: scale(1.03); /* Smaller scale on mobile */
+  }
+  
+  /* Reduce animation duration on mobile */
+  .fade-in,
+  .slide-in-up,
+  .slide-in-down,
+  .slide-in-left,
+  .slide-in-right,
+  .scale-in {
+    animation-duration: 0.3s;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .transition-all,
+  .transition-transform,
+  .transition-opacity,
+  .transition-colors,
+  .hover-lift,
+  .hover-bright,
+  .hover-scale,
+  .fade-in,
+  .slide-in-up,
+  .slide-in-down,
+  .slide-in-left,
+  .slide-in-right,
+  .scale-in,
+  .pulse,
+  .bounce {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Prevent content flash during page transitions */
+.page-transition-container {
+  will-change: opacity, transform, visibility;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: content;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.page-transition-container[style*="visibility: visible"] {
+  opacity: 1;
+}
+
+/* Optimize animations for better performance */
+.animated-transition {
+  will-change: opacity, transform, visibility;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: content;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration) ease-out, visibility var(--duration) ease-out, transform var(--duration) ease-out;
+}
+
+.animated-transition[style*="visibility: visible"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Remove the initial page load classes since we're handling it differently now */
+.initial-page-load,
+.initial-page-load.loaded {
+  display: none;
+}
+
+/* Update animation states to include visibility */
+.fade-enter, .fade-exit,
+.slide-up-enter, .slide-up-exit,
+.slide-down-enter, .slide-down-exit,
+.slide-left-enter, .slide-left-exit,
+.slide-right-enter, .slide-right-exit {
+  will-change: opacity, transform, visibility;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: content;
+  visibility: hidden;
+  transition: opacity var(--duration) ease-out, visibility var(--duration) ease-out, transform var(--duration) ease-out;
+} 

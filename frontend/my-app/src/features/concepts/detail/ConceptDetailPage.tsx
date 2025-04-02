@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
+import { ErrorBoundary } from '../../../components/ui';
 import { fetchConceptDetail, ConceptData, ColorVariationData } from '../../../services/supabaseClient';
 import { getSessionId } from '../../../services/sessionManager';
 import { ExportOptions } from './components/ExportOptions';
@@ -12,7 +13,7 @@ import { ExportOptions } from './components/ExportOptions';
 /**
  * Component to display concept details
  */
-export const ConceptDetailPage: React.FC = () => {
+const ConceptDetailContent: React.FC = () => {
   const { conceptId } = useParams<{ conceptId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -428,5 +429,19 @@ export const ConceptDetailPage: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * Wrapper component with ErrorBoundary
+ */
+export const ConceptDetailPage: React.FC = () => {
+  return (
+    <ErrorBoundary
+      errorMessage="We're having trouble loading this concept. Please try again or return to the home page."
+      canRetry={true}
+    >
+      <ConceptDetailContent />
+    </ErrorBoundary>
   );
 }; 
