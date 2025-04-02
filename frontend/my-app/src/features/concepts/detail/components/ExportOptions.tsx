@@ -382,100 +382,194 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
     }
   };
   
-  const handleDownload = async () => {
-    try {
-      if (onDownload) {
-        onDownload(selectedFormat, selectedSize);
-        return;
-      }
+  // Modified button click handler that bypasses the parent's onDownload if needed
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any default behavior
+    e.stopPropagation(); // Stop propagation to parent elements
+    console.log('Download button click intercepted');
+    
+    // Force direct download immediately without using the parent's callback
+    const forceDirectDownload = async () => {
+      console.log('Forcing direct download...');
+      const fileExtension = selectedFormat;
+      setIsProcessing(true);
       
-      // Set the file extension to use (SVG is now properly implemented)
-      const fileExtension = selectedFormat; // Now we can use the format directly as extension
-      
-      if (!processedImageUrl) {
-        // Start processing if not already done
-        setIsProcessing(true);
-        try {
+      try {
+        // If we already have a processed URL, use it
+        if (processedImageUrl) {
+          await downloadProcessedImage(processedImageUrl, fileExtension);
+        } else {
+          // Otherwise process the image first
           const url = await processImage(imageUrl, selectedFormat, selectedSize);
-          setProcessedImageUrl(url);
-          
-          // Now proceed with the download using the processed URL
-          await downloadProcessedImage(url, fileExtension);
-        } catch (error) {
-          console.error('Error processing image for download:', error);
-          // Fallback to the original URL if processing failed
-          await downloadProcessedImage(imageUrl, fileExtension);
-        } finally {
-          setIsProcessing(false);
+          if (url) {
+            await downloadProcessedImage(url, fileExtension);
+          } else {
+            // Fallback to original URL if processing fails
+            await downloadProcessedImage(imageUrl, fileExtension);
+          }
         }
-      } else {
-        // Use the already processed image URL
-        await downloadProcessedImage(processedImageUrl, fileExtension);
+      } catch (error) {
+        console.error('Error in direct download:', error);
+      } finally {
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Error during download:', error);
-      // Show an error toast or notification here
+    };
+    
+    // Use direct download immediately (bypassing parent callback)
+    forceDirectDownload();
+    
+    // Also try the parent's onDownload as a secondary approach (it might work better in some cases)
+    if (onDownload) {
+      console.log('Also calling parent onDownload as secondary approach');
+      setTimeout(() => onDownload(selectedFormat, selectedSize), 500);
     }
   };
   
   // Helper function to safely download the processed image
   const downloadProcessedImage = async (url: string, fileExtension: string) => {
+    console.log('downloadProcessedImage called with:', { url: url.substring(0, 30) + '...', fileExtension });
     const filename = `${conceptTitle}${variationName ? `-${variationName}` : ''}.${fileExtension}`;
+    console.log('Download filename:', filename);
     
     try {
+      const triggerDownload = (downloadUrl: string, name: string) => {
+        console.log('Triggering download with URL:', downloadUrl.substring(0, 30) + '...');
+        
+        // Force download using browser-native approach
+        try {
+          // Create a link and trigger the download
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = name;
+          a.rel = 'noopener noreferrer'; // Security best practice
+          a.style.display = 'none'; // Hide the element
+          
+          // Add to DOM, trigger click, and remove
+          document.body.appendChild(a);
+          
+          console.log('Downloading with a.download method');
+          
+          // Use setTimeout to ensure the browser has time to process
+          setTimeout(() => {
+            const clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true,
+            });
+            a.dispatchEvent(clickEvent);
+            
+            // Delay cleanup to ensure download starts
+            setTimeout(() => {
+              document.body.removeChild(a);
+              if (downloadUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(downloadUrl);
+              }
+              console.log('Download click event completed and cleaned up');
+            }, 300);
+          }, 100);
+        } catch (downloadError) {
+          console.error('Error with download link approach:', downloadError);
+          
+          // Try an alternative method - iFrame download
+          console.log('Attempting iframe download method');
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          document.body.appendChild(iframe);
+          
+          try {
+            const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+            if (iframeDoc) {
+              iframeDoc.open();
+              iframeDoc.write(`
+                <html>
+                <head>
+                  <title>Downloading ${name}</title>
+                </head>
+                <body>
+                  <a id="download" href="${downloadUrl}" download="${name}">Download</a>
+                  <script>
+                    document.getElementById('download').click();
+                  </script>
+                </body>
+                </html>
+              `);
+              iframeDoc.close();
+            }
+            
+            // Remove iframe after a delay
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+              if (downloadUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(downloadUrl);
+              }
+            }, 1000);
+          } catch (iframeError) {
+            console.error('Error with iframe download method:', iframeError);
+            // If iframe method fails, try direct window.location approach as last resort
+            window.open(downloadUrl, '_blank');
+          }
+        }
+      };
+      
       // Handle SVG object URLs specially
       if (url.startsWith('blob:') && fileExtension === 'svg') {
+        console.log('Handling SVG blob URL');
         const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch SVG: ${response.status} ${response.statusText}`);
+        }
         const svgText = await response.text();
         
         // Create a download for the raw SVG content
         const blob = new Blob([svgText], { type: 'image/svg+xml' });
         const downloadUrl = URL.createObjectURL(blob);
         
-        // Create a link and trigger the download
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = filename;
-        // Add to body to ensure it works in all browsers
-        document.body.appendChild(a);
-        a.click();
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(downloadUrl);
-        }, 100);
+        console.log('Created download URL for SVG:', downloadUrl);
+        triggerDownload(downloadUrl, filename);
       } else if (url.startsWith('data:')) {
+        console.log('Handling data URL');
         // For data URLs (common with PNG/JPG formats)
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(a);
-        }, 100);
+        triggerDownload(url, filename);
       } else {
-        // For regular URLs, fetch first to ensure proper download
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = objectUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(objectUrl);
-        }, 100);
+        console.log('Handling regular URL');
+        try {
+          // For regular URLs, fetch first to ensure proper download
+          const response = await fetch(url, { 
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/octet-stream',
+            },
+            cache: 'no-store',
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+          }
+          
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          
+          console.log('Created object URL from fetched content:', objectUrl);
+          triggerDownload(objectUrl, filename);
+        } catch (fetchError) {
+          console.error('Fetch error, trying direct download:', fetchError);
+          // Fallback if fetch fails - try direct download
+          triggerDownload(url, filename);
+        }
       }
       
       console.log(`Downloaded ${fileExtension.toUpperCase()} file: ${filename}`);
     } catch (error) {
       console.error('Error downloading the image:', error);
+      
+      // Last resort fallback - open in new tab and let user save manually
+      try {
+        console.log('Attempting fallback: opening image in new tab');
+        window.open(url, '_blank');
+      } catch (fallbackError) {
+        console.error('Even fallback failed:', fallbackError);
+      }
+      
       throw error;
     }
   };
@@ -585,8 +679,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           </button>
           <button 
             className="px-4 py-2 min-w-[120px] bg-gradient-to-r from-indigo-600 to-indigo-400 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex justify-center items-center"
-            onClick={handleDownload}
+            onClick={handleDownloadClick}
             disabled={isProcessing || isAutoProcessing}
+            data-testid="download-button"
           >
             {(isProcessing || isAutoProcessing) ? (
               <span className="flex items-center">

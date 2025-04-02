@@ -188,6 +188,14 @@
 - [ ] Create responsive designs for mobile
 - [ ] Optimize prompts for Logo Design
 
+
+Future
+- Tests
+- Setup Github Workflows
+- Clean up Code
+- Make sure no .env files are leaked
+- Setup for Deployment
+
 ## Concept Visualizer - Current Status
 
 ### Testing Progress
