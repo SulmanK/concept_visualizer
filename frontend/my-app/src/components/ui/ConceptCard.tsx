@@ -1,6 +1,34 @@
 import React, { useState } from 'react';
 import { Card } from './Card';
 
+/**
+ * Helper function to determine if a color is light
+ * @param hexColor - Hex color string
+ * @returns boolean - True if color is light
+ */
+const isLightColor = (hexColor: string): boolean => {
+  // Default to false for non-hex colors
+  if (!hexColor || !hexColor.startsWith('#')) {
+    return false;
+  }
+
+  // Convert hex to RGB
+  let r = 0, g = 0, b = 0;
+  if (hexColor.length === 7) {
+    r = parseInt(hexColor.substring(1, 3), 16);
+    g = parseInt(hexColor.substring(3, 5), 16);
+    b = parseInt(hexColor.substring(5, 7), 16);
+  } else if (hexColor.length === 4) {
+    r = parseInt(hexColor.substring(1, 2), 16) * 17;
+    g = parseInt(hexColor.substring(2, 3), 16) * 17;
+    b = parseInt(hexColor.substring(3, 4), 16) * 17;
+  }
+
+  // Calculate perceived brightness (YIQ formula)
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq >= 200; // Higher threshold to catch very light colors
+}
+
 export interface ConceptCardProps {
   /**
    * Concept title/name
@@ -138,19 +166,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           )}
           
           {/* Color variations */}
-          {hasVariations && colorVariations.map((variation, index) => (
-            <button 
-              key={`${variation[0]}-${index}`}
-              onClick={() => handleVariationSelect(includeOriginal ? index + 1 : index)}
-              className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
-                selectedVariationIndex === (includeOriginal ? index + 1 : index) 
-                  ? 'ring-2 ring-indigo-500 ring-offset-2' 
-                  : 'hover-scale'
-              }`}
-              style={{ backgroundColor: variation[0] || '#4F46E5' }}
-              title={`Color Palette ${index + 1}`}
-            />
-          ))}
+          {hasVariations && colorVariations.map((variation, index) => {
+            const color = variation[0] || '#4F46E5';
+            const isLight = isLightColor(color);
+            
+            return (
+              <button 
+                key={`${color}-${index}`}
+                onClick={() => handleVariationSelect(includeOriginal ? index + 1 : index)}
+                className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
+                  selectedVariationIndex === (includeOriginal ? index + 1 : index) 
+                    ? 'ring-2 ring-indigo-500 ring-offset-2' 
+                    : 'hover-scale'
+                } ${isLight ? 'border-2 border-gray-400' : ''}`}
+                style={{ backgroundColor: color }}
+                title={`Color Palette ${index + 1}`}
+              />
+            );
+          })}
         </div>
         
         {/* Actions */}

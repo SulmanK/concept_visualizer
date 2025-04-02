@@ -4,6 +4,34 @@ import { useConceptContext } from '../../contexts/ConceptContext';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 
 /**
+ * Helper function to determine if a color is light
+ * @param hexColor - Hex color string
+ * @returns boolean - True if color is light
+ */
+const isLightColor = (hexColor: string): boolean => {
+  // Default to false for non-hex colors
+  if (!hexColor || !hexColor.startsWith('#')) {
+    return false;
+  }
+
+  // Convert hex to RGB
+  let r = 0, g = 0, b = 0;
+  if (hexColor.length === 7) {
+    r = parseInt(hexColor.substring(1, 3), 16);
+    g = parseInt(hexColor.substring(3, 5), 16);
+    b = parseInt(hexColor.substring(5, 7), 16);
+  } else if (hexColor.length === 4) {
+    r = parseInt(hexColor.substring(1, 2), 16) * 17;
+    g = parseInt(hexColor.substring(2, 3), 16) * 17;
+    b = parseInt(hexColor.substring(3, 4), 16) * 17;
+  }
+
+  // Calculate perceived brightness (YIQ formula)
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq >= 200; // Higher threshold to catch very light colors
+}
+
+/**
  * Page for selecting a concept to refine
  */
 export const RefinementSelectionPage: React.FC = () => {
@@ -188,13 +216,18 @@ export const RefinementSelectionPage: React.FC = () => {
                   </div>
                   
                   {/* Color variations */}
-                  {hasVariations && concept.color_variations?.slice(0, 3).map((variation, idx) => (
-                    <div
-                      key={idx}
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: variation.colors[0] || '#4F46E5' }}
-                    />
-                  ))}
+                  {hasVariations && concept.color_variations?.slice(0, 3).map((variation, idx) => {
+                    const color = variation.colors[0] || '#4F46E5';
+                    const isLight = isLightColor(color);
+                    
+                    return (
+                      <div
+                        key={idx}
+                        className={`w-4 h-4 rounded-full ${isLight ? 'border-2 border-gray-400' : ''}`}
+                        style={{ backgroundColor: color }}
+                      />
+                    );
+                  })}
                   {hasVariations && concept.color_variations!.length > 3 && (
                     <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-600 text-xs font-bold">
                       +{concept.color_variations!.length - 3}

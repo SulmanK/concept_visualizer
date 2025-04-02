@@ -7,6 +7,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
 import { fetchConceptDetail, ConceptData, ColorVariationData } from '../../../services/supabaseClient';
 import { getSessionId } from '../../../services/sessionManager';
+import { ExportOptions } from './components/ExportOptions';
 
 /**
  * Component to display concept details
@@ -283,16 +284,6 @@ export const ConceptDetailPage: React.FC = () => {
                   <div className="flex justify-between items-center mb-2">
                     <h4 className="text-sm font-medium text-indigo-700">Color Palette</h4>
                   </div>
-                  <div className="flex gap-2 mb-3">
-                    {selectedVariation.colors.map((color, index) => (
-                      <div
-                        key={`${color}-${index}`}
-                        className="w-full h-10 rounded-md border border-gray-200 shadow-sm"
-                        style={{ backgroundColor: color }}
-                        title={color}
-                      />
-                    ))}
-                  </div>
                   <ColorPalette 
                     palette={{
                       primary: selectedVariation.colors[0] || '#4F46E5',
@@ -347,8 +338,9 @@ export const ConceptDetailPage: React.FC = () => {
                   </div>
                 </div>
                 
+                {/* Move palette description here, above export options */}
                 {selectedVariation.description && (
-                  <div className="mt-4">
+                  <div className="mt-4 mb-6">
                     <div className="flex items-center mb-2">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-700 mr-1" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
@@ -358,6 +350,35 @@ export const ConceptDetailPage: React.FC = () => {
                     <p className="text-gray-700 p-4 bg-indigo-50 rounded-md leading-relaxed text-sm border border-indigo-100">{selectedVariation.description}</p>
                   </div>
                 )}
+
+                {/* Add export options with improved readability */}
+                <div className="mt-6 bg-white rounded-xl shadow-sm border border-indigo-100">
+                  <details className="group">
+                    <summary className="p-4 cursor-pointer text-lg font-semibold text-indigo-800 flex items-center hover:bg-indigo-50 transition-colors rounded-t-xl">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      Export Options
+                    </summary>
+                    <div className="p-5 border-t border-indigo-100">
+                      <ExportOptions
+                        imageUrl={selectedVariation.image_url}
+                        conceptTitle={concept.logo_description || 'Concept'}
+                        variationName={selectedVariation.palette_name}
+                        onDownload={(format, size) => {
+                          // In a real implementation, this would handle different format/size conversions
+                          console.log(`Downloading ${format} image at ${size} size`);
+                          const a = document.createElement('a');
+                          a.href = selectedVariation.image_url;
+                          a.download = `${concept.logo_description || 'Concept'}-${selectedVariation.palette_name}.${format}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }}
+                      />
+                    </div>
+                  </details>
+                </div>
               </div>
             ) : (
               <div className="mb-6 bg-white rounded-xl shadow-sm p-4 border border-indigo-100">
@@ -378,9 +399,38 @@ export const ConceptDetailPage: React.FC = () => {
                   </svg>
                   <h4 className="text-sm font-medium text-indigo-700">Information</h4>
                 </div>
-                <p className="text-gray-700 p-4 bg-indigo-50 rounded-md leading-relaxed text-sm border border-indigo-100">
+                <p className="text-gray-700 p-4 bg-indigo-50 rounded-md leading-relaxed text-sm border border-indigo-100 mb-5">
                   This is the original concept without any color variations applied. Select one of the color variations above to see how different color palettes affect the design.
                 </p>
+                
+                {/* Add export options for original concept */}
+                <div className="mt-6 bg-white rounded-xl shadow-sm border border-indigo-100">
+                  <details className="group">
+                    <summary className="p-4 cursor-pointer text-lg font-semibold text-indigo-800 flex items-center hover:bg-indigo-50 transition-colors rounded-t-xl">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                      Export Options
+                    </summary>
+                    <div className="p-5 border-t border-indigo-100">
+                      <ExportOptions
+                        imageUrl={concept.base_image_url}
+                        conceptTitle={concept.logo_description || 'Concept'}
+                        variationName="Original"
+                        onDownload={(format, size) => {
+                          // In a real implementation, this would handle different format/size conversions
+                          console.log(`Downloading original in ${format} format at ${size} size`);
+                          const a = document.createElement('a');
+                          a.href = concept.base_image_url;
+                          a.download = `${concept.logo_description || 'Concept'}-Original.${format}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }}
+                      />
+                    </div>
+                  </details>
+                </div>
               </div>
             )}
           </div>

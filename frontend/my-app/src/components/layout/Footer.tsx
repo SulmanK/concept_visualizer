@@ -70,6 +70,20 @@ export const Footer: React.FC<FooterProps> = ({
                 </li>
                 <li>
                   <Link 
+                    to="/recent" 
+                    className="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                  >
+                    <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="relative">
+                      Recent Concepts
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"></span>
+                    </span>
+                  </Link>
+                </li>
+                <li>
+                  <Link 
                     to="/refine" 
                     className="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
                   >
@@ -78,20 +92,6 @@ export const Footer: React.FC<FooterProps> = ({
                     </svg>
                     <span className="relative">
                       Refine Concepts
-                      <span className="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"></span>
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link 
-                    to="/recent" 
-                    className="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
-                  >
-                    <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="relative">
-                      Recent Designs
                       <span className="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"></span>
                     </span>
                   </Link>
@@ -107,7 +107,7 @@ export const Footer: React.FC<FooterProps> = ({
               <ul className="space-y-2">
                 <li>
                   <a
-                    href="https://github.com/username/concept-visualizer"
+                    href="https://github.com/SulmanK/concept-visualizer"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
@@ -149,7 +149,7 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
           
           <a
-            href="https://github.com/username/concept-visualizer"
+            href="https://github.com/SulmanK/concept-visualizer"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-800/30 text-indigo-200 hover:bg-indigo-700/50 hover:text-white transition-all transform hover:-translate-y-1 hover:shadow-md"
             aria-label="GitHub"
             target="_blank"
