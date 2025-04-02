@@ -9,10 +9,10 @@ export interface FooterProps {
 }
 
 /**
- * Application footer with navigation, links and copyright
- * Uses dark indigo color scheme with responsive two-column layout
+ * Modern footer component that combines the two-column layout with links grid
+ * and uses the dark indigo color scheme
  */
-export const Footer: React.FC<FooterProps> = ({ 
+export const CombinedFooter: React.FC<FooterProps> = ({ 
   year = new Date().getFullYear() 
 }) => {
   return (
@@ -34,6 +34,16 @@ export const Footer: React.FC<FooterProps> = ({
             <p className="mt-4 text-sm text-indigo-200 leading-relaxed">
               Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.
             </p>
+            
+            <Link 
+              to="/get-started" 
+              className="mt-5 inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary to-primary-dark text-white text-sm font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5"
+            >
+              <svg className="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+              </svg>
+              Get Started
+            </Link>
             
             <div className="mt-6">
               <a href="https://jigsawstack.com/?ref=powered-by" rel="follow" className="block">
