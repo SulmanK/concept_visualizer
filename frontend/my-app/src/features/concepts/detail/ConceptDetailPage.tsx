@@ -18,6 +18,7 @@ export const ConceptDetailPage: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get('colorId');
+  const showExport = searchParams.get('showExport') === 'true';
   
   const [concept, setConcept] = useState<ConceptData | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<ColorVariationData | null>(null);
@@ -353,7 +354,7 @@ export const ConceptDetailPage: React.FC = () => {
 
                 {/* Add export options with improved readability */}
                 <div className="mt-6 bg-white rounded-xl shadow-sm border border-indigo-100">
-                  <details className="group">
+                  <details className="group" open={showExport}>
                     <summary className="p-4 cursor-pointer text-lg font-semibold text-indigo-800 flex items-center hover:bg-indigo-50 transition-colors rounded-t-xl">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -405,7 +406,7 @@ export const ConceptDetailPage: React.FC = () => {
                 
                 {/* Add export options for original concept */}
                 <div className="mt-6 bg-white rounded-xl shadow-sm border border-indigo-100">
-                  <details className="group">
+                  <details className="group" open={showExport}>
                     <summary className="p-4 cursor-pointer text-lg font-semibold text-indigo-800 flex items-center hover:bg-indigo-50 transition-colors rounded-t-xl">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />

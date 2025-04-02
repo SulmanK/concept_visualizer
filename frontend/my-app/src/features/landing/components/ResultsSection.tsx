@@ -2,6 +2,7 @@ import React from 'react';
 import { ConceptResult } from '../../../components/concept/ConceptResult';
 import { GenerationResponse } from '../../../types';
 import { Button } from '../../../components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 interface ResultsSectionProps {
   result: GenerationResponse | null;
@@ -19,7 +20,14 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   selectedColor,
   onColorSelect
 }) => {
+  const navigate = useNavigate();
+  
   if (!result) return null;
+
+  // Handler to navigate to the concept details page
+  const handleExport = (conceptId: string) => {
+    navigate(`/concepts/${conceptId}?showExport=true`);
+  };
 
   return (
     <div className="mb-16">
@@ -39,6 +47,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
           concept={result}
           onColorSelect={onColorSelect}
           variations={result.variations || []}
+          onExport={handleExport}
         />
       </div>
     </div>

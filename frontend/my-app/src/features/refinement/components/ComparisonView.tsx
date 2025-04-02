@@ -1,6 +1,7 @@
 import React from 'react';
 import { ConceptResult } from '../../../components/concept/ConceptResult';
 import { GenerationResponse } from '../../../types';
+import { useNavigate } from 'react-router-dom';
 
 interface ComparisonViewProps {
   originalConcept: {
@@ -22,6 +23,13 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   onColorSelect = () => {}, // Default to empty function
   onRefineRequest = () => {}, // Default to empty function
 }) => {
+  const navigate = useNavigate();
+  
+  // Handler to navigate to the concept details page
+  const handleExport = (conceptId: string) => {
+    navigate(`/concepts/${conceptId}?showExport=true`);
+  };
+
   return (
     <>
       {/* Comparison view */}
@@ -57,6 +65,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
           concept={refinedConcept}
           onRefineRequest={onRefineRequest}
           onColorSelect={onColorSelect}
+          onExport={handleExport}
         />
       </div>
     </>

@@ -213,6 +213,11 @@ export interface ConceptResultProps {
     image_url: string;
     description?: string;
   }>;
+
+  /**
+   * Handler for navigating to concept detail page
+   */
+  onExport?: (conceptId: string) => void;
 }
 
 /**
@@ -224,6 +229,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   onDownload,
   onColorSelect,
   variations = [],
+  onExport,
 }) => {
   const [selectedVariation, setSelectedVariation] = useState<number | null>(null);
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
@@ -517,6 +523,31 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     );
   };
   
+  const handleExport = () => {
+    // Log the concept ID data to debug the issue
+    console.log('Export button clicked, concept data:', {
+      hasId: concept && 'id' in concept,
+      id: concept?.id,
+      hasGenerationId: concept && 'generation_id' in concept,
+      generationId: concept?.generation_id,
+      promptId: concept?.prompt_id
+    });
+    
+    // Try to get a valid ID from either id, generation_id, or prompt_id
+    const conceptId = concept?.id || concept?.generation_id || concept?.prompt_id;
+    
+    // Check if onExport is provided and if we have a valid conceptId
+    if (onExport && conceptId && typeof conceptId === 'string') {
+      console.log('Calling onExport with conceptId:', conceptId);
+      onExport(conceptId);
+      return;
+    }
+    
+    console.log('Falling back to download function');
+    // If onExport is not provided or concept.id is missing, fall back to download
+    handleDownload();
+  };
+  
   if (!concept) {
     return <div className="text-center p-8 text-gray-500">No concept data available</div>;
   }
@@ -548,13 +579,13 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         <div className="flex justify-center gap-4 mt-8">
           <Button
             variant="primary"
-            onClick={handleDownload}
+            onClick={handleExport}
             className="px-6 py-2 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
-            Download
+            Export
           </Button>
           
           {onRefineRequest && (

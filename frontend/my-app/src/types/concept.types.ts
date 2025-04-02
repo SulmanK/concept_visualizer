@@ -42,6 +42,7 @@ export interface GenerationResponse {
   variations?: ColorVariation[];
   original_image_url?: string | null;
   refinement_prompt?: string | null;
+  id?: string; // ID of the saved concept in the database
   
   // These are aliases for frontend compatibility
   // They might not be in the API response
