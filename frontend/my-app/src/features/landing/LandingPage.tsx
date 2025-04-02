@@ -77,13 +77,34 @@ export const LandingPage: React.FC = () => {
       });
   };
   
-  const handleEdit = (conceptId: string) => {
+  const handleEdit = (conceptId: string, variationIndex: number = 0) => {
     // Check if this is a sample concept
     if (conceptId.startsWith('sample-')) {
       alert('This is a sample concept. Please generate a real concept to edit it.');
       return;
     }
-    navigate(`/refine/${conceptId}`);
+    
+    // Find the concept
+    const concept = recentConcepts.find(c => c.id === conceptId);
+    if (!concept) {
+      navigate(`/refine/${conceptId}`);
+      return;
+    }
+    
+    // Get the variation ID if available
+    const variation = concept.color_variations && 
+                      variationIndex < concept.color_variations.length ? 
+                      concept.color_variations[variationIndex] : null;
+    
+    // If we have a variation, use its ID, otherwise just use the concept ID
+    const variationId = variation ? variation.id : null;
+    
+    // Navigate to the refine page with variation ID as query parameter if available
+    if (variationId) {
+      navigate(`/refine/${conceptId}?colorId=${variationId}`);
+    } else {
+      navigate(`/refine/${conceptId}`);
+    }
   };
   
   const handleViewDetails = (conceptId: string) => {
@@ -125,10 +146,9 @@ export const LandingPage: React.FC = () => {
       
       // Get images from color variations
       const images = concept.color_variations?.map(variation => variation.image_url) || [];
-      // Add base image as fallback if no variations or fallback to empty
-      if (concept.base_image_url && (!images.length || !images[0])) {
-        images.unshift(concept.base_image_url);
-      }
+      
+      // Include original image for proper selection and display
+      const originalImage = concept.base_image_url || '';
       
       return {
         id: concept.id,
@@ -141,7 +161,8 @@ export const LandingPage: React.FC = () => {
         colorVariations,
         gradient: { from: 'blue-400', to: 'indigo-500' },
         initials,
-        images
+        images,
+        originalImage // Pass the original image separately
       };
     });
   };
@@ -162,6 +183,7 @@ export const LandingPage: React.FC = () => {
       gradient: { from: 'blue-400', to: 'indigo-500' },
       initials: 'TC',
       images: ['/samples/tech-company.png'],
+      originalImage: '/samples/tech-company.png' // Include original image
     },
     {
       id: 'sample-fs',
@@ -174,6 +196,7 @@ export const LandingPage: React.FC = () => {
       gradient: { from: 'indigo-400', to: 'purple-500' },
       initials: 'FS',
       images: ['/samples/fashion-studio.png'],
+      originalImage: '/samples/fashion-studio.png' // Include original image
     },
     {
       id: 'sample-ep',
@@ -186,6 +209,7 @@ export const LandingPage: React.FC = () => {
       gradient: { from: 'blue-400', to: 'teal-500' },
       initials: 'EP',
       images: ['/samples/eco-product.png'],
+      originalImage: '/samples/eco-product.png' // Include original image
     },
   ];
   

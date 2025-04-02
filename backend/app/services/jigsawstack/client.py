@@ -153,7 +153,7 @@ class JigsawStackClient:
             logger.error(f"Error refining image: {str(e)}")
             raise
     
-    async def generate_multiple_palettes(self, logo_description: str, theme_description: str, num_palettes: int = 8) -> List[Dict[str, Any]]:
+    async def generate_multiple_palettes(self, logo_description: str, theme_description: str, num_palettes: int = 7) -> List[Dict[str, Any]]:
         """Generate multiple color palettes in a single LLM call.
         
         Args:
@@ -374,6 +374,16 @@ class JigsawStackClient:
                 "name": "Complementary Palette",
                 "colors": ["#8B5CF6", "#A78BFA", "#C4B5FD", "#EDE9FE", "#4C1D95"],
                 "description": f"A complementary palette for: {prompt}"
+            },
+            {
+                "name": "Warm Palette",
+                "colors": ["#F59E0B", "#FBBF24", "#FCD34D", "#FEF3C7", "#92400E"],
+                "description": f"A warm and inviting palette for: {prompt}"
+            },
+            {
+                "name": "Cool Palette",
+                "colors": ["#0EA5E9", "#38BDF8", "#7DD3FC", "#E0F2FE", "#075985"],
+                "description": f"A cool and refreshing palette for: {prompt}"
             }
         ][:num_palettes]
 

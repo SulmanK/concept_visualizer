@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useConceptContext } from '../../../../contexts/ConceptContext';
 import { ConceptCard } from './ConceptCard';
 
@@ -8,6 +8,49 @@ import { ConceptCard } from './ConceptCard';
  */
 export const ConceptList: React.FC = () => {
   const { recentConcepts, loadingConcepts, errorLoadingConcepts, refreshConcepts } = useConceptContext();
+  const navigate = useNavigate();
+  
+  // Handle navigation to the edit/refine page
+  const handleEdit = (conceptId: string, variationIndex: number) => {
+    const concept = recentConcepts?.find(c => c.id === conceptId);
+    if (!concept) {
+      navigate(`/refine/${conceptId}`);
+      return;
+    }
+    
+    const variation = concept.color_variations && 
+                      variationIndex < concept.color_variations.length ? 
+                      concept.color_variations[variationIndex] : null;
+    
+    const variationId = variation ? variation.id : null;
+    
+    if (variationId) {
+      navigate(`/refine/${conceptId}?colorId=${variationId}`);
+    } else {
+      navigate(`/refine/${conceptId}`);
+    }
+  };
+  
+  // Handle navigation to the concept details page
+  const handleViewDetails = (conceptId: string, variationIndex: number) => {
+    const concept = recentConcepts?.find(c => c.id === conceptId);
+    if (!concept) {
+      navigate(`/concepts/${conceptId}`);
+      return;
+    }
+    
+    const variation = concept.color_variations && 
+                      variationIndex < concept.color_variations.length ? 
+                      concept.color_variations[variationIndex] : null;
+    
+    const variationId = variation ? variation.id : null;
+    
+    if (variationId) {
+      navigate(`/concepts/${conceptId}?colorId=${variationId}`);
+    } else {
+      navigate(`/concepts/${conceptId}`);
+    }
+  };
   
   // Log component state on each render for debugging
   console.log('ConceptList render state:', { 
@@ -113,6 +156,9 @@ export const ConceptList: React.FC = () => {
             <ConceptCard 
               key={concept.id}
               concept={concept}
+              preventNavigation={true}
+              onEdit={handleEdit}
+              onViewDetails={handleViewDetails}
             />
           );
         })}

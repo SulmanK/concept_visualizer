@@ -20,8 +20,15 @@ export interface ConceptCardProps {
   
   /**
    * Images for each color variation, if available
+   * If includeOriginal is true, the first image is considered the original
    */
   images?: string[];
+  
+  /**
+   * Whether to include the original image as a variation option
+   * If true, the first image in the images array is the original
+   */
+  includeOriginal?: boolean;
   
   /**
    * Gradient colors for the header (from and to)
@@ -39,7 +46,7 @@ export interface ConceptCardProps {
   /**
    * Handler for edit button click
    */
-  onEdit?: () => void;
+  onEdit?: (index: number) => void;
   
   /**
    * Handler for view details button click
@@ -55,6 +62,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   description,
   colorVariations,
   images,
+  includeOriginal = false,
   gradient = { from: 'blue-400', to: 'indigo-500' },
   initials,
   onEdit,
@@ -65,16 +73,14 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   
   // Ensure we have at least one variation
   const hasVariations = colorVariations && colorVariations.length > 0;
-  const colors = hasVariations ? colorVariations[selectedVariationIndex] : [];
+  const colors = hasVariations ? colorVariations[selectedVariationIndex - (includeOriginal && selectedVariationIndex > 0 ? 1 : 0)] : [];
   
   // Get the main color from the current variation
   const mainColor = colors.length > 0 ? colors[0] : '#4F46E5';
   
   // Handle color variation selection
   const handleVariationSelect = (index: number) => {
-    if (index >= 0 && index < colorVariations.length) {
-      setSelectedVariationIndex(index);
-    }
+    setSelectedVariationIndex(index);
   };
   
   return (
@@ -110,28 +116,43 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         <p className="text-sm text-gray-600 mt-1">{description}</p>
         
         {/* Color palettes */}
-        {hasVariations && (
-          <div className="mt-3 flex space-x-2">
-            {colorVariations.map((variation, index) => (
-              <button 
-                key={`${variation[0]}-${index}`}
-                onClick={() => handleVariationSelect(index)}
-                className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
-                  selectedVariationIndex === index ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
-                }`}
-                style={{ backgroundColor: variation[0] || '#4F46E5' }}
-                title={`Color Palette ${index + 1}`}
-              />
-            ))}
-          </div>
-        )}
+        <div className="mt-3 flex space-x-2">
+          {/* Original option if available */}
+          {includeOriginal && (
+            <button 
+              onClick={() => handleVariationSelect(0)}
+              className={`inline-block w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center transition-all duration-300 ${
+                selectedVariationIndex === 0 ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
+              }`}
+              style={{ background: 'white' }}
+              title="Original"
+            >
+              <span className="text-xs">O</span>
+            </button>
+          )}
+          
+          {/* Color variations */}
+          {hasVariations && colorVariations.map((variation, index) => (
+            <button 
+              key={`${variation[0]}-${index}`}
+              onClick={() => handleVariationSelect(includeOriginal ? index + 1 : index)}
+              className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
+                selectedVariationIndex === (includeOriginal ? index + 1 : index) 
+                  ? 'ring-2 ring-indigo-500 ring-offset-2' 
+                  : 'hover-scale'
+              }`}
+              style={{ backgroundColor: variation[0] || '#4F46E5' }}
+              title={`Color Palette ${index + 1}`}
+            />
+          ))}
+        </div>
         
         {/* Actions */}
         <div className="mt-4 flex justify-between">
           {onEdit && (
             <button 
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
-              onClick={onEdit}
+              onClick={() => onEdit(selectedVariationIndex)}
             >
               Edit
             </button>

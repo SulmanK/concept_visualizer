@@ -238,7 +238,7 @@ class ConceptService:
             self, 
             theme_description: str, 
             logo_description: Optional[str] = None,
-            num_palettes: int = 8
+            num_palettes: int = 7
     ) -> List[Dict[str, Any]]:
         """
         Generate color palettes based on a theme description and logo description.

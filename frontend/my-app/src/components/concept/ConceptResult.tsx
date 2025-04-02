@@ -434,6 +434,50 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
           Color Variations
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {/* Original concept */}
+          <div 
+            key="variation-original"
+            className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+              selectedVariation === null 
+                ? 'border-2 border-primary' 
+                : 'border border-gray-200'
+            }`}
+            onClick={() => setSelectedVariation(null)}
+          >
+            <div className="p-2 border-b border-gray-100 bg-gray-50 text-center">
+              <h4 className="text-xs font-medium text-gray-900">
+                Original
+              </h4>
+            </div>
+            <div className="p-2">
+              <img 
+                src={getOriginalImageUrl()}
+                alt="Original concept"
+                className="w-full h-[100px] object-contain mb-2"
+                onError={handleImageError}
+              />
+              <div className="flex justify-center gap-1 pb-1">
+                {concept.color_palette && (Array.isArray(concept.color_palette) 
+                  ? concept.color_palette.slice(0, 5).map((color, colorIndex) => (
+                    <div 
+                      key={`dot-original-${colorIndex}`}
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))
+                  : Object.values(concept.color_palette).slice(0, 5).map((color, colorIndex) => (
+                    <div 
+                      key={`dot-original-${colorIndex}`}
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: color as string }}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Color variations */}
           {variations.map((variation, index) => (
             <div 
               key={`variation-${index}`}

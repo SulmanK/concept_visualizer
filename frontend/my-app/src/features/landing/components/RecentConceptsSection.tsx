@@ -12,11 +12,12 @@ interface ConceptData {
   };
   initials: string;
   images?: string[];
+  originalImage?: string;
 }
 
 interface RecentConceptsSectionProps {
   concepts: ConceptData[];
-  onEdit: (conceptId: string) => void;
+  onEdit: (conceptId: string, variationIndex: number) => void;
   onViewDetails: (conceptId: string) => void;
 }
 
@@ -39,10 +40,16 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
               title={concept.title}
               description={concept.description}
               colorVariations={concept.colorVariations}
-              images={concept.images}
+              images={concept.originalImage 
+                ? [concept.originalImage, ...(concept.images || [])] 
+                : concept.images}
               gradient={concept.gradient}
               initials={concept.initials}
-              onEdit={() => onEdit(concept.id)}
+              includeOriginal={!!concept.originalImage}
+              onEdit={(index) => {
+                const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
+                onEdit(concept.id, adjustedIndex);
+              }}
               onViewDetails={() => onViewDetails(concept.id)}
             />
           ))}

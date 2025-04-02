@@ -3,7 +3,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
 import { fetchConceptDetail, ConceptData, ColorVariationData } from '../../../services/supabaseClient';
 import { getSessionId } from '../../../services/sessionManager';
@@ -14,6 +14,9 @@ import { getSessionId } from '../../../services/sessionManager';
 export const ConceptDetailPage: React.FC = () => {
   const { conceptId } = useParams<{ conceptId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const colorId = searchParams.get('colorId');
   
   const [concept, setConcept] = useState<ConceptData | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<ColorVariationData | null>(null);
@@ -50,8 +53,17 @@ export const ConceptDetailPage: React.FC = () => {
         
         setConcept(conceptData);
         
-        // Set the first variation as selected by default
-        if (conceptData.color_variations && conceptData.color_variations.length > 0) {
+        // If colorId is provided in the URL, select that specific variation
+        if (colorId && conceptData.color_variations) {
+          const foundVariation = conceptData.color_variations.find(v => v.id === colorId);
+          if (foundVariation) {
+            setSelectedVariation(foundVariation);
+          } else {
+            // If the specified colorId doesn't exist, fall back to the first variation
+            setSelectedVariation(conceptData.color_variations[0]);
+          }
+        } else if (conceptData.color_variations && conceptData.color_variations.length > 0) {
+          // If no colorId specified, use the first variation as default
           setSelectedVariation(conceptData.color_variations[0]);
         }
         
@@ -64,7 +76,7 @@ export const ConceptDetailPage: React.FC = () => {
     };
     
     loadConceptDetail();
-  }, [conceptId]);
+  }, [conceptId, colorId]);
   
   // Handle loading state
   if (loading) {
@@ -138,7 +150,13 @@ export const ConceptDetailPage: React.FC = () => {
           </Link>
           
           <button
-            onClick={() => navigate(`/refine/${conceptId}`)}
+            onClick={() => {
+              if (selectedVariation) {
+                navigate(`/refine/${conceptId}?colorId=${selectedVariation.id}`);
+              } else {
+                navigate(`/refine/${conceptId}`);
+              }
+            }}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-400 text-white rounded-full"
           >
             Refine This Concept
@@ -177,7 +195,7 @@ export const ConceptDetailPage: React.FC = () => {
             {concept.color_variations && concept.color_variations.length > 0 && (
               <div>
                 <h3 className="text-md font-semibold text-indigo-700 mb-4">
-                  Select a Color Palette ({concept.color_variations.length} options)
+                  Select a Color Palette ({concept.color_variations && concept.color_variations.length + 1} options)
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
                   {/* Base image thumbnail */}
@@ -193,7 +211,7 @@ export const ConceptDetailPage: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     </button>
-                    <span className="text-xs font-medium text-indigo-800 mt-2 text-center bg-indigo-50 px-2 py-1 rounded-md w-full">Original</span>
+                    <span className="text-sm font-semibold text-indigo-800 mt-2 text-center bg-indigo-50 px-2 py-1 rounded-md w-full shadow-sm">Original</span>
                   </div>
                   
                   {/* Variation thumbnails */}
@@ -210,7 +228,7 @@ export const ConceptDetailPage: React.FC = () => {
                           className="w-full h-full object-cover"
                         />
                       </button>
-                      <span className="text-xs font-medium text-indigo-800 mt-2 text-center truncate px-1 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem]">{variation.palette_name}</span>
+                      <span className="text-sm font-semibold text-indigo-800 mt-2 text-center truncate px-2 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem] shadow-sm">{variation.palette_name}</span>
                     </div>
                   ))}
                 </div>
@@ -259,7 +277,22 @@ export const ConceptDetailPage: React.FC = () => {
                     Selected
                   </span>
                 </div>
-                <div className="mb-4">
+                
+                {/* Visual color palette display */}
+                <div className="mb-4 p-3 bg-white rounded-lg border border-indigo-100 shadow-sm">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="text-sm font-medium text-indigo-700">Color Palette</h4>
+                  </div>
+                  <div className="flex gap-2 mb-3">
+                    {selectedVariation.colors.map((color, index) => (
+                      <div
+                        key={`${color}-${index}`}
+                        className="w-full h-10 rounded-md border border-gray-200 shadow-sm"
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
                   <ColorPalette 
                     palette={{
                       primary: selectedVariation.colors[0] || '#4F46E5',
@@ -275,34 +308,54 @@ export const ConceptDetailPage: React.FC = () => {
                   />
                   
                   {/* Color hex codes */}
-                  <div className="grid grid-cols-2 gap-2 mt-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 p-4 bg-gray-50 rounded-lg border border-indigo-100">
                     <div className="flex items-center">
-                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[0] || '#4F46E5' }}></div>
-                      <span className="font-mono">Primary: {selectedVariation.colors[0] || '#4F46E5'}</span>
+                      <div className="w-6 h-6 mr-3 rounded-md border border-gray-300 shadow-sm" style={{ backgroundColor: selectedVariation.colors[0] || '#4F46E5' }}></div>
+                      <div>
+                        <div className="text-xs font-medium text-indigo-700">Primary</div>
+                        <div className="font-mono text-sm font-bold">{selectedVariation.colors[0] || '#4F46E5'}</div>
+                      </div>
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[1] || '#818CF8' }}></div>
-                      <span className="font-mono">Secondary: {selectedVariation.colors[1] || '#818CF8'}</span>
+                      <div className="w-6 h-6 mr-3 rounded-md border border-gray-300 shadow-sm" style={{ backgroundColor: selectedVariation.colors[1] || '#818CF8' }}></div>
+                      <div>
+                        <div className="text-xs font-medium text-indigo-700">Secondary</div>
+                        <div className="font-mono text-sm font-bold">{selectedVariation.colors[1] || '#818CF8'}</div>
+                      </div>
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[2] || '#C7D2FE' }}></div>
-                      <span className="font-mono">Accent: {selectedVariation.colors[2] || '#C7D2FE'}</span>
+                      <div className="w-6 h-6 mr-3 rounded-md border border-gray-300 shadow-sm" style={{ backgroundColor: selectedVariation.colors[2] || '#C7D2FE' }}></div>
+                      <div>
+                        <div className="text-xs font-medium text-indigo-700">Accent</div>
+                        <div className="font-mono text-sm font-bold">{selectedVariation.colors[2] || '#C7D2FE'}</div>
+                      </div>
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[3] || '#EEF2FF' }}></div>
-                      <span className="font-mono">Background: {selectedVariation.colors[3] || '#EEF2FF'}</span>
+                      <div className="w-6 h-6 mr-3 rounded-md border border-gray-300 shadow-sm" style={{ backgroundColor: selectedVariation.colors[3] || '#EEF2FF' }}></div>
+                      <div>
+                        <div className="text-xs font-medium text-indigo-700">Background</div>
+                        <div className="font-mono text-sm font-bold">{selectedVariation.colors[3] || '#EEF2FF'}</div>
+                      </div>
                     </div>
                     <div className="flex items-center">
-                      <div className="w-4 h-4 mr-2 rounded-full" style={{ backgroundColor: selectedVariation.colors[4] || '#312E81' }}></div>
-                      <span className="font-mono">Text: {selectedVariation.colors[4] || '#312E81'}</span>
+                      <div className="w-6 h-6 mr-3 rounded-md border border-gray-300 shadow-sm" style={{ backgroundColor: selectedVariation.colors[4] || '#312E81' }}></div>
+                      <div>
+                        <div className="text-xs font-medium text-indigo-700">Text</div>
+                        <div className="font-mono text-sm font-bold">{selectedVariation.colors[4] || '#312E81'}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
                 {selectedVariation.description && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-indigo-700 mb-2">Palette Description</h4>
-                    <p className="text-gray-700 p-3 bg-indigo-50 rounded-md leading-relaxed">{selectedVariation.description}</p>
+                    <div className="flex items-center mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-700 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <h4 className="text-sm font-medium text-indigo-700">Palette Description</h4>
+                    </div>
+                    <p className="text-gray-700 p-4 bg-indigo-50 rounded-md leading-relaxed text-sm border border-indigo-100">{selectedVariation.description}</p>
                   </div>
                 )}
               </div>
@@ -319,7 +372,13 @@ export const ConceptDetailPage: React.FC = () => {
                     Base Image
                   </span>
                 </div>
-                <p className="text-gray-700 p-3 bg-indigo-50 rounded-md leading-relaxed">
+                <div className="flex items-center mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-700 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <h4 className="text-sm font-medium text-indigo-700">Information</h4>
+                </div>
+                <p className="text-gray-700 p-4 bg-indigo-50 rounded-md leading-relaxed text-sm border border-indigo-100">
                   This is the original concept without any color variations applied. Select one of the color variations above to see how different color palettes affect the design.
                 </p>
               </div>

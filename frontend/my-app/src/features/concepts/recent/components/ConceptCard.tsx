@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ColorPalette } from '../../../../components/ui/ColorPalette';
 import { ConceptData } from '../../../../services/supabaseClient';
 
@@ -9,6 +9,10 @@ interface ConceptCardProps {
   preventNavigation?: boolean;
   /** Callback when a specific color variation is clicked */
   onColorClick?: (variationId: string) => void;
+  /** Callback when the Edit button is clicked */
+  onEdit?: (conceptId: string, variationIndex: number) => void;
+  /** Callback when the View Details button is clicked */
+  onViewDetails?: (conceptId: string, variationIndex: number) => void;
 }
 
 /**
@@ -31,14 +35,19 @@ const getConceptInitials = (description: string): string => {
 export const ConceptCard: React.FC<ConceptCardProps> = ({ 
   concept, 
   preventNavigation = false,
-  onColorClick 
+  onColorClick,
+  onEdit,
+  onViewDetails
 }) => {
-  // State to track the selected color variation
-  const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
+  const navigate = useNavigate();
   
-  // Get current color variation or default to first one
-  const hasVariations = concept.color_variations && concept.color_variations.length > 0;
-  const currentVariation = hasVariations ? concept.color_variations?.[selectedVariationIndex] : null;
+  // State to track the selected color variation
+  const [selectedVariationIndex, setSelectedVariationIndex] = useState(-1); // -1 means original image
+  
+  // Get current color variation or null if original is selected
+  const currentVariation = selectedVariationIndex >= 0 && concept.color_variations && concept.color_variations.length > 0 
+    ? concept.color_variations?.[selectedVariationIndex] 
+    : null;
   
   // Get main color for concept (use selected variation or default to indigo)
   // This is used for the color buttons, but not for the background anymore
@@ -53,12 +62,58 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     e.preventDefault(); // Prevent navigation when clicking on color circles
     e.stopPropagation(); // Prevent the card click from triggering
 
-    if (hasVariations && index < (concept.color_variations?.length || 0)) {
-      setSelectedVariationIndex(index);
-      
-      // If onColorClick is provided, call it with the variation ID
-      if (onColorClick && concept.color_variations) {
-        onColorClick(concept.color_variations[index].id);
+    setSelectedVariationIndex(index);
+    
+    // If onColorClick is provided and it's a variation (not original)
+    if (onColorClick && concept.color_variations && index >= 0) {
+      onColorClick(concept.color_variations[index].id);
+    }
+  };
+  
+  // Handle edit button click
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(concept.id, selectedVariationIndex);
+    } else {
+      // If no callback provided, navigate to refine page with selected variation
+      if (selectedVariationIndex >= 0 && concept.color_variations) {
+        const variation = concept.color_variations?.[selectedVariationIndex];
+        const variationId = variation ? variation.id : null;
+        
+        if (variationId) {
+          navigate(`/refine/${concept.id}?colorId=${variationId}`);
+        } else {
+          navigate(`/refine/${concept.id}`);
+        }
+      } else {
+        // Navigate to refine with original
+        navigate(`/refine/${concept.id}`);
+      }
+    }
+  };
+  
+  // Handle view details button click
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onViewDetails) {
+      onViewDetails(concept.id, selectedVariationIndex);
+    } else {
+      // If no callback provided, navigate to concept details page with selected variation
+      if (selectedVariationIndex >= 0 && concept.color_variations) {
+        const variation = concept.color_variations?.[selectedVariationIndex];
+        const variationId = variation ? variation.id : null;
+        
+        if (variationId) {
+          navigate(`/concepts/${concept.id}?colorId=${variationId}`);
+        } else {
+          navigate(`/concepts/${concept.id}`);
+        }
+      } else {
+        // Navigate to details with original
+        navigate(`/concepts/${concept.id}`);
       }
     }
   };
@@ -93,9 +148,22 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           {concept.logo_description || 'No description available'}
         </p>
         
-        {hasVariations && (
+        {concept.color_variations && concept.color_variations.length > 0 && (
           <div className="mt-3 mb-3">
             <div className="flex space-x-2">
+              {/* Original color option */}
+              <button 
+                onClick={(e) => handlePaletteClick(e, -1)}
+                className={`w-6 h-6 rounded-full border border-gray-300 transition-all duration-300 flex items-center justify-center ${
+                  selectedVariationIndex === -1 ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
+                }`}
+                style={{ background: 'white' }}
+                title="Original Image"
+              >
+                <span className="text-xs">O</span>
+              </button>
+              
+              {/* Color variations */}
               {concept.color_variations?.map((variation, index) => (
                 <button 
                   key={index}
@@ -112,8 +180,18 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         )}
         
         <div className="flex justify-between mt-4 pt-4 border-t border-dark-100">
-          <span className="text-indigo-600 text-sm font-medium">View Details</span>
-          <span className="text-indigo-600 text-sm font-medium">Edit</span>
+          <button 
+            onClick={handleEdit}
+            className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
+          >
+            Edit
+          </button>
+          <button 
+            onClick={handleViewDetails}
+            className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
+          >
+            View Details
+          </button>
         </div>
       </div>
     </div>
@@ -124,13 +202,6 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     return cardContent;
   }
   
-  // Otherwise wrap it in a Link for navigation
-  return (
-    <Link 
-      to={`/concepts/${concept.id}`}
-      className="block hover-lift hover:no-underline"
-    >
-      {cardContent}
-    </Link>
-  );
+  // Otherwise render the card without a Link wrapper, since we now have buttons
+  return cardContent;
 }; 
