@@ -61,4 +61,11 @@ class GenerationResponse(BaseModel):
     refinement_prompt: Optional[str] = Field(
         None,
         description="Prompt used for refinement"
-    ) 
+    )
+
+
+class SVGConversionResponse(BaseModel):
+    """Response model for SVG conversion"""
+    svg_data: str = Field(..., description="SVG data as a string")
+    success: bool = Field(..., description="Whether the conversion was successful")
+    message: str = Field(..., description="Message about the conversion process") 

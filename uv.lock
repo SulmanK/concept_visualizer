@@ -249,6 +249,7 @@ dependencies = [
     { name = "python-multipart" },
     { name = "supabase" },
     { name = "uvicorn" },
+    { name = "vtracer" },
 ]
 
 [package.optional-dependencies]
@@ -284,6 +285,7 @@ requires-dist = [
     { name = "supabase", specifier = ">=1.0.3" },
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31.0.2" },
     { name = "uvicorn", specifier = ">=0.23.2" },
+    { name = "vtracer", specifier = ">=0.0.1" },
 ]
 
 [[package]]
@@ -1347,6 +1349,34 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/4d/938bd85e5bf2edeec766267a5015ad969730bb91e31b44021dfe8b22df6c/uvicorn-0.34.0.tar.gz", hash = "sha256:404051050cd7e905de2c9a7e61790943440b3416f49cb409f965d9dcd0fa73e9", size = 76568 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/14/33a3a1352cfa71812a3a21e8c9bfb83f60b0011f5e36f2b1399d51928209/uvicorn-0.34.0-py3-none-any.whl", hash = "sha256:023dc038422502fa28a09c7a30bf2b6991512da7dcdb8fd35fe57cfc154126f4", size = 62315 },
+]
+
+[[package]]
+name = "vtracer"
+version = "0.6.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/ad/2c89d6f2858ec8a1ac093144ebe6cfefc9307920ce95ad4ff045bb72b228/vtracer-0.6.11.tar.gz", hash = "sha256:407e147362366e14e2666155bf328814bdc345899a6cce18a7729724ff25c01e", size = 24054 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/cf/cb669600592335dc781b0da1e200ffe9af2840ddffc7a83fab5a1763b4d7/vtracer-0.6.11-cp311-cp311-macosx_10_12_x86_64.whl", hash = "sha256:9868a771c264a4895ea61d86b7445754b896be3b3f287d56331de0ea0a6ed4f6", size = 964427 },
+    { url = "https://files.pythonhosted.org/packages/47/17/061011d5e00e06eb6673e5735957d957f1c720c21f80437b9fd0e8d133f8/vtracer-0.6.11-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0dd57915987a5c62d78ba17cf620a27a8297983d481675313328f75f59ff1840", size = 921986 },
+    { url = "https://files.pythonhosted.org/packages/a8/c6/f0e6790566a0065b7de6bdba5183855d16e56d79d327f4d557aee3e4d6d8/vtracer-0.6.11-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9414748c8877ea38f5a6d5942ad994185d9c13761f85316620c97cd53bc8d197", size = 1791843 },
+    { url = "https://files.pythonhosted.org/packages/51/19/be6807507b9343bfe3d3b522629e26c8219e4fe02f6bc519702de852f0ac/vtracer-0.6.11-cp311-cp311-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:5eb28a6f3de3f4a65d81a0cd60afe3ffa0ed65480f5f06ba18be4019aae255d5", size = 1801752 },
+    { url = "https://files.pythonhosted.org/packages/35/78/10d63f3fc9375e6e5214dfdff3f4211b06686c0ce08e825265ad5ee5a358/vtracer-0.6.11-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:9eaffb399d023d1ea5fb8ae5faf0e6248692a7c34d1e3bed04e50f307b242158", size = 1899852 },
+    { url = "https://files.pythonhosted.org/packages/20/9b/ae66bc451d8b99586cdf2394ca2cf44062063a976360c78a34f996375daf/vtracer-0.6.11-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:82920d1c4afe0c3c7ad075bbe63b2b3e3e4884c98f1773f078630947a88e0718", size = 1883863 },
+    { url = "https://files.pythonhosted.org/packages/0c/bc/cfe4478f9fe1358eaf60b91c99c72107526c277bc1216f5d6d5747c2f5f7/vtracer-0.6.11-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:93c07a5c3456648708f688664334fe6e66b5cd897c8ddad7d2442700056de6a5", size = 2024774 },
+    { url = "https://files.pythonhosted.org/packages/b7/ac/aa376c4d7ba6597fc4f9aadbccfb1fc84d3911e48ecfbf9acf1dcacd3167/vtracer-0.6.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:62f752f5e6d46a334e064368ff47b72550c4f460aad7ff2ede1f790ba6f65b33", size = 1818085 },
+    { url = "https://files.pythonhosted.org/packages/dd/03/2a98e4f38636ce75f0ef99ff4725a0837a3c7753de578a3d722b7ff9444d/vtracer-0.6.11-cp311-none-win32.whl", hash = "sha256:bca8d8f1c92184abcc6ec76b2f06c75f4172f05812794efe8ec4eff057435bff", size = 770331 },
+    { url = "https://files.pythonhosted.org/packages/3f/86/6cf264f55d0505c6ca36fb6de2139b67bd74a74a50cbd2b58b5ccde37cf7/vtracer-0.6.11-cp311-none-win_amd64.whl", hash = "sha256:efec6250df8a4e27a8c9d8e101093726b3de4d65a7df1f426c813974dbc19960", size = 789117 },
+    { url = "https://files.pythonhosted.org/packages/ec/78/f91da19e1f4769317fe14a6bacb2be9e21b8fa6262dbd7021e2ab33545f8/vtracer-0.6.11-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:4ac53a37dd1729f16ed64feae4f40b8dae1cf61dfe0d6bf26e9d399d48a25250", size = 963913 },
+    { url = "https://files.pythonhosted.org/packages/82/4e/4a7728b8d9eca037a0e2e9e08c5b94af61d1590afb1f378b5928c53c16a5/vtracer-0.6.11-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:e48a726e0f1b1d80d8d199e17ae3f95c048b5907f764134e257a79e543e30278", size = 921907 },
+    { url = "https://files.pythonhosted.org/packages/7e/fa/45e7c7a2add37e5647c05928731b8fd0685e48b220979f05beeabf754bb9/vtracer-0.6.11-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:67e17c5ac4cfa697c8686e563db84e027b9fb1c8b06b797285f58abd6e147eff", size = 1790996 },
+    { url = "https://files.pythonhosted.org/packages/c7/2c/c5e2c3a195478eb7b2d723d34a7f1011b3bc8b7916b540bea1b24b26d829/vtracer-0.6.11-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:3229dd4f32d316d4fad14a6671583e57d0c7eec604bf6f91a8765c8fc7cc6610", size = 1801203 },
+    { url = "https://files.pythonhosted.org/packages/7b/b7/6880f045f727b8cece6c1e4a3e03cf8198685a93a22daffddccda05dcabf/vtracer-0.6.11-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:be93615d159947e050cfd26e89a0916c8e3674c2ab2ef1c87ce31579a0900eca", size = 1898368 },
+    { url = "https://files.pythonhosted.org/packages/7e/df/76855a3bc29a5474958d46f6a51f9d4bcc64124aa11b69087f1e1d4d5708/vtracer-0.6.11-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:1644d2f7942a27109bc8ca4de8116fc4234135ecea20ef8e0350ddd4cbbf9972", size = 1882947 },
+    { url = "https://files.pythonhosted.org/packages/ea/cb/14ed02290f514325551e2fd3015b09f29ca330d51219767fca74dc4bb506/vtracer-0.6.11-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:6a47ed4d19834fc7e9e5387f85c160895552cb81a3eb4171e2087dc9e4841551", size = 2013341 },
+    { url = "https://files.pythonhosted.org/packages/96/24/07a0a4d12d31c49513823a15deea3c735580819eb67af914676df5cb9c8e/vtracer-0.6.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1f804d3b4f23b512a5bcf687944e1eb7a38069e0b2bec4edf4ae9810a13d5953", size = 1816606 },
+    { url = "https://files.pythonhosted.org/packages/2e/e1/b659c9c5a3799a0755de1697d07af4ae81d8148a865e60ff0cc89c69cfe7/vtracer-0.6.11-cp312-none-win32.whl", hash = "sha256:63ae0ec7ba3db067b5e9979aa05219e79dc181b9013d2cdc4fea4dfb22818eb9", size = 770494 },
+    { url = "https://files.pythonhosted.org/packages/c1/a0/49b1bdeb1df5d6a4d2ccca739a6c4ab9699082fa7ae77fa352b96113b4ea/vtracer-0.6.11-cp312-none-win_amd64.whl", hash = "sha256:5f2174a6f2da741672f3322daf0d59fc24705632a5c4ecb633cb74d5cf1c0c16", size = 789552 },
 ]
 
 [[package]]

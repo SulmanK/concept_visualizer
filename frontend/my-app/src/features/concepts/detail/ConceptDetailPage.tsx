@@ -367,14 +367,9 @@ export const ConceptDetailPage: React.FC = () => {
                         conceptTitle={concept.logo_description || 'Concept'}
                         variationName={selectedVariation.palette_name}
                         onDownload={(format, size) => {
-                          // In a real implementation, this would handle different format/size conversions
-                          console.log(`Downloading ${format} image at ${size} size`);
-                          const a = document.createElement('a');
-                          a.href = selectedVariation.image_url;
-                          a.download = `${concept.logo_description || 'Concept'}-${selectedVariation.palette_name}.${format}`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
+                          // Just log the export details, actual download handled by ExportOptions
+                          console.log(`Exporting ${selectedVariation.palette_name} variation in ${format} format at ${size} size`);
+                          // No need to manually download here anymore
                         }}
                       />
                     </div>
@@ -419,14 +414,9 @@ export const ConceptDetailPage: React.FC = () => {
                         conceptTitle={concept.logo_description || 'Concept'}
                         variationName="Original"
                         onDownload={(format, size) => {
-                          // In a real implementation, this would handle different format/size conversions
-                          console.log(`Downloading original in ${format} format at ${size} size`);
-                          const a = document.createElement('a');
-                          a.href = concept.base_image_url;
-                          a.download = `${concept.logo_description || 'Concept'}-Original.${format}`;
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
+                          // Just log the export details, actual download handled by ExportOptions
+                          console.log(`Exporting original concept in ${format} format at ${size} size`);
+                          // No need to manually download here anymore
                         }}
                       />
                     </div>
