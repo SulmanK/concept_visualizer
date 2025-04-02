@@ -268,9 +268,14 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           <Button
             variant="primary"
             type="submit"
-            disabled={isSubmitting || isSuccess}
+            disabled={true}
+            title="Feature under construction"
+            className="relative"
           >
-            {isSubmitting ? 'Refining...' : 'Refine Concept'}
+            <span>Refine Concept</span>
+            <span className="absolute -top-8 right-0 whitespace-nowrap bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded border border-yellow-300">
+              Coming Soon
+            </span>
           </Button>
         </div>
       </form>

@@ -46,6 +46,7 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
               gradient={concept.gradient}
               initials={concept.initials}
               includeOriginal={!!concept.originalImage}
+              editButtonText="Refine"
               onEdit={(index) => {
                 const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
                 onEdit(concept.id, adjustedIndex);

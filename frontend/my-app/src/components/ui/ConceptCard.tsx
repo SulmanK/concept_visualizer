@@ -52,6 +52,11 @@ export interface ConceptCardProps {
    * Handler for view details button click
    */
   onViewDetails?: () => void;
+  
+  /**
+   * Text to display on the edit button (default: "Edit")
+   */
+  editButtonText?: string;
 }
 
 /**
@@ -67,6 +72,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   initials,
   onEdit,
   onViewDetails,
+  editButtonText = "Edit",
 }) => {
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
@@ -154,7 +160,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
               onClick={() => onEdit(selectedVariationIndex)}
             >
-              Edit
+              {editButtonText}
             </button>
           )}
           

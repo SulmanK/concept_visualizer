@@ -184,7 +184,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
             onClick={handleEdit}
             className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
           >
-            Edit
+            Refine
           </button>
           <button 
             onClick={handleViewDetails}

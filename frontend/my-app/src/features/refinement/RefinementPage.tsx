@@ -108,16 +108,10 @@ export const RefinementPage: React.FC = () => {
     themeDescription: string,
     preserveAspects: string[]
   ) => {
-    if (!originalConcept) return;
-    
-    refineConcept(
-      originalConcept.imageUrl,
-      refinementPrompt,
-      logoDescription || undefined,
-      themeDescription || undefined,
-      preserveAspects
-    );
-    setSelectedColor(null);
+    // Refinement is disabled - functionality under construction
+    console.log('Refinement functionality is currently disabled (under construction)');
+    // Show an alert to inform the user
+    alert('The refinement feature is currently under development. Please check back later!');
   };
   
   const handleReset = () => {
@@ -174,23 +168,42 @@ export const RefinementPage: React.FC = () => {
   }
   
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Under Construction Watermark */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="transform rotate-[-30deg] bg-red-600/10 text-red-800 font-bold text-6xl p-10 rounded-lg border-4 border-red-600/30 backdrop-blur-sm">
+          UNDER CONSTRUCTION
+        </div>
+      </div>
+      
       <RefinementHeader 
         isVariation={!!colorId} 
         variationName={originalConcept.colorVariation?.palette_name} 
       />
       
       {!result && (
-        <RefinementForm
-          originalImageUrl={originalConcept.imageUrl}
-          onSubmit={handleRefineConcept}
-          status={status}
-          error={error}
-          onCancel={handleCancel}
-          initialLogoDescription={originalConcept.logoDescription}
-          initialThemeDescription={originalConcept.themeDescription}
-          colorVariation={originalConcept.colorVariation}
-        />
+        <div className="relative">
+          <RefinementForm
+            originalImageUrl={originalConcept.imageUrl}
+            onSubmit={handleRefineConcept}
+            status={status}
+            error={error}
+            onCancel={handleCancel}
+            initialLogoDescription={originalConcept.logoDescription}
+            initialThemeDescription={originalConcept.themeDescription}
+            colorVariation={originalConcept.colorVariation}
+          />
+          
+          {/* Informational banner */}
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800 text-center max-w-xl mx-auto">
+            <p className="font-medium">
+              📝 This feature is currently under development
+            </p>
+            <p className="text-sm mt-1">
+              The refinement functionality is coming soon! You can explore the interface, but submissions are disabled.
+            </p>
+          </div>
+        </div>
       )}
       
       {status === 'success' && result && (
