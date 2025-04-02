@@ -437,9 +437,9 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
           {/* Original concept */}
           <div 
             key="variation-original"
-            className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+            className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md ${
               selectedVariation === null 
-                ? 'border-2 border-primary' 
+                ? 'border-2 border-indigo-600' 
                 : 'border border-gray-200'
             }`}
             onClick={() => setSelectedVariation(null)}
@@ -481,9 +481,9 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
           {variations.map((variation, index) => (
             <div 
               key={`variation-${index}`}
-              className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md ${
+              className={`rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-md ${
                 selectedVariation === index 
-                  ? 'border-2 border-primary' 
+                  ? 'border-2 border-indigo-600' 
                   : 'border border-gray-200'
               }`}
               onClick={() => setSelectedVariation(index)}
@@ -522,38 +522,54 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   }
   
   return (
-    <div className="w-full bg-white rounded-xl p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          Concept
-        </h2>
-        <div className="text-sm text-gray-500">
-          {new Date().toLocaleDateString()}
+    <div className="w-full bg-white/90 backdrop-blur-sm rounded-xl p-8 shadow-modern border border-indigo-100 relative overflow-hidden">
+      {/* Subtle gradient background accents */}
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-100/30 rounded-full blur-3xl"></div>
+      <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-50/50 rounded-full blur-2xl"></div>
+      
+      <div className="relative z-10">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-indigo-900">
+            Your Concept
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 bg-indigo-100 rounded-full text-sm text-indigo-800 font-medium">
+              {new Date().toLocaleDateString()}
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <div className="mb-6">
-        {getImageElements()}
-      </div>
-      
-      {renderVariations()}
-      
-      <div className="flex justify-center gap-4 mt-6">
-        <Button
-          variant="primary"
-          onClick={handleDownload}
-        >
-          Download
-        </Button>
         
-        {onRefineRequest && (
+        <div className="mb-6">
+          {getImageElements()}
+        </div>
+        
+        {renderVariations()}
+        
+        <div className="flex justify-center gap-4 mt-8">
           <Button
-            variant="outline"
-            onClick={onRefineRequest}
+            variant="primary"
+            onClick={handleDownload}
+            className="px-6 py-2 text-base font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
           >
-            Refine Concept
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            Download
           </Button>
-        )}
+          
+          {onRefineRequest && (
+            <Button
+              variant="outline"
+              onClick={onRefineRequest}
+              className="px-6 py-2 text-base font-medium shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              Refine Concept
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
