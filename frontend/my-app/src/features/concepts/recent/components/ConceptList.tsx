@@ -153,13 +153,14 @@ export const ConceptList: React.FC = () => {
           }
           
           return (
-            <ConceptCard 
-              key={concept.id}
-              concept={concept}
-              preventNavigation={true}
-              onEdit={handleEdit}
-              onViewDetails={handleViewDetails}
-            />
+            <div key={concept.id} className="h-full">
+              <ConceptCard 
+                concept={concept}
+                preventNavigation={true}
+                onEdit={handleEdit}
+                onViewDetails={handleViewDetails}
+              />
+            </div>
           );
         })}
       </div>

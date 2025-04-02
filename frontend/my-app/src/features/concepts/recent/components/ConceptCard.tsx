@@ -127,11 +127,11 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   // Create the card content
   const cardContent = (
     <div className="flex flex-col bg-indigo-50/90 rounded-lg overflow-hidden shadow-sm border border-indigo-100 h-full transition-all duration-300 hover:shadow-md">
+      {/* Image container with fixed height */}
       <div 
-        className="h-48 flex items-center justify-center"
+        className="h-48 flex items-center justify-center overflow-hidden"
         style={{ background: neutralBackgroundColor }}
       >
-        {/* Show the selected variation image or base image */}
         <img
           src={currentImageUrl}
           alt={concept.logo_description}
@@ -139,17 +139,28 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         />
       </div>
       
-      <div className="p-5 flex-grow">
-        <h3 className="font-semibold text-dark-900 mb-2">
-          {concept.title || (concept.logo_description ? concept.logo_description.substring(0, 40) + '...' : 'Untitled Concept')}
-        </h3>
+      <div className="p-5 flex-grow flex flex-col">
+        {/* Title container with fixed height */}
+        <div className="h-16 mb-2">
+          <h3 className="font-semibold text-dark-900 line-clamp-2">
+            {concept.title || (concept.logo_description ? 
+              (concept.logo_description.length > 40 ? 
+                concept.logo_description.substring(0, 40) + '...' : 
+                concept.logo_description) : 
+              'Untitled Concept')}
+          </h3>
+        </div>
         
-        <p className="text-sm text-dark-600 line-clamp-2 mb-4">
-          {concept.logo_description || 'No description available'}
-        </p>
+        {/* Description with fixed height and clamp */}
+        <div className="h-12 mb-4">
+          <p className="text-sm text-dark-600 line-clamp-2">
+            {concept.logo_description || 'No description available'}
+          </p>
+        </div>
         
-        {concept.color_variations && concept.color_variations.length > 0 && (
-          <div className="mt-3 mb-3">
+        {/* Color variations */}
+        <div className="mt-auto mb-3">
+          {concept.color_variations && concept.color_variations.length > 0 && (
             <div className="flex space-x-2">
               {/* Original color option */}
               <button 
@@ -176,10 +187,11 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
                 />
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
         
-        <div className="flex justify-between mt-4 pt-4 border-t border-dark-100">
+        {/* Action buttons with consistent position */}
+        <div className="flex justify-between pt-4 border-t border-dark-100">
           <button 
             onClick={handleEdit}
             className="text-indigo-600 text-sm font-medium hover:text-indigo-800 transition-colors"
