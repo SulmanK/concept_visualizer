@@ -10,19 +10,20 @@ export interface FooterProps {
 
 /**
  * Application footer with navigation, links and copyright
- * Uses dark indigo color scheme with responsive two-column layout
+ * Uses dark indigo color scheme with responsive layout
+ * Optimized for both mobile and desktop viewing
  */
 export const Footer: React.FC<FooterProps> = ({ 
   year = new Date().getFullYear() 
 }) => {
   return (
-    <footer className="w-full bg-indigo-900 text-indigo-100 py-12 mt-12 shadow-lg relative overflow-hidden">
-      <div className="container max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Two-column grid layout */}
+    <footer className="w-full bg-indigo-900 text-indigo-100 py-8 sm:py-12 mt-8 sm:mt-12 shadow-lg relative overflow-hidden">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Responsive grid layout - single column on mobile, multi-column on larger screens */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
-          {/* Brand column - takes up 1/3 of the space */}
+          {/* Brand column - takes up full width on mobile, 1/3 on desktop */}
           <div className="flex flex-col md:col-span-1">
-            <div className="flex items-center">
+            <div className="flex items-center justify-center md:justify-start">
               <div className="w-10 h-10 bg-gradient-to-r from-primary to-primary-dark rounded-lg flex items-center justify-center text-white font-bold shadow-md">
                 CV
               </div>
@@ -31,11 +32,11 @@ export const Footer: React.FC<FooterProps> = ({
               </h2>
             </div>
             
-            <p className="mt-4 text-sm text-indigo-200 leading-relaxed">
+            <p className="mt-4 text-sm text-indigo-200 leading-relaxed text-center md:text-left">
               Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.
             </p>
             
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center md:justify-start">
               <a href="https://jigsawstack.com/?ref=powered-by" rel="follow" className="block">
                 <img
                   src="https://jigsawstack.com/badge.svg"
@@ -46,14 +47,14 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
           </div>
           
-          {/* Links grid - takes up 2/3 of the space */}
+          {/* Links grid - takes up full width on mobile, 2/3 on desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:col-span-2">
             {/* Features column */}
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left">
                 Features
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3 flex flex-col items-center sm:items-start">
                 <li>
                   <Link 
                     to="/create" 
@@ -101,10 +102,10 @@ export const Footer: React.FC<FooterProps> = ({
             
             {/* Resources column */}
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left">
                 Resources
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3 flex flex-col items-center sm:items-start">
                 <li>
                   <a
                     href="https://github.com/SulmanK/concept-visualizer"
@@ -143,8 +144,8 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
         
         {/* Footer bottom with copyright and GitHub link */}
-        <div className="mt-10 pt-6 border-t border-indigo-700 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-          <div className="text-xs text-indigo-300">
+        <div className="mt-8 sm:mt-10 pt-4 sm:pt-6 border-t border-indigo-700 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+          <div className="text-xs text-indigo-300 text-center sm:text-left">
             &copy; {year} Concept Visualizer. All rights reserved.
           </div>
           

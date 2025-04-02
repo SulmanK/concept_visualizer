@@ -222,18 +222,18 @@
   - [x] Implement motion accessibility options
     - [x] Honor user's prefers-reduced-motion setting
     - [x] Provide alternative visual cues for disabled animations
-- [ ] Create responsive designs for mobile
+- [x] Create responsive designs for mobile
 - [ ] Optimize prompts for Logo Design
 
 
 Future
-- Create Another Concept, should just send you to Create New Concept or just remove it (Just REmovei it)
 - Tests
 - Setup Github Workflows
 - Clean up Code
 - Make sure no .env files are leaked
 - Setup for Deployment
 - Setup Docs
+- Security Audit
 
 ## Concept Visualizer - Current Status
 

@@ -11,6 +11,7 @@ interface ConceptFormSectionProps {
 
 /**
  * Form section for the landing page
+ * Optimized for responsive viewing on both mobile and desktop
  */
 export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
   onSubmit,
@@ -19,7 +20,7 @@ export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
   onReset
 }) => {
   return (
-    <div id="create-form" className="mb-16">
+    <div id="create-form" className="mb-8 sm:mb-16">
       <ConceptForm 
         onSubmit={onSubmit}
         status={status}

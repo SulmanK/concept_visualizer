@@ -26,6 +26,7 @@ interface RecentConceptsSectionProps {
 
 /**
  * Recent concepts section showing previously created concepts
+ * Optimized for responsive viewing on mobile and desktop
  */
 export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   concepts,
@@ -48,31 +49,31 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   };
   
   return (
-    <div className="mt-16 mb-12">
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 relative overflow-hidden">
+    <div className="mt-10 sm:mt-16 mb-8 sm:mb-12">
+      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-4 sm:p-6 md:p-8 relative overflow-hidden">
         {/* Subtle gradient background accents */}
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-100/30 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-50/50 rounded-full blur-2xl"></div>
         
         <div className="relative z-10">
           {/* Header with view all link */}
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-indigo-900">
+          <div className="flex justify-between items-center mb-4 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold text-indigo-900">
               {isLoading ? 'Loading Recent Concepts...' : 'Recent Concepts'}
             </h2>
             <Link 
               to="/recent" 
               className="text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-medium flex items-center"
             >
-              View All
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+              <span className="mr-1">View All</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
               </svg>
             </Link>
           </div>
           
-          {/* Grid with consistent card heights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Grid with responsive columns - 1 column on mobile, 2 on medium screens, 3 on large */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {isLoading ? renderSkeletonCards() : concepts.map((concept) => (
               <div key={concept.id} className="h-full transform transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 <ConceptCard
@@ -95,19 +96,6 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
               </div>
             ))}
           </div>
-          
-          {/* Additional CTA for empty spots or if we have fewer than 3 concepts */}
-          {!isLoading && concepts.length < 3 && (
-            <div className="mt-8 text-center">
-              <Link 
-                to="/create" 
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700 transition-colors"
-              >
-                <span className="mr-2">✨</span>
-                Create Another Concept
-              </Link>
-            </div>
-          )}
         </div>
       </div>
     </div>

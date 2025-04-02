@@ -12,33 +12,17 @@ export interface MainLayoutProps {
 
 /**
  * Main layout component with header, footer, and content area
+ * Optimized for responsive viewing across device sizes
  */
 export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
   const location = useLocation();
   
-  const layoutStyle = {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    minHeight: '100vh',
-    width: '100%',
-    margin: 0,
-    padding: 0,
-    background: 'linear-gradient(to bottom right, #EEF2FF, #C7D2FE)'
-  };
-  
-  const mainStyle = {
-    flex: '1 1 auto',
-    width: '100%',
-    maxWidth: '1280px', 
-    margin: '0 auto',
-    padding: '2rem'
-  };
-  
+  // Using Tailwind classes instead of inline styles for better responsive control
   return (
-    <div style={layoutStyle}>
+    <div className="flex flex-col min-h-screen w-full m-0 p-0 bg-gradient-to-br from-indigo-50 to-indigo-200">
       <Header activeRoute={location.pathname} />
       
-      <main style={mainStyle}>
+      <main className={`flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 ${className}`}>
         <Outlet />
       </main>
       

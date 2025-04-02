@@ -15,6 +15,7 @@ interface ResultsSectionProps {
 
 /**
  * Results section showing the generated concept
+ * Optimized for both mobile and desktop viewing
  */
 export const ResultsSection: React.FC<ResultsSectionProps> = ({
   result,
@@ -35,10 +36,10 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   };
 
   return (
-    <div className="mb-16">
-      <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 p-8 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-indigo-900">
+    <div className="mb-8 sm:mb-16">
+      <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 p-4 sm:p-6 md:p-8 mb-4 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-indigo-900 mb-3 sm:mb-0">
             {isLoading ? 'Generating Concept...' : 'Generated Concept'}
           </h2>
           <Button 
@@ -46,16 +47,19 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             onClick={onReset} 
             size="sm"
             disabled={isLoading}
+            className="self-start sm:self-auto"
           >
             Start Over
           </Button>
         </div>
         
         {isLoading ? (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Skeleton for the image */}
             <div className="flex justify-center">
-              <SkeletonLoader type="image" width="300px" height="300px" />
+              <div className="w-full" style={{ maxWidth: '300px' }}>
+                <SkeletonLoader type="image" width="100%" height="300px" />
+              </div>
             </div>
             
             {/* Skeleton for the title */}
@@ -78,9 +82,13 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             </div>
             
             {/* Skeleton for buttons */}
-            <div className="flex justify-end space-x-3 mt-6">
-              <SkeletonLoader type="button" width="120px" />
-              <SkeletonLoader type="button" width="120px" />
+            <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
+              <div className="w-full sm:w-auto" style={{ maxWidth: '120px' }}>
+                <SkeletonLoader type="button" width="100%" />
+              </div>
+              <div className="w-full sm:w-auto" style={{ maxWidth: '120px' }}>
+                <SkeletonLoader type="button" width="100%" />
+              </div>
             </div>
           </div>
         ) : result ? (
