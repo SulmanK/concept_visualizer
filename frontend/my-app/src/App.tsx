@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { ConceptProvider } from './contexts/ConceptContext';
+import { ToastProvider } from './hooks/useToast';
 import { debugSessionStatus, getSessionId, ensureSession } from './services/sessionManager';
 import { LandingPage } from './features/landing';
 import { ConceptDetailPage } from './features/concepts/detail';
@@ -77,35 +78,37 @@ export default function App() {
 
   return (
     <div style={appStyle}>
-      <ConceptProvider>
-        <Router>
-          <Routes>
-            {/* Main application routes */}
-            <Route path="/" element={<MainLayout />}>
-              {/* Make LandingPage the default homepage */}
-              <Route index element={<LandingPage />} />
-              
-              {/* Create page */}
-              <Route path="create" element={<CreateConceptPage />} />
-              
-              {/* Concept detail page */}
-              <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-              
-              {/* Recent concepts page */}
-              <Route path="recent" element={<RecentConceptsPage />} />
-              
-              {/* Refinement selection page */}
-              <Route path="refine" element={<RefinementSelectionPage />} />
-              
-              {/* Refinement page with concept ID */}
-              <Route path="refine/:conceptId" element={<RefinementPage />} />
-              
-              {/* Fallback for unknown routes */}
-              <Route path="*" element={<div>Page not found</div>} />
-            </Route>
-          </Routes>
-        </Router>
-      </ConceptProvider>
+      <ToastProvider position="bottom-right" defaultDuration={5000} maxToasts={5}>
+        <ConceptProvider>
+          <Router>
+            <Routes>
+              {/* Main application routes */}
+              <Route path="/" element={<MainLayout />}>
+                {/* Make LandingPage the default homepage */}
+                <Route index element={<LandingPage />} />
+                
+                {/* Create page */}
+                <Route path="create" element={<CreateConceptPage />} />
+                
+                {/* Concept detail page */}
+                <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
+                
+                {/* Recent concepts page */}
+                <Route path="recent" element={<RecentConceptsPage />} />
+                
+                {/* Refinement selection page */}
+                <Route path="refine" element={<RefinementSelectionPage />} />
+                
+                {/* Refinement page with concept ID */}
+                <Route path="refine/:conceptId" element={<RefinementPage />} />
+                
+                {/* Fallback for unknown routes */}
+                <Route path="*" element={<div>Page not found</div>} />
+              </Route>
+            </Routes>
+          </Router>
+        </ConceptProvider>
+      </ToastProvider>
       
       {/* Debugging overlay - only shown in development */}
       {process.env.NODE_ENV === 'development' && debugInfo && (

@@ -228,6 +228,7 @@ export const LandingPage: React.FC = () => {
           onReset={handleReset}
           selectedColor={selectedColor}
           onColorSelect={handleColorSelect}
+          status={status}
         />
       ) : (
         <ConceptFormSection 
@@ -239,18 +240,27 @@ export const LandingPage: React.FC = () => {
       )}
       
       {/* Show real concepts if available, otherwise show sample concepts */}
-      {!loadingConcepts && (
+      {loadingConcepts ? (
+        <RecentConceptsSection 
+          concepts={[]}
+          onEdit={handleEdit}
+          onViewDetails={handleViewDetails}
+          isLoading={true}
+        />
+      ) : (
         formattedConcepts.length > 0 ? (
           <RecentConceptsSection 
             concepts={formattedConcepts}
             onEdit={handleEdit}
             onViewDetails={handleViewDetails}
+            isLoading={false}
           />
         ) : (
           <RecentConceptsSection 
             concepts={sampleConcepts}
             onEdit={handleEdit}
             onViewDetails={handleViewDetails}
+            isLoading={false}
           />
         )
       )}

@@ -1,8 +1,12 @@
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
 import { Card } from '../ui/Card';
+import { LoadingIndicator } from '../ui/LoadingIndicator';
+import { ErrorMessage } from '../ui/ErrorMessage';
+import { useToast } from '../../hooks/useToast';
+import { useErrorHandling } from '../../hooks/useErrorHandling';
 import { FormStatus } from '../../types';
 
 export interface ConceptFormProps {
@@ -43,8 +47,27 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     theme?: string;
   }>({});
   
+  const toast = useToast();
+  const { setError, clearError, error: formError } = useErrorHandling();
+  
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
+  
+  // Handle external error props
+  useEffect(() => {
+    if (error) {
+      setError(error, 'server');
+    } else {
+      clearError();
+    }
+  }, [error, setError, clearError]);
+  
+  // Show success toast when generation is complete
+  useEffect(() => {
+    if (status === 'success') {
+      toast.showSuccess('Concept generated successfully!');
+    }
+  }, [status, toast]);
   
   const validateForm = (): boolean => {
     const errors: { logo?: string; theme?: string } = {};
@@ -62,6 +85,12 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     }
     
     setValidationErrors(errors);
+    
+    // Show validation error toast if there are errors
+    if (Object.keys(errors).length > 0) {
+      toast.showWarning('Please fix the form errors before submitting.');
+    }
+    
     return Object.keys(errors).length === 0;
   };
   
@@ -69,6 +98,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     e.preventDefault();
     
     if (validateForm()) {
+      toast.showInfo('Generating your concept...');
       onSubmit(logoDescription, themeDescription);
     }
   };
@@ -77,6 +107,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     setLogoDescription('');
     setThemeDescription('');
     setValidationErrors({});
+    clearError();
     if (onReset) onReset();
   };
   
@@ -116,20 +147,30 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
           </div>
         </div>
         
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
-            {error}
-          </div>
+        {formError && (
+          <ErrorMessage 
+            message={formError.message}
+            details={formError.details}
+            type={formError.category as any} 
+            onDismiss={clearError}
+            onRetry={isSubmitting ? undefined : () => validateForm() && onSubmit(logoDescription, themeDescription)}
+          />
         )}
         
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center">
+          {isSubmitting && (
+            <div className="flex items-center mr-4">
+              <LoadingIndicator size="small" showLabel labelText="Generating concept..." />
+            </div>
+          )}
+          
           <Button
             type="submit"
             disabled={isSubmitting || isSuccess}
             variant="primary"
             size="lg"
           >
-            {isSubmitting ? 'Generating...' : 'Generate Concept'}
+            {isSubmitting ? 'Please wait...' : 'Generate Concept'}
           </Button>
         </div>
       </form>

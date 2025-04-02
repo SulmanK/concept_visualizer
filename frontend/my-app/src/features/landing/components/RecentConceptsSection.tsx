@@ -1,5 +1,6 @@
 import React from 'react';
 import { ConceptCard } from '../../../components/ui/ConceptCard';
+import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { Link } from 'react-router-dom';
 
 interface ConceptData {
@@ -20,6 +21,7 @@ interface RecentConceptsSectionProps {
   concepts: ConceptData[];
   onEdit: (conceptId: string, variationIndex: number) => void;
   onViewDetails: (conceptId: string) => void;
+  isLoading?: boolean;
 }
 
 /**
@@ -28,12 +30,22 @@ interface RecentConceptsSectionProps {
 export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   concepts,
   onEdit,
-  onViewDetails
+  onViewDetails,
+  isLoading = false
 }) => {
-  // If there are no concepts, don't render the section
-  if (!concepts || concepts.length === 0) {
+  // If there are no concepts and not loading, don't render the section
+  if (!concepts || concepts.length === 0 && !isLoading) {
     return null;
   }
+  
+  // Render skeleton cards when loading
+  const renderSkeletonCards = () => {
+    return Array.from({ length: 3 }).map((_, index) => (
+      <div key={`skeleton-${index}`} className="h-full">
+        <SkeletonLoader type="card" height="360px" className="rounded-xl" />
+      </div>
+    ));
+  };
   
   return (
     <div className="mt-16 mb-12">
@@ -45,7 +57,9 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
         <div className="relative z-10">
           {/* Header with view all link */}
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-indigo-900">Recent Concepts</h2>
+            <h2 className="text-2xl font-bold text-indigo-900">
+              {isLoading ? 'Loading Recent Concepts...' : 'Recent Concepts'}
+            </h2>
             <Link 
               to="/recent" 
               className="text-indigo-600 hover:text-indigo-800 transition-colors text-sm font-medium flex items-center"
@@ -59,7 +73,7 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
           
           {/* Grid with consistent card heights */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {concepts.map((concept) => (
+            {isLoading ? renderSkeletonCards() : concepts.map((concept) => (
               <div key={concept.id} className="h-full transform transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                 <ConceptCard
                   title={concept.title}
@@ -83,7 +97,7 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
           </div>
           
           {/* Additional CTA for empty spots or if we have fewer than 3 concepts */}
-          {concepts.length < 3 && (
+          {!isLoading && concepts.length < 3 && (
             <div className="mt-8 text-center">
               <Link 
                 to="/create" 
