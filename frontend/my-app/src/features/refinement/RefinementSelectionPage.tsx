@@ -180,16 +180,24 @@ export const RefinementSelectionPage: React.FC = () => {
                   {totalVariations} {totalVariations === 1 ? 'option' : 'options'}
                 </span>
                 <div className="flex space-x-1">
-                  {hasVariations && concept.color_variations?.slice(0, 4).map((variation, idx) => (
+                  {/* Original color option */}
+                  <div
+                    className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center bg-white"
+                  >
+                    <span className="text-[8px] font-bold text-gray-600">O</span>
+                  </div>
+                  
+                  {/* Color variations */}
+                  {hasVariations && concept.color_variations?.slice(0, 3).map((variation, idx) => (
                     <div
                       key={idx}
                       className="w-4 h-4 rounded-full"
                       style={{ backgroundColor: variation.colors[0] || '#4F46E5' }}
                     />
                   ))}
-                  {hasVariations && concept.color_variations!.length > 4 && (
+                  {hasVariations && concept.color_variations!.length > 3 && (
                     <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-600 text-xs font-bold">
-                      +{concept.color_variations!.length - 4}
+                      +{concept.color_variations!.length - 3}
                     </div>
                   )}
                 </div>

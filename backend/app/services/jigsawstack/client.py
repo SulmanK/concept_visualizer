@@ -173,10 +173,6 @@ class JigsawStackClient:
             # Combine both descriptions for a more complete context
             combined_prompt = f"Logo: {logo_description}. Theme: {theme_description}"
             
-            print(combined_prompt)
-            print(logo_description)
-            print(theme_description)
-            
             # Create payload using the structure from the working example
             payload = {
                 "inputs": [
