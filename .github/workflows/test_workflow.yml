@@ -1,0 +1,26 @@
+name: "Simple Test Workflow"
+
+on:
+  # Allows manual triggering from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Simple Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Hello World
+      run: echo "Hello, world! GitHub Actions is working!"
+      
+    - name: List files
+      run: ls -la
+      
+    - name: Environment info
+      run: |
+        echo "GitHub Runner OS: $RUNNER_OS"
+        echo "GitHub Workspace: $GITHUB_WORKSPACE"
+        echo "GitHub Repository: $GITHUB_REPOSITORY" 
