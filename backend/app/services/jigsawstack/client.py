@@ -10,7 +10,7 @@ import json
 from functools import lru_cache
 from typing import List, Dict, Any
 
-from backend.app.core.config import settings
+from backend.app.core.config import settings, get_masked_value
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class JigsawStackClient:
             "Accept": "application/json",
             "x-api-key": api_key  # Some endpoints use x-api-key instead of Authorization
         }
-        logger.info(f"Initialized JigsawStack client with API key prefix: {api_key[:10]}...")
+        logger.info(f"Initialized JigsawStack client with API URL: {api_url}")
     
     async def generate_image(
         self, logo_description: str, width: int = 512, height: int = 512, model: str = "stable-diffusion-xl"
@@ -411,7 +411,7 @@ def get_jigsawstack_client() -> JigsawStackClient:
     Returns:
         JigsawStackClient: A singleton instance of the JigsawStack client
     """
-    logger.info(f"Creating JigsawStack client with API key: {settings.JIGSAWSTACK_API_KEY[:10]}...")
+    logger.info(f"Creating JigsawStack client with API key: {get_masked_value(settings.JIGSAWSTACK_API_KEY)}...")
     return JigsawStackClient(
         api_key=settings.JIGSAWSTACK_API_KEY,
         api_url=settings.JIGSAWSTACK_API_URL

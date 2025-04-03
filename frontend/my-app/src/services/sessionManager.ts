@@ -10,13 +10,26 @@ const SESSION_COOKIE_NAME = 'concept_session';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
+ * Mask a string value for logging to avoid revealing full sensitive information
+ * 
+ * @param value String to mask
+ * @param visibleChars Number of characters to leave visible at the beginning
+ * @returns Masked string with first few characters visible and the rest replaced with asterisks
+ */
+const maskValue = (value: string, visibleChars: number = 4): string => {
+  if (!value) return '[EMPTY]';
+  if (value.length <= visibleChars) return '[TOO_SHORT]';
+  return `${value.substring(0, visibleChars)}${'*'.repeat(Math.min(8, value.length - visibleChars))}`;
+};
+
+/**
  * Get the current session ID from cookies
  * 
  * @returns The current session ID or null if not found
  */
 export const getSessionId = (): string | null => {
   const sessionId = Cookies.get(SESSION_COOKIE_NAME) || null;
-  console.log(`SessionManager: Current session ID is ${sessionId ? sessionId : 'not found'}`);
+  console.log(`SessionManager: Session ID ${sessionId ? 'found' : 'not found'}`);
   return sessionId;
 };
 
@@ -27,7 +40,7 @@ export const getSessionId = (): string | null => {
  * @param days Number of days until the cookie expires (default: 30)
  */
 export const setSessionId = (sessionId: string, days: number = 30): void => {
-  console.log(`SessionManager: Setting session ID to ${sessionId}`);
+  console.log(`SessionManager: Setting session ID (masked: ${maskValue(sessionId)})`);
   Cookies.set(SESSION_COOKIE_NAME, sessionId, { 
     expires: days, 
     sameSite: 'Lax',
@@ -53,14 +66,14 @@ export const ensureSession = async (): Promise<boolean> => {
   
   if (currentSessionId) {
     // Session already exists, sync with backend
-    console.log(`Found existing session ID: ${currentSessionId}, syncing with backend`);
+    console.log(`Found existing session (masked: ${maskValue(currentSessionId)}), syncing with backend`);
     await syncSession();
     return false;
   }
   
   // No session exists, generate a new UUID and set it
   const newSessionId = uuidv4();
-  console.log(`Generated new client-side session ID: ${newSessionId}`);
+  console.log(`Generated new client-side session (masked: ${maskValue(newSessionId)})`);
   setSessionId(newSessionId);
   
   // Sync the new session ID with the backend
@@ -86,7 +99,7 @@ export const ensureSession = async (): Promise<boolean> => {
     
     // If the server returned a different session ID, update our cookie
     if (data.session_id && data.session_id !== newSessionId) {
-      console.log(`Updating local session ID from ${newSessionId} to ${data.session_id}`);
+      console.log(`Updating local session ID (masked from: ${maskValue(newSessionId)} to: ${maskValue(data.session_id)})`);
       setSessionId(data.session_id);
     }
     
@@ -106,14 +119,26 @@ export const debugSessionStatus = (): {exists: boolean, value?: string, allCooki
   const sessionId = Cookies.get(SESSION_COOKIE_NAME);
   const allCookies = Cookies.get(); // Gets all cookies as object
   
+  // Create a safe version for logging
+  const safeCookies: Record<string, string> = {};
+  for (const [key, value] of Object.entries(allCookies)) {
+    safeCookies[key] = maskValue(value);
+  }
+  
   const status = {
+    exists: !!sessionId,
+    value: sessionId ? maskValue(sessionId) : undefined,
+    allCookies: safeCookies
+  };
+  
+  console.log('Session debug information:', status);
+
+  // Return actual values to caller
+  return {
     exists: !!sessionId,
     value: sessionId,
     allCookies
   };
-  
-  console.log('Session debug information:', status);
-  return status;
 };
 
 /**
@@ -131,7 +156,7 @@ export const syncSession = async (): Promise<boolean> => {
   }
   
   try {
-    console.log(`Attempting to sync session: ${currentSessionId}`);
+    console.log(`Attempting to sync session (masked: ${maskValue(currentSessionId)})`);
     
     // Call the special endpoint to sync the session, using the API base URL
     const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
@@ -156,7 +181,7 @@ export const syncSession = async (): Promise<boolean> => {
     
     // If the server returned a different session ID, update our cookie
     if (data.session_id && data.session_id !== currentSessionId) {
-      console.log(`Session sync: Updating session ID from ${currentSessionId} to ${data.session_id}`);
+      console.log(`Session sync: Updating session ID (masked from: ${maskValue(currentSessionId)} to: ${maskValue(data.session_id)})`);
       setSessionId(data.session_id);
       return true;
     }

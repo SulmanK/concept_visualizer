@@ -13,7 +13,7 @@ from typing import List, Dict, Optional, Any, Union
 from PIL import Image
 from supabase import create_client, Client
 
-from .config import settings
+from .config import settings, get_masked_value
 
 
 # Configure logging
@@ -85,7 +85,7 @@ class SupabaseClient:
                 # Ensure it's in the standard string format
                 session_id = str(uuid_obj)
             except ValueError:
-                self.logger.error(f"Invalid UUID format for session_id: {session_id}")
+                self.logger.error(f"Invalid UUID format for session_id: {get_masked_value(session_id)}")
                 return None
                 
             # Insert the session with the provided ID
@@ -93,14 +93,14 @@ class SupabaseClient:
             
             # Log the result for debugging
             if result.data:
-                self.logger.info(f"Created session with client-provided ID: {session_id}")
+                self.logger.info(f"Created session with client-provided ID: {get_masked_value(session_id)}")
             else:
-                self.logger.warning(f"No data returned when creating session with ID: {session_id}")
+                self.logger.warning(f"No data returned when creating session with ID: {get_masked_value(session_id)}")
                 
             return result.data[0] if result.data else None
             
         except Exception as e:
-            self.logger.error(f"Error creating session with ID {session_id}: {e}")
+            self.logger.error(f"Error creating session with ID {get_masked_value(session_id)}: {e}")
             return None
     
     def update_session_activity(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -174,7 +174,7 @@ class SupabaseClient:
         """
         try:
             # Log the session ID being used for the query
-            self.logger.info(f"Querying recent concepts with session_id: {session_id}")
+            self.logger.info(f"Querying recent concepts with session_id: {get_masked_value(session_id)}")
             
             # Security: Always filter by session_id to ensure users only see their own data
             result = self.client.table("concepts").select(
@@ -185,18 +185,22 @@ class SupabaseClient:
             
             # Log the results for debugging
             if result.data:
-                self.logger.info(f"Found {len(result.data)} concepts for session ID {session_id}")
+                self.logger.info(f"Found {len(result.data)} concepts for session ID {get_masked_value(session_id)}")
                 for i, concept in enumerate(result.data):
-                    self.logger.info(f"Concept {i+1}: ID={concept.get('id')}, session_id={concept.get('session_id')}, base_path={concept.get('base_image_path')}")
+                    concept_id = concept.get('id')
+                    concept_session_id = concept.get('session_id')
+                    self.logger.info(f"Concept {i+1}: ID={get_masked_value(concept_id)}, session_id={get_masked_value(concept_session_id)}, base_path={concept.get('base_image_path')}")
             else:
-                self.logger.warning(f"No concepts found for session ID {session_id}")
+                self.logger.warning(f"No concepts found for session ID {get_masked_value(session_id)}")
                 
                 # Additional check: Look for all concepts without session filter
                 all_results = self.client.table("concepts").select("id, session_id").limit(5).execute()
                 if all_results.data:
                     self.logger.info(f"Found {len(all_results.data)} total concepts in database. Sample session IDs:")
                     for i, concept in enumerate(all_results.data):
-                        self.logger.info(f"  - Sample concept {i+1}: ID={concept.get('id')}, session_id={concept.get('session_id')}")
+                        concept_id = concept.get('id')
+                        concept_session_id = concept.get('session_id')
+                        self.logger.info(f"  - Sample concept {i+1}: ID={get_masked_value(concept_id)}, session_id={get_masked_value(concept_session_id)}")
             
             return result.data
         except Exception as e:
@@ -221,7 +225,7 @@ class SupabaseClient:
             
             return result.data[0] if result.data else None
         except Exception as e:
-            self.logger.error(f"Error retrieving concept detail: {e}")
+            self.logger.error(f"Error retrieving concept detail for concept ID {get_masked_value(concept_id)}: {e}")
             return None
     
     async def upload_image_from_url(self, image_url: str, bucket: str, session_id: str) -> Optional[str]:

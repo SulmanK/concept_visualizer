@@ -227,10 +227,10 @@
 
 ## Backend Refactoring and Production Preparation
 - [ ] **Security Improvements**
-  - [ ] Remove API keys and sensitive information from .env files and use environment variables
-  - [ ] Create a secrets management strategy for production deployment
-  - [ ] Implement proper rate limiting on API endpoints
-  - [ ] Add CSRF protection for authenticated endpoints (when implemented)
+  - [ ] Remove API keys and sensitive information from .env files and use environment variables [LATER]
+  - [ ] Create a secrets management strategy for production deployment [LATER]
+  - [x] Implement proper rate limiting on API endpoints
+  - [ ] Add CSRF protection for authenticated endpoints (when implemented) [LATER]
   - [ ] Audit backend dependencies for security vulnerabilities
   - [ ] Update JigsawStack client error handling to prevent exposing sensitive information
 - [ ] **Directory Structure Refinement**

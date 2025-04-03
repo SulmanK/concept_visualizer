@@ -5,8 +5,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Environment variables for Supabase
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://pstdcfittpjhxzynbdbu.supabase.co';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzdGRjZml0dHBqaHh6eW5iZGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyNzIxNTgsImV4cCI6MjA1ODg0ODE1OH0.u2FM0VaV_XUGmmtwhdkV2vbtKGXST25VJkJCYH9SXSI';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 /**
  * Initialize and export the Supabase client with storage options
@@ -19,7 +19,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   global: {
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_KEY}`
     },
   }
 });

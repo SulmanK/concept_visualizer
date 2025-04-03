@@ -12,7 +12,7 @@ from typing import Optional, Tuple
 
 from fastapi import Depends, Cookie, Response
 from ..core.supabase import get_supabase_client, SupabaseClient
-from ..core.config import settings
+from ..core.config import settings, get_masked_value
 
 
 # Configure logging
@@ -49,8 +49,8 @@ class SessionService:
         """
         # Log initial state
         self.logger.info("==== SESSION MANAGEMENT START ====")
-        self.logger.info(f"Cookie session_id: {session_id}")
-        self.logger.info(f"Client session_id: {client_session_id}")
+        self.logger.info(f"Cookie session_id: {get_masked_value(session_id) if session_id else 'None'}")
+        self.logger.info(f"Client session_id: {get_masked_value(client_session_id) if client_session_id else 'None'}")
         
         # Determine which session ID to use
         final_session_id = await self._resolve_session_id(
@@ -61,7 +61,7 @@ class SessionService:
         # Set the cookie and return the result
         self._set_session_cookie(response, final_session_id)
         
-        self.logger.info(f"Final session_id: {final_session_id['id']}, is_new: {final_session_id['is_new']}")
+        self.logger.info(f"Final session_id: {get_masked_value(final_session_id['id'])}, is_new: {final_session_id['is_new']}")
         self.logger.info("==== SESSION MANAGEMENT END ====")
         
         return final_session_id["id"], final_session_id["is_new"]
@@ -82,28 +82,28 @@ class SessionService:
         """
         # Priority 1: Check client-provided session ID if available
         if client_session_id:
-            self.logger.info(f"Checking client-provided session ID: {client_session_id}")
+            self.logger.info(f"Checking client-provided session ID: {get_masked_value(client_session_id)}")
             client_session = self.supabase_client.get_session(client_session_id)
             
             if client_session:
-                self.logger.info(f"Using existing client session ID: {client_session_id}")
+                self.logger.info(f"Using existing client session ID: {get_masked_value(client_session_id)}")
                 self.supabase_client.update_session_activity(client_session_id)
                 return {"id": client_session_id, "is_new": False}
             
             # Client session doesn't exist in DB, try to create it
-            self.logger.info(f"Creating new session with client ID: {client_session_id}")
+            self.logger.info(f"Creating new session with client ID: {get_masked_value(client_session_id)}")
             result = self.supabase_client.create_session_with_id(client_session_id)
             if result:
-                self.logger.info(f"Successfully created session with client ID: {client_session_id}")
+                self.logger.info(f"Successfully created session with client ID: {get_masked_value(client_session_id)}")
                 return {"id": client_session_id, "is_new": True}
         
         # Priority 2: Check cookie session ID if available
         if cookie_session_id:
-            self.logger.info(f"Checking cookie session ID: {cookie_session_id}")
+            self.logger.info(f"Checking cookie session ID: {get_masked_value(cookie_session_id)}")
             cookie_session = self.supabase_client.get_session(cookie_session_id)
             
             if cookie_session:
-                self.logger.info(f"Using existing cookie session ID: {cookie_session_id}")
+                self.logger.info(f"Using existing cookie session ID: {get_masked_value(cookie_session_id)}")
                 self.supabase_client.update_session_activity(cookie_session_id)
                 return {"id": cookie_session_id, "is_new": False}
         
@@ -112,12 +112,12 @@ class SessionService:
         new_session = self.supabase_client.create_session()
         
         if new_session:
-            self.logger.info(f"Created new session with ID: {new_session['id']}")
+            self.logger.info(f"Created new session with ID: {get_masked_value(new_session['id'])}")
             return {"id": new_session["id"], "is_new": True}
         
         # Fallback: Generate local UUID if Supabase is unavailable
         fallback_id = str(uuid.uuid4())
-        self.logger.warning(f"Supabase unavailable, using fallback ID: {fallback_id}")
+        self.logger.warning(f"Supabase unavailable, using fallback ID: {get_masked_value(fallback_id)}")
         return {"id": fallback_id, "is_new": True}
     
     def _set_session_cookie(self, response: Response, session_data: dict) -> None:
@@ -143,7 +143,7 @@ class SessionService:
         except Exception as e:
             self.logger.warning(f"Could not determine environment, defaulting to development: {str(e)}")
         
-        self.logger.info(f"Setting session cookie: {session_id} (secure: {is_production})")
+        self.logger.info(f"Setting session cookie: {get_masked_value(session_id)} (secure: {is_production})")
         response.set_cookie(
             key="concept_session",
             value=session_id,

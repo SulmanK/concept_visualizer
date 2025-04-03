@@ -81,16 +81,23 @@ class Settings(BaseSettings):
 # Create a settings instance
 settings = Settings()
 
-# Log the API key for debugging (first 10 chars only)
-api_key_prefix = settings.JIGSAWSTACK_API_KEY[:10]
-logger.info(f"JigsawStack API key prefix: {api_key_prefix}...")
+# Safely log configuration with masked sensitive information
+def get_masked_value(value: str, visible_chars: int = 4) -> str:
+    """Return a masked string showing only the first few characters."""
+    if not value or len(value) <= visible_chars:
+        return "[EMPTY]" if not value else "[TOO_SHORT]"
+    return f"{value[:visible_chars]}{'*' * min(8, len(value) - visible_chars)}"
 
-# Log the Supabase URL for debugging
-supabase_url = settings.SUPABASE_URL
-logger.info(f"Supabase URL: {supabase_url}")
-
-# Log the environment
+# Log configuration with masked sensitive data
 logger.info(f"Application running in {settings.ENVIRONMENT} environment")
+logger.info(f"API configured with prefix: {settings.API_PREFIX}")
+logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
 
-# Log Redis connection info
-logger.info(f"Upstash Redis Endpoint: {settings.UPSTASH_REDIS_ENDPOINT}") 
+# Masked logging of sensitive configuration
+if settings.LOG_LEVEL == "DEBUG":
+    logger.debug(f"JigsawStack API key: {get_masked_value(settings.JIGSAWSTACK_API_KEY)}")
+    logger.debug(f"JigsawStack API URL: {settings.JIGSAWSTACK_API_URL}")
+    logger.debug(f"Supabase URL: {get_masked_value(settings.SUPABASE_URL, 8)}")
+    logger.debug(f"Supabase key: {get_masked_value(settings.SUPABASE_KEY)}")
+    logger.debug(f"Redis endpoint: {get_masked_value(settings.UPSTASH_REDIS_ENDPOINT, 8)}")
+    logger.debug(f"Redis password: {get_masked_value(settings.UPSTASH_REDIS_PASSWORD)}") 

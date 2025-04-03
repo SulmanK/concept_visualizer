@@ -163,6 +163,48 @@ resetMockApi();
 
 The mock service simulates the behavior of the backend API and can be configured to return custom responses or simulate errors for testing edge cases.
 
+## Security
+
+### Credentials Management
+
+The application uses environment variables for managing all sensitive credentials. These include:
+
+- **CONCEPT_JIGSAWSTACK_API_KEY**: API key for JigsawStack services
+- **CONCEPT_SUPABASE_KEY**: Supabase API key for database and storage access
+- **CONCEPT_UPSTASH_REDIS_PASSWORD**: Password for Upstash Redis service
+
+Never commit actual credentials to the repository. The repository contains example files (`.env.example`) with placeholder values that should be used as templates.
+
+### Setting Up Credentials
+
+1. Copy the example environment files to create your own:
+   ```bash
+   # Backend
+   cp backend/.env.example backend/.env
+   
+   # Frontend
+   cp frontend/my-app/.env.example frontend/my-app/.env
+   ```
+
+2. Fill in your actual credentials in the `.env` files
+
+3. Make sure `.env` files are listed in the `.gitignore` to prevent accidental commits
+
+### Security Workflows
+
+This project includes GitHub workflows for security scanning:
+
+- **Security Scan**: Uses CodeQL to scan for security vulnerabilities in the code
+- **Environment Security Check**: Checks for hardcoded credentials and verifies proper environment file structure
+
+### Logging Security
+
+The application implements secure logging practices:
+
+- Sensitive information is masked in logs (only first few characters are shown)
+- User session IDs are never logged in full form
+- API keys and credentials are not logged
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
