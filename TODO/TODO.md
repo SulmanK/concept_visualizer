@@ -232,7 +232,7 @@
   - [x] Implement proper rate limiting on API endpoints
   - [ ] Add CSRF protection for authenticated endpoints (when implemented) [LATER]
   - [x] Audit backend dependencies for security vulnerabilities
-  - [ ] Update JigsawStack client error handling to prevent exposing sensitive information
+  - [x] Update JigsawStack client error handling to prevent exposing sensitive information
 - [ ] **Directory Structure Refinement**
   - [ ] Create separate files for route handlers in api/routes/ (split concept.py into multiple files)
   - [ ] Add missing dependencies.py and errors.py in the API layer
@@ -248,6 +248,16 @@
   - [ ] Optimize image processing operations
   - [ ] Profile API endpoints and optimize bottlenecks
   - [ ] Implement async task processing for long-running operations
+- [ ] **Background Task Implementation for Vercel Deployment**
+  - [ ] Create Supabase table for task tracking
+  - [ ] Add task_status endpoint for checking task status
+  - [ ] Update concept.py to use BackgroundTasks for generation
+  - [ ] Implement task service for managing background jobs
+  - [ ] Create vercel.json configuration with cron jobs
+  - [ ] Add vercel_app.py entry point
+  - [ ] Set up cron endpoint for processing timed-out tasks
+  - [ ] Test background task functionality with multiple concurrent users
+  - [ ] Add task status polling in frontend
 - [ ] **Documentation**
   - [ ] Update Swagger/OpenAPI documentation with detailed descriptions
   - [ ] Create deployment documentation

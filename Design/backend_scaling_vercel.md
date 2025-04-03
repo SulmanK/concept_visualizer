@@ -640,4 +640,212 @@ To monitor the application performance:
 - Use Vercel's built-in function metrics
 - Implement logging to Vercel logs
 - Add custom performance tracking in critical endpoints
-- Consider implementing simple heartbeat checks 
+- Consider implementing simple heartbeat checks
+
+## Implementation Structure
+
+To implement the BackgroundTasks pattern for our Concept Visualizer, we need to modify or create several files in our backend structure. Here's a breakdown of the files we need to modify:
+
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── routes/
+│   │   │   ├── __init__.py                 # Update to include new task routes
+│   │   │   ├── concept.py                  # Modify to use background tasks
+│   │   │   ├── tasks.py                    # Create new file for task endpoints
+│   │   │   └── ...
+│   │   ├── core/
+│   │   │   ├── supabase.py                     # May need updates for task table interactions
+│   │   │   └── ...
+│   │   ├── models/
+│   │   │   ├── request.py                      # Update with task-related request models
+│   │   │   ├── response.py                     # Update with task-related response models
+│   │   │   ├── task.py                         # New file for task models
+│   │   │   └── ...
+│   │   ├── services/
+│   │   │   ├── concept_service.py              # Modify to support background processing
+│   │   │   ├── task_service.py                 # New file for task management services
+│   │   │   └── ...
+│   │   ├── main.py                             # Update to include new route
+│   │   └── ...
+│   ├── vercel.json                             # Create for Vercel configuration with cron
+│   └── vercel_app.py                           # Create Vercel entry point
+```
+
+### File Modification Details
+
+1. **Create `backend/vercel.json`**
+   - Configure deployment settings
+   - Set up cron jobs for pending task processing
+
+2. **Create `backend/vercel_app.py`**
+   - Simple entry point for Vercel serverless functions
+
+3. **Create `backend/app/models/task.py`**
+   - Define Pydantic models for task requests and responses
+   ```python
+   from pydantic import BaseModel, Field
+   from typing import Optional, Dict, Any
+   from datetime import datetime
+   import uuid
+   
+   class TaskBase(BaseModel):
+       """Base model for tasks"""
+       id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+       
+   class TaskCreate(TaskBase):
+       """Model for creating a new task"""
+       pass
+       
+   class TaskResponse(TaskBase):
+       """Model for task response"""
+       status: str
+       created_at: Optional[datetime] = None
+       
+   class TaskStatusResponse(TaskResponse):
+       """Model for task status response"""
+       updated_at: Optional[datetime] = None
+       result: Optional[Dict[str, Any]] = None
+       error: Optional[str] = None
+   ```
+
+4. **Update `backend/app/models/request.py` and `backend/app/models/response.py`**
+   - Add any additional request/response models needed
+
+5. **Create `backend/app/api/routes/tasks.py`**
+   - Implement endpoints for task status checking
+   ```python
+   """
+   Task status endpoints for the API.
+   
+   This module provides endpoints to check the status of background tasks.
+   """
+   
+   from fastapi import APIRouter, Depends, HTTPException
+   from app.models.task import TaskStatusResponse
+   from app.core.supabase import get_supabase_client
+   import json
+   
+   router = APIRouter()
+   
+   @router.get("/{task_id}", response_model=TaskStatusResponse)
+   async def get_task_status(task_id: str, supabase=Depends(get_supabase_client)):
+       """
+       Get the status of a task by its ID.
+       """
+       # Implementation details
+   ```
+
+6. **Update `backend/app/api/routes/__init__.py`**
+   - Register the new tasks router
+
+7. **Modify `backend/app/api/routes/concept.py`**
+   - Update to use BackgroundTasks for the generation process
+
+8. **Create `backend/app/services/task_service.py`**
+   - Implement task management services
+   ```python
+   """
+   Task management services.
+   
+   This module provides services for managing background tasks.
+   """
+   
+   import json
+   import logging
+   import time
+   from datetime import datetime
+   from typing import Dict, Any
+   
+   from app.core.supabase import SupabaseClient
+   
+   logger = logging.getLogger(__name__)
+   
+   class TaskService:
+       """Service for managing background tasks."""
+       
+       def __init__(self, supabase: SupabaseClient):
+           self.supabase = supabase
+           
+       async def create_task(self, session_id: str, request_data: Dict[str, Any]) -> str:
+           """Create a new task and return its ID."""
+           # Implementation details
+           
+       async def update_task_status(self, task_id: str, status: str, result: Dict[str, Any] = None, error: str = None):
+           """Update the status of a task."""
+           # Implementation details
+           
+       async def get_task_status(self, task_id: str) -> Dict[str, Any]:
+           """Get the status of a task."""
+           # Implementation details
+   ```
+
+9. **Create an API endpoint for Cron Jobs (`backend/app/api/routes/cron.py`)**
+   - Implement the endpoint for Vercel's cron to call
+   ```python
+   """
+   Cron job endpoints for the API.
+   
+   This module provides endpoints for cron jobs to process pending tasks.
+   """
+   
+   from fastapi import APIRouter, BackgroundTasks, Depends
+   from app.core.supabase import get_supabase_client
+   from app.services.task_service import TaskService
+   from app.services.concept_service import ConceptService
+   from datetime import datetime, timedelta
+   import json
+   
+   router = APIRouter()
+   
+   @router.post("/process-pending-tasks")
+   async def process_pending_tasks(
+       background_tasks: BackgroundTasks,
+       supabase = Depends(get_supabase_client),
+       task_service: TaskService = Depends(),
+       concept_service: ConceptService = Depends()
+   ):
+       """
+       Process pending tasks that may have timed out.
+       """
+       # Implementation details
+   ```
+
+10. **Update Supabase Schema**
+    - Run the SQL to create the tasks table in Supabase
+
+### SQL for Supabase
+
+Execute the following SQL in the Supabase SQL Editor:
+
+```sql
+-- Create tasks table
+CREATE TABLE IF NOT EXISTS tasks (
+  id UUID PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  status TEXT NOT NULL, -- 'pending', 'processing', 'completed', 'failed'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  request JSONB, -- Store the original request parameters
+  result JSONB, -- Store the result when completed
+  error TEXT -- Store error message if failed
+);
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_tasks_session_id ON tasks(session_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+
+-- Create Row Level Security policies
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+-- Policy to allow the server to read/write all tasks
+CREATE POLICY "Server can read all tasks" ON tasks
+    FOR SELECT USING (true);
+    
+CREATE POLICY "Server can insert tasks" ON tasks
+    FOR INSERT WITH CHECK (true);
+    
+CREATE POLICY "Server can update tasks" ON tasks
+    FOR UPDATE USING (true);
+``` 

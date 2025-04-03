@@ -11,6 +11,7 @@ import calendar
 import logging
 from app.core.rate_limiter import get_redis_client
 from typing import Dict, Any
+from app.utils.mask import mask_id, mask_ip, mask_redis_key
 
 
 # Configure logging
@@ -87,13 +88,13 @@ async def rate_limits(request: Request, force_refresh: bool = False):
     # Check if we have a cached response for this session/IP
     now = datetime.utcnow()
     if not force_refresh and cache_key in _rate_limits_cache and now < _rate_limits_cache[cache_key]["expires_at"]:
-        logger.debug(f"Using cached rate limits for {_mask_id(cache_key)}")
+        logger.debug(f"Using cached rate limits for {mask_id(cache_key)}")
         return _rate_limits_cache[cache_key]["data"]
     
     if force_refresh:
-        logger.info(f"Force refreshing rate limits for {_mask_id(cache_key)}")
+        logger.info(f"Force refreshing rate limits for {mask_id(cache_key)}")
     else:
-        logger.info(f"Generating fresh rate limits data for {_mask_id(cache_key)}")
+        logger.info(f"Generating fresh rate limits data for {mask_id(cache_key)}")
     
     limiter = request.app.state.limiter
     
@@ -111,7 +112,7 @@ async def rate_limits(request: Request, force_refresh: bool = False):
     
     # Get only the requested rate limits
     limits_info = {
-        "user_identifier": _mask_id(cache_key),  # Mask the session ID in the response
+        "user_identifier": mask_id(cache_key),  # Mask the session ID in the response
         "session_id": session_id is not None,  # Include whether session was found
         "redis_available": redis_available,  # Include Redis availability status
         "limits": default_limits if not redis_available else {
@@ -209,7 +210,7 @@ def _get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_
                     try:
                         val = direct_redis.get(key)
                         if val is not None:
-                            logger.debug(f"Direct Redis - Found key: {_mask_key(key)} = {val}")
+                            logger.debug(f"Direct Redis - Found key: {mask_redis_key(key)} = {val}")
                             try:
                                 val_int = int(val)
                                 if val_int > current:
@@ -242,7 +243,7 @@ def _get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_
                     try:
                         val = storage.get(key)
                         if val is not None:
-                            logger.debug(f"SlowAPI Storage - Found key: {_mask_key(key)} = {val}")
+                            logger.debug(f"SlowAPI Storage - Found key: {mask_redis_key(key)} = {val}")
                             try:
                                 val_int = int(val)
                                 if val_int > current:
