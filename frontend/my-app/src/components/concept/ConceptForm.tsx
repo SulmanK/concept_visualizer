@@ -125,7 +125,9 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               className="w-full px-4 py-3 border border-indigo-200 rounded-lg bg-indigo-50/50 resize-y min-h-28 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200"
               disabled={isSubmitting || isSuccess}
             />
-            <p className="mt-1 text-xs text-indigo-600">Be descriptive about style, symbols, and colors you want</p>
+            <p className="mt-1 text-xs text-indigo-600">
+              <span className="font-medium">Pro tip:</span> "A minimalist fox logo with geometric shapes and clean lines" works better than "A cool fox logo"
+            </p>
             {validationErrors.logo && (
               <p className="text-red-500 text-xs mt-1">{validationErrors.logo}</p>
             )}
@@ -140,7 +142,9 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               className="w-full px-4 py-3 border border-indigo-200 rounded-lg bg-indigo-50/50 resize-y min-h-28 outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200"
               disabled={isSubmitting || isSuccess}
             />
-            <p className="mt-1 text-xs text-indigo-600">Describe mood, colors, and style of your brand</p>
+            <p className="mt-1 text-xs text-indigo-600">
+              <span className="font-medium">Pro tip:</span> "Energetic and playful with orange and blue tones, conveying creativity and trust" works better than "Bright and professional colors"
+            </p>
             {validationErrors.theme && (
               <p className="text-red-500 text-xs mt-1">{validationErrors.theme}</p>
             )}

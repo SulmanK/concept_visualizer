@@ -53,7 +53,7 @@ class ConceptService:
         try:
             # Generate logo image
             image_url = await self.client.generate_image(
-                prompt=f"Logo design: {logo_description}. Style/theme: {theme_description}",
+                logo_description=logo_description,
                 width=512,
                 height=512,
                 model="stable-diffusion-xl",

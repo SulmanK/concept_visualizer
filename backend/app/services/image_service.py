@@ -51,7 +51,7 @@ class ImageService:
         try:
             # Generate image using JigsawStack
             self.logger.info(f"Generating image with prompt: {prompt}")
-            image_data = await self.jigsawstack_client.generate_image(prompt=prompt)
+            image_data = await self.jigsawstack_client.generate_image(logo_description=prompt)
             
             if not image_data:
                 self.logger.error("Failed to generate image: No binary data returned")

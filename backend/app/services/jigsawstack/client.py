@@ -37,7 +37,7 @@ class JigsawStackClient:
         logger.info(f"Initialized JigsawStack client with API key prefix: {api_key[:10]}...")
     
     async def generate_image(
-        self, prompt: str, width: int = 512, height: int = 512, model: str = "stable-diffusion-xl"
+        self, logo_description: str, width: int = 512, height: int = 512, model: str = "stable-diffusion-xl"
     ) -> bytes:
         """
         Generate an image using the JigsawStack API.
@@ -55,7 +55,7 @@ class JigsawStackClient:
             Exception: If the API request fails
         """
         try:
-            logger.info(f"Generating image with prompt: {prompt}")
+            logger.info(f"Generating image with prompt: {logo_description}")
             
             # Determine aspect ratio based on dimensions
             aspect_ratio = "1:1"  # Default
@@ -64,6 +64,19 @@ class JigsawStackClient:
             elif height > width:
                 aspect_ratio = "9:16"
             
+            prompt = f"""Create a professional logo design based on this description: {logo_description}.
+
+Design requirements:
+- Create a minimalist, scalable vector-style logo
+- Use simple shapes with clean edges for easy masking
+- Include distinct foreground and background elements
+- Avoid complex gradients or photorealistic elements
+- Design with high contrast between elements
+- Create clear boundaries between different parts of the logo
+- Ensure the design works in monochrome before color is applied
+- Text or typography can be included if appropriate for the logo
+"""
+
             # Use the correct endpoint according to API reference
             endpoint = f"{self.api_url}/v1/ai/image_generation"
             payload = {
@@ -71,7 +84,7 @@ class JigsawStackClient:
                 "aspect_ratio": aspect_ratio,
                 "steps": 30,
                 "advance_config": {
-                    "negative_prompt": "blurry, low quality",
+                    "negative_prompt": "blurry, low quality, complex backgrounds, photorealistic elements,",
                     "guidance": 7.5
                 }
             }
@@ -170,16 +183,19 @@ class JigsawStackClient:
         try:
             logger.info(f"Generating {num_palettes} color palettes based on logo and theme descriptions")
             
-            # Combine both descriptions for a more complete context
-            combined_prompt = f"Logo: {logo_description}. Theme: {theme_description}"
             
             # Create payload using the structure from the working example
             payload = {
                 "inputs": [
                     {
-                        "key": "theme",
+                        "key": "theme_description",
                         "optional": False,
-                        "initial_value": "color scheme"
+                        "initial_value": "theme description"
+                    },
+                    {
+                        "key": "logo_description",
+                        "optional": False,
+                        "initial_value": "logo description"
                     },
                     {
                         "key": "num_palettes", 
@@ -187,10 +203,13 @@ class JigsawStackClient:
                         "initial_value": "8"
                     }
                 ],
-                "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
+               # "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
+                "prompt": "Generate exactly {num_palettes} professional color palettes for a logo with the following description: {logo_description}. The theme is: {theme_description}. For each palette: - Include exactly 5 colors (primary, secondary, accent, background, and highlight) - Provide the exact hex codes (e.g., #FFFFFF) - Ensure sufficient contrast between elements for accessibility - Make each palette distinctly different from the others Ensure variety across the 7 palettes by including: - At least one monochromatic palette - At least one palette with complementary colors - At least one high-contrast palette - At least one palette with a transparent/white background option",
+                
                 "prompt_guard": ["hate", "sexual_content",],
                 "input_values": {
-                    "theme": combined_prompt,
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
                     "num_palettes": str(num_palettes)
                 },
                 "return_prompt": [
@@ -205,7 +224,7 @@ class JigsawStackClient:
                                 "4": "#colorhex5"
                             }
                         ],
-                        "description": "Description of how the palette relates to the brand identity"
+                        "description": "Description of how the palette relates to the theme."
                     }
                 ],
                 "optimize_prompt": True
@@ -229,7 +248,7 @@ class JigsawStackClient:
                 if response.status_code != 200:
                     error_details = f"Status: {response.status_code}, Response: {response.text}"
                     logger.error(f"Color palette generation API error: {error_details}")
-                    return self._get_default_palettes(num_palettes, combined_prompt)
+                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
                 
                 # Parse the response
                 try:
@@ -242,15 +261,15 @@ class JigsawStackClient:
                         if isinstance(raw_palettes, list) and raw_palettes:
                             # Process each palette to extract colors properly
                             processed_palettes = [self._process_palette_colors(palette) for palette in raw_palettes]
-                            return self._validate_and_clean_palettes(processed_palettes, num_palettes, combined_prompt)
+                            return self._validate_and_clean_palettes(processed_palettes, num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
                     
                     # If we couldn't get proper palettes from the response
                     logger.warning("Invalid response format from JigsawStack API")
-                    return self._get_default_palettes(num_palettes, combined_prompt)
+                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
                     
                 except Exception as e:
                     logger.error(f"Error processing response: {e}")
-                    return self._get_default_palettes(num_palettes, combined_prompt)
+                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
             
         except Exception as e:
             logger.error(f"Error generating multiple color palettes: {str(e)}")
