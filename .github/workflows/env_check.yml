@@ -1,0 +1,98 @@
+name: "Environment Security Check"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 2 * * 0'  # Run at 2:00 AM UTC every Sunday
+
+jobs:
+  scan-secrets:
+    name: Scan for hardcoded secrets
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        
+    - name: Install GitLeaks
+      run: |
+        wget https://github.com/zricethezav/gitleaks/releases/download/v8.16.1/gitleaks_8.16.1_linux_x64.tar.gz
+        tar -xzf gitleaks_8.16.1_linux_x64.tar.gz
+        sudo mv gitleaks /usr/local/bin/
+        
+    - name: Run GitLeaks
+      run: |
+        gitleaks detect --report-format json --report-path gitleaks-report.json || true
+        
+    - name: Check for secrets found
+      run: |
+        if [ -s gitleaks-report.json ]; then
+          echo "::warning::Potential secrets found in the code. See the gitleaks-report.json artifact."
+          cat gitleaks-report.json
+          exit 1
+        else
+          echo "No secrets found by GitLeaks"
+        fi
+        
+    - name: Upload scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: gitleaks-report
+        path: gitleaks-report.json
+        
+  check-env-examples:
+    name: Check environment files
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+        
+    - name: Verify .env.example files exist
+      run: |
+        # Check backend has .env.example
+        if [ ! -f backend/.env.example ]; then
+          echo "::error::Missing backend/.env.example file"
+          exit 1
+        fi
+        
+        # Check frontend has .env.example
+        if [ ! -f frontend/my-app/.env.example ]; then
+          echo "::error::Missing frontend/my-app/.env.example file"
+          exit 1
+        fi
+        
+    - name: Check for actual secrets in example files
+      run: |
+        # Define patterns to look for actual credentials (not placeholders)
+        PATTERNS=(
+          "sk_[a-zA-Z0-9]{32,}"
+          "[a-zA-Z0-9]{32,}\.[a-zA-Z0-9]{32,}\.[a-zA-Z0-9-_]{32,}"
+          "key-[a-zA-Z0-9]{32,}"
+          "password: [^<]+"
+          "password=[^<]+"
+          "eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}"
+        )
+        
+        FOUND_SECRETS=0
+        for pattern in "${PATTERNS[@]}"; do
+          # Check .env.example files for actual secrets
+          RESULTS=$(grep -E "$pattern" */*/\.env\.example 2>/dev/null || echo "")
+          if [ ! -z "$RESULTS" ]; then
+            echo "::warning::Potential real secrets found in example files: $RESULTS"
+            FOUND_SECRETS=1
+          fi
+        done
+        
+        if [ $FOUND_SECRETS -eq 1 ]; then
+          echo "::error::Found potential real credentials in example files!"
+          exit 1
+        else
+          echo "No actual secrets found in example files"
+        fi 
