@@ -1,0 +1,17 @@
+"""
+Concept API routes package.
+
+This module exposes the concept API routes for generating and refining visual concepts.
+"""
+
+from fastapi import APIRouter
+
+from app.api.routes.concept.generation import router as generation_router
+from app.api.routes.concept.refinement import router as refinement_router
+
+# Create a combined router
+router = APIRouter()
+
+# Include the generation and refinement routers
+router.include_router(generation_router)
+router.include_router(refinement_router) 

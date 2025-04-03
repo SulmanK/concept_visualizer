@@ -5,8 +5,10 @@ This module provides endpoints for storing and retrieving concepts
 from the database.
 """
 
-from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
+import logging
 from typing import Optional, List
+
+from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from slowapi.util import get_remote_address
 
 from app.models.request import PromptRequest
@@ -16,6 +18,10 @@ from app.services.session_service import SessionService, get_session_service
 from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
 from app.services.image_service import ImageService, get_image_service
 from app.services.concept_service import ConceptService, get_concept_service
+from app.utils.rate_limiting import apply_rate_limit
+
+# Configure logging
+logger = logging.getLogger("concept_storage_api")
 
 router = APIRouter()
 
@@ -46,8 +52,7 @@ async def generate_and_store_concept(
         Generated concept with image URL and color palettes
     """
     # Apply rate limit
-    limiter = req.app.state.limiter
-    limiter.limit("10/month")(get_remote_address)(req)
+    await apply_rate_limit(req, "/storage/store", "10/month")
     
     try:
         # Get or create session
@@ -128,8 +133,7 @@ async def get_recent_concepts(
         List of recent concepts
     """
     # Apply rate limit - higher limits for read operations
-    limiter = req.app.state.limiter
-    limiter.limit("30/minute")(get_remote_address)(req)
+    await apply_rate_limit(req, "/storage/recent", "30/minute", "minute")
     
     try:
         # Get or create session
@@ -169,8 +173,7 @@ async def get_concept_detail(
         Detailed concept information
     """
     # Apply rate limit - higher limits for read operations
-    limiter = req.app.state.limiter
-    limiter.limit("30/minute")(get_remote_address)(req)
+    await apply_rate_limit(req, f"/storage/concept/{concept_id}", "30/minute", "minute")
     
     try:
         # Get or create session

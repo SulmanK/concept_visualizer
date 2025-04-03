@@ -235,19 +235,39 @@
   - [x] Update JigsawStack client error handling to prevent exposing sensitive information
 - [ ] **Directory Structure Refinement**
   - [ ] Create separate files for route handlers in api/routes/:
-    - [ ] Split concept.py (469 lines) into separate modules:
-      - [ ] concept_generation.py - Move generate_concept and generate_with_palettes functions
-      - [ ] concept_refinement.py - Move refine_concept function
-      - [ ] concept_export.py - Move export_concept function
-    - [ ] Split health.py (401 lines) into separate modules:
-      - [ ] health_check.py - Move health_check functions
-      - [ ] rate_limits.py - Move rate limit checking functionality
-    - [ ] Split svg_conversion.py (304 lines) into more focused modules
+    - [x] Split concept.py (469 lines) into separate modules:
+      - [x] Implemented package structure in concept/ directory
+      - [x] Created concept/generation.py module for concept generation endpoints
+      - [x] Created concept/refinement.py module for concept refinement endpoints
+      - [x] Added concept/__init__.py to expose the router
+      - [x] Extracted common rate limiting logic to a utility module
+    - [x] Split health.py (401 lines) into separate modules:
+      - [x] Created health/ directory with package structure
+      - [x] Created health/check.py module for health check endpoint
+      - [x] Created health/limits.py module for rate limit checking functionality
+      - [x] Created health/utils.py for shared utility functions
+      - [x] Added health/__init__.py to combine routers
+    - [x] Split svg_conversion.py (304 lines) into more focused modules:
+      - [x] Created svg/ directory with package structure
+      - [x] Created svg/converter.py module for SVG conversion endpoint
+      - [x] Created svg/utils.py module for shared utility functions
+      - [x] Added svg/__init__.py to combine routers
+    - [ ] Organize remaining route files into subdirectories:
+      - [x] Create session/ directory with package structure
+      - [x] Move session.py into session/ directory
+      - [x] Create session/__init__.py to expose the router
+      - [x] Create concept_storage/ directory with package structure
+      - [x] Move concept_storage.py into concept_storage/ directory
+      - [x] Create concept_storage/__init__.py to expose the router
+    - [ ] Move utility modules to appropriate locations:
+      - [x] Move rate_limiting.py from api/routes/ to app/utils/ since it's shared across routes
+      - [x] Update imports in all files that use rate_limiting.py
   - [ ] Reorganize API structure to match the architecture guidelines:
     - [ ] Create api/dependencies.py with shared dependency functions
     - [ ] Create api/errors.py with custom error handling
     - [ ] Move API route registration from __init__.py to a dedicated router.py file
   - [ ] Organize imports consistently and fix import patterns:
+    - [x] Updated direct router imports in __init__.py for cleaner organization
     - [ ] Sort imports using isort pattern: stdlib, third-party, local
     - [ ] Use consistent relative vs. absolute imports across files
   - [ ] Remove unused imports and code from all files
@@ -290,7 +310,9 @@
   - [ ] Fix line length issues in docstrings and comments
   - [ ] Fix unused imports
 - [ ] Refactor large functions:
-  - [ ] Extract rate limiting logic from concept.py endpoints into separate helper functions
+  - [x] Extract rate limiting logic from concept.py endpoints into separate helper functions
+    - [x] Created rate_limiting.py utility module for common rate limiting functions
+    - [ ] Consider moving rate_limiting.py to app/core/ as it's a cross-cutting concern
   - [ ] Reduce complexity in _get_limit_info() in health.py
   - [ ] Refactor error handling patterns in service classes
 - [ ] Standardize error handling throughout the codebase:
@@ -352,6 +374,20 @@ Or implement a task queue system like Celery with Redis
   - [x] Combined header-fix.css and header.module.css into a single file
   - [x] Converted Header component from inline styles to CSS modules
   - [x] Improved organization and documentation in CSS files
+- [x] Backend API Refactoring
+  - [x] Concept API Routes Refactoring
+    - [x] Restructured concept.py into concept/ package with specialized modules
+    - [x] Created utility module for rate limiting logic
+    - [x] Updated imports to use explicit router naming convention
+  - [x] Health API Routes Refactoring
+    - [x] Created health/ directory with specialized modules
+    - [x] Extracted functions into separate modules based on responsibility
+    - [x] Improved organization with shared utility functions
+  - [x] SVG Conversion API Routes Refactoring
+    - [x] Created svg/ directory with specialized modules
+    - [x] Created svg/converter.py module for SVG conversion endpoint
+    - [x] Created svg/utils.py module for shared utility functions
+    - [x] Added svg/__init__.py to combine routers
 
 ### Next Steps
 - [x] Implement API mock service for better integration tests
