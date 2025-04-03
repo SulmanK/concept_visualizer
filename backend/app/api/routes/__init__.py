@@ -12,7 +12,7 @@ from backend.app.api.routes import concept, health, concept_storage, session, sv
 api_router = APIRouter()
 
 # Include sub-routers with appropriate prefixes
-api_router.include_router(health.router, tags=["health"])
+api_router.include_router(health.router, prefix="/health", tags=["health"])
 api_router.include_router(
     concept.router, prefix="/concepts", tags=["concepts"]
 )

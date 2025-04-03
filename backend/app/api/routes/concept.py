@@ -58,7 +58,38 @@ async def generate_concept(
     """
     # Apply rate limit
     limiter = req.app.state.limiter
-    limiter.limit("10/month")(get_remote_address)(req)
+    try:
+        # Use the rate limit function properly with a specific key
+        key_func = get_remote_address
+        rate_limit = "10/month"
+        user_id = key_func(req)
+        
+        # Log the rate limiting attempt
+        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        
+        # Try-except block for the rate limit to handle connection issues
+        try:
+            limiter.limit(rate_limit)(key_func)(req)
+            logger.info("SlowAPI rate limit applied successfully")
+        except Exception as e:
+            logger.error(f"SlowAPI rate limiting error: {str(e)}")
+        
+        # Use our custom direct Redis tracking as a more reliable method
+        if hasattr(limiter, 'increment_rate_limit'):
+            success = limiter.increment_rate_limit(
+                user_id=user_id,
+                endpoint="/api/concept/generate",
+                period="month"
+            )
+            if success:
+                logger.info("Rate limit counter incremented successfully in Redis")
+            else:
+                logger.warning("Failed to increment rate limit counter in Redis")
+        
+        logger.info("Rate limit tracking completed")
+    except Exception as e:
+        logger.error(f"Error applying rate limit: {str(e)}")
+        # Continue even if rate limiting fails
     
     try:
         # Get or create session
@@ -154,7 +185,38 @@ async def generate_concept_with_palettes(
     """
     # Apply rate limit
     limiter = req.app.state.limiter
-    limiter.limit("10/month")(get_remote_address)(req)
+    try:
+        # Use the rate limit function properly with a specific key
+        key_func = get_remote_address
+        rate_limit = "10/month"
+        user_id = key_func(req)
+        
+        # Log the rate limiting attempt
+        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        
+        # Try-except block for the rate limit to handle connection issues
+        try:
+            limiter.limit(rate_limit)(key_func)(req)
+            logger.info("SlowAPI rate limit applied successfully")
+        except Exception as e:
+            logger.error(f"SlowAPI rate limiting error: {str(e)}")
+        
+        # Use our custom direct Redis tracking as a more reliable method
+        if hasattr(limiter, 'increment_rate_limit'):
+            success = limiter.increment_rate_limit(
+                user_id=user_id,
+                endpoint="/api/concept/generate-with-palettes",
+                period="month"
+            )
+            if success:
+                logger.info("Rate limit counter incremented successfully in Redis")
+            else:
+                logger.warning("Failed to increment rate limit counter in Redis")
+        
+        logger.info("Rate limit tracking completed")
+    except Exception as e:
+        logger.error(f"Error applying rate limit: {str(e)}")
+        # Continue even if rate limiting fails
     
     try:
         # Get or create session
@@ -288,7 +350,38 @@ async def refine_concept(
     """
     # Apply rate limit
     limiter = req.app.state.limiter
-    limiter.limit("10/hour")(get_remote_address)(req)
+    try:
+        # Use the rate limit function properly with a specific key
+        key_func = get_remote_address
+        rate_limit = "10/hour"
+        user_id = key_func(req)
+        
+        # Log the rate limiting attempt
+        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        
+        # Try-except block for the rate limit to handle connection issues
+        try:
+            limiter.limit(rate_limit)(key_func)(req)
+            logger.info("SlowAPI rate limit applied successfully")
+        except Exception as e:
+            logger.error(f"SlowAPI rate limiting error: {str(e)}")
+        
+        # Use our custom direct Redis tracking as a more reliable method
+        if hasattr(limiter, 'increment_rate_limit'):
+            success = limiter.increment_rate_limit(
+                user_id=user_id,
+                endpoint="/api/concept/refine",
+                period="hour"
+            )
+            if success:
+                logger.info("Rate limit counter incremented successfully in Redis")
+            else:
+                logger.warning("Failed to increment rate limit counter in Redis")
+        
+        logger.info("Rate limit tracking completed")
+    except Exception as e:
+        logger.error(f"Error applying rate limit: {str(e)}")
+        # Continue even if rate limiting fails
     
     try:
         # Get or create session

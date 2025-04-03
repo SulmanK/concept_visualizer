@@ -48,8 +48,12 @@ async def create_session(
         SessionResponse containing the session ID
     """
     # Apply rate limit - higher limits for session operations
-    limiter = req.app.state.limiter
-    limiter.limit("60/hour")(get_remote_address)(req)
+    try:
+        limiter = req.app.state.limiter
+        limiter.limit("60/hour")(get_remote_address)(req)
+    except Exception as e:
+        session_service.logger.error(f"Rate limiting error (create session): {str(e)}")
+        # Continue without rate limiting in case of error
     
     try:
         session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
@@ -85,8 +89,12 @@ async def sync_session(
         SessionResponse containing the synchronized session ID
     """
     # Apply rate limit - higher limits for session operations
-    limiter = req.app.state.limiter
-    limiter.limit("60/hour")(get_remote_address)(req)
+    try:
+        limiter = req.app.state.limiter
+        limiter.limit("60/hour")(get_remote_address)(req)
+    except Exception as e:
+        session_service.logger.error(f"Rate limiting error (sync session): {str(e)}")
+        # Continue without rate limiting in case of error
     
     try:
         client_session_id = request.client_session_id
