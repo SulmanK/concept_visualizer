@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
+import { RateLimitsPanel } from '../RateLimitsPanel';
 
 export interface MainLayoutProps {
   /**
@@ -16,6 +17,11 @@ export interface MainLayoutProps {
  */
 export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
   const location = useLocation();
+  const [showRateLimits, setShowRateLimits] = useState(false);
+  
+  const toggleRateLimits = () => {
+    setShowRateLimits(!showRateLimits);
+  };
   
   // Using Tailwind classes instead of inline styles for better responsive control
   return (
@@ -27,6 +33,23 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
       </main>
       
       <Footer />
+      
+      {/* API Rate Limits panel - fixed position */}
+      <div className="fixed bottom-4 right-4 z-50">
+        {showRateLimits ? (
+          <RateLimitsPanel className="w-80" />
+        ) : (
+          <button
+            onClick={toggleRateLimits}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+            title="Show API usage limits"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   );
 };

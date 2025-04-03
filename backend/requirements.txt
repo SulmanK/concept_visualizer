@@ -3,6 +3,8 @@ fastapi>=0.95.0
 uvicorn>=0.21.1
 python-multipart>=0.0.6
 pydantic>=1.10.7
+slowapi>=0.1.9
+redis>=5.0.0
 
 # HTTP Client
 httpx>=0.24.0

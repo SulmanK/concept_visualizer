@@ -105,15 +105,18 @@ CREATE TABLE color_variations (
   image_path TEXT NOT NULL -- Path to image in Supabase Storage
 );
 
+
+
 -- Create indexes for performance
 CREATE INDEX concepts_session_id_idx ON concepts(session_id);
 CREATE INDEX color_variations_concept_id_idx ON color_variations(concept_id);
+
 ```
 
 5. Click "Run" to execute the script
 
 6. Verify the tables were created by checking the "Table Editor" section in the left sidebar
-   - You should see the three new tables: `sessions`, `concepts`, and `color_variations`
+   - You should see the four new tables: `sessions`, `concepts`, `color_variations`, and `rate_limits`
    - Note that we're now using `base_image_path` and `image_path` instead of URLs, as these will store the Supabase Storage paths
 
 ## Step 4: Configure Production-Ready Access Policies
@@ -159,6 +162,8 @@ Now that your database schema is set up, configure access policies for all resou
    - For the check expression, use the same expression
    - Operations: SELECT, INSERT, UPDATE, DELETE
    - Click "Save Policy"
+
+
 
 > **Note on Security:** While these policies grant broad access at the database level, our application will enforce security by:
 > 1. Organizing data into session-specific structures
@@ -254,7 +259,123 @@ async def get_recent_concepts(
     return await storage_service.get_recent_concepts(session_id)
 ```
 
-## Step 6: Get API Keys
+## Step 6: Implementing Session-Based Rate Limiting
+
+To ensure fair usage of your API and prevent abuse, we'll implement session-based rate limiting with Supabase:
+
+### 1. Implementing a Supabase Storage Backend for Rate Limiting
+
+Create a custom storage backend that will store rate limits in the Supabase `rate_limits` table:
+
+```python
+# backend/app/core/limiter.py
+import datetime
+import logging
+from typing import Optional
+
+from fastapi import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from backend.app.core.config import settings
+from backend.app.core.supabase import get_supabase_client
+
+logger = logging.getLogger(__name__)
+
+def get_session_or_ip(request: Request) -> str:
+    """Get the session ID from cookies or fall back to IP address."""
+    # Try to get the session ID from cookies
+    session_id = request.cookies.get("concept_session")
+    
+    if session_id:
+        logger.debug(f"Rate limiting using session ID: {session_id}")
+        return f"session:{session_id}"
+    
+    # Fall back to IP address
+    ip = get_remote_address(request)
+    logger.debug(f"Rate limiting using IP address: {ip}")
+    return f"ip:{ip}"
+
+class SupabaseStorage:
+    """Storage implementation for rate limits using Supabase."""
+    
+    def __init__(self):
+        """Initialize the storage with Supabase client."""
+        self.client = get_supabase_client()
+        self.table = "rate_limits"
+    
+    async def get(self, key: str) -> Optional[int]:
+        """Get the current value for a rate limit key."""
+        try:
+            # Remove expired keys first
+            self._cleanup_expired()
+            
+            # Get current value
+            result = self.client.client.table(self.table).select("*").eq("key", key).execute()
+            if result.data and len(result.data) > 0:
+                item = result.data[0]
+                # Check if expired
+                if datetime.datetime.fromisoformat(item["expires_at"].replace("Z", "+00:00")) < datetime.datetime.now(datetime.timezone.utc):
+                    return None
+                return item["value"]
+            return None
+        except Exception as e:
+            logger.error(f"Error getting rate limit key {key}: {e}")
+            return None
+    
+    async def set(self, key: str, value: int, expiry: int) -> None:
+        """Set a new value for a rate limit key."""
+        try:
+            expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=expiry)
+            
+            # Upsert the key
+            self.client.client.table(self.table).upsert({
+                "key": key,
+                "value": value,
+                "expires_at": expires_at.isoformat(),
+                "updated_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+            }).execute()
+        except Exception as e:
+            logger.error(f"Error setting rate limit key {key}: {e}")
+    
+    async def increment(self, key: str, amount: int, expiry: int) -> int:
+        """Increment the value for a rate limit key."""
+        try:
+            current = await self.get(key) or 0
+            new_value = current + amount
+            await self.set(key, new_value, expiry)
+            return new_value
+        except Exception as e:
+            logger.error(f"Error incrementing rate limit key {key}: {e}")
+            return amount  # Default to just the increment amount
+    
+    def _cleanup_expired(self) -> None:
+        """Delete expired rate limit keys."""
+        try:
+            self.client.client.table(self.table).delete().lt(
+                "expires_at", 
+                datetime.datetime.now(datetime.timezone.utc).isoformat()
+            ).execute()
+        except Exception as e:
+            logger.error(f"Error cleaning up expired rate limits: {e}")
+
+# Define rate limit tiers
+GENERAL_API_LIMITS = ["30/minute"]
+GENERATION_LIMITS = ["5/minute", "20/hour"]
+REFINEMENT_LIMITS = ["10/minute", "30/hour"]
+MONTHLY_GENERATION_LIMIT = ["10/month"]
+
+# Create limiter with Supabase storage
+limiter = Limiter(
+    key_func=get_session_or_ip,
+    default_limits=["100/minute"]
+)
+
+def get_limiter() -> Limiter:
+    """Get the configured rate limiter."""
+    return limiter
+
+## Step 7: Get API Keys
 
 To connect your application to Supabase:
 
@@ -268,7 +389,7 @@ To connect your application to Supabase:
 
 4. Important: Never expose the `service_role` key in client-side code; it bypasses RLS policies
 
-## Step 7: Set Up Backend Environment
+## Step 8: Set Up Backend Environment
 
 1. Create or update your `.env` file in the backend directory:
 
@@ -295,7 +416,7 @@ python-multipart>=0.0.5
 pillow>=8.0.0
 ```
 
-## Step 8: Implement Backend Integration
+## Step 9: Implement Backend Integration
 
 Create the necessary files for Supabase integration:
 
@@ -564,7 +685,7 @@ async def get_session_service(
     return SessionService(supabase_client)
 ```
 
-## Step 9: Set Up Frontend Environment
+## Step 10: Set Up Frontend Environment
 
 1. Create or update your `.env` file in the frontend directory:
 
@@ -589,7 +710,7 @@ const apiClient = axios.create({
 export default apiClient;
 ```
 
-## Step 10: Testing the Integration
+## Step 11: Testing the Integration
 
 Once everything is set up, test the integration:
 
@@ -609,7 +730,7 @@ Once everything is set up, test the integration:
    - Verify that your recent concepts are still available
    - Check that images still load correctly
 
-## Step 11: Troubleshooting Common Issues
+## Step 12: Troubleshooting Common Issues
 
 ### CORS Issues
 
@@ -635,7 +756,7 @@ If images aren't processing correctly:
 2. Verify Pillow is installed correctly
 3. Test with small, simple images first
 
-## Step 12: Implementing Nightly Data Purge
+## Step 13: Implementing Nightly Data Purge
 
 For development environments or implementations with privacy requirements, you may want to purge all data nightly. This section outlines how to implement this functionality.
 
@@ -659,6 +780,7 @@ async def purge_all_data(self):
         await self.delete_all_color_variations()
         await self.delete_all_concepts()
         await self.delete_all_sessions()
+        await self.delete_all_rate_limits()
         
         # Delete all from storage buckets
         await self.delete_all_storage_objects("palette-images")
@@ -698,6 +820,16 @@ async def delete_all_sessions(self):
         return True
     except Exception as e:
         self.logger.error(f"Error deleting sessions: {e}")
+        return False
+
+async def delete_all_rate_limits(self):
+    """Delete all records from rate_limits table."""
+    try:
+        result = await self.client.table("rate_limits").delete().neq("id", "impossible-value").execute()
+        self.logger.info(f"Deleted {len(result.data) if result.data else 0} rate limits")
+        return True
+    except Exception as e:
+        self.logger.error(f"Error deleting rate limits: {e}")
         return False
 
 async def delete_all_storage_objects(self, bucket: str):

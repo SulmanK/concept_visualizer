@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.api.routes import api_router
 from backend.app.core.config import settings
 from backend.app.utils.logging import setup_logging
+from backend.app.core.rate_limiter import setup_rate_limiter
 
 # Configure application logging
 setup_logging()
@@ -36,6 +37,9 @@ app = FastAPI(
         "url": "https://opensource.org/licenses/MIT",
     },
 )
+
+# Setup rate limiting
+limiter = setup_rate_limiter(app)
 
 # Configure CORS
 app.add_middleware(

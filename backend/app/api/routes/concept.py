@@ -9,8 +9,9 @@ import traceback
 import uuid
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
 from pydantic import ValidationError
+from slowapi.util import get_remote_address
 
 from backend.app.models.request import PromptRequest, RefinementRequest
 from backend.app.models.response import GenerationResponse, PaletteVariation
@@ -29,6 +30,7 @@ router = APIRouter()
 async def generate_concept(
     request: PromptRequest,
     response: Response,
+    req: Request,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
     image_service: ImageService = Depends(get_image_service),
@@ -41,6 +43,7 @@ async def generate_concept(
     Args:
         request: The prompt request containing logo and theme descriptions
         response: FastAPI response object for setting cookies
+        req: The FastAPI request object for rate limiting
         concept_service: The concept generation service
         session_service: Service for managing sessions
         image_service: Service for image operations
@@ -53,6 +56,10 @@ async def generate_concept(
     Raises:
         HTTPException: If there was an error generating the concept
     """
+    # Apply rate limit
+    limiter = req.app.state.limiter
+    limiter.limit("10/month")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, _ = await session_service.get_or_create_session(response, session_id)
@@ -116,6 +123,7 @@ async def generate_concept(
 async def generate_concept_with_palettes(
     request: PromptRequest,
     response: Response,
+    req: Request,
     num_palettes: int = 7,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
@@ -130,6 +138,7 @@ async def generate_concept_with_palettes(
     Args:
         request: The prompt request containing logo and theme descriptions
         response: FastAPI response object for setting cookies
+        req: The FastAPI request object for rate limiting
         num_palettes: Number of distinct palette variations to generate (default: 7)
         concept_service: The concept generation service
         session_service: Service for managing sessions
@@ -143,6 +152,10 @@ async def generate_concept_with_palettes(
     Raises:
         HTTPException: If there was an error during generation
     """
+    # Apply rate limit
+    limiter = req.app.state.limiter
+    limiter.limit("10/month")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, _ = await session_service.get_or_create_session(response, session_id)
@@ -247,6 +260,7 @@ async def generate_concept_with_palettes(
 async def refine_concept(
     request: RefinementRequest,
     response: Response,
+    req: Request,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
     image_service: ImageService = Depends(get_image_service),
@@ -254,12 +268,13 @@ async def refine_concept(
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
-    Refine an existing concept based on the provided request and store it.
+    Refine an existing concept based on user feedback.
     
     Args:
-        request: The refinement request with original image and new instructions
+        request: The refinement request containing feedback and concept ID
         response: FastAPI response object for setting cookies
-        concept_service: The concept generation service
+        req: The FastAPI request object for rate limiting
+        concept_service: The concept service
         session_service: Service for managing sessions
         image_service: Service for image operations
         storage_service: Service for storing concepts
@@ -271,6 +286,10 @@ async def refine_concept(
     Raises:
         HTTPException: If there was an error refining the concept
     """
+    # Apply rate limit
+    limiter = req.app.state.limiter
+    limiter.limit("10/hour")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, _ = await session_service.get_or_create_session(response, session_id)

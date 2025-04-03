@@ -36,6 +36,9 @@ class Settings(BaseSettings):
         SUPABASE_KEY: API key (anon or service role) for Supabase
         LOG_LEVEL: Log level for the application
         ENVIRONMENT: Environment the application is running in
+        UPSTASH_REDIS_ENDPOINT: Endpoint for Upstash Redis
+        UPSTASH_REDIS_PASSWORD: Password for Upstash Redis
+        UPSTASH_REDIS_PORT: Port for Upstash Redis
     """
     
     # API settings
@@ -61,6 +64,11 @@ class Settings(BaseSettings):
     # Environment settings
     ENVIRONMENT: str = "development"
     
+    # Upstash Redis settings
+    UPSTASH_REDIS_ENDPOINT: str = "your-redis-url.upstash.io"
+    UPSTASH_REDIS_PASSWORD: str = "your-redis-password"
+    UPSTASH_REDIS_PORT: int = 6379
+    
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(
         env_file=str(ENV_FILE),
@@ -82,4 +90,7 @@ supabase_url = settings.SUPABASE_URL
 logger.info(f"Supabase URL: {supabase_url}")
 
 # Log the environment
-logger.info(f"Application running in {settings.ENVIRONMENT} environment") 
+logger.info(f"Application running in {settings.ENVIRONMENT} environment")
+
+# Log Redis connection info
+logger.info(f"Upstash Redis Endpoint: {settings.UPSTASH_REDIS_ENDPOINT}") 

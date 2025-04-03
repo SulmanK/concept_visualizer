@@ -21,7 +21,7 @@ concept_visualizer/
 
 ## Backend Structure
 
-The backend follows a layered architecture pattern with clear separation of concerns:
+The backend follows a layered architecture pattern with clear separation of concerns. The current structure is:
 
 ```
 backend/
@@ -32,50 +32,80 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── config.py     # Configuration management
 │   │   ├── logging.py    # Logging setup
+│   │   ├── supabase.py   # Supabase client integration
 │   │   └── exceptions.py # Custom exception definitions
 │   ├── api/              # API layer
 │   │   ├── __init__.py
-│   │   ├── dependencies.py
-│   │   ├── errors.py     # Error handlers
 │   │   └── routes/       # API routes organized by domain
 │   │       ├── __init__.py
+│   │       ├── api.py
 │   │       ├── concept.py
-│   │       └── health.py
+│   │       ├── concept_storage.py
+│   │       ├── health.py
+│   │       ├── session.py
+│   │       └── svg_conversion.py
 │   ├── services/         # Service layer (business logic)
 │   │   ├── __init__.py
 │   │   ├── concept_service.py
+│   │   ├── concept_storage_service.py
+│   │   ├── image_processing.py
+│   │   ├── image_service.py
+│   │   ├── session_service.py
 │   │   └── jigsawstack/  # External API integration
 │   │       ├── __init__.py
-│   │       ├── client.py
-│   │       ├── image.py
-│   │       └── text.py
+│   │       └── client.py
 │   ├── models/           # Data models
 │   │   ├── __init__.py
+│   │   ├── concept.py    # Domain models
 │   │   ├── request.py    # Request models (Pydantic)
 │   │   └── response.py   # Response models (Pydantic)
 │   └── utils/            # Utility functions
 │       ├── __init__.py
 │       └── color_utils.py
-├── tests/                # Test directory mirroring app structure
+├── static/               # Static files served by backend
+├── tests/                # Test directory 
 │   ├── __init__.py
 │   ├── conftest.py       # Test fixtures
-│   ├── test_api/
-│   │   └── test_routes/
-│   │       ├── test_concept.py
-│   │       └── test_health.py
-│   └── test_services/
-│       └── test_concept_service.py
+│   └── test_api/
+│       └── test_routes/
+│           ├── test_concept.py
+│           └── test_health.py
+├── scripts/              # Backend utility scripts
+├── run.py                # Script to run the application
+├── setup.py              # Package setup script
+├── requirements.txt      # Project dependencies
 ├── .env                  # Environment variables (not in git)
-└── requirements-dev.txt  # Development dependencies
+└── .env.example          # Example environment variables template
 ```
 
 ### Backend Layer Responsibilities
 
 1. **API Layer** (`api/`): Handles HTTP requests/responses, input validation, and routing
+   - Responsible for input validation using Pydantic models
+   - Routes requests to appropriate service functions
+   - Handles cookies and session management
+   - Returns HTTP responses with proper status codes
+
 2. **Service Layer** (`services/`): Contains business logic and coordinates with external services
+   - Implements domain logic for concept generation and refinement
+   - Orchestrates calls to external APIs (JigsawStack)
+   - Handles image processing and color palette generation
+   - Provides session management and concept storage functionality
+
 3. **Models** (`models/`): Defines data structures using Pydantic
+   - Request models validate incoming API requests
+   - Response models define API response structures
+   - Domain models represent core business entities
+
 4. **Core** (`core/`): Application configuration and setup
+   - Manages environment variables and settings
+   - Configures logging and exception handling
+   - Provides Supabase client for database and storage operations
+
 5. **Utils** (`utils/`): Reusable utility functions
+   - Color manipulation utilities
+   - Logging utilities
+   - Helper functions used across different layers
 
 ## Frontend Structure
 
@@ -222,15 +252,39 @@ frontend/
 2. **Hook Tests**: Test custom hooks
 3. **Integration Tests**: Test feature workflows
 
-## CI/CD Configuration
+## Areas for Improvement
 
-```
-.github/
-└── workflows/
-    ├── backend-ci.yml    # Backend CI pipeline
-    ├── frontend-ci.yml   # Frontend CI pipeline
-    └── deploy.yml        # Vercel deployment
-```
+### Backend Enhancements
+
+1. **API Layer Refinement**:
+   - Create dedicated route files for different concept operations
+   - Add error handling middleware
+   - Implement dependencies.py for cleaner dependency injection
+
+2. **Security Improvements**:
+   - Secure environment variable management
+   - Implement proper rate limiting
+   - Add CSRF protection
+
+3. **Performance Optimization**:
+   - Add caching layer for frequent operations
+   - Optimize image processing operations
+
+4. **Documentation**:
+   - Enhance API documentation with more examples
+   - Create detailed deployment instructions
+
+### Frontend Enhancements
+
+1. **Performance Optimization**:
+   - Implement code splitting
+   - Add caching for API responses
+   - Optimize bundle size
+
+2. **User Experience**:
+   - Add more micro-interactions
+   - Improve loading states
+   - Enhance error feedback
 
 ## Development Environment Setup
 
@@ -252,52 +306,29 @@ scripts/
 ```
 # .env.example (template for developers)
 # Backend
-JIGSAWSTACK_API_KEY=your_api_key_here
-LOG_LEVEL=INFO
-CORS_ORIGINS=http://localhost:3000
+CONCEPT_JIGSAWSTACK_API_KEY=your_api_key_here
+CONCEPT_LOG_LEVEL=INFO
+CONCEPT_CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+CONCEPT_SUPABASE_URL=your_supabase_url
+CONCEPT_SUPABASE_KEY=your_supabase_key
+CONCEPT_ENVIRONMENT=development
 
 # Frontend
 VITE_API_BASE_URL=http://localhost:8000/api
 ```
 
-## Dependency Management
-
-1. **Backend**: UV for Python package management
-   - `pyproject.toml` for project configuration
-   - Virtual environment isolation
-
-2. **Frontend**: npm/yarn for JavaScript dependencies
-   - Proper version constraints in package.json
-
 ## Deployment Configuration
 
-### Vercel Configuration
+The project is prepared for deployment with the following considerations:
 
-```
-vercel.json
-```
+1. **Backend Deployment**:
+   - Runs as a FastAPI application
+   - Requires environment variables for configuration
+   - Uses Supabase for data storage
 
-This file configures both frontend and backend deployment on Vercel, including:
-- Build commands
-- Environment variable handling
-- Routing rules
-
-## Best Practices Enforced Through Structure
-
-1. **Separation of Concerns**: Clear boundaries between layers
-2. **Single Responsibility**: Each directory has a focused purpose
-3. **Dependency Injection**: Services are injected rather than imported directly
-4. **Consistent Naming**: Naming conventions are consistent across project
-5. **Import Organization**: Avoids circular dependencies
-
-## Implementation Guidelines
-
-When implementing the concept visualizer, developers should:
-
-1. Place new API endpoints in the appropriate route file in `backend/app/api/routes/`
-2. Implement business logic in service modules in `backend/app/services/`
-3. Define data models in `backend/app/models/`
-4. Create React components in their feature directory or in shared components
-5. Follow the testing patterns established in the test directories
+2. **Frontend Deployment**:
+   - Built with Vite for optimized bundles
+   - Requires API URL configuration
+   - Static assets can be served from CDN
 
 This structure follows clean architecture principles while being pragmatic for a modern web application with Python backend and React frontend. 

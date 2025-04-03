@@ -4,13 +4,14 @@ SVG conversion API endpoints.
 This module provides routes for converting raster images to SVG format.
 """
 
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Request
 import base64
 from io import BytesIO
 import tempfile
 import os
 import vtracer
 from PIL import Image
+from slowapi.util import get_remote_address
 
 from ...models.request import SVGConversionRequest
 from ...models.response import SVGConversionResponse
@@ -21,16 +22,23 @@ router = APIRouter()
 
 @router.post("/convert-to-svg", response_model=SVGConversionResponse)
 async def convert_to_svg(
-    request: SVGConversionRequest = Body(...)
+    request: SVGConversionRequest = Body(...),
+    req: Request = None
 ):
     """Convert a raster image to SVG using vtracer.
     
     Args:
         request: The request containing the image data and conversion options
+        req: The FastAPI request object for rate limiting
         
     Returns:
         SVGConversionResponse containing the SVG data
     """
+    # Apply rate limit - SVG conversion is resource-intensive
+    if req:
+        limiter = req.app.state.limiter
+        limiter.limit("20/hour")(get_remote_address)(req)
+    
     try:
         # Extract the image data from base64
         if not request.image_data:

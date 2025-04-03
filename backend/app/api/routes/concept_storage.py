@@ -5,8 +5,9 @@ This module provides endpoints for storing and retrieving concepts
 from the database.
 """
 
-from fastapi import APIRouter, Depends, Response, Cookie, HTTPException
+from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from typing import Optional, List
+from slowapi.util import get_remote_address
 
 from backend.app.models.request import PromptRequest
 from backend.app.models.response import GenerationResponse
@@ -23,6 +24,7 @@ router = APIRouter()
 async def generate_and_store_concept(
     request: PromptRequest,
     response: Response,
+    req: Request,
     concept_service: ConceptService = Depends(get_concept_service),
     session_service: SessionService = Depends(get_session_service),
     image_service: ImageService = Depends(get_image_service),
@@ -34,6 +36,7 @@ async def generate_and_store_concept(
     Args:
         request: User prompt request with logo and theme descriptions
         response: FastAPI response object for setting cookies
+        req: The FastAPI request object for rate limiting
         concept_service: Service for generating concepts
         session_service: Service for managing sessions
         image_service: Service for handling images
@@ -42,6 +45,10 @@ async def generate_and_store_concept(
     Returns:
         Generated concept with image URL and color palettes
     """
+    # Apply rate limit
+    limiter = req.app.state.limiter
+    limiter.limit("10/month")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, is_new_session = await session_service.get_or_create_session(response)
@@ -102,6 +109,7 @@ async def generate_and_store_concept(
 @router.get("/recent", response_model=List[ConceptSummary])
 async def get_recent_concepts(
     response: Response,
+    req: Request,
     session_service: SessionService = Depends(get_session_service),
     storage_service: ConceptStorageService = Depends(get_concept_storage_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
@@ -111,6 +119,7 @@ async def get_recent_concepts(
     
     Args:
         response: FastAPI response object for setting cookies
+        req: The FastAPI request object for rate limiting
         session_service: Service for managing sessions
         storage_service: Service for storing concepts
         session_id: Optional session ID from cookies
@@ -118,6 +127,10 @@ async def get_recent_concepts(
     Returns:
         List of recent concepts
     """
+    # Apply rate limit - higher limits for read operations
+    limiter = req.app.state.limiter
+    limiter.limit("30/minute")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
@@ -136,6 +149,7 @@ async def get_recent_concepts(
 async def get_concept_detail(
     concept_id: str,
     response: Response,
+    req: Request,
     session_service: SessionService = Depends(get_session_service),
     storage_service: ConceptStorageService = Depends(get_concept_storage_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
@@ -146,6 +160,7 @@ async def get_concept_detail(
     Args:
         concept_id: ID of the concept to retrieve
         response: FastAPI response object for setting cookies
+        req: The FastAPI request object for rate limiting
         session_service: Service for managing sessions
         storage_service: Service for storing concepts
         session_id: Optional session ID from cookies
@@ -153,6 +168,10 @@ async def get_concept_detail(
     Returns:
         Detailed concept information
     """
+    # Apply rate limit - higher limits for read operations
+    limiter = req.app.state.limiter
+    limiter.limit("30/minute")(get_remote_address)(req)
+    
     try:
         # Get or create session
         session_id, _ = await session_service.get_or_create_session(response, session_id)
