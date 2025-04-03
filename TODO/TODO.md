@@ -260,7 +260,9 @@
   - [ ] Create test fixtures and helper functions
 
 Future
-- Fix Rate Limit parsing on SVG conversion
+- Consider Implementing Background Tasks:
+For long-running operations, use FastAPI's BackgroundTasks
+Or implement a task queue system like Celery with Redis
 
 - Autoclear storage buckets every day 
 - Tests
