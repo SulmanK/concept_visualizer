@@ -234,10 +234,25 @@
   - [x] Audit backend dependencies for security vulnerabilities
   - [x] Update JigsawStack client error handling to prevent exposing sensitive information
 - [ ] **Directory Structure Refinement**
-  - [ ] Create separate files for route handlers in api/routes/ (split concept.py into multiple files)
-  - [ ] Add missing dependencies.py and errors.py in the API layer
-  - [ ] Update imports to follow consistent patterns
-  - [ ] Remove unused files/code and reorganize tests to match current structure
+  - [ ] Create separate files for route handlers in api/routes/:
+    - [ ] Split concept.py (469 lines) into separate modules:
+      - [ ] concept_generation.py - Move generate_concept and generate_with_palettes functions
+      - [ ] concept_refinement.py - Move refine_concept function
+      - [ ] concept_export.py - Move export_concept function
+    - [ ] Split health.py (401 lines) into separate modules:
+      - [ ] health_check.py - Move health_check functions
+      - [ ] rate_limits.py - Move rate limit checking functionality
+    - [ ] Split svg_conversion.py (304 lines) into more focused modules
+  - [ ] Reorganize API structure to match the architecture guidelines:
+    - [ ] Create api/dependencies.py with shared dependency functions
+    - [ ] Create api/errors.py with custom error handling
+    - [ ] Move API route registration from __init__.py to a dedicated router.py file
+  - [ ] Organize imports consistently and fix import patterns:
+    - [ ] Sort imports using isort pattern: stdlib, third-party, local
+    - [ ] Use consistent relative vs. absolute imports across files
+  - [ ] Remove unused imports and code from all files
+  - [ ] Reorganize tests to match current structure
+    - [ ] Create test fixtures directory
 - [ ] **Error Handling Improvements**
   - [ ] Implement centralized error handler middleware
   - [ ] Create custom exception classes
@@ -268,6 +283,34 @@
   - [ ] Increase test coverage
   - [ ] Add performance tests
   - [ ] Create test fixtures and helper functions
+
+## Code Quality Improvements
+- [ ] Fix linter errors across the codebase:
+  - [ ] Fix spacing between functions (two blank lines needed)
+  - [ ] Fix line length issues in docstrings and comments
+  - [ ] Fix unused imports
+- [ ] Refactor large functions:
+  - [ ] Extract rate limiting logic from concept.py endpoints into separate helper functions
+  - [ ] Reduce complexity in _get_limit_info() in health.py
+  - [ ] Refactor error handling patterns in service classes
+- [ ] Standardize error handling throughout the codebase:
+  - [ ] Create custom exception classes for different error categories
+  - [ ] Implement consistent error response format
+  - [ ] Add more descriptive error messages for API users
+- [ ] Improve docstrings consistency:
+  - [ ] Ensure all public functions have complete docstrings with Args, Returns, Raises
+  - [ ] Add module-level docstrings for all new modules
+- [ ] Extract duplicated code into shared utility functions:
+  - [ ] Consolidate rate limiting code
+  - [ ] Create shared validation helpers
+- [ ] Apply SRP (Single Responsibility Principle) more rigorously:
+  - [ ] Move rate limiting logic out of route handlers
+  - [ ] Separate HTTP concerns from business logic in services
+- [ ] Add type hints for all function parameters and return values
+- [ ] Add more detailed logging throughout the codebase
+- [ ] Update variable naming for clarity:
+  - [ ] Rename variables with more descriptive names (e.g., 'e' to 'error')
+  - [ ] Use consistent naming patterns across all modules
 
 Future
 - Consider Implementing Background Tasks:
