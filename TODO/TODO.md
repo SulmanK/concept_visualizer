@@ -266,6 +266,48 @@
       - [x] Create api/dependencies.py with shared dependency functions
       - [x] Create api/errors.py with custom error handling
       - [x] Move API route registration from __init__.py to a dedicated router.py file
+  - [ ] **Core Module Refactoring**:
+    - [ ] Refactor supabase.py (585 lines) into smaller modules:
+      - [ ] Create supabase/ directory with package structure
+      - [ ] Extract session_storage.py module for session-related operations
+      - [ ] Extract concept_storage.py module for concept storage operations
+      - [ ] Extract image_storage.py module for image storage operations
+      - [ ] Create client.py module for base client functionality
+      - [ ] Create __init__.py to provide a clean interface
+    - [ ] Refactor rate_limiter.py (262 lines) into smaller modules:
+      - [ ] Extract separate modules for Redis integration
+      - [ ] Create limiter.py for core rate limiting functionality
+      - [ ] Extract helpers.py for utility functions
+      - [ ] Ensure proper type hints and documentation
+    - [ ] Ensure proper error handling and logging throughout core modules
+  - [ ] **Service Layer Refactoring**:
+    - [ ] Refactor concept_service.py (314 lines) into smaller modules:
+      - [ ] Extract generation.py module for concept generation
+      - [ ] Extract refinement.py module for concept refinement
+      - [ ] Extract palette.py module for palette generation
+      - [ ] Create interfaces/ directory for service interfaces
+    - [ ] Refactor image_service.py (259 lines) and image_processing.py (311 lines):
+      - [ ] Create image/ directory with package structure
+      - [ ] Extract processing.py module for image processing operations
+      - [ ] Extract storage.py module for image storage operations
+      - [ ] Extract conversion.py module for format conversion operations
+    - [ ] Improve separation of concerns in all service modules
+  - [ ] **Models Refactoring**:
+    - [ ] Organize models into domain-specific modules:
+      - [ ] Create concept/ directory for concept-related models
+      - [ ] Create session/ directory for session-related models
+      - [ ] Ensure proper validation and documentation for all models
+  - [ ] **Utils and Main Refactoring**:
+    - [ ] Refactor main.py (145 lines) to improve structure:
+      - [ ] Extract middleware configuration to a separate module
+      - [ ] Extract application setup code to a factory function
+      - [ ] Improve documentation and type hints
+    - [ ] Organize utils directory:
+      - [ ] Create logging/ directory with improved logging patterns
+      - [ ] Move rate_limiting.py to core/rate_limiting/ directory
+      - [ ] Create validation/ directory for shared validation functions
+      - [ ] Create data/ directory for data transformation helpers
+      - [ ] Ensure all utility functions have comprehensive tests
   - [ ] Organize imports consistently and fix import patterns:
     - [x] Updated direct router imports in __init__.py for cleaner organization
     - [ ] Sort imports using isort pattern: stdlib, third-party, local
@@ -294,15 +336,48 @@
   - [ ] Test background task functionality with multiple concurrent users
   - [ ] Add task status polling in frontend
 - [ ] **Documentation**
+  - [x] Create central docs/ directory with subdirectories for backend/ and frontend/
+  - [x] Create API route documentation:
+    - [x] Document concept endpoints
+    - [x] Document concept_storage endpoints
+    - [x] Document session endpoints
+    - [x] Document health endpoints
+    - [x] Document svg endpoints
+  - [ ] Create service layer documentation:
+    - [ ] Document concept_service
+    - [ ] Document concept_storage_service
+    - [ ] Document image_service and image_processing
+    - [ ] Document session_service
+    - [ ] Document jigsawstack client
+  - [ ] Create core module documentation:
+    - [ ] Document configuration management
+    - [ ] Document rate limiter implementation
+    - [ ] Document Supabase integration
+    - [ ] Document error handling patterns
+  - [ ] Create models documentation:
+    - [ ] Document request models
+    - [ ] Document response models
+    - [ ] Document domain models
+  - [ ] Create utils documentation:
+    - [ ] Document logging utilities
+    - [ ] Document masking utilities
+    - [ ] Document rate limiting utilities
+  - [ ] Create deployment documentation:
+    - [ ] Document environment setup
+    - [ ] Document configuration options
+    - [ ] Document deployment process
+  - [ ] Create developer guide:
+    - [ ] Document development environment setup
+    - [ ] Document testing procedures
+    - [ ] Document code style and architecture guidelines
   - [ ] Update Swagger/OpenAPI documentation with detailed descriptions
-  - [ ] Create deployment documentation
-  - [ ] Add developer setup instructions
-  - [ ] Document environment variables and configuration
+
 - [ ] **Testing Improvements**
   - [ ] Add integration tests for API endpoints
   - [ ] Increase test coverage
   - [ ] Add performance tests
   - [ ] Create test fixtures and helper functions
+
 - [ ] **API Refactoring Improvements**
   - [x] Create centralized dependencies module for route handlers
   - [x] Implement a consistent error handling pattern
@@ -316,7 +391,7 @@
     - [x] Refactor svg module handlers
   - [ ] Add integration tests for new error handling patterns
   - [ ] Document new dependency and error handling patterns
-
+  
 ## Code Quality Improvements
 - [ ] Fix linter errors across the codebase:
   - [ ] Fix spacing between functions (two blank lines needed)
