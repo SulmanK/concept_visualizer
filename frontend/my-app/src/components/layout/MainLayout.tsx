@@ -34,17 +34,28 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
       
       <Footer />
       
-      {/* API Rate Limits panel - fixed position */}
-      <div className="fixed bottom-4 right-4 z-50">
+      {/* API Rate Limits panel - positioned in middle-right */}
+      <div className="fixed right-0 top-1/2 transform -translate-y-1/2 z-50">
         {showRateLimits ? (
-          <RateLimitsPanel className="w-80" />
+          <div className="flex">
+            <RateLimitsPanel className="w-80" />
+            <button
+              onClick={toggleRateLimits}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-l-md rounded-r-none p-2 shadow-lg"
+              title="Hide API usage limits"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         ) : (
           <button
             onClick={toggleRateLimits}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-l-md rounded-r-none p-2 shadow-lg"
             title="Show API usage limits"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </button>

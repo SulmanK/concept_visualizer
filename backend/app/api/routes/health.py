@@ -54,8 +54,6 @@ async def rate_limits(request: Request):
             keys_to_check = [
                 f"*{user_ip}*month*",  # For monthly limits
                 f"*{user_ip}*hour*",    # For hourly limits
-                f"*{user_ip}*minute*",  # For minute limits
-                f"*{user_ip}*day*",     # For daily limits
             ]
             
             for pattern in keys_to_check:
@@ -69,15 +67,13 @@ async def rate_limits(request: Request):
         except Exception as e:
             logger.error(f"Error accessing Redis directly: {str(e)}")
     
-    # Get all the configured limits
+    # Get only the requested rate limits
     limits_info = {
         "user_identifier": user_ip,
         "limits": {
             "generate_concept": _get_limit_info(limiter, direct_redis_client, "10/month", user_ip, "generate_concept"),
-            "refine_concept": _get_limit_info(limiter, direct_redis_client, "10/hour", user_ip, "refine_concept"),
             "store_concept": _get_limit_info(limiter, direct_redis_client, "10/month", user_ip, "store_concept"),
-            "get_concepts": _get_limit_info(limiter, direct_redis_client, "30/minute", user_ip, "get_concepts"),
-            "sessions": _get_limit_info(limiter, direct_redis_client, "60/hour", user_ip, "sessions"),
+            "refine_concept": _get_limit_info(limiter, direct_redis_client, "10/hour", user_ip, "refine_concept"),
             "svg_conversion": _get_limit_info(limiter, direct_redis_client, "20/hour", user_ip, "svg_conversion"),
         },
         "default_limits": ["200/day", "50/hour", "10/minute"]
