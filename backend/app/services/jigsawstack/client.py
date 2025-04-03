@@ -10,7 +10,8 @@ import json
 from functools import lru_cache
 from typing import List, Dict, Any
 
-from backend.app.core.config import settings, get_masked_value
+from app.core.config import settings, get_masked_value
+from ...utils.mask import mask_id
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +412,9 @@ def get_jigsawstack_client() -> JigsawStackClient:
     Returns:
         JigsawStackClient: A singleton instance of the JigsawStack client
     """
-    logger.info(f"Creating JigsawStack client with API key: {get_masked_value(settings.JIGSAWSTACK_API_KEY)}...")
+    # Mask the API key in logs
+    masked_api_key = mask_id(settings.JIGSAWSTACK_API_KEY) if settings.JIGSAWSTACK_API_KEY else "none"
+    logger.info(f"Creating JigsawStack client with API key: {masked_api_key}...")
     return JigsawStackClient(
         api_key=settings.JIGSAWSTACK_API_KEY,
         api_url=settings.JIGSAWSTACK_API_URL

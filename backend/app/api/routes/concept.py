@@ -13,12 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
 from pydantic import ValidationError
 from slowapi.util import get_remote_address
 
-from backend.app.models.request import PromptRequest, RefinementRequest
-from backend.app.models.response import GenerationResponse, PaletteVariation
-from backend.app.services.concept_service import ConceptService, get_concept_service
-from backend.app.services.session_service import SessionService, get_session_service
-from backend.app.services.image_service import ImageService, get_image_service
-from backend.app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
+from app.models.request import PromptRequest, RefinementRequest
+from app.models.response import GenerationResponse, PaletteVariation
+from app.services.concept_service import ConceptService, get_concept_service
+from app.services.session_service import SessionService, get_session_service
+from app.services.image_service import ImageService, get_image_service
+from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
 
 # Configure logging
 logger = logging.getLogger("concept_api")
@@ -59,34 +59,39 @@ async def generate_concept(
     # Apply rate limit
     limiter = req.app.state.limiter
     try:
-        # Use the rate limit function properly with a specific key
-        key_func = get_remote_address
+        # Use session ID for rate limiting (key_func is now get_session_id)
         rate_limit = "10/month"
-        user_id = key_func(req)
         
         # Log the rate limiting attempt
-        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        logger.info(f"Applying rate limit '{rate_limit}' for session")
         
         # Try-except block for the rate limit to handle connection issues
         try:
-            limiter.limit(rate_limit)(key_func)(req)
-            logger.info("SlowAPI rate limit applied successfully")
+            # Fix the await syntax - limiter.limit returns a function, not an awaitable
+            limit_func = limiter.limit(rate_limit)
+            # Apply the limit function to the request, but don't await it (it's not an async function)
+            limit_func(req)
+            logger.debug("SlowAPI rate limit applied successfully")
         except Exception as e:
             logger.error(f"SlowAPI rate limiting error: {str(e)}")
         
         # Use our custom direct Redis tracking as a more reliable method
         if hasattr(limiter, 'increment_rate_limit'):
+            # The user ID will be extracted from cookies in the key_func
+            user_id = req.cookies.get("concept_session", get_remote_address(req))
+            user_id = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
+            
             success = limiter.increment_rate_limit(
                 user_id=user_id,
                 endpoint="/api/concept/generate",
                 period="month"
             )
             if success:
-                logger.info("Rate limit counter incremented successfully in Redis")
+                logger.debug("Rate limit counter incremented successfully in Redis")
             else:
                 logger.warning("Failed to increment rate limit counter in Redis")
         
-        logger.info("Rate limit tracking completed")
+        logger.debug("Rate limit tracking completed")
     except Exception as e:
         logger.error(f"Error applying rate limit: {str(e)}")
         # Continue even if rate limiting fails
@@ -186,34 +191,39 @@ async def generate_concept_with_palettes(
     # Apply rate limit
     limiter = req.app.state.limiter
     try:
-        # Use the rate limit function properly with a specific key
-        key_func = get_remote_address
+        # Use session ID for rate limiting (key_func is now get_session_id)
         rate_limit = "10/month"
-        user_id = key_func(req)
         
         # Log the rate limiting attempt
-        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        logger.info(f"Applying rate limit '{rate_limit}' for session")
         
         # Try-except block for the rate limit to handle connection issues
         try:
-            limiter.limit(rate_limit)(key_func)(req)
-            logger.info("SlowAPI rate limit applied successfully")
+            # Fix the await syntax - limiter.limit returns a function, not an awaitable
+            limit_func = limiter.limit(rate_limit)
+            # Apply the limit function to the request, but don't await it (it's not an async function)
+            limit_func(req)
+            logger.debug("SlowAPI rate limit applied successfully")
         except Exception as e:
             logger.error(f"SlowAPI rate limiting error: {str(e)}")
         
         # Use our custom direct Redis tracking as a more reliable method
         if hasattr(limiter, 'increment_rate_limit'):
+            # The user ID will be extracted from cookies in the key_func
+            user_id = req.cookies.get("concept_session", get_remote_address(req))
+            user_id = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
+            
             success = limiter.increment_rate_limit(
                 user_id=user_id,
                 endpoint="/api/concept/generate-with-palettes",
                 period="month"
             )
             if success:
-                logger.info("Rate limit counter incremented successfully in Redis")
+                logger.debug("Rate limit counter incremented successfully in Redis")
             else:
                 logger.warning("Failed to increment rate limit counter in Redis")
         
-        logger.info("Rate limit tracking completed")
+        logger.debug("Rate limit tracking completed")
     except Exception as e:
         logger.error(f"Error applying rate limit: {str(e)}")
         # Continue even if rate limiting fails
@@ -248,7 +258,7 @@ async def generate_concept_with_palettes(
         
         for palette in palettes:
             # Apply each palette to the base image using the new OpenCV method
-            from backend.app.core.supabase import get_supabase_client
+            from app.core.supabase import get_supabase_client
             supabase_client = get_supabase_client()
             
             # Transform the image with the current palette
@@ -351,34 +361,39 @@ async def refine_concept(
     # Apply rate limit
     limiter = req.app.state.limiter
     try:
-        # Use the rate limit function properly with a specific key
-        key_func = get_remote_address
+        # Use session ID for rate limiting (key_func is now get_session_id)
         rate_limit = "10/hour"
-        user_id = key_func(req)
         
         # Log the rate limiting attempt
-        logger.info(f"Applying rate limit '{rate_limit}' to user {user_id}")
+        logger.info(f"Applying rate limit '{rate_limit}' for session")
         
         # Try-except block for the rate limit to handle connection issues
         try:
-            limiter.limit(rate_limit)(key_func)(req)
-            logger.info("SlowAPI rate limit applied successfully")
+            # Fix the await syntax - limiter.limit returns a function, not an awaitable
+            limit_func = limiter.limit(rate_limit)
+            # Apply the limit function to the request, but don't await it (it's not an async function)
+            limit_func(req)
+            logger.debug("SlowAPI rate limit applied successfully")
         except Exception as e:
             logger.error(f"SlowAPI rate limiting error: {str(e)}")
         
         # Use our custom direct Redis tracking as a more reliable method
         if hasattr(limiter, 'increment_rate_limit'):
+            # The user ID will be extracted from cookies in the key_func
+            user_id = req.cookies.get("concept_session", get_remote_address(req))
+            user_id = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
+            
             success = limiter.increment_rate_limit(
                 user_id=user_id,
                 endpoint="/api/concept/refine",
                 period="hour"
             )
             if success:
-                logger.info("Rate limit counter incremented successfully in Redis")
+                logger.debug("Rate limit counter incremented successfully in Redis")
             else:
                 logger.warning("Failed to increment rate limit counter in Redis")
         
-        logger.info("Rate limit tracking completed")
+        logger.debug("Rate limit tracking completed")
     except Exception as e:
         logger.error(f"Error applying rate limit: {str(e)}")
         # Continue even if rate limiting fails

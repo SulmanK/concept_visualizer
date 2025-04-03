@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from typing import Optional
 from slowapi.util import get_remote_address
 
-from backend.app.services.session_service import SessionService, get_session_service
+from app.services.session_service import SessionService, get_session_service
 
 
 router = APIRouter()
@@ -47,13 +47,7 @@ async def create_session(
     Returns:
         SessionResponse containing the session ID
     """
-    # Apply rate limit - higher limits for session operations
-    try:
-        limiter = req.app.state.limiter
-        limiter.limit("60/hour")(get_remote_address)(req)
-    except Exception as e:
-        session_service.logger.error(f"Rate limiting error (create session): {str(e)}")
-        # Continue without rate limiting in case of error
+    # Rate limiting removed for session operations to reduce connection errors
     
     try:
         session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
@@ -88,22 +82,34 @@ async def sync_session(
     Returns:
         SessionResponse containing the synchronized session ID
     """
-    # Apply rate limit - higher limits for session operations
-    try:
-        limiter = req.app.state.limiter
-        limiter.limit("60/hour")(get_remote_address)(req)
-    except Exception as e:
-        session_service.logger.error(f"Rate limiting error (sync session): {str(e)}")
-        # Continue without rate limiting in case of error
+    # Rate limiting removed for session operations to reduce connection errors
     
     try:
         client_session_id = request.client_session_id
         cookie_session_id = session_id
         
-        # Log all session IDs for debugging
-        session_service.logger.info("Session sync request received")
-        session_service.logger.info(f"- Client session ID: {client_session_id}")
-        session_service.logger.info(f"- Cookie session ID: {cookie_session_id}")
+        # Fast path: if the session IDs match exactly and are valid, return immediately
+        if client_session_id and cookie_session_id and client_session_id == cookie_session_id:
+            # Just log a brief message at debug level
+            session_service.logger.debug(f"Quick session sync - IDs match")
+            
+            # Only check if it's a valid session in the database
+            if session_service.supabase_client.get_session(client_session_id):
+                # Silently update activity in the background
+                try:
+                    session_service.supabase_client.update_session_activity(client_session_id)
+                except Exception:
+                    # Ignore errors in activity update
+                    pass
+                
+                return SessionResponse(
+                    session_id=client_session_id,
+                    is_new_session=False,
+                    message="Session valid, no sync needed"
+                )
+        
+        # Only log minimal info to reduce noise
+        session_service.logger.debug("Processing full session sync")
         
         # Use get_or_create_session with the client_session_id parameter
         # This will prioritize the client-provided session ID
@@ -118,8 +124,6 @@ async def sync_session(
             if is_new_session 
             else "Session synchronized successfully"
         )
-        
-        session_service.logger.info(f"Synced session ID: {final_session_id}, is_new: {is_new_session}")
         
         return SessionResponse(
             session_id=final_session_id,

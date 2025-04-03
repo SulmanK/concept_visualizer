@@ -12,6 +12,7 @@ import uuid
 
 from ..core.supabase import get_supabase_client, SupabaseClient
 from ..models.concept import ColorPalette, ConceptSummary, ConceptDetail, ConceptCreate, ColorVariationCreate
+from ..utils.mask import mask_id, mask_path
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -49,8 +50,12 @@ class ConceptStorageService:
             Created concept data or None on error
         """
         try:
+            # Mask sensitive information
+            masked_session = mask_id(session_id)
+            masked_path_value = mask_path(base_image_path)
+            
             # Insert concept
-            self.logger.info(f"Storing concept for session: {session_id}")
+            self.logger.info(f"Storing concept for session: {masked_session}")
             concept_data = {
                 "session_id": session_id,
                 "logo_description": logo_description,
@@ -63,11 +68,15 @@ class ConceptStorageService:
                 self.logger.error("Failed to store concept")
                 return None
             
-            self.logger.info(f"Stored concept with ID: {concept['id']}")
+            masked_concept_id = mask_id(concept['id'])
+            self.logger.info(f"Stored concept with ID: {masked_concept_id}")
             
             # Insert color variations
             variations = []
             for palette in color_palettes:
+                masked_palette_path = mask_path(palette["image_path"])
+                self.logger.debug(f"Adding palette variation: {palette['name']}, path: {masked_palette_path}")
+                
                 variation = {
                     "concept_id": concept["id"],
                     "palette_name": palette["name"],
@@ -101,12 +110,18 @@ class ConceptStorageService:
             List of concept summaries with their variations
         """
         try:
-            self.logger.info(f"Getting recent concepts for session: {session_id}")
+            masked_session = mask_id(session_id)
+            self.logger.info(f"Getting recent concepts for session: {masked_session}")
             concepts = self.supabase_client.get_recent_concepts(session_id, limit)
             
             # Convert to ConceptSummary model
             summaries = []
             for concept_data in concepts:
+                # Mask sensitive paths
+                masked_concept_id = mask_id(concept_data['id'])
+                masked_base_path = mask_path(concept_data["base_image_path"])
+                self.logger.debug(f"Processing concept: {masked_concept_id}, base path: {masked_base_path}")
+                
                 # Add public URLs for all images
                 base_image_url = self.supabase_client.get_image_url(
                     concept_data["base_image_path"], 
@@ -161,11 +176,14 @@ class ConceptStorageService:
             Concept detail object or None if not found
         """
         try:
-            self.logger.info(f"Getting concept detail for concept: {concept_id}, session: {session_id}")
+            masked_concept_id = mask_id(concept_id)
+            masked_session = mask_id(session_id)
+            
+            self.logger.info(f"Getting concept detail for concept: {masked_concept_id}, session: {masked_session}")
             concept_data = self.supabase_client.get_concept_detail(concept_id, session_id)
             
             if not concept_data:
-                self.logger.warning(f"Concept {concept_id} not found or access denied")
+                self.logger.warning(f"Concept {masked_concept_id} not found or access denied")
                 return None
                 
             # Add public URLs for all images

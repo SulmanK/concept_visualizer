@@ -49,7 +49,7 @@ export const useNetworkStatus = (options?: {
   const {
     notifyOnStatusChange = true,
     checkEndpoint = '/api/health',
-    checkInterval = 30000, // 30 seconds
+    checkInterval = 120000, // 2 minutes
   } = options || {};
   
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);

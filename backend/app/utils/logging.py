@@ -7,7 +7,7 @@ This module configures the application's logging system.
 import logging
 import sys
 
-from backend.app.core.config import settings
+from app.core.config import settings
 
 
 def setup_logging() -> None:
@@ -42,18 +42,49 @@ def setup_logging() -> None:
     # Add the handler to the logger
     root_logger.addHandler(console_handler)
     
+    # Configure specific loggers with custom levels
+    # Set httpx to WARNING to reduce API request logs
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    
+    # Set uvicorn access logs to WARNING
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    
+    # Set session service to a higher level to reduce noise
+    logging.getLogger("session_service").setLevel(logging.INFO)
+    
+    # Keep detailed logs for concept-related services
+    logging.getLogger("concept_service").setLevel(log_level)
+    logging.getLogger("concept_api").setLevel(log_level)
+    
     # Log that the logger has been configured
     logging.info(f"Logging configured with level: {settings.LOG_LEVEL}")
 
 
-def get_logger(name: str) -> logging.Logger:
+def get_logger(name: str, level: int = None) -> logging.Logger:
     """
     Get a logger for a specific module.
     
     Args:
         name: The name for the logger, typically __name__
+        level: Optional custom log level to set
         
     Returns:
         logging.Logger: A configured logger instance
     """
-    return logging.getLogger(name) 
+    logger = logging.getLogger(name)
+    if level is not None:
+        logger.setLevel(level)
+    return logger
+
+
+def is_health_check(path: str) -> bool:
+    """
+    Check if a request path is a health check.
+    
+    Args:
+        path: Request path
+        
+    Returns:
+        bool: True if this is a health check path
+    """
+    return path.endswith("/health") or "/health/" in path 

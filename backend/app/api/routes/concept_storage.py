@@ -9,13 +9,13 @@ from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from typing import Optional, List
 from slowapi.util import get_remote_address
 
-from backend.app.models.request import PromptRequest
-from backend.app.models.response import GenerationResponse
-from backend.app.models.concept import ConceptSummary, ConceptDetail
-from backend.app.services.session_service import SessionService, get_session_service
-from backend.app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
-from backend.app.services.image_service import ImageService, get_image_service
-from backend.app.services.concept_service import ConceptService, get_concept_service
+from app.models.request import PromptRequest
+from app.models.response import GenerationResponse
+from app.models.concept import ConceptSummary, ConceptDetail
+from app.services.session_service import SessionService, get_session_service
+from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
+from app.services.image_service import ImageService, get_image_service
+from app.services.concept_service import ConceptService, get_concept_service
 
 router = APIRouter()
 

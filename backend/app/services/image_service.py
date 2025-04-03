@@ -16,6 +16,7 @@ from PIL import Image
 from ..core.supabase import get_supabase_client, SupabaseClient
 from .jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 from .image_processing import apply_palette_with_masking_optimized
+from ..utils.mask import mask_id, mask_path
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -60,14 +61,17 @@ class ImageService:
             self.logger.info(f"Image generated successfully. Binary data received: {len(image_data)} bytes")
                 
             # Generate a unique filename and upload to Supabase Storage
-            self.logger.info(f"Uploading image to Supabase Storage, bucket: concept-images, session: {session_id}")
+            masked_session = mask_id(session_id)
+            self.logger.info(f"Uploading image to Supabase Storage, bucket: [concept-images], session: {masked_session}")
             
             # Determine image format
             img = Image.open(BytesIO(image_data))
             format_ext = img.format.lower() if img.format else "png"
             
             # Generate a unique filename with the correct extension
-            unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
+            unique_id = str(uuid.uuid4())
+            unique_filename = f"{session_id}/{unique_id}.{format_ext}"
+            masked_filename = mask_path(unique_filename)
             
             # Upload to Supabase Storage
             result = self.supabase_client.client.storage.from_("concept-images").upload(
@@ -84,7 +88,7 @@ class ImageService:
             storage_path = unique_filename
                 
             # Get public URL
-            self.logger.info(f"Getting public URL for image: {storage_path}")
+            self.logger.info(f"Getting public URL for image: {masked_filename}")
             public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
             
             return storage_path, public_url
@@ -126,14 +130,17 @@ class ImageService:
             self.logger.info(f"Image refined successfully. Binary data received: {len(image_data)} bytes")
                 
             # Generate a unique filename and upload to Supabase Storage
-            self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {session_id}")
+            masked_session = mask_id(session_id)
+            self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {masked_session}")
             
             # Determine image format
             img = Image.open(BytesIO(image_data))
             format_ext = img.format.lower() if img.format else "png"
             
             # Generate a unique filename with the correct extension
-            unique_filename = f"{session_id}/{uuid.uuid4()}.{format_ext}"
+            unique_id = str(uuid.uuid4())
+            unique_filename = f"{session_id}/{unique_id}.{format_ext}"
+            masked_filename = mask_path(unique_filename)
             
             # Upload to Supabase Storage
             result = self.supabase_client.client.storage.from_("concept-images").upload(
@@ -150,7 +157,7 @@ class ImageService:
             storage_path = unique_filename
                 
             # Get public URL
-            self.logger.info(f"Getting public URL for refined image: {storage_path}")
+            self.logger.info(f"Getting public URL for refined image: {masked_filename}")
             public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
             
             return storage_path, public_url
@@ -179,13 +186,16 @@ class ImageService:
         result_palettes = []
         
         # Get image URL from storage path
+        masked_base_path = mask_path(base_image_path)
+        masked_session = mask_id(session_id)
+        
         base_image_url = self.supabase_client.get_image_url(base_image_path, "concept-images")
         if not base_image_url:
-            self.logger.error(f"Failed to get URL for base image: {base_image_path}")
+            self.logger.error(f"Failed to get URL for base image: {masked_base_path}")
             return []
         
         for palette in palettes:
-            self.logger.info(f"Creating palette variation for palette: {palette['name']}")
+            self.logger.info(f"Creating palette variation for palette: {palette['name']} using base image: {masked_base_path}")
             
             try:
                 # Apply palette to image using the optimized masking approach
@@ -196,7 +206,9 @@ class ImageService:
                 )
                 
                 # Generate a unique filename for the palette variation
-                unique_filename = f"{session_id}/palette_{uuid.uuid4()}.png"
+                unique_id = str(uuid.uuid4())
+                unique_filename = f"{session_id}/palette_{unique_id}.png"
+                masked_filename = mask_path(unique_filename)
                 
                 # Upload to Supabase Storage
                 result = self.supabase_client.client.storage.from_("palette-images").upload(
@@ -215,7 +227,7 @@ class ImageService:
                     "palette-images"
                 )
                 
-                self.logger.info(f"Created palette variation: {unique_filename}")
+                self.logger.info(f"Created palette variation: {masked_filename}")
                 
                 # Add paths to palette dict
                 palette_copy = palette.copy()

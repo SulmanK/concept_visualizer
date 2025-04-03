@@ -14,6 +14,7 @@ from PIL import Image
 from supabase import create_client, Client
 
 from .config import settings, get_masked_value
+from ..utils.mask import mask_id, mask_path, mask_ip
 
 
 # Configure logging
@@ -38,6 +39,32 @@ class SupabaseClient:
         
         # Initialize Supabase client (no headers parameter in v1.0.3)
         self.client = create_client(self.url, self.key)
+        
+        # Log initialization with masked session ID if present
+        if session_id:
+            self.logger.debug(f"Initialized Supabase client with session: {mask_id(session_id)}")
+        else:
+            self.logger.debug("Initialized Supabase client without session ID")
+    
+    def _mask_path(self, path: str) -> str:
+        """Mask a storage path to protect session ID privacy.
+        
+        Args:
+            path: Storage path potentially containing session ID
+            
+        Returns:
+            Masked path with session ID portion obscured
+        """
+        if not path or "/" not in path:
+            return path
+            
+        # Split path at first slash to separate session ID from filename
+        parts = path.split("/", 1)
+        if len(parts) >= 2:
+            session_part = parts[0]
+            file_part = parts[1]
+            return f"{get_masked_value(session_part)}/{file_part}"
+        return path
     
     def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get a session by ID.
@@ -85,7 +112,7 @@ class SupabaseClient:
                 # Ensure it's in the standard string format
                 session_id = str(uuid_obj)
             except ValueError:
-                self.logger.error(f"Invalid UUID format for session_id: {get_masked_value(session_id)}")
+                self.logger.error(f"Invalid UUID format for session_id: {mask_id(session_id)}")
                 return None
                 
             # Insert the session with the provided ID
@@ -93,14 +120,14 @@ class SupabaseClient:
             
             # Log the result for debugging
             if result.data:
-                self.logger.info(f"Created session with client-provided ID: {get_masked_value(session_id)}")
+                self.logger.info(f"Created session with client-provided ID: {mask_id(session_id)}")
             else:
-                self.logger.warning(f"No data returned when creating session with ID: {get_masked_value(session_id)}")
+                self.logger.warning(f"No data returned when creating session with ID: {mask_id(session_id)}")
                 
             return result.data[0] if result.data else None
             
         except Exception as e:
-            self.logger.error(f"Error creating session with ID {get_masked_value(session_id)}: {e}")
+            self.logger.error(f"Error creating session with ID {mask_id(session_id)}: {e}")
             return None
     
     def update_session_activity(self, session_id: str) -> Optional[Dict[str, Any]]:
@@ -174,7 +201,7 @@ class SupabaseClient:
         """
         try:
             # Log the session ID being used for the query
-            self.logger.info(f"Querying recent concepts with session_id: {get_masked_value(session_id)}")
+            self.logger.info(f"Querying recent concepts with session_id: {mask_id(session_id)}")
             
             # Security: Always filter by session_id to ensure users only see their own data
             result = self.client.table("concepts").select(
@@ -185,13 +212,15 @@ class SupabaseClient:
             
             # Log the results for debugging
             if result.data:
-                self.logger.info(f"Found {len(result.data)} concepts for session ID {get_masked_value(session_id)}")
+                self.logger.info(f"Found {len(result.data)} concepts for session ID {mask_id(session_id)}")
                 for i, concept in enumerate(result.data):
                     concept_id = concept.get('id')
                     concept_session_id = concept.get('session_id')
-                    self.logger.info(f"Concept {i+1}: ID={get_masked_value(concept_id)}, session_id={get_masked_value(concept_session_id)}, base_path={concept.get('base_image_path')}")
+                    base_path = concept.get('base_image_path')
+                    masked_base_path = mask_path(base_path) if base_path else "none"
+                    self.logger.info(f"Concept {i+1}: ID={mask_id(concept_id)}, session_id={mask_id(concept_session_id)}, base_path={masked_base_path}")
             else:
-                self.logger.warning(f"No concepts found for session ID {get_masked_value(session_id)}")
+                self.logger.warning(f"No concepts found for session ID {mask_id(session_id)}")
                 
                 # Additional check: Look for all concepts without session filter
                 all_results = self.client.table("concepts").select("id, session_id").limit(5).execute()
@@ -200,7 +229,7 @@ class SupabaseClient:
                     for i, concept in enumerate(all_results.data):
                         concept_id = concept.get('id')
                         concept_session_id = concept.get('session_id')
-                        self.logger.info(f"  - Sample concept {i+1}: ID={get_masked_value(concept_id)}, session_id={get_masked_value(concept_session_id)}")
+                        self.logger.info(f"  - Sample concept {i+1}: ID={mask_id(concept_id)}, session_id={mask_id(concept_session_id)}")
             
             return result.data
         except Exception as e:
@@ -225,7 +254,7 @@ class SupabaseClient:
             
             return result.data[0] if result.data else None
         except Exception as e:
-            self.logger.error(f"Error retrieving concept detail for concept ID {get_masked_value(concept_id)}: {e}")
+            self.logger.error(f"Error retrieving concept detail for concept ID {mask_id(concept_id)}: {e}")
             return None
     
     async def upload_image_from_url(self, image_url: str, bucket: str, session_id: str) -> Optional[str]:
@@ -283,6 +312,8 @@ class SupabaseClient:
             Public URL for the image
         """
         try:
+            masked_path = mask_path(path)
+            self.logger.debug(f"Getting image URL for path: {masked_path} in bucket: {bucket}")
             return self.client.storage.from_(bucket).get_public_url(path)
         except Exception as e:
             self.logger.error(f"Error getting image URL: {e}")
@@ -305,7 +336,9 @@ class SupabaseClient:
         """
         try:
             # Get the image data from storage
-            self.logger.info(f"Downloading image from storage: {image_path}")
+            masked_path = mask_path(image_path)
+            masked_session = mask_id(session_id)
+            self.logger.info(f"Downloading image from storage: {masked_path}")
             image_data = self.client.storage.from_("concept-images").download(image_path)
             if not image_data:
                 self.logger.error("Failed to download image from storage")
@@ -334,6 +367,7 @@ class SupabaseClient:
             # Generate a unique filename for the palette version
             file_ext = image_path.split(".")[-1] if "." in image_path else "png"
             unique_filename = f"{session_id}/{uuid.uuid4()}.{file_ext}"
+            masked_filename = mask_path(unique_filename)
             
             # Load image with OpenCV
             img_array = np.frombuffer(image_data, np.uint8)
@@ -400,14 +434,14 @@ class SupabaseClient:
             _, buffer = cv2.imencode(f'.{file_ext}', enhanced_bgr)
             
             # Upload to Supabase
-            self.logger.info(f"Uploading recolored image to palette-images bucket: {unique_filename}")
+            self.logger.info(f"Uploading recolored image to palette-images bucket: {masked_filename}")
             result = self.client.storage.from_("palette-images").upload(
                 path=unique_filename,
                 file=buffer.tobytes(),
                 file_options={"content-type": f"image/{file_ext}"}
             )
             
-            self.logger.info(f"Successfully created palette variation: {unique_filename}")
+            self.logger.info(f"Successfully created palette variation: {masked_filename}")
             # Return the storage path
             return unique_filename
         except Exception as e:
@@ -488,12 +522,17 @@ class SupabaseClient:
         """
         try:
             prefix = f"{session_id}/" if session_id else ""
+            masked_prefix = f"{mask_id(session_id)}/" if session_id else ""
+            self.logger.info(f"Deleting storage objects from bucket {bucket} with prefix: {masked_prefix}")
+            
             response = self.client.storage.from_(bucket).list(path=prefix)
             
             # Delete each file
             for file in response:
                 file_path = file.get("name")
                 if file_path:
+                    masked_path = mask_path(file_path)
+                    self.logger.debug(f"Deleting file: {masked_path}")
                     self.client.storage.from_(bucket).remove([file_path])
             
             return True

@@ -231,7 +231,7 @@
   - [ ] Create a secrets management strategy for production deployment [LATER]
   - [x] Implement proper rate limiting on API endpoints
   - [ ] Add CSRF protection for authenticated endpoints (when implemented) [LATER]
-  - [ ] Audit backend dependencies for security vulnerabilities
+  - [x] Audit backend dependencies for security vulnerabilities
   - [ ] Update JigsawStack client error handling to prevent exposing sensitive information
 - [ ] **Directory Structure Refinement**
   - [ ] Create separate files for route handlers in api/routes/ (split concept.py into multiple files)
@@ -260,6 +260,9 @@
   - [ ] Create test fixtures and helper functions
 
 Future
+- Fix Rate Limit parsing on SVG conversion
+
+- Autoclear storage buckets every day 
 - Tests
 - Setup Github Workflows
 - Clean up Code

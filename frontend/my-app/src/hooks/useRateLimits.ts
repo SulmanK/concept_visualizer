@@ -36,7 +36,7 @@ export function useRateLimits(): UseRateLimitsResult {
     // Optional: Set up periodic refreshing
     const intervalId = setInterval(() => {
       fetchData();
-    }, 60000); // Refresh every minute
+    }, 180000); // Refresh every 3 minutes
     
     return () => clearInterval(intervalId);
   }, []);
