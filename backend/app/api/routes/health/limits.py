@@ -4,6 +4,7 @@ Rate limit checking endpoints.
 This module provides endpoints to check the current rate limit status.
 """
 
+import traceback
 from fastapi import APIRouter, Request
 from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
@@ -13,8 +14,11 @@ from typing import Dict, Any
 from app.core.rate_limiter import get_redis_client
 from app.api.routes.health.utils import get_reset_time, mask_id, mask_key
 
+# Import error handling
+from app.api.errors import ServiceUnavailableError
+
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("health_limits_api")
 
 # Create router
 router = APIRouter()
@@ -37,65 +41,73 @@ async def rate_limits(request: Request, force_refresh: bool = False):
     
     Returns:
         dict: Rate limit information by endpoint.
+        
+    Raises:
+        ServiceUnavailableError: If there was an error getting rate limit information
     """
-    global _rate_limits_cache
-    
-    # Use session ID if available, otherwise fall back to IP address
-    session_id = request.cookies.get("concept_session")
-    user_ip = get_remote_address(request)
-    
-    # Create a unique cache key based on session or IP
-    cache_key = f"session:{session_id}" if session_id else f"ip:{user_ip}"
-    
-    # Check if we have a cached response for this session/IP
-    now = datetime.utcnow()
-    if not force_refresh and cache_key in _rate_limits_cache and now < _rate_limits_cache[cache_key]["expires_at"]:
-        logger.debug(f"Using cached rate limits for {mask_id(cache_key)}")
-        return _rate_limits_cache[cache_key]["data"]
-    
-    if force_refresh:
-        logger.info(f"Force refreshing rate limits for {mask_id(cache_key)}")
-    else:
-        logger.info(f"Generating fresh rate limits data for {mask_id(cache_key)}")
-    
-    limiter = request.app.state.limiter
-    
-    # Try to directly check Redis for rate limit keys
-    direct_redis_client = get_redis_client()
-    redis_available = direct_redis_client is not None
-    
-    # Default rate limit data to use if Redis is not available
-    default_limits = {
-        "generate_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
-        "store_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
-        "refine_concept": {"limit": "10/hour", "remaining": 10, "reset_after": get_reset_time("hour")},
-        "svg_conversion": {"limit": "20/hour", "remaining": 20, "reset_after": get_reset_time("hour")}
-    }
-    
-    # Get only the requested rate limits
-    limits_info = {
-        "user_identifier": mask_id(cache_key),  # Mask the session ID in the response
-        "session_id": session_id is not None,  # Include whether session was found
-        "redis_available": redis_available,  # Include Redis availability status
-        "limits": default_limits if not redis_available else {
-            "generate_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "generate_concept"),
-            "store_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "store_concept"),
-            "refine_concept": get_limit_info(limiter, direct_redis_client, "10/hour", cache_key, "refine_concept"),
-            "svg_conversion": get_limit_info(limiter, direct_redis_client, "20/hour", cache_key, "svg_conversion"),
-        },
-        "default_limits": ["200/day", "50/hour", "10/minute"],
-        "last_updated": now.isoformat(),  # Add timestamp to show when data was refreshed
-        "cache_expires": (now + timedelta(seconds=5)).isoformat()  # Add cache expiry information
-    }
-    
-    # Cache the result for this key (cache for 5 seconds instead of 1 minute)
-    _rate_limits_cache[cache_key] = {
-        "data": limits_info,
-        "timestamp": now,
-        "expires_at": now + timedelta(seconds=5)
-    }
-    
-    return limits_info
+    try:
+        global _rate_limits_cache
+        
+        # Use session ID if available, otherwise fall back to IP address
+        session_id = request.cookies.get("concept_session")
+        user_ip = get_remote_address(request)
+        
+        # Create a unique cache key based on session or IP
+        cache_key = f"session:{session_id}" if session_id else f"ip:{user_ip}"
+        
+        # Check if we have a cached response for this session/IP
+        now = datetime.utcnow()
+        if not force_refresh and cache_key in _rate_limits_cache and now < _rate_limits_cache[cache_key]["expires_at"]:
+            logger.debug(f"Using cached rate limits for {mask_id(cache_key)}")
+            return _rate_limits_cache[cache_key]["data"]
+        
+        if force_refresh:
+            logger.info(f"Force refreshing rate limits for {mask_id(cache_key)}")
+        else:
+            logger.info(f"Generating fresh rate limits data for {mask_id(cache_key)}")
+        
+        limiter = request.app.state.limiter
+        
+        # Try to directly check Redis for rate limit keys
+        direct_redis_client = get_redis_client()
+        redis_available = direct_redis_client is not None
+        
+        # Default rate limit data to use if Redis is not available
+        default_limits = {
+            "generate_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
+            "store_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
+            "refine_concept": {"limit": "10/hour", "remaining": 10, "reset_after": get_reset_time("hour")},
+            "svg_conversion": {"limit": "20/hour", "remaining": 20, "reset_after": get_reset_time("hour")}
+        }
+        
+        # Get only the requested rate limits
+        limits_info = {
+            "user_identifier": mask_id(cache_key),  # Mask the session ID in the response
+            "session_id": session_id is not None,  # Include whether session was found
+            "redis_available": redis_available,  # Include Redis availability status
+            "limits": default_limits if not redis_available else {
+                "generate_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "generate_concept"),
+                "store_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "store_concept"),
+                "refine_concept": get_limit_info(limiter, direct_redis_client, "10/hour", cache_key, "refine_concept"),
+                "svg_conversion": get_limit_info(limiter, direct_redis_client, "20/hour", cache_key, "svg_conversion"),
+            },
+            "default_limits": ["200/day", "50/hour", "10/minute"],
+            "last_updated": now.isoformat(),  # Add timestamp to show when data was refreshed
+            "cache_expires": (now + timedelta(seconds=5)).isoformat()  # Add cache expiry information
+        }
+        
+        # Cache the result for this key (cache for 5 seconds instead of 1 minute)
+        _rate_limits_cache[cache_key] = {
+            "data": limits_info,
+            "timestamp": now,
+            "expires_at": now + timedelta(seconds=5)
+        }
+        
+        return limits_info
+    except Exception as e:
+        logger.error(f"Error getting rate limit information: {str(e)}")
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        raise ServiceUnavailableError(detail="Error retrieving rate limit information")
 
 
 def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_type):

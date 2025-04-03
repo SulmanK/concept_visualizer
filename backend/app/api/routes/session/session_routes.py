@@ -4,6 +4,8 @@ Session management endpoints.
 This module provides endpoints for managing user sessions.
 """
 
+import logging
+import traceback
 from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
@@ -11,6 +13,12 @@ from slowapi.util import get_remote_address
 
 from app.services.session_service import SessionService, get_session_service
 
+# Add imports for new dependencies and errors
+from app.api.dependencies import get_or_create_session
+from app.api.errors import ServiceUnavailableError, ValidationError, AuthenticationError
+
+# Configure logging
+logger = logging.getLogger("session_api")
 
 router = APIRouter()
 
@@ -57,7 +65,9 @@ async def create_session(
             message="Session created successfully" if is_new_session else "Using existing session"
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
+        logger.error(f"Failed to create session: {str(e)}")
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        raise ServiceUnavailableError(detail=f"Failed to create session: {str(e)}")
 
 
 @router.post("/sync", response_model=SessionResponse)
@@ -85,6 +95,13 @@ async def sync_session(
     # Rate limiting removed for session operations to reduce connection errors
     
     try:
+        # Validate request
+        if not request.client_session_id:
+            raise ValidationError(
+                detail="Client session ID is required",
+                field_errors={"client_session_id": ["Field is required"]}
+            )
+            
         client_session_id = request.client_session_id
         cookie_session_id = session_id
         
@@ -130,6 +147,10 @@ async def sync_session(
             is_new_session=is_new_session,
             message=message
         )
+    except ValidationError:
+        # Re-raise our custom errors directly
+        raise
     except Exception as e:
         session_service.logger.error(f"Error syncing session: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to sync session: {str(e)}") 
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        raise ServiceUnavailableError(detail=f"Failed to sync session: {str(e)}") 

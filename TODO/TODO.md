@@ -262,10 +262,10 @@
     - [ ] Move utility modules to appropriate locations:
       - [x] Move rate_limiting.py from api/routes/ to app/utils/ since it's shared across routes
       - [x] Update imports in all files that use rate_limiting.py
-  - [ ] Reorganize API structure to match the architecture guidelines:
-    - [ ] Create api/dependencies.py with shared dependency functions
-    - [ ] Create api/errors.py with custom error handling
-    - [ ] Move API route registration from __init__.py to a dedicated router.py file
+    - [ ] Reorganize API structure to match the architecture guidelines:
+      - [x] Create api/dependencies.py with shared dependency functions
+      - [x] Create api/errors.py with custom error handling
+      - [x] Move API route registration from __init__.py to a dedicated router.py file
   - [ ] Organize imports consistently and fix import patterns:
     - [x] Updated direct router imports in __init__.py for cleaner organization
     - [ ] Sort imports using isort pattern: stdlib, third-party, local
@@ -274,9 +274,9 @@
   - [ ] Reorganize tests to match current structure
     - [ ] Create test fixtures directory
 - [ ] **Error Handling Improvements**
-  - [ ] Implement centralized error handler middleware
-  - [ ] Create custom exception classes
-  - [ ] Add proper error responses with consistent format
+  - [x] Implement centralized error handler middleware
+  - [x] Create custom exception classes
+  - [x] Add proper error responses with consistent format
   - [ ] Improve logging for better debugging of production issues
 - [ ] **Performance Optimization**
   - [ ] Add caching layer for frequently accessed resources
@@ -303,6 +303,19 @@
   - [ ] Increase test coverage
   - [ ] Add performance tests
   - [ ] Create test fixtures and helper functions
+- [ ] **API Refactoring Improvements**
+  - [x] Create centralized dependencies module for route handlers
+  - [x] Implement a consistent error handling pattern
+  - [x] Refactor route handlers to use new dependency and error modules
+  - [x] Continue refactoring remaining route handlers
+    - [x] Refactor concept_storage/storage_routes.py handlers
+    - [x] Refactor concept/generation.py handlers
+    - [x] Refactor concept/refinement.py handlers
+    - [x] Refactor session/session_routes.py handlers
+    - [x] Refactor health check module handlers
+    - [x] Refactor svg module handlers
+  - [ ] Add integration tests for new error handling patterns
+  - [ ] Document new dependency and error handling patterns
 
 ## Code Quality Improvements
 - [ ] Fix linter errors across the codebase:
@@ -339,6 +352,7 @@ Future
 For long-running operations, use FastAPI's BackgroundTasks
 Or implement a task queue system like Celery with Redis
 
+- update other structures now
 - Autoclear storage buckets every day 
 - Tests
 - Setup Github Workflows

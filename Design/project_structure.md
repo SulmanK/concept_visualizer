@@ -16,6 +16,9 @@ concept_visualizer/
 ├── backend/              # Python FastAPI backend
 ├── frontend/             # React frontend
 ├── design/               # Design documents
+├── docs/                 # Project documentation
+│   ├── backend/          # Backend documentation
+│   └── frontend/         # Frontend documentation
 └── scripts/              # Utility scripts for development
 ```
 
@@ -33,17 +36,36 @@ backend/
 │   │   ├── config.py     # Configuration management
 │   │   ├── logging.py    # Logging setup
 │   │   ├── supabase.py   # Supabase client integration
+│   │   ├── rate_limiter.py # Rate limiting configuration
 │   │   └── exceptions.py # Custom exception definitions
 │   ├── api/              # API layer
 │   │   ├── __init__.py
+│   │   ├── router.py     # Main router configuration
+│   │   ├── dependencies.py # Common API dependencies
+│   │   ├── errors.py     # Error handling and custom exceptions
 │   │   └── routes/       # API routes organized by domain
 │   │       ├── __init__.py
-│   │       ├── api.py
-│   │       ├── concept.py
-│   │       ├── concept_storage.py
-│   │       ├── health.py
-│   │       ├── session.py
-│   │       └── svg_conversion.py
+│   │       ├── api.py    # Base API routes
+│   │       ├── concept/  # Concept generation routes
+│   │       │   ├── __init__.py
+│   │       │   ├── generation.py
+│   │       │   └── refinement.py
+│   │       ├── concept_storage/ # Concept storage routes
+│   │       │   ├── __init__.py
+│   │       │   └── storage.py
+│   │       ├── health/   # Health check routes
+│   │       │   ├── __init__.py
+│   │       │   ├── check.py
+│   │       │   ├── limits.py
+│   │       │   └── utils.py
+│   │       ├── session/  # Session management routes
+│   │       │   ├── __init__.py
+│   │       │   └── session_routes.py
+│   │       ├── svg/      # SVG conversion routes
+│   │       │   ├── __init__.py
+│   │       │   ├── converter.py
+│   │       │   └── utils.py
+│   │       └── __tests__/ # Route-specific tests
 │   ├── services/         # Service layer (business logic)
 │   │   ├── __init__.py
 │   │   ├── concept_service.py
@@ -61,7 +83,11 @@ backend/
 │   │   └── response.py   # Response models (Pydantic)
 │   └── utils/            # Utility functions
 │       ├── __init__.py
-│       └── color_utils.py
+│       ├── color_utils.py
+│       ├── mask.py       # Data masking utilities
+│       └── rate_limiting.py # Rate limiting utilities
+├── docs/                 # Backend documentation
+│   └── rate_limiting.md  # Documentation for rate limiting
 ├── static/               # Static files served by backend
 ├── tests/                # Test directory 
 │   ├── __init__.py
@@ -85,6 +111,7 @@ backend/
    - Routes requests to appropriate service functions
    - Handles cookies and session management
    - Returns HTTP responses with proper status codes
+   - Uses centralized dependencies and error handling
 
 2. **Service Layer** (`services/`): Contains business logic and coordinates with external services
    - Implements domain logic for concept generation and refinement
@@ -101,6 +128,7 @@ backend/
    - Manages environment variables and settings
    - Configures logging and exception handling
    - Provides Supabase client for database and storage operations
+   - Configures rate limiting
 
 5. **Utils** (`utils/`): Reusable utility functions
    - Color manipulation utilities

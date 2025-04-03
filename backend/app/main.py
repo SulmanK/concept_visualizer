@@ -11,7 +11,7 @@ import asyncio
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.api.routes import api_router
+from app.api.router import configure_api_routes
 from app.core.config import settings
 from app.utils.logging import setup_logging
 from app.core.rate_limiter import setup_rate_limiter
@@ -126,9 +126,8 @@ class PrioritizationMiddleware(BaseHTTPMiddleware):
 # Add prioritization middleware
 app.add_middleware(PrioritizationMiddleware)
 
-# Include API router with prefix
-app.include_router(api_router, prefix=settings.API_PREFIX)
-
+# Configure API routes and error handlers
+configure_api_routes(app)
 
 @app.get("/")
 async def root():

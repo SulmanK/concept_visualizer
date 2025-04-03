@@ -8,8 +8,11 @@ from fastapi import APIRouter, Request
 from datetime import datetime, timedelta
 import logging
 
+# Import error handling
+from app.api.errors import ServiceUnavailableError
+
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("health_check_api")
 
 # Create router
 router = APIRouter()
@@ -32,21 +35,31 @@ async def health_check(request: Request):
     If there are many health check requests while the server is processing heavy tasks like image generation,
     it will return a cached response instead of creating a new one each time.
     
+    Args:
+        request: The FastAPI request object
+    
     Returns:
         dict: A dictionary with the status of the API.
+        
+    Raises:
+        ServiceUnavailableError: If the service is not healthy
     """
-    global _health_cache
-    
-    # Check if the cache is still valid
-    now = datetime.utcnow()
-    if now < _health_cache["expires_at"]:
-        return {"status": _health_cache["status"]}
-    
-    # Update the cache
-    _health_cache = {
-        "status": "ok",
-        "timestamp": now,
-        "expires_at": now + timedelta(seconds=30)
-    }
-    
-    return {"status": "ok"} 
+    try:
+        global _health_cache
+        
+        # Check if the cache is still valid
+        now = datetime.utcnow()
+        if now < _health_cache["expires_at"]:
+            return {"status": _health_cache["status"]}
+        
+        # Update the cache
+        _health_cache = {
+            "status": "ok",
+            "timestamp": now,
+            "expires_at": now + timedelta(seconds=30)
+        }
+        
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        raise ServiceUnavailableError(detail="Service is not healthy") 

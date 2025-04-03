@@ -20,6 +20,10 @@ from app.services.image_service import ImageService, get_image_service
 from app.services.concept_service import ConceptService, get_concept_service
 from app.utils.rate_limiting import apply_rate_limit
 
+# Add imports for new modules
+from app.api.dependencies import CommonDependencies, get_or_create_session
+from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
+
 # Configure logging
 logger = logging.getLogger("concept_storage_api")
 
@@ -31,10 +35,7 @@ async def generate_and_store_concept(
     request: PromptRequest,
     response: Response,
     req: Request,
-    concept_service: ConceptService = Depends(get_concept_service),
-    session_service: SessionService = Depends(get_session_service),
-    image_service: ImageService = Depends(get_image_service),
-    storage_service: ConceptStorageService = Depends(get_concept_storage_service)
+    commons: CommonDependencies = Depends()
 ):
     """
     Generate a concept based on user prompt and store it in the database.
@@ -43,10 +44,7 @@ async def generate_and_store_concept(
         request: User prompt request with logo and theme descriptions
         response: FastAPI response object for setting cookies
         req: The FastAPI request object for rate limiting
-        concept_service: Service for generating concepts
-        session_service: Service for managing sessions
-        image_service: Service for handling images
-        storage_service: Service for storing concepts
+        commons: Common dependencies including all necessary services
         
     Returns:
         Generated concept with image URL and color palettes
@@ -56,33 +54,36 @@ async def generate_and_store_concept(
     
     try:
         # Get or create session
-        session_id, is_new_session = await session_service.get_or_create_session(response)
+        session_id, _ = await get_or_create_session(
+            response=response,
+            session_service=commons.session_service
+        )
         
         # Generate base image and store it in Supabase Storage
-        base_image_path, base_image_url = await image_service.generate_and_store_image(
+        base_image_path, base_image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
             session_id
         )
         
         if not base_image_path or not base_image_url:
-            raise HTTPException(status_code=500, detail="Failed to generate or store image")
+            raise ServiceUnavailableError(detail="Failed to generate or store image")
         
         # Generate color palettes
         # First get color palettes from JigsawStack
-        raw_palettes = await concept_service.generate_color_palettes(
+        raw_palettes = await commons.concept_service.generate_color_palettes(
             theme_description=request.theme_description,
             logo_description=request.logo_description
         )
         
         # Apply color palettes to create variations and store in Supabase Storage
-        palette_variations = await image_service.create_palette_variations(
+        palette_variations = await commons.image_service.create_palette_variations(
             base_image_path,
             raw_palettes,
             session_id
         )
         
         # Store concept in Supabase database
-        stored_concept = await storage_service.store_concept(
+        stored_concept = await commons.storage_service.store_concept(
             session_id=session_id,
             logo_description=request.logo_description,
             theme_description=request.theme_description,
@@ -91,7 +92,7 @@ async def generate_and_store_concept(
         )
         
         if not stored_concept:
-            raise HTTPException(status_code=500, detail="Failed to store concept")
+            raise ServiceUnavailableError(detail="Failed to store concept")
         
         # Return generation response
         return GenerationResponse(
@@ -107,16 +108,19 @@ async def generate_and_store_concept(
                 for p in palette_variations
             ]
         )
+    except ServiceUnavailableError:
+        # Re-raise our custom errors directly
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error generating concept: {str(e)}")
+        raise ServiceUnavailableError(detail=f"Error generating concept: {str(e)}")
 
 
 @router.get("/recent", response_model=List[ConceptSummary])
 async def get_recent_concepts(
     response: Response,
     req: Request,
-    session_service: SessionService = Depends(get_session_service),
-    storage_service: ConceptStorageService = Depends(get_concept_storage_service),
+    commons: CommonDependencies = Depends(),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
@@ -125,8 +129,7 @@ async def get_recent_concepts(
     Args:
         response: FastAPI response object for setting cookies
         req: The FastAPI request object for rate limiting
-        session_service: Service for managing sessions
-        storage_service: Service for storing concepts
+        commons: Common dependencies including services
         session_id: Optional session ID from cookies
         
     Returns:
@@ -136,17 +139,22 @@ async def get_recent_concepts(
     await apply_rate_limit(req, "/storage/recent", "30/minute", "minute")
     
     try:
-        # Get or create session
-        session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
+        # Get or create session using dependency
+        session_id, is_new_session = await get_or_create_session(
+            response=response,
+            session_service=commons.session_service,
+            session_id=session_id
+        )
         
         # Return empty list for new sessions
         if is_new_session:
             return []
         
-        # Get recent concepts with public image URLs
-        return await storage_service.get_recent_concepts(session_id)
+        # Get recent concepts with public image URLs using commons
+        return await commons.storage_service.get_recent_concepts(session_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching recent concepts: {str(e)}")
+        raise ServiceUnavailableError(detail=f"Error fetching recent concepts: {str(e)}")
 
 
 @router.get("/concept/{concept_id}", response_model=ConceptDetail)
@@ -154,8 +162,7 @@ async def get_concept_detail(
     concept_id: str,
     response: Response,
     req: Request,
-    session_service: SessionService = Depends(get_session_service),
-    storage_service: ConceptStorageService = Depends(get_concept_storage_service),
+    commons: CommonDependencies = Depends(),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
@@ -165,8 +172,7 @@ async def get_concept_detail(
         concept_id: ID of the concept to retrieve
         response: FastAPI response object for setting cookies
         req: The FastAPI request object for rate limiting
-        session_service: Service for managing sessions
-        storage_service: Service for storing concepts
+        commons: Common dependencies including services
         session_id: Optional session ID from cookies
         
     Returns:
@@ -176,15 +182,28 @@ async def get_concept_detail(
     await apply_rate_limit(req, f"/storage/concept/{concept_id}", "30/minute", "minute")
     
     try:
-        # Get or create session
-        session_id, _ = await session_service.get_or_create_session(response, session_id)
+        # Get or create session using our new dependency
+        session_id, _ = await get_or_create_session(
+            response=response,
+            session_service=commons.session_service,
+            session_id=session_id
+        )
         
-        # Get concept detail
-        concept = await storage_service.get_concept_detail(concept_id, session_id)
+        # Get concept detail using storage service from commons
+        concept = await commons.storage_service.get_concept_detail(concept_id, session_id)
         
         if not concept:
-            raise HTTPException(status_code=404, detail="Concept not found")
+            # Use our custom error class instead of generic HTTPException
+            raise ResourceNotFoundError(
+                resource_type="Concept",
+                resource_id=concept_id
+            )
         
         return concept
+    except ResourceNotFoundError:
+        # Re-raise our custom errors directly
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        logger.error(f"Error retrieving concept: {str(e)}")
+        # Use our custom error class for service errors
+        raise ServiceUnavailableError(detail=f"Error retrieving concept: {str(e)}") 

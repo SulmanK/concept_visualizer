@@ -8,8 +8,9 @@ import logging
 import os
 import tempfile
 import base64
+import traceback
 from io import BytesIO
-from fastapi import APIRouter, HTTPException, Body, Request
+from fastapi import APIRouter, Body, Request
 from PIL import Image
 from slowapi.util import get_remote_address
 import vtracer
@@ -19,8 +20,11 @@ from app.models.response import SVGConversionResponse
 from app.utils.mask import mask_id, mask_ip
 from app.api.routes.svg.utils import create_simple_svg_from_image, increment_svg_rate_limit
 
+# Import error handling
+from app.api.errors import ValidationError, ServiceUnavailableError
+
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("svg_converter_api")
 
 # Create router
 router = APIRouter()
@@ -39,43 +43,57 @@ async def convert_to_svg(
         
     Returns:
         SVGConversionResponse containing the SVG data
+        
+    Raises:
+        ValidationError: If the request is invalid
+        ServiceUnavailableError: If the service fails to convert the image
     """
-    limiter = None
-    if req:
-        limiter = req.app.state.limiter
-        try:
-            # Use session ID for rate limiting (key_func is now get_session_id)
-            rate_limit = "20/hour"
-            
-            # Log the rate limiting attempt
-            logger.info(f"Checking rate limit '{rate_limit}' for SVG conversion")
-            
-            # Try-except block for the rate limit to handle connection issues
-            try:
-                # Fix the await syntax - limiter.limit returns a function, not an awaitable
-                limit_func = limiter.limit(rate_limit)
-                # Apply the limit function to the request, but don't await it (it's not an async function)
-                limit_func(req)
-                logger.info("SlowAPI rate limit check passed for SVG conversion")
-            except Exception as e:
-                logger.error(f"SlowAPI rate limiting error in SVG conversion: {str(e)}")
-                # Continue even if rate limiting fails
-        except Exception as e:
-            logger.error(f"Error checking rate limit for SVG conversion: {str(e)}")
-            # Continue even if rate limiting fails
-    
     try:
+        limiter = None
+        if req:
+            limiter = req.app.state.limiter
+            try:
+                # Use session ID for rate limiting (key_func is now get_session_id)
+                rate_limit = "20/hour"
+                
+                # Log the rate limiting attempt
+                logger.info(f"Checking rate limit '{rate_limit}' for SVG conversion")
+                
+                # Try-except block for the rate limit to handle connection issues
+                try:
+                    # Fix the await syntax - limiter.limit returns a function, not an awaitable
+                    limit_func = limiter.limit(rate_limit)
+                    # Apply the limit function to the request, but don't await it (it's not an async function)
+                    limit_func(req)
+                    logger.info("SlowAPI rate limit check passed for SVG conversion")
+                except Exception as e:
+                    logger.error(f"SlowAPI rate limiting error in SVG conversion: {str(e)}")
+                    # Continue even if rate limiting fails
+            except Exception as e:
+                logger.error(f"Error checking rate limit for SVG conversion: {str(e)}")
+                # Continue even if rate limiting fails
+        
+        # Validate the request
         # Extract the image data from base64
         if not request.image_data:
-            raise HTTPException(status_code=400, detail="No image data provided")
+            raise ValidationError(
+                detail="No image data provided",
+                field_errors={"image_data": ["Field is required"]}
+            )
         
         # Remove data URL prefix if present
         image_data = request.image_data
         if "base64," in image_data:
             image_data = image_data.split("base64,")[1]
         
-        # Decode base64
-        image_bytes = base64.b64decode(image_data)
+        try:
+            # Decode base64
+            image_bytes = base64.b64decode(image_data)
+        except Exception as e:
+            raise ValidationError(
+                detail=f"Invalid base64 image data: {str(e)}",
+                field_errors={"image_data": ["Invalid base64 format"]}
+            )
         
         # Create temporary files for input and output
         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_in_file, \
@@ -90,7 +108,13 @@ async def convert_to_svg(
             
             try:
                 # Process the image with PIL to ensure the format is correct
-                image = Image.open(BytesIO(image_bytes))
+                try:
+                    image = Image.open(BytesIO(image_bytes))
+                except Exception as e:
+                    raise ValidationError(
+                        detail=f"Invalid image format: {str(e)}",
+                        field_errors={"image_data": ["Invalid image format"]}
+                    )
                 
                 # Resize if needed
                 if request.max_size and (image.width > request.max_size or image.height > request.max_size):
@@ -201,18 +225,29 @@ async def convert_to_svg(
                     return SVGConversionResponse(
                         svg_data=svg_content,
                         success=True,
-                        message="SVG conversion successful (fallback method)"
+                        message="SVG conversion successful (using fallback method)"
                     )
                 
             finally:
-                # Clean up temporary files
+                # Clean up temp files
                 try:
                     os.unlink(temp_in_path)
+                except:
+                    pass
+                    
+                try:
                     os.unlink(temp_out_path)
-                except Exception as e:
-                    logger.error(f"Error removing temporary files: {e}")
-        
+                except:
+                    pass
+                    
+    except ValidationError:
+        # Re-raise validation errors directly
+        raise
     except Exception as e:
-        logger.error(f"SVG conversion error: {str(e)}")
-        # Don't increment the rate limit counter if conversion failed
-        raise HTTPException(status_code=500, detail=f"SVG conversion failed: {str(e)}") 
+        logger.error(f"Error converting image to SVG: {str(e)}")
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        raise ServiceUnavailableError(detail=f"SVG conversion failed: {str(e)}")
+
+
+# Alias route for backward compatibility
+router.post("/convert", response_model=SVGConversionResponse)(convert_to_svg) 
