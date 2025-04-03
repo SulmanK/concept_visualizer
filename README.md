@@ -27,28 +27,70 @@ A web application for generating and refining visual concepts with AI assistance
 
 ## Project Structure
 
+This project follows a clean, modular structure with clear separation between frontend and backend:
+
 ```
 concept_visualizer/
-├── backend/           # Python FastAPI backend
-│   ├── app/
-│   │   ├── api/       # API routes and endpoints
-│   │   ├── core/      # Core functionality and settings
-│   │   ├── models/    # Data models and schemas
-│   │   ├── services/  # Business logic and external services
-│   │   └── utils/     # Utility functions
-├── frontend/          # React TypeScript frontend
-│   ├── public/        # Static assets
-│   ├── src/
-│   │   ├── components/# Reusable UI components
-│   │   ├── contexts/  # Context providers for state management
-│   │   ├── features/  # Feature-specific components
-│   │   ├── hooks/     # Custom React hooks
-│   │   ├── services/  # API integration and external services
-│   │   │   └── mocks/ # Mock services for testing
-│   │   ├── styles/    # Global styles
-│   │   └── types/     # TypeScript type definitions
-├── design/            # Design documents and assets
-└── scripts/           # Utility scripts
+├── .github/             # GitHub workflows and CI/CD configuration
+├── backend/             # Python FastAPI backend
+│   ├── .venv/           # Backend virtual environment (not tracked in git)
+│   ├── app/             # Application code 
+│   ├── docs/            # Backend documentation
+│   ├── tests/           # Test suite
+│   ├── .env             # Environment variables (not tracked in git)
+│   ├── .env.example     # Example environment file
+│   └── pyproject.toml   # Backend dependencies and configuration
+├── frontend/            # React frontend
+│   ├── my-app/          # Main React application
+│   │   ├── node_modules/ # Frontend dependencies (not tracked in git)
+│   │   ├── src/         # Source code
+│   │   ├── .env         # Environment variables (not tracked in git)
+│   │   └── .env.example # Example environment file
+├── Design/              # Design documentation
+└── docs/                # Project-wide documentation
+```
+
+## Development Setup
+
+### Backend
+
+To set up the backend:
+
+```bash
+# Navigate to the backend directory
+cd backend
+
+# Create a virtual environment
+uv venv
+
+# Install dependencies
+uv pip install -e .
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your specific configuration
+
+# Run the development server
+uvicorn app.main:app --reload
+```
+
+### Frontend
+
+To set up the frontend:
+
+```bash
+# Navigate to the frontend directory
+cd frontend/my-app
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your specific configuration
+
+# Run the development server
+npm run dev
 ```
 
 ## Getting Started
@@ -60,56 +102,6 @@ concept_visualizer/
 - npm or yarn
 - JigsawStack API key
 - Supabase account and project
-
-### Backend Setup
-
-1. Navigate to the backend directory:
-   ```
-   cd backend
-   ```
-
-2. Install dependencies:
-   ```
-   pip install -e .
-   ```
-
-3. Create a `.env` file with your API keys:
-   ```
-   CONCEPT_JIGSAWSTACK_API_KEY=your_jigsaw_api_key_here
-   CONCEPT_SUPABASE_URL=your_supabase_url_here
-   CONCEPT_SUPABASE_KEY=your_supabase_api_key_here
-   ```
-
-4. Run the development server:
-   ```
-   uvicorn app.main:app --reload
-   ```
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```
-   cd frontend/my-app
-   ```
-
-2. Install dependencies:
-   ```
-   npm install
-   npm install @supabase/supabase-js js-cookie
-   npm install --save-dev @types/js-cookie
-   ```
-
-3. Create a `.env` file:
-   ```
-   VITE_API_BASE_URL=http://localhost:8000/api
-   VITE_SUPABASE_URL=your_supabase_url_here
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-   ```
-
-4. Start the development server:
-   ```
-   npm run dev
-   ```
 
 ### Supabase Setup
 

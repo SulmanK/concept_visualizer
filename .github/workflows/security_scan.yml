@@ -59,9 +59,17 @@ jobs:
     - name: Backend dependency scan
       run: |
         cd backend
-        uv pip install safety
-        uv pip install -r requirements.txt
-        uv run safety check
+        # Try creating a virtual environment or use system packages if that fails
+        uv venv || echo "Failed to create venv, using system installation"
+        
+        # Install safety
+        uv pip install safety || pip install safety
+        
+        # Install project dependencies
+        uv pip install -e . || pip install -e .
+        
+        # Run safety check
+        uv run safety check --output text || safety check
         
     - name: Setup Node.js
       uses: actions/setup-node@v4
