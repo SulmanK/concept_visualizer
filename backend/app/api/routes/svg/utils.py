@@ -63,16 +63,19 @@ def increment_svg_rate_limit(limiter, user_id: str, endpoint: str, period: str =
             logger.warning("Cannot increment SVG rate limit: Redis not available")
             return True  # Return success anyway to allow the operation to continue
         
-        # Use only specific key formats for SVG conversion, NOT generic ones like {user_id}:{period}
-        # which could interfere with other rate limits
+        # Use key formats matching what's being checked in health/limits.py
+        # IMPORTANT: We must only include SVG-specific keys to avoid affecting other quotas
         keys = [
-            # Use specific SVG key formats
+            # REMOVED: The generic key that was affecting other endpoints
+            # f"{user_id}:{period}", 
+            
+            # SVG-specific keys only
             f"svg:{user_id}:{period}",
-            f"POST:{endpoint}:{user_id}:{period}", 
-            f"{endpoint}:{user_id}:{period}"
+            
+            # Make the standard format keys specific to SVG
+            f"svg:POST:{endpoint}:{user_id}:{period}", 
+            f"svg:{endpoint}:{user_id}:{period}"
         ]
-        
-        # Deliberately exclude the generic key format: f"{user_id}:{period}"
         
         # Calculate TTL based on period
         if period == "minute":

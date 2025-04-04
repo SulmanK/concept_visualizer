@@ -36,16 +36,48 @@ def download_image(image_url_or_data: Union[str, BytesIO]) -> np.ndarray:
             return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
         
         # Handle URL input
-        import requests
-        response = requests.get(image_url_or_data, timeout=10)
-        response.raise_for_status()
+        if isinstance(image_url_or_data, str) and (image_url_or_data.startswith('http://') or image_url_or_data.startswith('https://')):
+            import requests
+            
+            # Use a session that automatically handles redirects
+            session = requests.Session()
+            
+            # Be more browser-like to avoid some access restrictions
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+            }
+            
+            # Try to download the image with a longer timeout
+            response = session.get(image_url_or_data, headers=headers, timeout=30, allow_redirects=True)
+            response.raise_for_status()
+            
+            # Log success
+            logger.info(f"Successfully downloaded image: {len(response.content)} bytes")
+            
+            # Convert to numpy array via PIL
+            image = Image.open(BytesIO(response.content))
+            image_rgb = np.array(image.convert("RGB"))
+            
+            # Convert from RGB to BGR (OpenCV format)
+            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
         
-        # Convert to numpy array via PIL
-        image = Image.open(BytesIO(response.content))
-        image_rgb = np.array(image.convert("RGB"))
-        
-        # Convert from RGB to BGR (OpenCV format)
-        return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+        # Handle local file paths (including those from file:// URLs)
+        if isinstance(image_url_or_data, str):
+            # If it starts with file://, remove that prefix
+            if image_url_or_data.startswith('file://'):
+                image_url_or_data = image_url_or_data[7:]
+            
+            # Open the local file
+            with open(image_url_or_data, 'rb') as f:
+                image_data = f.read()
+                
+            # Load as PIL image
+            image = Image.open(BytesIO(image_data))
+            image_rgb = np.array(image.convert("RGB"))
+            
+            # Convert from RGB to BGR (OpenCV format)
+            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            
     except Exception as e:
         logger.error(f"Error downloading/reading image: {str(e)}")
         raise
@@ -165,16 +197,21 @@ def create_color_mask(image: np.ndarray, target_color: Tuple[int, int, int], thr
     target_hsv = cv2.cvtColor(np.uint8([[target_color]]), cv2.COLOR_BGR2HSV)[0][0]
     
     # Create range for target color
+    # Explicitly convert to uint8 to avoid type mismatches and overflows
+    h_thresh = min(threshold, 90)  # Limit hue threshold to avoid wrapping issues
+    
+    # Create bounds with proper types and clamping
     lower_bound = np.array([
-        max(0, target_hsv[0] - threshold),
-        max(0, target_hsv[1] - threshold),
-        max(0, target_hsv[2] - threshold)
-    ])
+        max(0, int(target_hsv[0]) - h_thresh),
+        max(0, int(target_hsv[1]) - threshold),
+        max(0, int(target_hsv[2]) - threshold)
+    ], dtype=np.uint8)
+    
     upper_bound = np.array([
-        min(179, target_hsv[0] + threshold),
-        min(255, target_hsv[1] + threshold),
-        min(255, target_hsv[2] + threshold)
-    ])
+        min(179, int(target_hsv[0]) + h_thresh),
+        min(255, int(target_hsv[1]) + threshold),
+        min(255, int(target_hsv[2]) + threshold)
+    ], dtype=np.uint8)
     
     # Create mask
     mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
@@ -237,9 +274,9 @@ def apply_palette_with_masking_optimized(
             target_hsv = cv2.cvtColor(np.uint8([[target_color]]), cv2.COLOR_BGR2HSV)[0][0]
             
             # Calculate color shift
-            h_shift = target_hsv[0] - dom_hsv[0]
-            s_scale = target_hsv[1] / max(1, dom_hsv[1])  # Scale saturation
-            v_scale = target_hsv[2] / max(1, dom_hsv[2])  # Value ratio for preserving lighting
+            h_shift = int(target_hsv[0]) - int(dom_hsv[0])
+            s_scale = float(target_hsv[1]) / max(1.0, float(dom_hsv[1]))  # Scale saturation
+            v_scale = float(target_hsv[2]) / max(1.0, float(dom_hsv[2]))  # Value ratio for preserving lighting
             
             # Apply the shift to the entire image
             shifted_hsv = hsv_image.copy()
@@ -250,15 +287,21 @@ def apply_palette_with_masking_optimized(
             # Create a recolored version with shifted HSV values
             # This vectorized approach is much faster than pixel-by-pixel operations
             shifted_hsv[..., 0] = (hsv_image[..., 0] + h_shift) % 180
-            shifted_hsv[..., 1] = np.minimum(255, hsv_image[..., 1] * s_scale)
-            shifted_hsv[..., 2] = np.minimum(255, hsv_image[..., 2] * v_scale)
+            shifted_hsv[..., 1] = np.clip(hsv_image[..., 1] * s_scale, 0, 255)
+            shifted_hsv[..., 2] = np.clip(hsv_image[..., 2] * v_scale, 0, 255)
             
             # Convert back to BGR
             shifted_bgr = cv2.cvtColor(shifted_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
             
             # Blend with original using the mask
             for c in range(3):  # For each BGR channel
-                result[..., c] = (1 - mask_3d[..., c]) * result[..., c] + mask_3d[..., c] * shifted_bgr[..., c]
+                # Use safe blend method to avoid overflow
+                blended = (1 - mask_3d[..., c]) * result[..., c] + mask_3d[..., c] * shifted_bgr[..., c]
+                # Clamp values to valid range
+                result[..., c] = np.clip(blended, 0, 255).astype(np.uint8)
+        
+        # Make sure we have a valid image type before encoding
+        result = result.astype(np.uint8)
         
         # Convert the result to bytes
         _, buffer = cv2.imencode('.png', result)

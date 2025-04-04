@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from './useToast';
+import { RateLimitError } from '../services/apiClient';
+import { formatTimeRemaining } from '../services/rateLimitService';
 
 export type ErrorCategory = 
   | 'validation'   // Form validation errors
@@ -8,6 +10,7 @@ export type ErrorCategory =
   | 'notFound'     // Resource not found errors
   | 'server'       // Server-side errors
   | 'client'       // Client-side errors
+  | 'rateLimit'    // Rate limit errors
   | 'unknown';     // Uncategorized errors
 
 export interface ErrorWithCategory {
@@ -15,6 +18,11 @@ export interface ErrorWithCategory {
   details?: string;
   category: ErrorCategory;
   originalError?: unknown;
+  // Rate limit specific properties
+  limit?: number;
+  current?: number;
+  period?: string;
+  resetAfterSeconds?: number;
 }
 
 export interface UseErrorHandlingResult {
@@ -113,9 +121,19 @@ export const useErrorHandling = (options?: {
    * Categorize an error based on its properties or message
    */
   const categorizeError = useCallback((error: unknown): ErrorCategory => {
+    // Handle our custom RateLimitError
+    if (error instanceof RateLimitError) {
+      return 'rateLimit';
+    }
+    
     // Handle axios or fetch errors
     if (typeof error === 'object' && error !== null) {
       const err = error as any;
+      
+      // Check for rate limit errors based on status code
+      if (err.status === 429 || err.statusCode === 429) {
+        return 'rateLimit';
+      }
       
       // Network errors
       if (err.code === 'ECONNABORTED' || err.name === 'NetworkError' || err.message?.includes('Network Error')) {
@@ -153,6 +171,12 @@ export const useErrorHandling = (options?: {
    */
   const extractErrorMessage = useCallback(
     (error: unknown): string => {
+      // Handle RateLimitError specifically
+      if (error instanceof RateLimitError) {
+        const formattedTime = formatTimeRemaining(error.resetAfterSeconds);
+        return `Rate limit exceeded: ${error.current}/${error.limit} requests per ${error.period}. Try again in ${formattedTime}.`;
+      }
+      
       if (typeof error === 'string') {
         return error;
       }
@@ -236,7 +260,21 @@ export const useErrorHandling = (options?: {
       const message = extractErrorMessage(error);
       const details = extractErrorDetails(error);
       
-      setError(message, category, details, error);
+      // Add rate limit specific properties if applicable
+      if (category === 'rateLimit' && error instanceof RateLimitError) {
+        setErrorState({
+          message,
+          details,
+          category,
+          originalError: error,
+          limit: error.limit,
+          current: error.current,
+          period: error.period,
+          resetAfterSeconds: error.resetAfterSeconds
+        });
+      } else {
+        setError(message, category, details, error);
+      }
     },
     [categorizeError, extractErrorMessage, extractErrorDetails, setError]
   );

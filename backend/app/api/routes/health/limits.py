@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any
 
-from app.core.limiter import get_redis_client
+from app.core.limiter import get_redis_client, check_rate_limit
 from app.api.routes.health.utils import get_reset_time, mask_id, mask_key
 
 # Import error handling
@@ -155,7 +155,33 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
             ]
         }
         
-        # First try with the direct Redis client
+        # Use our new check_rate_limit function for more accurate limit checking
+        if limit_type in endpoint_paths:
+            # Just use the first endpoint path for simplicity
+            path = endpoint_paths[limit_type][0]
+            
+            # Use our new check_rate_limit function
+            limit_status = check_rate_limit(
+                user_id=user_identifier,
+                endpoint=path,
+                limit=limit_string
+            )
+            
+            # If successful, use the results directly
+            if "error" not in limit_status:
+                logger.debug(f"Using new rate limit check for {mask_id(user_identifier)} on {limit_type}")
+                return {
+                    "limit": limit_string,
+                    "remaining": max(0, count - limit_status.get("count", 0)),
+                    "reset_after": get_reset_time(period),
+                    "current_count": limit_status.get("count", 0),
+                    "period": limit_status.get("period", period),
+                    "exceeded": limit_status.get("exceeded", False)
+                }
+            else:
+                logger.warning(f"Error using new rate limit check: {limit_status.get('error')}")
+        
+        # Fall back to previous implementation if the new method fails
         current = 0
         if direct_redis:
             try:
@@ -178,6 +204,13 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
                 # Special case for SVG conversion which uses a specific prefix to avoid affecting other rate limits
                 if limit_type == "svg_conversion":
                     keys_to_try.append(f"svg:{user_identifier}:{period}")
+                    # Add the new SVG-specific keys
+                    if endpoint_paths[limit_type]:
+                        for path in endpoint_paths[limit_type]:
+                            keys_to_try.extend([
+                                f"svg:POST:{path}:{user_identifier}:{period}",
+                                f"svg:{path}:{user_identifier}:{period}"
+                            ])
                 
                 # Try each key directly with the Redis client
                 for key in keys_to_try:
@@ -237,6 +270,8 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
             "limit": limit_string,
             "remaining": remaining,
             "reset_after": get_reset_time(period),
+            "current_count": current,
+            "exceeded": current >= count
         }
     except Exception as e:
         logger.error(f"General error getting rate limit info: {str(e)}")

@@ -1,6 +1,8 @@
 import React from 'react';
+import { ErrorWithCategory } from '../../hooks/useErrorHandling';
+import { formatTimeRemaining } from '../../services/rateLimitService';
 
-export type ErrorType = 'validation' | 'network' | 'permission' | 'notFound' | 'server' | 'generic';
+export type ErrorType = 'validation' | 'network' | 'permission' | 'notFound' | 'server' | 'generic' | 'rateLimit';
 
 export interface ErrorMessageProps {
   /**
@@ -33,6 +35,16 @@ export interface ErrorMessageProps {
    * Handler for dismiss button click
    */
   onDismiss?: () => void;
+  
+  /**
+   * Rate limit specific data (only used when type is 'rateLimit')
+   */
+  rateLimitData?: {
+    limit: number;
+    current: number;
+    period: string;
+    resetAfterSeconds: number;
+  };
 }
 
 /**
@@ -45,6 +57,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   className = '',
   onRetry,
   onDismiss,
+  rateLimitData,
 }) => {
   // Map of error types to appropriate styling
   const typeStyles = {
@@ -54,6 +67,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     notFound: 'bg-purple-50 border-purple-200 text-purple-700',
     server: 'bg-red-50 border-red-200 text-red-700',
     generic: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+    rateLimit: 'bg-pink-50 border-pink-200 text-pink-700',
   };
   
   // Error icons based on type
@@ -77,10 +91,10 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
           </svg>
         );
-      case 'notFound':
+      case 'rateLimit':
         return (
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
           </svg>
         );
       case 'server':
@@ -98,6 +112,9 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     }
   };
 
+  // If this is a rate limit error, show detailed information
+  const isRateLimit = type === 'rateLimit' && rateLimitData;
+
   return (
     <div 
       className={`flex items-start p-4 rounded-lg border ${typeStyles[type]} ${className}`}
@@ -113,9 +130,30 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         <h3 className="text-sm font-medium">{message}</h3>
         {details && <p className="mt-1 text-xs opacity-80">{details}</p>}
         
+        {isRateLimit && (
+          <div className="mt-3 bg-white bg-opacity-50 p-3 rounded-md">
+            <div className="text-xs font-medium mb-2">API Usage Limit Reached</div>
+            <div className="flex justify-between text-xs mb-1">
+              <span>Current usage:</span>
+              <span className="font-medium">{rateLimitData.current}/{rateLimitData.limit} per {rateLimitData.period}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span>Reset in:</span>
+              <span className="font-medium">{formatTimeRemaining(rateLimitData.resetAfterSeconds)}</span>
+            </div>
+            
+            <div className="mt-2 text-xs">
+              <a href="/pricing" className="text-pink-700 hover:underline font-medium">
+                Upgrade your plan
+              </a>
+              {' '}for higher usage limits
+            </div>
+          </div>
+        )}
+        
         {(onRetry || onDismiss) && (
           <div className="mt-3 flex gap-2">
-            {onRetry && (
+            {onRetry && !isRateLimit && (
               <button
                 onClick={onRetry}
                 className="text-xs font-medium hover:underline"
@@ -138,6 +176,29 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         )}
       </div>
     </div>
+  );
+};
+
+/**
+ * Creates an ErrorMessage component preconfigured for rate limit errors
+ */
+export const RateLimitErrorMessage: React.FC<Omit<ErrorMessageProps, 'type' | 'rateLimitData' | 'message'> & { error: ErrorWithCategory }> = ({
+  error,
+  ...props
+}) => {
+  return (
+    <ErrorMessage
+      type="rateLimit"
+      message={error.message}
+      details={error.details}
+      rateLimitData={{
+        limit: error.limit || 0,
+        current: error.current || 0,
+        period: error.period || 'unknown',
+        resetAfterSeconds: error.resetAfterSeconds || 0
+      }}
+      {...props}
+    />
   );
 };
 

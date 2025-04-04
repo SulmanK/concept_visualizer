@@ -7,6 +7,7 @@ This module provides endpoints for generating visual concepts.
 import logging
 import traceback
 from typing import Optional
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
 from fastapi.responses import JSONResponse
@@ -59,8 +60,9 @@ async def generate_concept(
     Raises:
         ServiceUnavailableError: If there was an error generating the concept
         ValidationError: If the request validation fails
+        HTTPException: If rate limit is exceeded (429)
     """
-    # Apply rate limit
+    # Apply rate limit - this will now raise an HTTPException if limit is exceeded
     await apply_rate_limit(req, "/concepts/generate", "10/month")
     
     try:
@@ -105,22 +107,31 @@ async def generate_concept(
         
         # Store concept in Supabase database
         stored_concept = await commons.storage_service.store_concept(
-            session_id=session_id,
-            logo_description=request.logo_description,
-            theme_description=request.theme_description,
-            base_image_path=base_image_path,
-            color_palettes=palette_variations
+            concept_data={
+                "session_id": session_id,
+                "logo_description": request.logo_description,
+                "theme_description": request.theme_description,
+                "base_image_path": base_image_path,
+                "color_palettes": palette_variations
+            }
         )
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store concept")
         
-        # Return generation response
+        # Handle case where storage service returns just the ID string
+        concept_id = stored_concept
+        created_at = datetime.now().isoformat()
+        if isinstance(stored_concept, dict):
+            concept_id = stored_concept.get("id", stored_concept)
+            created_at = stored_concept.get("created_at", created_at)
+            
+        # Return the combined response
         return GenerationResponse(
-            prompt_id=stored_concept["id"],
+            prompt_id=concept_id,
             logo_description=request.logo_description,
             theme_description=request.theme_description,
-            created_at=stored_concept.get("created_at", ""),
+            created_at=created_at,
             image_url=base_image_url,
             variations=[
                 PaletteVariation(
@@ -168,8 +179,9 @@ async def generate_concept_with_palettes(
     Raises:
         ServiceUnavailableError: If there was an error during generation
         ValidationError: If the request validation fails
+        HTTPException: If rate limit is exceeded (429)
     """
-    # Apply rate limit
+    # Apply rate limit - this will now raise an HTTPException if limit is exceeded
     await apply_rate_limit(req, "/concepts/generate-with-palettes", "10/month")
     
     try:
@@ -206,6 +218,8 @@ async def generate_concept_with_palettes(
         
         if not palettes:
             raise ServiceUnavailableError(detail="Failed to generate color palettes")
+        
+        logger.info(f"Generated {len(palettes)} distinct color palettes")
         
         # Generate a single high-quality base image
         logger.info(f"Generating base image for concept with prompt: {request.logo_description}")
@@ -253,22 +267,31 @@ async def generate_concept_with_palettes(
         
         # Store the concept with all variations
         stored_concept = await commons.storage_service.store_concept(
-            session_id=session_id,
-            logo_description=request.logo_description,
-            theme_description=request.theme_description,
-            base_image_path=base_image_path,
-            color_palettes=palette_variations
+            concept_data={
+                "session_id": session_id,
+                "logo_description": request.logo_description,
+                "theme_description": request.theme_description,
+                "base_image_path": base_image_path,
+                "color_palettes": palette_variations
+            }
         )
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store concept")
             
+        # Handle case where storage service returns just the ID string
+        concept_id = stored_concept
+        created_at = datetime.now().isoformat()
+        if isinstance(stored_concept, dict):
+            concept_id = stored_concept.get("id", stored_concept)
+            created_at = stored_concept.get("created_at", created_at)
+            
         # Return the combined response
         return GenerationResponse(
-            prompt_id=stored_concept["id"],
+            prompt_id=concept_id,
             logo_description=request.logo_description,
             theme_description=request.theme_description,
-            created_at=stored_concept.get("created_at", ""),
+            created_at=created_at,
             image_url=base_image_url,
             variations=[
                 PaletteVariation(

@@ -68,6 +68,18 @@ def generate_rate_limit_keys(user_id: str, endpoint: str, period: str) -> list[s
     Returns:
         list[str]: List of possible rate limit keys
     """
+    # Special case for SVG conversion endpoints to avoid conflicting with other endpoints
+    if "svg" in endpoint.lower() or "convert" in endpoint.lower():
+        return [
+            # SVG-specific keys to avoid affecting other rate limits
+            f"svg:{user_id}:{period}",
+            
+            # Make the standard format keys specific to SVG
+            f"svg:POST:{endpoint}:{user_id}:{period}", 
+            f"svg:{endpoint}:{user_id}:{period}"
+        ]
+    
+    # Standard keys for all other endpoints
     return [
         # Format used by our rate limit checker
         f"{user_id}:{period}",

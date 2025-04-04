@@ -47,7 +47,6 @@ async def get_or_create_session(
     response: Response,
     session_service: SessionServiceInterface = Depends(get_session_service),
     session_id: Optional[str] = Depends(get_session_id),
-    client_session_id: Optional[str] = None
 ) -> Tuple[str, bool]:
     """
     Get an existing session or create a new one.
@@ -56,16 +55,19 @@ async def get_or_create_session(
         response: FastAPI response object for setting cookies
         session_service: Service for managing sessions
         session_id: Session ID from cookies
-        client_session_id: Optional client-provided session ID for synchronization
         
     Returns:
         Tuple of (session_id, is_new_session)
     """
-    return await session_service.get_or_create_session(
-        response, 
-        session_id=session_id,
-        client_session_id=client_session_id
-    )
+    # Pass session_id directly without client_session_id to avoid duplicate parameters
+    session = await session_service.get_or_create_session(session_id)
+    if "id" in session:
+        # Make sure to set the cookie for future requests
+        session_service.set_session_cookie(response, session["id"])
+        return session["id"], session.get("is_new", False)
+    else:
+        # Fallback in case the session format is unexpected
+        return session_id or "", False
 
 
 def get_request_ip(request: Request) -> str:

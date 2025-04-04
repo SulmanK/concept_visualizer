@@ -153,7 +153,7 @@ Design requirements:
                 if response.status_code != 200:
                     logger.error(
                         f"Image generation API error: Status {response.status_code}, "
-                        f"Response: {response.text[:200]}..."
+                        f"Response: {str(response.content[:200])}..."
                     )
                     raise JigsawStackGenerationError(
                         message="Image generation failed",
@@ -162,25 +162,102 @@ Design requirements:
                         details={
                             "status_code": response.status_code,
                             "endpoint": endpoint,
-                            "response_text": response.text[:200]  # Limit response text size
+                            "response_content": str(response.content[:100])  # Limit response content size
                         }
                     )
                 
-                # Parse response JSON
-                try:
-                    result = response.json()
-                    logger.info("Image generation successful")
-                    return {
-                        "url": result["output"]["image_url"],
-                        "id": result.get("id", "unknown")
-                    }
-                except (json.JSONDecodeError, KeyError) as e:
-                    logger.error(f"Failed to parse image generation response: {str(e)}")
+                # Check if the response is binary data (image) or JSON
+                content_type = response.headers.get('content-type', '')
+                logger.debug(f"Response content type: {content_type}")
+                
+                if 'application/json' in content_type:
+                    # Parse response JSON
+                    try:
+                        result = response.json()
+                        logger.info("Image generation successful (JSON response)")
+                        if "output" in result and "image_url" in result["output"]:
+                            return {
+                                "url": result["output"]["image_url"],
+                                "id": result.get("id", "unknown")
+                            }
+                        else:
+                            logger.error(f"Unexpected JSON response structure: {result}")
+                            raise JigsawStackGenerationError(
+                                message="Unexpected response structure from image generation API",
+                                content_type="image",
+                                prompt=prompt,
+                                details={"response": str(result)}
+                            )
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse JSON response: {str(e)}")
+                        raise JigsawStackGenerationError(
+                            message=f"Failed to parse JSON response: {str(e)}",
+                            content_type="image",
+                            prompt=prompt
+                        )
+                elif any(img_type in content_type for img_type in ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']):
+                    # Binary image data in response - save it directly
+                    try:
+                        # Create a temporary file or directly pass bytes to caller
+                        logger.info("Image generation successful (binary response)")
+                        import uuid
+                        import os
+                        import tempfile
+                        
+                        # Generate a temporary filename
+                        filename = f"temp_image_{uuid.uuid4()}.png"
+                        temp_path = os.path.join(tempfile.gettempdir(), filename)
+                        
+                        # Save the image data
+                        with open(temp_path, "wb") as f:
+                            f.write(response.content)
+                            
+                        # Return the local path as URL for now
+                        return {
+                            "url": f"file://{temp_path}",
+                            "id": str(uuid.uuid4()),
+                            "binary_data": response.content
+                        }
+                    except Exception as e:
+                        logger.error(f"Failed to process binary image data: {str(e)}")
+                        raise JigsawStackGenerationError(
+                            message=f"Failed to process binary image data: {str(e)}",
+                            content_type="image",
+                            prompt=prompt
+                        )
+                else:
+                    # Unrecognized content type
+                    logger.error(f"Unrecognized content type: {content_type}")
+                    
+                    # Try to determine if it's binary data based on content
+                    if response.content and len(response.content) > 4 and response.content[0:4] == b'\x89PNG':
+                        logger.info("Detected PNG image data in response")
+                        # Handle as PNG binary data
+                        import uuid
+                        import os
+                        import tempfile
+                        
+                        # Generate a temporary filename
+                        filename = f"temp_image_{uuid.uuid4()}.png"
+                        temp_path = os.path.join(tempfile.gettempdir(), filename)
+                        
+                        # Save the image data
+                        with open(temp_path, "wb") as f:
+                            f.write(response.content)
+                            
+                        # Return the local path as URL for now
+                        return {
+                            "url": f"file://{temp_path}",
+                            "id": str(uuid.uuid4()),
+                            "binary_data": response.content
+                        }
+                    
+                    # If we get here, we don't know what the response is
                     raise JigsawStackGenerationError(
-                        message=f"Failed to parse image generation response: {str(e)}",
+                        message=f"Unrecognized response content type: {content_type}",
                         content_type="image",
                         prompt=prompt,
-                        details={"response_text": response.text[:200]}
+                        details={"content_length": len(response.content) if response.content else 0}
                     )
                 
         except (JigsawStackConnectionError, JigsawStackAuthenticationError, JigsawStackGenerationError):
@@ -672,6 +749,102 @@ Design requirements:
             raise JigsawStackGenerationError(
                 message=f"Unexpected error generating image variation: {str(e)}",
                 details={"image_url": image_url, "model": model}
+            )
+
+    async def generate_image_with_palette(
+        self, 
+        logo_prompt: str, 
+        palette: List[str],
+        palette_name: str = "", 
+        width: int = 512, 
+        height: int = 512
+    ) -> bytes:
+        """
+        Generate an image with a specific color palette.
+        
+        Args:
+            logo_prompt: The logo description for image generation
+            palette: List of hex color codes to use in the image
+            palette_name: Optional name of the palette for logging
+            width: The width of the generated image
+            height: The height of the generated image
+            
+        Returns:
+            Binary image data
+            
+        Raises:
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If the image generation fails
+        """
+        try:
+            logger.info(f"Generating image for palette '{palette_name}' with colors: {palette}")
+            
+            # Convert color array to comma-separated string
+            color_string = ", ".join(palette)
+            
+            # Create an enhanced prompt that mentions the colors
+            enhanced_prompt = f"""Create a professional logo design based on this description: {logo_prompt}.
+Use ONLY these specific colors in the design: {color_string}.
+
+Design requirements:
+- Create a minimalist, scalable vector-style logo
+- ONLY use the specified color palette: {color_string}
+- Use simple shapes with clean edges for easy masking
+- Include distinct foreground and background elements
+- Design with high contrast between elements
+- Create clear boundaries between different parts of the logo
+- Text or typography can be included if appropriate for the logo
+"""
+            
+            # Generate the image with our standard method
+            result = await self.generate_image(
+                prompt=enhanced_prompt,
+                width=width,
+                height=height
+            )
+            
+            # If we got a binary_data key, return it directly
+            if 'binary_data' in result:
+                return result['binary_data']
+                
+            # Otherwise, if it's a URL, download the image
+            if 'url' in result:
+                image_url = result['url']
+                
+                # Handle file:// URLs (temporary files)
+                if image_url.startswith('file://'):
+                    local_path = image_url[7:]  # Remove 'file://' prefix
+                    with open(local_path, 'rb') as f:
+                        image_data = f.read()
+                    return image_data
+                
+                # Download from remote URL
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(image_url)
+                    response.raise_for_status()
+                    return response.content
+            
+            # If we get here, something went wrong
+            raise JigsawStackGenerationError(
+                message="Failed to generate image with palette: Invalid response format",
+                content_type="image",
+                prompt=logo_prompt,
+                details={"palette": palette, "result": str(result)}
+            )
+            
+        except (JigsawStackError, httpx.HTTPError) as e:
+            # Pass through JigsawStackError exceptions
+            if isinstance(e, JigsawStackError):
+                raise
+                
+            # Convert other exceptions to JigsawStackError
+            logger.error(f"Error generating image with palette '{palette_name}': {str(e)}")
+            raise JigsawStackGenerationError(
+                message=f"Failed to generate image with palette: {str(e)}",
+                content_type="image",
+                prompt=logo_prompt,
+                details={"palette": palette}
             )
 
 

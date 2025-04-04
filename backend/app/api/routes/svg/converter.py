@@ -206,7 +206,7 @@ async def convert_to_svg(
                         f.write(svg_content)
                     
                     # Only increment rate limit counter AFTER successful conversion
-                    if req and limiter and hasattr(limiter, 'increment_rate_limit'):
+                    if req and hasattr(req.app.state, 'limiter'):
                         # The user ID will be extracted from cookies in the key_func
                         user_id = req.cookies.get("concept_session", get_remote_address(req))
                         masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
@@ -214,9 +214,9 @@ async def convert_to_svg(
                         
                         logger.info(f"Incrementing rate limit for user: {masked_user_id} after successful conversion")
                         
-                        # Use a custom function to increment only SVG-specific keys
+                        # Use our fixed increment_svg_rate_limit function
                         success = increment_svg_rate_limit(
-                            limiter, 
+                            req.app.state.limiter, 
                             user_key, 
                             "/api/svg/convert-to-svg", 
                             "hour"
@@ -241,18 +241,23 @@ async def convert_to_svg(
                         svg_content = svg_file.read()
                     
                     # Even with fallback, we had a successful conversion, so increment the counter
-                    if req and limiter and hasattr(limiter, 'increment_rate_limit'):
+                    if req and hasattr(req.app.state, 'limiter'):
                         user_id = req.cookies.get("concept_session", get_remote_address(req))
                         masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
                         user_key = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
                         
                         logger.info(f"Incrementing rate limit for user: {masked_user_id} after fallback conversion")
-                        increment_svg_rate_limit(
-                            limiter, 
+                        success = increment_svg_rate_limit(
+                            req.app.state.limiter, 
                             user_key, 
                             "/api/svg/convert-to-svg", 
                             "hour"
                         )
+                        
+                        if success:
+                            logger.info("Rate limit counter incremented successfully in Redis for fallback SVG conversion")
+                        else:
+                            logger.warning("Failed to increment rate limit counter in Redis for fallback SVG conversion")
                     
                     return SVGConversionResponse(
                         svg_data=svg_content,

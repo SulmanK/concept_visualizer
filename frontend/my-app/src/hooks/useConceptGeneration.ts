@@ -10,6 +10,8 @@ import {
   FormStatus
 } from '../types';
 import { useConceptContext } from '../contexts/ConceptContext';
+import { RateLimitError } from '../services/apiClient';
+import { useErrorHandling } from './useErrorHandling';
 
 export interface ConceptGenerationState {
   status: FormStatus;
@@ -23,6 +25,7 @@ export interface ConceptGenerationState {
 export function useConceptGeneration() {
   const { post, loading, error, clearError } = useApi();
   const { refreshConcepts } = useConceptContext();
+  const { handleError: handleApiError } = useErrorHandling();
   
   const [generationState, setGenerationState] = useState<ConceptGenerationState>({
     status: 'idle',
@@ -90,13 +93,28 @@ export function useConceptGeneration() {
         await refreshConcepts();
       }
     } catch (err) {
+      console.error('Concept generation error:', err);
+      
+      // Special handling for rate limit errors
+      if (err instanceof RateLimitError) {
+        // Use the handleApiError to properly format and categorize the error
+        handleApiError(err);
+        
+        setGenerationState({
+          status: 'error',
+          result: null,
+          error: err.message,
+        });
+        return;
+      }
+      
       setGenerationState({
         status: 'error',
         result: null,
         error: err instanceof Error ? err.message : 'Failed to generate concept',
       });
     }
-  }, [post, refreshConcepts]);
+  }, [post, refreshConcepts, handleApiError]);
 
   /**
    * Reset the generation state

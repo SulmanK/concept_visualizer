@@ -37,33 +37,18 @@ class ImageStorageService:
             supabase_client: Supabase client instance
         """
         self.supabase = supabase_client
-        self.bucket_name = "images"
-        self._ensure_bucket_exists()
+        # The buckets exist in Supabase and are public
+        self.concept_bucket = "concept-images"
+        self.palette_bucket = "palette-images"
         self.logger = logging.getLogger(__name__)
-
-    def _ensure_bucket_exists(self) -> None:
-        """
-        Ensure that the images bucket exists.
-        Creates it if it doesn't exist.
-        """
-        try:
-            buckets = self.supabase.storage.list_buckets()
-            bucket_names = [bucket["name"] for bucket in buckets]
-            
-            if self.bucket_name not in bucket_names:
-                self.logger.info(f"Creating storage bucket: {self.bucket_name}")
-                self.supabase.storage.create_bucket(self.bucket_name, public=True)
-                
-        except Exception as e:
-            self.logger.warning(f"Failed to check/create bucket {self.bucket_name}: {str(e)}")
-            # Continue anyway, as bucket might already exist
     
     def store_image(
         self, 
         image_data: Union[bytes, BytesIO, UploadFile], 
         concept_id: Optional[str] = None,
         file_name: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        is_palette: bool = False
     ) -> str:
         """
         Store an image in the storage bucket.
@@ -73,6 +58,7 @@ class ImageStorageService:
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name (generated if not provided)
             metadata: Optional metadata to store with the image
+            is_palette: Whether the image is a palette (uses palette-images bucket)
             
         Returns:
             Public URL of the stored image
@@ -81,6 +67,9 @@ class ImageStorageService:
             ImageStorageError: If image storage fails
         """
         try:
+            # Select the appropriate bucket
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            
             # Process image data to get bytes
             if isinstance(image_data, UploadFile):
                 content = image_data.file.read()
@@ -88,6 +77,9 @@ class ImageStorageService:
                 content = image_data.getvalue()
             else:
                 content = image_data
+            
+            # Default extension - initialize it here to avoid undefined issues
+            ext = "png"
                 
             # Generate a unique file name if not provided
             if not file_name:
@@ -97,28 +89,69 @@ class ImageStorageService:
                 # Try to determine file format from content
                 try:
                     img = Image.open(BytesIO(content))
-                    ext = img.format.lower() if img.format else "png"
-                except:
-                    ext = "png"  # Default extension
+                    if img.format:
+                        ext = img.format.lower()
+                except Exception as e:
+                    self.logger.warning(f"Could not determine image format: {str(e)}, using default: {ext}")
                     
                 file_name = f"{timestamp}_{random_id}.{ext}"
+            else:
+                # Extract extension from provided file_name
+                if "." in file_name:
+                    ext = file_name.split(".")[-1].lower()
                 
             # Create subfolder path based on concept_id if provided
             path = f"{concept_id}/{file_name}" if concept_id else file_name
                 
             # Upload to storage
-            self.supabase.storage.from_(self.bucket_name).upload(
-                path=path,
-                file=content,
-                file_options={"content-type": f"image/{ext}"}
-            )
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                # Set content type based on extension
+                content_type = "image/png"  # Default content type
+                if ext == "jpg" or ext == "jpeg":
+                    content_type = "image/jpeg"
+                elif ext == "gif":
+                    content_type = "image/gif"
+                elif ext == "webp":
+                    content_type = "image/webp"
+                
+                # Set file options with correct content type
+                file_options = {"content-type": content_type}
+                
+                self.supabase.client.storage.from_(bucket_name).upload(
+                    path=path,
+                    file=content,
+                    file_options=file_options
+                )
+                
+                # Get the public URL
+                image_url = self.supabase.client.storage.from_(bucket_name).get_public_url(path)
+            else:
+                # Direct access if storage attribute exists on the client
+                # Set content type based on extension
+                content_type = "image/png"  # Default content type
+                if ext == "jpg" or ext == "jpeg":
+                    content_type = "image/jpeg"
+                elif ext == "gif":
+                    content_type = "image/gif"
+                elif ext == "webp":
+                    content_type = "image/webp"
+                
+                # Set file options with correct content type
+                file_options = {"content-type": content_type}
+                
+                self.supabase.storage.from_(bucket_name).upload(
+                    path=path,
+                    file=content,
+                    file_options=file_options
+                )
+                
+                # Get the public URL
+                image_url = self.supabase.storage.from_(bucket_name).get_public_url(path)
             
-            # Get the public URL
-            image_url = self.supabase.storage.from_(self.bucket_name).get_public_url(path)
-            
-            # Store metadata if provided
-            if metadata and concept_id:
-                self._store_image_metadata(path, concept_id, metadata)
+            # Store metadata if provided and we really need to store it
+            # Currently we're not storing metadata so skip this to avoid errors
+            # if metadata and concept_id:
+            #     self._store_image_metadata(path, concept_id, bucket_name, metadata)
                 
             return image_url
             
@@ -127,12 +160,13 @@ class ImageStorageService:
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
 
-    def get_image(self, image_path: str) -> bytes:
+    def get_image(self, image_path: str, is_palette: bool = False) -> bytes:
         """
         Retrieve an image from storage.
         
         Args:
             image_path: Path of the image in storage
+            is_palette: Whether the image is a palette (uses palette-images bucket)
             
         Returns:
             Image data as bytes
@@ -142,7 +176,15 @@ class ImageStorageService:
             ImageStorageError: If image retrieval fails
         """
         try:
-            response = self.supabase.storage.from_(self.bucket_name).download(image_path)
+            # Select the appropriate bucket
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            
+            # Try storage access through client attribute first, then fall back to direct access
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                response = self.supabase.client.storage.from_(bucket_name).download(image_path)
+            else:
+                response = self.supabase.storage.from_(bucket_name).download(image_path)
+                
             return response
             
         except Exception as e:
@@ -154,36 +196,35 @@ class ImageStorageService:
                 
             raise ImageStorageError(error_msg)
     
-    def _store_image_metadata(self, image_path: str, concept_id: str, metadata: Dict[str, Any]) -> None:
+    def _store_image_metadata(self, image_path: str, concept_id: str, bucket_name: str, metadata: Dict[str, Any]) -> None:
         """
         Store metadata about an image in the database.
         
         Args:
             image_path: Path of the image in storage
             concept_id: Concept ID associated with the image
+            bucket_name: Name of the bucket containing the image
             metadata: Metadata to store
         """
         try:
-            # Store in a database table for image metadata
-            data = {
-                "path": image_path,
-                "concept_id": concept_id,
-                "metadata": metadata,
-                "created_at": datetime.now().isoformat()
-            }
+            # We don't have an image_metadata table, so just log that we would store metadata
+            # Instead of trying to use self.supabase.table() which doesn't exist
+            self.logger.info(f"Metadata for image {image_path} in bucket {bucket_name} would be stored: {metadata}")
             
-            self.supabase.table("image_metadata").insert(data).execute()
+            # If concept_id looks like a UUID, we could try to update the concepts table
+            # but this is safer for now to avoid further errors
             
         except Exception as e:
             # Log but don't fail the overall operation
             self.logger.warning(f"Failed to store image metadata: {str(e)}")
             
-    def delete_image(self, image_path: str) -> bool:
+    def delete_image(self, image_path: str, is_palette: bool = False) -> bool:
         """
         Delete an image from storage.
         
         Args:
             image_path: Path of the image in storage
+            is_palette: Whether the image is a palette (uses palette-images bucket)
             
         Returns:
             True if deletion was successful
@@ -192,13 +233,20 @@ class ImageStorageService:
             ImageStorageError: If image deletion fails
         """
         try:
-            self.supabase.storage.from_(self.bucket_name).remove([image_path])
+            # Select the appropriate bucket
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
             
-            # Also delete metadata if it exists
-            try:
-                self.supabase.table("image_metadata").delete().eq("path", image_path).execute()
-            except Exception as e:
-                self.logger.warning(f"Failed to delete image metadata: {str(e)}")
+            # Try storage access through client attribute first, then fall back to direct access
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                self.supabase.client.storage.from_(bucket_name).remove([image_path])
+            else:
+                self.supabase.storage.from_(bucket_name).remove([image_path])
+            
+            # We don't have image_metadata table, so skip this
+            # try:
+            #     self.supabase.table("image_metadata").delete().eq("path", image_path).eq("bucket", bucket_name).execute()
+            # except Exception as e:
+            #     self.logger.warning(f"Failed to delete image metadata: {str(e)}")
                 
             return True
             
@@ -211,12 +259,13 @@ class ImageStorageService:
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
             
-    def list_images(self, concept_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def list_images(self, concept_id: Optional[str] = None, is_palette: bool = False) -> List[Dict[str, Any]]:
         """
         List images in storage, optionally filtered by concept ID.
         
         Args:
             concept_id: Optional concept ID to filter by
+            is_palette: Whether to list palette images (uses palette-images bucket)
             
         Returns:
             List of image information dictionaries
@@ -225,16 +274,29 @@ class ImageStorageService:
             ImageStorageError: If listing images fails
         """
         try:
+            # Select the appropriate bucket
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            
             # List files in the bucket, potentially in a subfolder
             path = f"{concept_id}" if concept_id else ""
-            response = self.supabase.storage.from_(self.bucket_name).list(path)
+            
+            # Try storage access through client attribute first, then fall back to direct access
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                response = self.supabase.client.storage.from_(bucket_name).list(path)
+            else:
+                response = self.supabase.storage.from_(bucket_name).list(path)
             
             # Transform the response into a more usable format
             images = []
             for item in response:
                 if "name" in item and not item.get("id", "").endswith("/"):  # Skip folders
                     full_path = f"{path}/{item['name']}" if path else item["name"]
-                    url = self.supabase.storage.from_(self.bucket_name).get_public_url(full_path)
+                    
+                    # Get public URL based on the available access pattern
+                    if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                        url = self.supabase.client.storage.from_(bucket_name).get_public_url(full_path)
+                    else:
+                        url = self.supabase.storage.from_(bucket_name).get_public_url(full_path)
                     
                     images.append({
                         "path": full_path,
@@ -242,12 +304,42 @@ class ImageStorageService:
                         "url": url,
                         "size": item.get("metadata", {}).get("size", 0),
                         "created_at": item.get("created_at", ""),
-                        "concept_id": concept_id
+                        "concept_id": concept_id,
+                        "bucket": bucket_name
                     })
             
             return images
             
         except Exception as e:
             error_msg = f"Failed to list images: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageStorageError(error_msg)
+
+    def get_public_url(self, image_path: str, is_palette: bool = False) -> str:
+        """
+        Get the public URL for an image in storage.
+        
+        Args:
+            image_path: Path to the image in storage
+            is_palette: Whether this is a palette image (uses palette-images bucket)
+            
+        Returns:
+            Public URL for the image
+            
+        Raises:
+            ImageStorageError: If URL generation fails
+        """
+        try:
+            # Select the appropriate bucket
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            
+            # Get the public URL
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                return self.supabase.client.storage.from_(bucket_name).get_public_url(image_path)
+            else:
+                return self.supabase.storage.from_(bucket_name).get_public_url(image_path)
+                
+        except Exception as e:
+            error_msg = f"Failed to get public URL for image {image_path}: {str(e)}"
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg) 

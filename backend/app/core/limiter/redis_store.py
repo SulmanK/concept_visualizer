@@ -7,7 +7,7 @@ This module provides functions for interacting with Redis for rate limiting purp
 import logging
 import redis
 import redis.connection
-from typing import Optional
+from typing import Optional, Tuple, Dict
 
 from app.core.config import settings
 from app.core.exceptions import ConfigurationError, RateLimitError
@@ -100,6 +100,109 @@ def get_redis_client() -> Optional[redis.Redis]:
         logger.warning("Falling back to memory storage for rate limiting")
         return None
 
+def get_rate_limit_count(user_id: str, endpoint: str, period: str = "month") -> Tuple[int, int]:
+    """
+    Get the current rate limit count for a user and endpoint.
+    
+    Args:
+        user_id: The user identifier (usually session ID or IP)
+        endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
+        period: The time period (minute, hour, day, month)
+        
+    Returns:
+        Tuple[int, int]: Current count and TTL in seconds
+        
+    Raises:
+        RateLimitError: If there's an error retrieving the rate limit
+    """
+    try:
+        redis_client = get_redis_client()
+        if not redis_client:
+            logger.warning("Cannot get rate limit count: Redis not available")
+            return 0, 0
+            
+        keys = generate_rate_limit_keys(user_id, endpoint, period)
+        
+        # Try all possible key formats
+        for key in keys:
+            try:
+                # Get current count and TTL
+                count = redis_client.get(key)
+                if count is not None:
+                    count = int(count)
+                    ttl = redis_client.ttl(key)
+                    logger.debug(f"Found rate limit key: {key} = {count}, TTL: {ttl}s")
+                    return count, ttl
+            except (redis.exceptions.RedisError, ValueError) as e:
+                logger.error(f"Error getting rate limit for key {key}: {str(e)}")
+                continue
+                
+        # No keys found, rate limit not yet set
+        logger.debug(f"No rate limit keys found for {user_id} on {endpoint}")
+        return 0, 0
+        
+    except redis.exceptions.RedisError as e:
+        error_message = f"Redis error getting rate limit: {str(e)}"
+        logger.error(error_message)
+        return 0, 0
+    except Exception as e:
+        error_message = f"Error getting rate limit: {str(e)}"
+        logger.error(error_message)
+        return 0, 0
+
+def check_rate_limit(user_id: str, endpoint: str, limit: str) -> Dict:
+    """
+    Check if a user has exceeded their rate limit.
+    
+    Args:
+        user_id: The user identifier (usually session ID or IP)
+        endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
+        limit: The rate limit string (e.g., "10/month")
+        
+    Returns:
+        Dict: Rate limit status containing:
+            - exceeded: Whether limit is exceeded (bool)
+            - count: Current count (int)
+            - limit: Maximum allowed (int)
+            - period: Time period (str)
+            - reset_at: Seconds until reset (int)
+            
+    Raises:
+        RateLimitError: If there's an error checking the rate limit
+    """
+    try:
+        # Parse the limit string (e.g., "10/month" -> limit=10, period="month")
+        parts = limit.split("/")
+        if len(parts) != 2:
+            logger.error(f"Invalid rate limit format: {limit}")
+            return {"exceeded": False, "error": "Invalid rate limit format"}
+            
+        max_requests = int(parts[0])
+        period = parts[1]
+        
+        # Get current count
+        current_count, ttl = get_rate_limit_count(user_id, endpoint, period)
+        
+        # Determine if limit is exceeded
+        is_exceeded = current_count >= max_requests
+        
+        if is_exceeded:
+            logger.warning(f"Rate limit exceeded for {user_id} on {endpoint}: {current_count}/{max_requests} {period}")
+        else:
+            logger.debug(f"Rate limit check for {user_id} on {endpoint}: {current_count}/{max_requests} {period}")
+            
+        return {
+            "exceeded": is_exceeded,
+            "count": current_count,
+            "limit": max_requests,
+            "period": period,
+            "reset_at": ttl
+        }
+    except Exception as e:
+        error_message = f"Error checking rate limit: {str(e)}"
+        logger.error(error_message)
+        # Default to not exceeded on error to prevent false positives
+        return {"exceeded": False, "error": str(e)}
 
 def increment_rate_limit(user_id: str, endpoint: str, period: str = "month") -> bool:
     """

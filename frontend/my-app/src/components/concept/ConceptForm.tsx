@@ -4,7 +4,7 @@ import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
 import { Card } from '../ui/Card';
 import { LoadingIndicator } from '../ui/LoadingIndicator';
-import { ErrorMessage } from '../ui/ErrorMessage';
+import { ErrorMessage, RateLimitErrorMessage } from '../ui/ErrorMessage';
 import { useToast } from '../../hooks/useToast';
 import { useErrorHandling } from '../../hooks/useErrorHandling';
 import { FormStatus } from '../../types';
@@ -152,13 +152,20 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
         </div>
         
         {formError && (
-          <ErrorMessage 
-            message={formError.message}
-            details={formError.details}
-            type={formError.category as any} 
-            onDismiss={clearError}
-            onRetry={isSubmitting ? undefined : () => validateForm() && onSubmit(logoDescription, themeDescription)}
-          />
+          formError.category === 'rateLimit' ? (
+            <RateLimitErrorMessage 
+              error={formError}
+              onDismiss={clearError}
+            />
+          ) : (
+            <ErrorMessage 
+              message={formError.message}
+              details={formError.details}
+              type={formError.category as any} 
+              onDismiss={clearError}
+              onRetry={isSubmitting ? undefined : () => validateForm() && onSubmit(logoDescription, themeDescription)}
+            />
+          )
         )}
         
         <div className="flex justify-end items-center">

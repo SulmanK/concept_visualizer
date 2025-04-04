@@ -5,6 +5,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ApiError, ApiResponse } from '../types';
 import { ensureSession } from '../services/sessionManager';
+import { RateLimitError } from '../services/apiClient';
 
 // Use the full backend URL instead of a relative path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -94,6 +95,22 @@ export function useApi() {
           message: 'An unexpected error occurred',
         }));
         
+        // Special handling for rate limit errors (429 status code)
+        if (response.status === 429) {
+          const rateLimitError = new RateLimitError(
+            errorData.message || 'You have reached your usage limit',
+            {
+              limit: errorData.limit || 0,
+              current: errorData.current || 0,
+              period: errorData.period || 'month',
+              reset_after_seconds: errorData.reset_after_seconds || 0
+            }
+          );
+          
+          console.error('Rate limit exceeded:', rateLimitError);
+          throw rateLimitError; // Throw the specialized error to be caught below
+        }
+        
         const apiError: ApiError = {
           status: response.status,
           message: errorData.message || 'An unexpected error occurred',
@@ -117,6 +134,13 @@ export function useApi() {
       return { data, loading: false };
     } catch (err) {
       console.error('API request failed:', err);
+      
+      // Special handling for RateLimitError
+      if (err instanceof RateLimitError) {
+        // Let this error bubble up to the component using useErrorHandling
+        setLoading(false);
+        throw err;
+      }
       
       const apiError: ApiError = {
         status: 500,

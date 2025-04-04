@@ -58,12 +58,22 @@ async def create_session(
     # Rate limiting removed for session operations to reduce connection errors
     
     try:
-        session_id, is_new_session = await session_service.get_or_create_session(response, session_id)
-        return SessionResponse(
-            session_id=session_id,
-            is_new_session=is_new_session,
-            message="Session created successfully" if is_new_session else "Using existing session"
-        )
+        # Use the updated implementation that doesn't pass response
+        session = await session_service.get_or_create_session(session_id)
+        
+        # Make sure to set the cookie
+        if "id" in session:
+            session_service.set_session_cookie(response, session["id"])
+            
+            return SessionResponse(
+                session_id=session["id"],
+                is_new_session=session.get("is_new", False),
+                message="Session created successfully" if session.get("is_new", False) else "Using existing session"
+            )
+        else:
+            # Fallback for unexpected session format
+            logger.error(f"Invalid session format returned: {session}")
+            raise ServiceUnavailableError(detail="Failed to create session: Invalid session format")
     except Exception as e:
         logger.error(f"Failed to create session: {str(e)}")
         logger.debug(f"Exception traceback: {traceback.format_exc()}")
@@ -128,13 +138,33 @@ async def sync_session(
         # Only log minimal info to reduce noise
         session_service.logger.debug("Processing full session sync")
         
-        # Use get_or_create_session with the client_session_id parameter
-        # This will prioritize the client-provided session ID
-        final_session_id, is_new_session = await session_service.get_or_create_session(
-            response, 
-            session_id=cookie_session_id, 
-            client_session_id=client_session_id
-        )
+        # Try client_session_id first
+        session = None
+        is_new_session = False
+        try:
+            if client_session_id:
+                session = await session_service.get_or_create_session(client_session_id)
+                
+            # Fall back to cookie_session_id if we couldn't use client_session_id
+            if not session and cookie_session_id:
+                session = await session_service.get_or_create_session(cookie_session_id)
+                
+            # If neither worked, create a new session
+            if not session:
+                session = await session_service.get_or_create_session(None)
+                
+            # Make sure to set the cookie with the final ID
+            if "id" in session:
+                final_session_id = session["id"]
+                is_new_session = session.get("is_new", False)
+                session_service.set_session_cookie(response, final_session_id)
+            else:
+                # This should never happen, but just in case
+                raise ServiceUnavailableError(detail="Invalid session format")
+                
+        except Exception as e:
+            session_service.logger.error(f"Session sync failed: {str(e)}")
+            raise ServiceUnavailableError(detail=f"Failed to sync session: {str(e)}")
         
         message = (
             "New session created during synchronization" 

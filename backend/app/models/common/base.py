@@ -18,7 +18,7 @@ class APIBaseModel(BaseModel):
         json_encoders = {
             # Add any custom encoders needed across models
         }
-        orm_mode = True  # For compatibility with ORM models
+        from_attributes = True  # For compatibility with ORM models (formerly orm_mode)
 
 
 class ErrorResponse(APIBaseModel):
@@ -32,7 +32,7 @@ class ErrorResponse(APIBaseModel):
     class Config:
         """Error response model configuration."""
         
-        schema_extra = {
+        json_schema_extra = {  # Formerly schema_extra
             "example": {
                 "detail": "Resource not found",
                 "code": "NOT_FOUND",

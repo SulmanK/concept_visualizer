@@ -11,6 +11,25 @@ interface RequestOptions {
   withCredentials?: boolean;
 }
 
+// Custom error class for rate limit errors
+export class RateLimitError extends Error {
+  status: number;
+  limit: number;
+  current: number;
+  period: string;
+  resetAfterSeconds: number;
+
+  constructor(message: string, response: any) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.status = 429;
+    this.limit = response.limit || 0;
+    this.current = response.current || 0;
+    this.period = response.period || 'unknown';
+    this.resetAfterSeconds = response.reset_after_seconds || 0;
+  }
+}
+
 /**
  * Make a GET request to the API
  * @param endpoint API endpoint path
@@ -62,6 +81,20 @@ async function request<T>(
     const response = await fetch(url, requestOptions);
     
     if (!response.ok) {
+      // Handle different error types based on status code
+      if (response.status === 429) {
+        // Rate limit exceeded
+        const errorData = await response.json().catch(() => ({
+          message: 'Rate limit exceeded',
+        }));
+        
+        // Throw a specialized RateLimitError
+        throw new RateLimitError(
+          errorData.message || 'You have reached your usage limit',
+          errorData
+        );
+      }
+      
       const errorData = await response.json().catch(() => ({
         message: 'An unexpected error occurred',
       }));
@@ -72,6 +105,11 @@ async function request<T>(
     const data = await response.json() as T;
     return { data };
   } catch (err) {
+    // Re-throw RateLimitError directly
+    if (err instanceof RateLimitError) {
+      throw err;
+    }
+    
     console.error('API request failed:', err);
     throw err;
   }
