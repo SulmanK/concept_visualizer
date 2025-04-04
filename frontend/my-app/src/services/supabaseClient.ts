@@ -3,6 +3,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { getBucketName } from './configService';
 
 // Environment variables for Supabase
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -28,10 +29,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
  * Works for both public and private buckets
  * 
  * @param path Path to the image in storage
- * @param bucket Storage bucket name
+ * @param bucketType Type of bucket ('concept' or 'palette')
  * @returns URL for the image
  */
-export const getImageUrl = async (path: string, bucket: string): Promise<string> => {
+export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette'): Promise<string> => {
+  // Get actual bucket name from config
+  const bucket = getBucketName(bucketType);
+  
   // If path is empty or null, return empty string
   if (!path) {
     console.error('No path provided to getImageUrl');
@@ -82,10 +86,13 @@ export const getImageUrl = async (path: string, bucket: string): Promise<string>
  * Use this when async/await is not feasible
  * 
  * @param path Path to the image in storage
- * @param bucket Storage bucket name
+ * @param bucketType Type of bucket ('concept' or 'palette')
  * @returns Public URL for the image
  */
-export const getPublicImageUrl = (path: string, bucket: string): string => {
+export const getPublicImageUrl = (path: string, bucketType: 'concept' | 'palette'): string => {
+  // Get actual bucket name from config
+  const bucket = getBucketName(bucketType);
+  
   // If path is empty or null, use a fallback image
   if (!path) {
     console.warn(`No path provided to getPublicImageUrl for bucket ${bucket}, using fallback`);
@@ -230,7 +237,7 @@ function processConceptData(data: any[]): ConceptData[] {
   return (data || []).map(concept => {
     // Generate base image URL for the concept
     const base_image_path = concept.base_image_path || '';
-    const base_image_url = getPublicImageUrl(base_image_path, 'concept-images');
+    const base_image_url = getPublicImageUrl(base_image_path, 'concept');
     
     // Log the base image URL for debugging
     console.log(`Concept ${concept.id.substring(0, 8)}... "${concept.logo_description.substring(0, 20)}...":`);
@@ -248,7 +255,7 @@ function processConceptData(data: any[]): ConceptData[] {
         
         // Generate image URL for this variation
         const image_path = variation.image_path || '';
-        const image_url = getPublicImageUrl(image_path, 'palette-images');
+        const image_url = getPublicImageUrl(image_path, 'palette');
         
         // Debug this variation
         console.log(`    ◦ Variation ${index}: "${variation.palette_name || 'Unnamed'}"`);
@@ -308,7 +315,7 @@ export const fetchConceptDetail = async (
     if (!data) return null;
 
     // Process the concept to add proper image URLs
-    const base_image_url = getPublicImageUrl(data.base_image_path, 'concept-images');
+    const base_image_url = getPublicImageUrl(data.base_image_path, 'concept');
     
     // Process variation images if they exist
     let variations = data.color_variations || [];
@@ -323,7 +330,7 @@ export const fetchConceptDetail = async (
           // Ensure critical fields have default values
           palette_name: variation.palette_name || 'Color Palette',
           colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-          image_url: getPublicImageUrl(variation.image_path, 'palette-images')
+          image_url: getPublicImageUrl(variation.image_path, 'palette')
         };
       });
     }

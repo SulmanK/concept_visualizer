@@ -246,7 +246,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     // Add more detailed logging specifically for debugging image display issues
     if (originalImageUrl) {
       console.log('Original image URL found:', originalImageUrl);
-      const formattedUrl = getFormattedUrl(originalImageUrl, 'concept-images');
+      const formattedUrl = getFormattedUrl(originalImageUrl, 'concept');
       console.log('Formatted original image URL:', formattedUrl);
     } else {
       console.warn('⚠️ Original image URL is missing from concept data!');
@@ -269,7 +269,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     }));
   };
   
-  const getFormattedUrl = (url: string | undefined, bucketName = 'concept-images') => {
+  const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
     if (!url) return '';
     
     // If the URL already has the domain in it, return it as is
@@ -280,7 +280,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     // Otherwise, assume it's a path/key and format it appropriately for Supabase
     try {
       // Assume the URL is a path in the Supabase bucket
-      return getPublicImageUrl(bucketName, url) || '';
+      return getPublicImageUrl(url, bucketType as 'concept' | 'palette');
     } catch (error) {
       console.error('Error formatting URL:', error);
       return '';
@@ -336,14 +336,14 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
       return '';
     }
     
-    return getFormattedUrl(concept.image_url, 'concept-images');
+    return getFormattedUrl(concept.image_url, 'concept');
   };
   
   const getCurrentImageUrl = () => {
     // If a variation is selected, return its image URL
     if (selectedVariation !== null && variations[selectedVariation]) {
       const variationUrl = variations[selectedVariation].image_url;
-      return getFormattedUrl(variationUrl, 'palette-images');
+      return getFormattedUrl(variationUrl, 'palette');
     }
     
     // Otherwise, return the original image URL
@@ -501,7 +501,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
               </div>
               <div className="p-2">
                 <img 
-                  src={getFormattedUrl(variation.image_url, 'palette-images')}
+                  src={getFormattedUrl(variation.image_url, 'palette')}
                   alt={`${variation.name} variation`}
                   className="w-full h-[100px] object-contain mb-2"
                   onError={handleImageError}

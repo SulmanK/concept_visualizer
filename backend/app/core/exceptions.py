@@ -451,4 +451,51 @@ class EnvironmentVariableError(ConfigurationError):
         if variable_name:
             error_details["variable_name"] = variable_name
             
-        super().__init__(message, error_details) 
+        super().__init__(message, error_details)
+
+
+# Image Storage Exceptions
+class ImageStorageError(StorageError):
+    """Exception raised when an image storage operation fails."""
+    
+    def __init__(
+        self, 
+        message: str = "Image storage operation failed", 
+        operation: Optional[str] = None,
+        bucket: Optional[str] = None,
+        path: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with image storage error details.
+        
+        Args:
+            message: Human-readable error message
+            operation: The storage operation that failed (e.g., "upload", "download")
+            bucket: The storage bucket involved
+            path: The storage path involved
+            details: Additional error details
+        """
+        super().__init__(message, operation, bucket, path, details)
+
+
+class ImageNotFoundError(ImageStorageError):
+    """Exception raised when an image is not found in storage."""
+    
+    def __init__(
+        self, 
+        message: str = "Image not found", 
+        path: Optional[str] = None,
+        bucket: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with image not found details.
+        
+        Args:
+            message: Human-readable error message
+            path: The storage path that was requested
+            bucket: The storage bucket that was queried
+            details: Additional error details
+        """
+        super().__init__(message, operation="download", bucket=bucket, path=path, details=details) 

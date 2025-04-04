@@ -42,6 +42,8 @@ class Settings(BaseSettings):
         UPSTASH_REDIS_ENDPOINT: Endpoint for Upstash Redis
         UPSTASH_REDIS_PASSWORD: Password for Upstash Redis
         UPSTASH_REDIS_PORT: Port for Upstash Redis
+        STORAGE_BUCKET_PALETTE: Name of the storage bucket for palettes
+        STORAGE_BUCKET_CONCEPT: Name of the storage bucket for concepts
     """
     
     # API settings
@@ -60,6 +62,10 @@ class Settings(BaseSettings):
     # Supabase settings
     SUPABASE_URL: str = "https://your-project-id.supabase.co"
     SUPABASE_KEY: str = "your-api-key"
+    
+    # Storage bucket settings
+    STORAGE_BUCKET_PALETTE: str = "palette-storage"
+    STORAGE_BUCKET_CONCEPT: str = "concept-storage"
     
     # Logging settings
     LOG_LEVEL: str = "INFO"
@@ -164,4 +170,6 @@ if settings.LOG_LEVEL == "DEBUG":
     logger.debug(f"Supabase URL: {get_masked_value(settings.SUPABASE_URL, 8)}")
     logger.debug(f"Supabase key: {get_masked_value(settings.SUPABASE_KEY)}")
     logger.debug(f"Redis endpoint: {get_masked_value(settings.UPSTASH_REDIS_ENDPOINT, 8)}")
-    logger.debug(f"Redis password: {get_masked_value(settings.UPSTASH_REDIS_PASSWORD)}") 
+    logger.debug(f"Redis password: {get_masked_value(settings.UPSTASH_REDIS_PASSWORD)}")
+    logger.debug(f"Storage bucket (palette): {get_masked_value(settings.STORAGE_BUCKET_PALETTE, 3)}")
+    logger.debug(f"Storage bucket (concept): {get_masked_value(settings.STORAGE_BUCKET_CONCEPT, 3)}") 

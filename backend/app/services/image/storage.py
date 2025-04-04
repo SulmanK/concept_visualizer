@@ -15,16 +15,10 @@ from fastapi import UploadFile
 from supabase import Client, create_client
 from PIL import Image
 
+from app.core.exceptions import ImageNotFoundError, ImageStorageError
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
-
-class ImageStorageError(Exception):
-    """Base exception for image storage errors."""
-    pass
-
-class ImageNotFoundError(ImageStorageError):
-    """Exception raised when an image is not found."""
-    pass
-
 
 class ImageStorageService:
     """Service for storing and retrieving images from Supabase storage."""
@@ -37,9 +31,9 @@ class ImageStorageService:
             supabase_client: Supabase client instance
         """
         self.supabase = supabase_client
-        # The buckets exist in Supabase and are public
-        self.concept_bucket = "concept-images"
-        self.palette_bucket = "palette-images"
+        # Get bucket names from config instead of hardcoding
+        self.concept_bucket = settings.STORAGE_BUCKET_CONCEPT
+        self.palette_bucket = settings.STORAGE_BUCKET_PALETTE
         self.logger = logging.getLogger(__name__)
     
     def store_image(

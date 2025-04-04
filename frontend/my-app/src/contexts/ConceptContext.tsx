@@ -124,10 +124,10 @@ export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) =>
       if (recentConcepts && recentConcepts.length > 0) {
         const processedConcepts = recentConcepts.map(concept => ({
           ...concept,
-          base_image_url: getPublicImageUrl(concept.base_image_path, 'concept-images'),
+          base_image_url: getPublicImageUrl(concept.base_image_path, 'concept'),
           color_variations: (concept.color_variations || []).map((variation: any) => ({
             ...variation,
-            image_url: getPublicImageUrl(variation.image_path, 'palette-images')
+            image_url: getPublicImageUrl(variation.image_path, 'palette')
           }))
         }));
         

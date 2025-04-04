@@ -28,6 +28,7 @@ from app.services.image.conversion import (
 )
 from app.services.jigsawstack.client import JigsawStackClient
 from app.utils.security.mask import mask_id, mask_path
+from app.core.config import settings
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -517,7 +518,7 @@ class ImageService(ImageServiceInterface):
             
             # Get the source image URL for the concept image
             try:
-                base_image_url = self.get_image_url(base_image_path, "concept-images")
+                base_image_url = self.get_image_url(base_image_path, settings.STORAGE_BUCKET_CONCEPT)
                 self.logger.info(f"Retrieved image URL for: {mask_path(base_image_path)}")
             except Exception as e:
                 self.logger.error(f"Failed to get image URL for {mask_path(base_image_path)}: {str(e)}")
@@ -583,7 +584,8 @@ class ImageService(ImageServiceInterface):
         """
         try:
             # Determine if this is a palette image based on the bucket name
-            is_palette = bucket_name == "palette-images"
+            # Compare with settings values instead of hardcoded strings
+            is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
             
             # Use the storage service to get the URL
             return self.storage.get_public_url(image_path, is_palette=is_palette)
