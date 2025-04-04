@@ -233,8 +233,9 @@
   - [ ] Add CSRF protection for authenticated endpoints (when implemented) [LATER]
   - [x] Audit backend dependencies for security vulnerabilities
   - [x] Update JigsawStack client error handling to prevent exposing sensitive information
+
 - [ ] **Directory Structure Refinement**
-  - [ ] Create separate files for route handlers in api/routes/:
+  - [x] **API Routes Refactoring** (COMPLETED)
     - [x] Split concept.py (469 lines) into separate modules:
       - [x] Implemented package structure in concept/ directory
       - [x] Created concept/generation.py module for concept generation endpoints
@@ -252,21 +253,52 @@
       - [x] Created svg/converter.py module for SVG conversion endpoint
       - [x] Created svg/utils.py module for shared utility functions
       - [x] Added svg/__init__.py to combine routers
-    - [ ] Organize remaining route files into subdirectories:
+    - [x] Organize remaining route files into subdirectories:
       - [x] Create session/ directory with package structure
       - [x] Move session.py into session/ directory
       - [x] Create session/__init__.py to expose the router
       - [x] Create concept_storage/ directory with package structure
       - [x] Move concept_storage.py into concept_storage/ directory
       - [x] Create concept_storage/__init__.py to expose the router
-    - [ ] Move utility modules to appropriate locations:
+    - [x] Move utility modules to appropriate locations:
       - [x] Move rate_limiting.py from api/routes/ to app/utils/ since it's shared across routes
       - [x] Update imports in all files that use rate_limiting.py
-    - [ ] Reorganize API structure to match the architecture guidelines:
+    - [x] Reorganize API structure to match the architecture guidelines:
       - [x] Create api/dependencies.py with shared dependency functions
       - [x] Create api/errors.py with custom error handling
       - [x] Move API route registration from __init__.py to a dedicated router.py file
-  - [ ] **Core Module Refactoring**:
+  
+  - [ ] **1. Utils and Main Refactoring** (CURRENT FOCUS)
+    - [x] Refactor main.py (145 lines) to improve structure:
+      - [x] Extract PrioritizationMiddleware to a dedicated module in core/middleware/prioritization.py
+      - [x] Create core/middleware/__init__.py to expose middleware
+      - [x] Move application setup code to a factory function in app/core/factory.py
+      - [x] Fix linting errors (add proper spacing between functions, fix unused imports)
+      - [x] Improve type hints and docstrings
+    - [x] Organize utils directory following the project structure:
+      - [x] Create logging/ directory:
+        - [x] Move logging.py content to logging/setup.py
+        - [x] Create logging/__init__.py to expose setup function
+      - [x] Create api_limits/ directory:
+        - [x] Move rate_limiting.py to api_limits/endpoints.py
+        - [x] Create api_limits/__init__.py to expose rate limiting functions
+      - [x] Create security/ directory:
+        - [x] Move mask.py to security/mask.py
+        - [x] Create security/__init__.py to expose masking functions
+      - [x] Create placeholder directories with proper __init__.py files:
+        - [x] Create validation/ directory with __init__.py
+        - [x] Create data/ directory with __init__.py
+      - [x] Update utils/__init__.py to provide a clean interface to utility functions
+    - [x] Update import paths across the codebase:
+      - [x] Fix imports in API routes that use utils.rate_limiting
+      - [x] Fix imports in any files that use utils.logging
+      - [x] Fix imports in any files that use utils.mask
+    - [ ] Add comprehensive tests for utils modules:
+      - [ ] Write tests for logging setup
+      - [ ] Write tests for rate limiting functions
+      - [ ] Write tests for masking utilities
+
+  - [ ] **2. Core Module Refactoring** (NEXT PRIORITY)
     - [ ] Refactor supabase.py (585 lines) into smaller modules:
       - [ ] Create supabase/ directory with package structure
       - [ ] Extract session_storage.py module for session-related operations
@@ -274,57 +306,57 @@
       - [ ] Extract image_storage.py module for image storage operations
       - [ ] Create client.py module for base client functionality
       - [ ] Create __init__.py to provide a clean interface
-    - [ ] Refactor rate_limiter.py (262 lines) into smaller modules:
-      - [ ] Extract separate modules for Redis integration
-      - [ ] Create limiter.py for core rate limiting functionality
-      - [ ] Extract helpers.py for utility functions
+    - [ ] Refactor rate_limiter.py (262 lines) into better organized modules:
+      - [ ] Create limiter/ directory with package structure
+      - [ ] Extract config.py for core limiter configuration 
+      - [ ] Extract redis_store.py for Redis integration
       - [ ] Ensure proper type hints and documentation
     - [ ] Ensure proper error handling and logging throughout core modules
-  - [ ] **Service Layer Refactoring**:
+
+  - [ ] **3. Service Layer Refactoring** (AFTER CORE)
     - [ ] Refactor concept_service.py (314 lines) into smaller modules:
+      - [ ] Create concept/ directory with package structure
       - [ ] Extract generation.py module for concept generation
       - [ ] Extract refinement.py module for concept refinement
       - [ ] Extract palette.py module for palette generation
-      - [ ] Create interfaces/ directory for service interfaces
     - [ ] Refactor image_service.py (259 lines) and image_processing.py (311 lines):
       - [ ] Create image/ directory with package structure
       - [ ] Extract processing.py module for image processing operations
       - [ ] Extract storage.py module for image storage operations
       - [ ] Extract conversion.py module for format conversion operations
+    - [ ] Refactor session_service.py into session/ package
     - [ ] Improve separation of concerns in all service modules
-  - [ ] **Models Refactoring**:
+
+  - [ ] **4. Models Refactoring** (FINAL LAYER)
     - [ ] Organize models into domain-specific modules:
       - [ ] Create concept/ directory for concept-related models
       - [ ] Create session/ directory for session-related models
+      - [ ] Create svg/ directory for SVG-related models
+      - [ ] Create common/ directory for shared model components
       - [ ] Ensure proper validation and documentation for all models
-  - [ ] **Utils and Main Refactoring**:
-    - [ ] Refactor main.py (145 lines) to improve structure:
-      - [ ] Extract middleware configuration to a separate module
-      - [ ] Extract application setup code to a factory function
-      - [ ] Improve documentation and type hints
-    - [ ] Organize utils directory:
-      - [ ] Create logging/ directory with improved logging patterns
-      - [ ] Move rate_limiting.py to core/rate_limiting/ directory
-      - [ ] Create validation/ directory for shared validation functions
-      - [ ] Create data/ directory for data transformation helpers
-      - [ ] Ensure all utility functions have comprehensive tests
-  - [ ] Organize imports consistently and fix import patterns:
-    - [x] Updated direct router imports in __init__.py for cleaner organization
-    - [ ] Sort imports using isort pattern: stdlib, third-party, local
-    - [ ] Use consistent relative vs. absolute imports across files
-  - [ ] Remove unused imports and code from all files
-  - [ ] Reorganize tests to match current structure
-    - [ ] Create test fixtures directory
+
+  - [ ] **Code Quality**
+    - [ ] Organize imports consistently and fix import patterns:
+      - [x] Updated direct router imports in __init__.py for cleaner organization
+      - [ ] Sort imports using isort pattern: stdlib, third-party, local
+      - [ ] Use consistent relative vs. absolute imports across files
+    - [ ] Remove unused imports and code from all files
+    - [ ] Reorganize tests to match current structure
+      - [ ] Create test fixtures directory
+      - [ ] Add tests for refactored modules
+
 - [ ] **Error Handling Improvements**
   - [x] Implement centralized error handler middleware
   - [x] Create custom exception classes
   - [x] Add proper error responses with consistent format
   - [ ] Improve logging for better debugging of production issues
+  
 - [ ] **Performance Optimization**
   - [ ] Add caching layer for frequently accessed resources
   - [ ] Optimize image processing operations
   - [ ] Profile API endpoints and optimize bottlenecks
   - [ ] Implement async task processing for long-running operations
+  
 - [ ] **Background Task Implementation for Vercel Deployment**
   - [ ] Create Supabase table for task tracking
   - [ ] Add task_status endpoint for checking task status
@@ -335,6 +367,7 @@
   - [ ] Set up cron endpoint for processing timed-out tasks
   - [ ] Test background task functionality with multiple concurrent users
   - [ ] Add task status polling in frontend
+  
 - [ ] **Documentation**
   - [x] Create central docs/ directory with subdirectories for backend/ and frontend/
   - [x] Create API route documentation:
@@ -391,7 +424,7 @@
     - [x] Refactor svg module handlers
   - [ ] Add integration tests for new error handling patterns
   - [ ] Document new dependency and error handling patterns
-  
+
 ## Code Quality Improvements
 - [ ] Fix linter errors across the codebase:
   - [ ] Fix spacing between functions (two blank lines needed)

@@ -12,6 +12,7 @@ from typing import Optional
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
 def mask_id(id_value: Optional[str], visible_chars: int = 8) -> str:
     """Mask an ID (session ID, concept ID, etc.) to protect privacy in logs.
     
@@ -29,6 +30,7 @@ def mask_id(id_value: Optional[str], visible_chars: int = 8) -> str:
         return f"{id_value}***"
         
     return f"{id_value[:visible_chars]}***"
+
 
 def mask_path(path: Optional[str]) -> str:
     """Mask a storage path to protect session ID privacy.
@@ -50,6 +52,7 @@ def mask_path(path: Optional[str]) -> str:
         return f"{mask_id(session_part)}/{file_part}"
     
     return path
+
 
 def mask_ip(ip_address: Optional[str]) -> str:
     """Mask an IP address to protect privacy in logs.
@@ -80,6 +83,7 @@ def mask_ip(ip_address: Optional[str]) -> str:
         return f"{ip_address[:4]}****"
     
     return "masked-ip"
+
 
 def mask_redis_key(key: Optional[str]) -> str:
     """Mask a Redis key that might contain sensitive information.

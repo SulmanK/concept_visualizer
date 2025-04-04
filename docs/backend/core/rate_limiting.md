@@ -95,3 +95,26 @@ Clients should handle 429 responses gracefully by:
 1. Displaying a friendly message to users
 2. Including the retry-after period if provided
 3. Potentially implementing exponential backoff for automated retries 
+
+## API Rate Limiting Usage
+
+The API uses rate limiting in two ways:
+
+1. SlowAPI declarative rate limiting
+2. Direct Redis rate limiting tracking
+
+- Implemented in `utils/api_limits/endpoints.py`
+- Applied to all key endpoints to prevent abuse
+
+```python
+from app.utils.api_limits import apply_rate_limit
+
+# Example usage in an API endpoint
+@router.post("/generate", response_model=GenerationResponse)
+async def generate_concept(request: PromptRequest, req: Request):
+    # Apply rate limit (10 requests per month)
+    await apply_rate_limit(req, "/concepts/generate", "10/month")
+    
+    # Endpoint implementation
+    # ...
+``` 

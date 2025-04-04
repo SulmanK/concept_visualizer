@@ -34,9 +34,19 @@ backend/
 │   ├── core/             # Core application code
 │   │   ├── __init__.py
 │   │   ├── config.py     # Configuration management
-│   │   ├── logging.py    # Logging setup
-│   │   ├── supabase.py   # Supabase client integration
-│   │   ├── rate_limiter.py # Rate limiting configuration
+│   │   ├── middleware/   # Application middleware
+│   │   │   ├── __init__.py
+│   │   │   └── prioritization.py # Request prioritization middleware
+│   │   ├── supabase/     # Supabase integration
+│   │   │   ├── __init__.py
+│   │   │   ├── client.py # Base client implementation
+│   │   │   ├── session_storage.py # Session storage operations
+│   │   │   ├── concept_storage.py # Concept storage operations
+│   │   │   └── image_storage.py   # Image storage operations
+│   │   ├── limiter/      # Rate limiting infrastructure
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py # Core limiter configuration
+│   │   │   └── redis_store.py # Redis integration
 │   │   └── exceptions.py # Custom exception definitions
 │   ├── api/              # API layer
 │   │   ├── __init__.py
@@ -68,34 +78,77 @@ backend/
 │   │       └── __tests__/ # Route-specific tests
 │   ├── services/         # Service layer (business logic)
 │   │   ├── __init__.py
-│   │   ├── concept_service.py
-│   │   ├── concept_storage_service.py
-│   │   ├── image_processing.py
-│   │   ├── image_service.py
-│   │   ├── session_service.py
+│   │   ├── interfaces/   # Service interfaces
+│   │   │   ├── __init__.py
+│   │   │   ├── concept_service.py
+│   │   │   ├── storage_service.py
+│   │   │   └── image_service.py
+│   │   ├── concept/      # Concept generation services
+│   │   │   ├── __init__.py
+│   │   │   ├── generation.py  # Concept generation logic
+│   │   │   ├── refinement.py  # Concept refinement logic
+│   │   │   └── palette.py     # Color palette generation
+│   │   ├── storage/      # Storage services
+│   │   │   ├── __init__.py
+│   │   │   └── concept_storage.py # Concept storage logic
+│   │   ├── image/        # Image processing services
+│   │   │   ├── __init__.py
+│   │   │   ├── processing.py # Image manipulation
+│   │   │   ├── conversion.py # Format conversion
+│   │   │   └── storage.py    # Image storage operations
+│   │   ├── session/      # Session services
+│   │   │   ├── __init__.py
+│   │   │   └── session_service.py # Session management
 │   │   └── jigsawstack/  # External API integration
 │   │       ├── __init__.py
-│   │       └── client.py
+│   │       └── client.py # API client implementation
 │   ├── models/           # Data models
 │   │   ├── __init__.py
-│   │   ├── concept.py    # Domain models
-│   │   ├── request.py    # Request models (Pydantic)
-│   │   └── response.py   # Response models (Pydantic)
+│   │   ├── common/       # Shared model components
+│   │   │   ├── __init__.py
+│   │   │   └── base.py   # Base model classes
+│   │   ├── concept/      # Concept-related models
+│   │   │   ├── __init__.py
+│   │   │   ├── domain.py # Domain models
+│   │   │   ├── request.py # Request models
+│   │   │   └── response.py # Response models
+│   │   ├── session/      # Session-related models
+│   │   │   ├── __init__.py
+│   │   │   └── session.py # Session models
+│   │   └── svg/          # SVG-related models
+│   │       ├── __init__.py
+│   │       └── conversion.py # Conversion models
 │   └── utils/            # Utility functions
 │       ├── __init__.py
-│       ├── color_utils.py
-│       ├── mask.py       # Data masking utilities
-│       └── rate_limiting.py # Rate limiting utilities
+│       ├── logging/      # Logging utilities
+│       │   ├── __init__.py
+│       │   └── setup.py  # Logging configuration
+│       ├── validation/   # Validation utilities
+│       │   ├── __init__.py
+│       │   └── validators.py # Custom validators
+│       ├── api_limits/   # API rate limiting utilities
+│       │   ├── __init__.py
+│       │   └── endpoints.py # Endpoint rate limiting functions
+│       ├── data/         # Data transformation
+│       │   ├── __init__.py
+│       │   └── transformers.py # Data transformers
+│       └── security/     # Security utilities
+│           ├── __init__.py
+│           └── mask.py   # Data masking
 ├── docs/                 # Backend documentation
-│   └── rate_limiting.md  # Documentation for rate limiting
+│   ├── api/              # API documentation
+│   ├── services/         # Services documentation
+│   ├── models/           # Models documentation
+│   ├── core/             # Core documentation
+│   └── utils/            # Utils documentation
 ├── static/               # Static files served by backend
 ├── tests/                # Test directory 
 │   ├── __init__.py
 │   ├── conftest.py       # Test fixtures
-│   └── test_api/
-│       └── test_routes/
-│           ├── test_concept.py
-│           └── test_health.py
+│   ├── test_api/         # API tests
+│   ├── test_services/    # Service tests
+│   ├── test_models/      # Model tests
+│   └── test_utils/       # Utility tests
 ├── scripts/              # Backend utility scripts
 ├── run.py                # Script to run the application
 ├── setup.py              # Package setup script
@@ -114,26 +167,29 @@ backend/
    - Uses centralized dependencies and error handling
 
 2. **Service Layer** (`services/`): Contains business logic and coordinates with external services
-   - Implements domain logic for concept generation and refinement
-   - Orchestrates calls to external APIs (JigsawStack)
-   - Handles image processing and color palette generation
-   - Provides session management and concept storage functionality
+   - Implements domain logic in feature-specific modules
+   - Exposes clean interfaces through the interfaces directory
+   - Follows single responsibility principle with focused modules
+   - Orchestrates calls to external APIs
+   - Delegates specialized operations to appropriate sub-services
 
 3. **Models** (`models/`): Defines data structures using Pydantic
+   - Organized by domain with focused model modules
    - Request models validate incoming API requests
    - Response models define API response structures
    - Domain models represent core business entities
 
 4. **Core** (`core/`): Application configuration and setup
    - Manages environment variables and settings
-   - Configures logging and exception handling
-   - Provides Supabase client for database and storage operations
-   - Configures rate limiting
+   - Configures middleware and application infrastructure
+   - Provides client implementations for external services
+   - Handles cross-cutting concerns like rate limiting
 
 5. **Utils** (`utils/`): Reusable utility functions
-   - Color manipulation utilities
-   - Logging utilities
-   - Helper functions used across different layers
+   - Organized by function type (logging, validation, etc.)
+   - Provides domain-agnostic helper functions
+   - Implements cross-cutting functionalities
+   - Focuses on reusability across different modules
 
 ## Frontend Structure
 

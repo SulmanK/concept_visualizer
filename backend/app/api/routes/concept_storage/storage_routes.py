@@ -18,7 +18,7 @@ from app.services.session_service import SessionService, get_session_service
 from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
 from app.services.image_service import ImageService, get_image_service
 from app.services.concept_service import ConceptService, get_concept_service
-from app.utils.rate_limiting import apply_rate_limit
+from app.utils.api_limits import apply_rate_limit
 
 # Add imports for new modules
 from app.api.dependencies import CommonDependencies, get_or_create_session
