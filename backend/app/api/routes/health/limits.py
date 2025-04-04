@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import logging
 from typing import Dict, Any
 
-from app.core.rate_limiter import get_redis_client
+from app.core.limiter import get_redis_client
 from app.api.routes.health.utils import get_reset_time, mask_id, mask_key
 
 # Import error handling

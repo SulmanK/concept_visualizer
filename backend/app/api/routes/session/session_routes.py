@@ -111,10 +111,10 @@ async def sync_session(
             session_service.logger.debug(f"Quick session sync - IDs match")
             
             # Only check if it's a valid session in the database
-            if session_service.supabase_client.get_session(client_session_id):
+            if session_service.session_storage.get_session(client_session_id):
                 # Silently update activity in the background
                 try:
-                    session_service.supabase_client.update_session_activity(client_session_id)
+                    session_service.session_storage.update_session_activity(client_session_id)
                 except Exception:
                     # Ignore errors in activity update
                     pass

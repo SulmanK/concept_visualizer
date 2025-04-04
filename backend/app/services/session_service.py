@@ -13,8 +13,9 @@ from datetime import datetime, timedelta
 
 from fastapi import Depends, Cookie, Response
 from ..core.supabase import get_supabase_client, SupabaseClient
+from ..core.supabase.session_storage import SessionStorage
 from ..core.config import settings
-from ..utils.mask import mask_id
+from ..utils.security.mask import mask_id
 
 
 # Configure logging
@@ -35,6 +36,7 @@ class SessionService:
             supabase_client: Client for interacting with Supabase
         """
         self.supabase_client = supabase_client
+        self.session_storage = SessionStorage(supabase_client)
         self.logger = logging.getLogger("session_service")
     
     async def get_or_create_session(
@@ -118,16 +120,16 @@ class SessionService:
         # Priority 1: Check client-provided session ID if available
         if client_session_id:
             self.logger.debug(f"Checking client-provided session ID: {mask_id(client_session_id)}")
-            client_session = self.supabase_client.get_session(client_session_id)
+            client_session = self.session_storage.get_session(client_session_id)
             
             if client_session:
                 self.logger.debug(f"Using existing client session ID: {mask_id(client_session_id)}")
-                self.supabase_client.update_session_activity(client_session_id)
+                self.session_storage.update_session_activity(client_session_id)
                 return {"id": client_session_id, "is_new": False}
             
             # Client session doesn't exist in DB, try to create it
             self.logger.info(f"Creating new session with client ID: {mask_id(client_session_id)}")
-            result = self.supabase_client.create_session_with_id(client_session_id)
+            result = self.session_storage.create_session_with_id(client_session_id)
             if result:
                 self.logger.info(f"Successfully created session with client ID: {mask_id(client_session_id)}")
                 return {"id": client_session_id, "is_new": True}
@@ -135,16 +137,16 @@ class SessionService:
         # Priority 2: Check cookie session ID if available
         if cookie_session_id:
             self.logger.debug(f"Checking cookie session ID: {mask_id(cookie_session_id)}")
-            cookie_session = self.supabase_client.get_session(cookie_session_id)
+            cookie_session = self.session_storage.get_session(cookie_session_id)
             
             if cookie_session:
                 self.logger.debug(f"Using existing cookie session ID: {mask_id(cookie_session_id)}")
-                self.supabase_client.update_session_activity(cookie_session_id)
+                self.session_storage.update_session_activity(cookie_session_id)
                 return {"id": cookie_session_id, "is_new": False}
         
         # Priority 3: Create a new session
         self.logger.info("Creating new session")
-        new_session = self.supabase_client.create_session()
+        new_session = self.session_storage.create_session()
         
         if new_session:
             self.logger.info(f"Created new session with ID: {mask_id(new_session['id'])}")

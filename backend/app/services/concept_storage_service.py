@@ -6,16 +6,21 @@ from Supabase.
 """
 
 import logging
-from fastapi import Depends
-from typing import List, Dict, Optional, Any
 import uuid
+from typing import List, Dict, Optional, Any
+
+from fastapi import Depends
 
 from ..core.supabase import get_supabase_client, SupabaseClient
-from ..models.concept import ColorPalette, ConceptSummary, ConceptDetail, ConceptCreate, ColorVariationCreate
-from ..utils.mask import mask_id, mask_path
+from ..core.supabase.concept_storage import ConceptStorage
+from ..core.supabase.image_storage import ImageStorage
+from ..models.concept import ColorPalette, ConceptSummary, ConceptDetail
+from ..utils.security.mask import mask_id, mask_path
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
 
 class ConceptStorageService:
     """Service for storing and retrieving concepts."""
@@ -27,6 +32,8 @@ class ConceptStorageService:
             supabase_client: Client for interacting with Supabase
         """
         self.supabase_client = supabase_client
+        self.concept_storage = ConceptStorage(supabase_client)
+        self.image_storage = ImageStorage(supabase_client)
         self.logger = logging.getLogger("concept_storage_service")
     
     async def store_concept(
@@ -52,7 +59,6 @@ class ConceptStorageService:
         try:
             # Mask sensitive information
             masked_session = mask_id(session_id)
-            masked_path_value = mask_path(base_image_path)
             
             # Insert concept
             self.logger.info(f"Storing concept for session: {masked_session}")
@@ -63,7 +69,7 @@ class ConceptStorageService:
                 "base_image_path": base_image_path
             }
             
-            concept = self.supabase_client.store_concept(concept_data)
+            concept = self.concept_storage.store_concept(concept_data)
             if not concept:
                 self.logger.error("Failed to store concept")
                 return None
@@ -86,7 +92,7 @@ class ConceptStorageService:
                 }
                 variations.append(variation)
             
-            variations_result = self.supabase_client.store_color_variations(variations)
+            variations_result = self.concept_storage.store_color_variations(variations)
             
             # Return full concept with variations
             if variations_result:
@@ -112,7 +118,7 @@ class ConceptStorageService:
         try:
             masked_session = mask_id(session_id)
             self.logger.info(f"Getting recent concepts for session: {masked_session}")
-            concepts = self.supabase_client.get_recent_concepts(session_id, limit)
+            concepts = self.concept_storage.get_recent_concepts(session_id, limit)
             
             # Convert to ConceptSummary model
             summaries = []
@@ -123,7 +129,7 @@ class ConceptStorageService:
                 self.logger.debug(f"Processing concept: {masked_concept_id}, base path: {masked_base_path}")
                 
                 # Add public URLs for all images
-                base_image_url = self.supabase_client.get_image_url(
+                base_image_url = self.image_storage.get_image_url(
                     concept_data["base_image_path"], 
                     "concept-images"
                 )
@@ -132,7 +138,7 @@ class ConceptStorageService:
                 variations = []
                 if "color_variations" in concept_data and concept_data["color_variations"]:
                     for variation in concept_data["color_variations"]:
-                        image_url = self.supabase_client.get_image_url(
+                        image_url = self.image_storage.get_image_url(
                             variation["image_path"], 
                             "palette-images"
                         )
@@ -180,14 +186,14 @@ class ConceptStorageService:
             masked_session = mask_id(session_id)
             
             self.logger.info(f"Getting concept detail for concept: {masked_concept_id}, session: {masked_session}")
-            concept_data = self.supabase_client.get_concept_detail(concept_id, session_id)
+            concept_data = self.concept_storage.get_concept_detail(concept_id, session_id)
             
             if not concept_data:
                 self.logger.warning(f"Concept {masked_concept_id} not found or access denied")
                 return None
                 
             # Add public URLs for all images
-            base_image_url = self.supabase_client.get_image_url(
+            base_image_url = self.image_storage.get_image_url(
                 concept_data["base_image_path"], 
                 "concept-images"
             )
@@ -196,7 +202,7 @@ class ConceptStorageService:
             variations = []
             if "color_variations" in concept_data and concept_data["color_variations"]:
                 for variation in concept_data["color_variations"]:
-                    image_url = self.supabase_client.get_image_url(
+                    image_url = self.image_storage.get_image_url(
                         variation["image_path"], 
                         "palette-images"
                     )
@@ -213,7 +219,6 @@ class ConceptStorageService:
             detail = ConceptDetail(
                 id=uuid.UUID(concept_data["id"]),
                 created_at=concept_data["created_at"],
-                session_id=uuid.UUID(concept_data["session_id"]),
                 logo_description=concept_data["logo_description"],
                 theme_description=concept_data["theme_description"],
                 base_image_url=base_image_url,

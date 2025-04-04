@@ -5,10 +5,13 @@ This module defines the settings for the Concept Visualizer API.
 """
 
 import logging
+import os
 from typing import List
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.core.exceptions import ConfigurationError, EnvironmentVariableError
 
 
 # Configure logging
@@ -76,10 +79,76 @@ class Settings(BaseSettings):
         env_prefix="CONCEPT_",
         case_sensitive=True,
     )
+    
+    def validate_required_settings(self):
+        """
+        Validate that all required settings are properly configured.
+        
+        Raises:
+            EnvironmentVariableError: If a required setting is missing or has its default value
+        """
+        # JigsawStack is required for the API to function
+        if self.JIGSAWSTACK_API_KEY == "dummy_key":
+            logger.error("Missing required environment variable: CONCEPT_JIGSAWSTACK_API_KEY")
+            raise EnvironmentVariableError(
+                message="JigsawStack API key is required",
+                variable_name="CONCEPT_JIGSAWSTACK_API_KEY"
+            )
+        
+        # Supabase is required for session and data storage
+        if self.SUPABASE_URL == "https://your-project-id.supabase.co":
+            logger.error("Missing required environment variable: CONCEPT_SUPABASE_URL")
+            raise EnvironmentVariableError(
+                message="Supabase URL is required",
+                variable_name="CONCEPT_SUPABASE_URL"
+            )
+            
+        if self.SUPABASE_KEY == "your-api-key":
+            logger.error("Missing required environment variable: CONCEPT_SUPABASE_KEY")
+            raise EnvironmentVariableError(
+                message="Supabase key is required",
+                variable_name="CONCEPT_SUPABASE_KEY"
+            )
+        
+        # Redis is optional, so we don't validate it here
+
+    def __init__(self, **kwargs):
+        """Initialize settings and validate in non-development environments."""
+        super().__init__(**kwargs)
+        
+        # Only validate in production and staging environments
+        # This allows development to proceed without all services configured
+        if self.ENVIRONMENT not in ["development", "test"]:
+            try:
+                self.validate_required_settings()
+            except EnvironmentVariableError as e:
+                # Re-raise with additional context for non-development environments
+                raise ConfigurationError(
+                    message=f"Configuration error in {self.ENVIRONMENT} environment: {e.message}",
+                    config_key=e.variable_name,
+                    details={"environment": self.ENVIRONMENT}
+                )
 
 
 # Create a settings instance
-settings = Settings()
+try:
+    settings = Settings()
+    
+    # Safely log configuration with masked sensitive information
+    logger.info(f"Application running in {settings.ENVIRONMENT} environment")
+    logger.info(f"API configured with prefix: {settings.API_PREFIX}")
+    logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
+except Exception as e:
+    logger.critical(f"Failed to load configuration: {str(e)}")
+    # In a production environment, we might want to exit the application here
+    # since continuing with invalid configuration could lead to security issues
+    if os.getenv("CONCEPT_ENVIRONMENT") not in ["development", "test"]:
+        raise ConfigurationError(
+            message=f"Fatal configuration error: {str(e)}",
+            details={"hint": "Check your environment variables and .env file"}
+        )
+    settings = Settings()  # Use defaults in development
+
 
 # Safely log configuration with masked sensitive information
 def get_masked_value(value: str, visible_chars: int = 4) -> str:
@@ -87,11 +156,6 @@ def get_masked_value(value: str, visible_chars: int = 4) -> str:
     if not value or len(value) <= visible_chars:
         return "[EMPTY]" if not value else "[TOO_SHORT]"
     return f"{value[:visible_chars]}{'*' * min(8, len(value) - visible_chars)}"
-
-# Log configuration with masked sensitive data
-logger.info(f"Application running in {settings.ENVIRONMENT} environment")
-logger.info(f"API configured with prefix: {settings.API_PREFIX}")
-logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
 
 # Masked logging of sensitive configuration
 if settings.LOG_LEVEL == "DEBUG":

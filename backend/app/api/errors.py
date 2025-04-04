@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.exceptions import ApplicationError
+
 # Configure logging
 logger = logging.getLogger("api_errors")
 
@@ -300,13 +302,117 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+async def application_error_handler(request: Request, exc: ApplicationError) -> JSONResponse:
+    """
+    Handle domain-specific application errors.
+    
+    This handler converts ApplicationError exceptions (domain errors)
+    into appropriate API error responses.
+    
+    Args:
+        request: The FastAPI request
+        exc: The ApplicationError exception
+        
+    Returns:
+        JSON response with error details
+    """
+    logger.error(
+        f"Application error: {exc.message}", 
+        extra={
+            "error_type": exc.__class__.__name__,
+            "details": exc.details,
+            "path": request.url.path,
+            "method": request.method,
+        }
+    )
+    
+    # Map specific application error types to appropriate HTTP status codes
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    error_code = "INTERNAL_ERROR"
+    
+    # JigsawStack errors
+    if exc.__class__.__name__.startswith("JigsawStack"):
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        error_code = "EXTERNAL_SERVICE_ERROR"
+    
+    # Database errors
+    elif exc.__class__.__name__ == "DatabaseError":
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        error_code = "DATABASE_ERROR"
+    
+    # Storage errors
+    elif exc.__class__.__name__ == "StorageError":
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        error_code = "STORAGE_ERROR"
+    
+    # Rate limit errors
+    elif exc.__class__.__name__ == "RateLimitError":
+        status_code = status.HTTP_429_TOO_MANY_REQUESTS
+        error_code = "RATE_LIMIT_EXCEEDED"
+    
+    # Session errors
+    elif exc.__class__.__name__.startswith("Session"):
+        if exc.__class__.__name__ == "SessionNotFoundError":
+            status_code = status.HTTP_404_NOT_FOUND
+            error_code = "SESSION_NOT_FOUND"
+        else:
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            error_code = "SESSION_ERROR"
+    
+    # Concept errors
+    elif exc.__class__.__name__.startswith("Concept"):
+        if exc.__class__.__name__ == "ConceptNotFoundError":
+            status_code = status.HTTP_404_NOT_FOUND
+            error_code = "CONCEPT_NOT_FOUND"
+        else:
+            status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+            error_code = "CONCEPT_PROCESSING_ERROR"
+    
+    # Image processing errors
+    elif exc.__class__.__name__.endswith("ProcessingError") or exc.__class__.__name__.endswith("ConversionError"):
+        status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        error_code = "IMAGE_PROCESSING_ERROR"
+    
+    # Configuration errors
+    elif exc.__class__.__name__.endswith("ConfigurationError"):
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_code = "CONFIGURATION_ERROR"
+    
+    response = {
+        "error": True,
+        "detail": exc.message,
+        "status_code": status_code,
+        "error_code": error_code,
+    }
+    
+    # Add details if available, but filter out sensitive information
+    if exc.details:
+        safe_details = {k: v for k, v in exc.details.items() 
+                       if k not in ["prompt", "api_key", "password", "token"]}
+        if safe_details:
+            response["details"] = safe_details
+    
+    return JSONResponse(
+        status_code=status_code,
+        content=response
+    )
+
+
 def configure_error_handlers(app):
     """
-    Configure error handlers for the FastAPI application.
+    Configure exception handlers for the FastAPI application.
     
     Args:
         app: The FastAPI application instance
     """
+    # Register handlers for our custom API errors
     app.add_exception_handler(APIError, api_error_handler)
+    
+    # Register handler for domain-specific application errors
+    app.add_exception_handler(ApplicationError, application_error_handler)
+    
+    # Register handler for FastAPI's built-in HTTPException
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    
+    # Register handler for request validation errors
     app.add_exception_handler(RequestValidationError, validation_exception_handler) 

@@ -11,7 +11,13 @@ from functools import lru_cache
 from typing import List, Dict, Any
 
 from app.core.config import settings, get_masked_value
-from ...utils.mask import mask_id
+from app.utils.security.mask import mask_id
+from app.core.exceptions import (
+    JigsawStackError, 
+    JigsawStackConnectionError, 
+    JigsawStackAuthenticationError,
+    JigsawStackGenerationError
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +59,9 @@ class JigsawStackClient:
             bytes: Binary image data that can be uploaded to storage
             
         Raises:
-            Exception: If the API request fails
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If the image generation fails
         """
         try:
             logger.info(f"Generating image with prompt: {logo_description}")
@@ -90,25 +98,59 @@ Design requirements:
                 }
             }
             
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    endpoint, 
-                    headers=self.headers, 
-                    json=payload, 
-                    timeout=30.0
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        endpoint, 
+                        headers=self.headers, 
+                        json=payload, 
+                        timeout=30.0
+                    )
+            except httpx.ConnectError as e:
+                raise JigsawStackConnectionError(
+                    message=f"Failed to connect to JigsawStack API: {str(e)}",
+                    details={"endpoint": endpoint}
+                )
+            except httpx.TimeoutException as e:
+                raise JigsawStackConnectionError(
+                    message=f"JigsawStack API timed out: {str(e)}",
+                    details={"endpoint": endpoint, "timeout": "30.0"}
                 )
                 
-                if response.status_code != 200:
-                    error_details = f"Status: {response.status_code}, Response: {response.text}"
-                    logger.error(f"Image generation API error: {error_details}")
-                    raise Exception(f"Image generation failed: {error_details}")
-                
-                logger.info("Image generation successful, returning binary data")
-                return response.content
+            if response.status_code == 401 or response.status_code == 403:
+                raise JigsawStackAuthenticationError(
+                    message="Authentication failed with JigsawStack API",
+                    details={"status_code": response.status_code}
+                )
             
-        except Exception as e:
-            logger.error(f"Error generating image: {str(e)}")
+            if response.status_code != 200:
+                error_details = f"Status: {response.status_code}, Response: {response.text}"
+                logger.error(f"Image generation API error: {error_details}")
+                raise JigsawStackGenerationError(
+                    message=f"Image generation failed",
+                    content_type="image",
+                    prompt=logo_description,
+                    details={
+                        "status_code": response.status_code,
+                        "endpoint": endpoint,
+                        "response_text": response.text[:200]  # Only include part of the response
+                    }
+                )
+                
+            logger.info("Image generation successful, returning binary data")
+            return response.content
+            
+        except (JigsawStackConnectionError, JigsawStackAuthenticationError, JigsawStackGenerationError):
+            # Re-raise domain-specific exceptions we've already created
             raise
+        except Exception as e:
+            # Catch any other exceptions and convert to domain-specific exception
+            logger.error(f"Unexpected error generating image: {str(e)}")
+            raise JigsawStackGenerationError(
+                message=f"Unexpected error during image generation: {str(e)}",
+                content_type="image",
+                prompt=logo_description
+            )
     
     async def refine_image(
         self, 
@@ -130,7 +172,9 @@ Design requirements:
             bytes: Binary image data that can be uploaded to storage
             
         Raises:
-            Exception: If the API request fails
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If the image refinement fails
         """
         try:
             logger.info(f"Refining image with prompt: {prompt}")
@@ -147,25 +191,59 @@ Design requirements:
                 }
             }
             
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    endpoint, 
-                    headers=self.headers, 
-                    json=payload, 
-                    timeout=30.0
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        endpoint, 
+                        headers=self.headers, 
+                        json=payload, 
+                        timeout=30.0
+                    )
+            except httpx.ConnectError as e:
+                raise JigsawStackConnectionError(
+                    message=f"Failed to connect to JigsawStack API: {str(e)}",
+                    details={"endpoint": endpoint}
+                )
+            except httpx.TimeoutException as e:
+                raise JigsawStackConnectionError(
+                    message=f"JigsawStack API timed out: {str(e)}",
+                    details={"endpoint": endpoint, "timeout": "30.0"}
                 )
                 
-                if response.status_code != 200:
-                    error_details = f"Status: {response.status_code}, Response: {response.text}"
-                    logger.error(f"Image refinement API error: {error_details}")
-                    raise Exception(f"Image refinement failed: {error_details}")
+            if response.status_code == 401 or response.status_code == 403:
+                raise JigsawStackAuthenticationError(
+                    message="Authentication failed with JigsawStack API",
+                    details={"status_code": response.status_code}
+                )
+            
+            if response.status_code != 200:
+                error_details = f"Status: {response.status_code}, Response: {response.text}"
+                logger.error(f"Image refinement API error: {error_details}")
+                raise JigsawStackGenerationError(
+                    message=f"Image refinement failed",
+                    content_type="image_refinement",
+                    prompt=prompt,
+                    details={
+                        "status_code": response.status_code,
+                        "endpoint": endpoint,
+                        "response_text": response.text[:200]  # Only include part of the response
+                    }
+                )
                 
-                logger.info("Image refinement successful, returning binary data")
-                return response.content
+            logger.info("Image refinement successful, returning binary data")
+            return response.content
                 
-        except Exception as e:
-            logger.error(f"Error refining image: {str(e)}")
+        except (JigsawStackConnectionError, JigsawStackAuthenticationError, JigsawStackGenerationError):
+            # Re-raise domain-specific exceptions we've already created
             raise
+        except Exception as e:
+            # Catch any other exceptions and convert to domain-specific exception
+            logger.error(f"Unexpected error refining image: {str(e)}")
+            raise JigsawStackGenerationError(
+                message=f"Unexpected error during image refinement: {str(e)}",
+                content_type="image_refinement",
+                prompt=prompt
+            )
     
     async def generate_multiple_palettes(self, logo_description: str, theme_description: str, num_palettes: int = 7) -> List[Dict[str, Any]]:
         """Generate multiple color palettes in a single LLM call.
@@ -179,11 +257,12 @@ Design requirements:
             List[Dict[str, Any]]: List of palette dictionaries with name, colors, and description
             
         Raises:
-            Exception: If the API request fails
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails 
+            JigsawStackGenerationError: If palette generation fails
         """
         try:
             logger.info(f"Generating {num_palettes} color palettes based on logo and theme descriptions")
-            
             
             # Create payload using the structure from the working example
             payload = {
@@ -204,7 +283,6 @@ Design requirements:
                         "initial_value": "8"
                     }
                 ],
-               # "prompt": "Generate {num_palettes} creative color palettes for a brand with logo and theme described as: {theme}. Each palette should have a descriptive name related to the brand, 5 harmonious hex color codes, and a brief explanation of how it relates to the brand identity.",
                 "prompt": "Generate exactly {num_palettes} professional color palettes for a logo with the following description: {logo_description}. The theme is: {theme_description}. For each palette: - Include exactly 5 colors (primary, secondary, accent, background, and highlight) - Provide the exact hex codes (e.g., #FFFFFF) - Ensure sufficient contrast between elements for accessibility - Make each palette distinctly different from the others Ensure variety across the 7 palettes by including: - At least one monochromatic palette - At least one palette with complementary colors - At least one high-contrast palette - At least one palette with a transparent/white background option",
                 
                 "prompt_guard": ["hate", "sexual_content",],
@@ -236,43 +314,66 @@ Design requirements:
             
             endpoint = f"{self.api_url}/v1/prompt_engine/run"
             
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    endpoint, 
-                    headers=self.headers, 
-                    json=payload, 
-                    timeout=40.0
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        endpoint, 
+                        headers=self.headers, 
+                        json=payload, 
+                        timeout=40.0
+                    )
+            except httpx.ConnectError as e:
+                raise JigsawStackConnectionError(
+                    message=f"Failed to connect to JigsawStack API: {str(e)}",
+                    details={"endpoint": endpoint}
+                )
+            except httpx.TimeoutException as e:
+                raise JigsawStackConnectionError(
+                    message=f"JigsawStack API timed out: {str(e)}",
+                    details={"endpoint": endpoint, "timeout": "40.0"}
                 )
                 
-                logger.info(f"Response status code: {response.status_code}")
-                
-                if response.status_code != 200:
-                    error_details = f"Status: {response.status_code}, Response: {response.text}"
-                    logger.error(f"Color palette generation API error: {error_details}")
-                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
-                
-                # Parse the response
-                try:
-                    response_data = response.json()
-                    logger.info(f"Raw API response structure: {list(response_data.keys()) if isinstance(response_data, dict) else type(response_data)}")
-                    
-                    # Check if we have a successful result
-                    if isinstance(response_data, dict) and response_data.get("success") is True and "result" in response_data:
-                        raw_palettes = response_data["result"]
-                        if isinstance(raw_palettes, list) and raw_palettes:
-                            # Process each palette to extract colors properly
-                            processed_palettes = [self._process_palette_colors(palette) for palette in raw_palettes]
-                            return self._validate_and_clean_palettes(processed_palettes, num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
-                    
-                    # If we couldn't get proper palettes from the response
-                    logger.warning("Invalid response format from JigsawStack API")
-                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing response: {e}")
-                    return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+            logger.info(f"Response status code: {response.status_code}")
             
+            if response.status_code == 401 or response.status_code == 403:
+                raise JigsawStackAuthenticationError(
+                    message="Authentication failed with JigsawStack API",
+                    details={"status_code": response.status_code}
+                )
+                
+            if response.status_code != 200:
+                error_details = f"Status: {response.status_code}, Response: {response.text}"
+                logger.error(f"Color palette generation API error: {error_details}")
+                # Use fallback palettes instead of failing
+                logger.info("Using default color palettes as fallback")
+                return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+            
+            # Parse the response
+            try:
+                response_data = response.json()
+                logger.info(f"Raw API response structure: {list(response_data.keys()) if isinstance(response_data, dict) else type(response_data)}")
+                
+                # Check if we have a successful result
+                if isinstance(response_data, dict) and response_data.get("success") is True and "result" in response_data:
+                    raw_palettes = response_data["result"]
+                    if isinstance(raw_palettes, list) and raw_palettes:
+                        # Process each palette to extract colors properly
+                        processed_palettes = [self._process_palette_colors(palette) for palette in raw_palettes]
+                        return self._validate_and_clean_palettes(processed_palettes, num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+                
+                # If we couldn't get proper palettes from the response
+                logger.warning("Invalid response format from JigsawStack API")
+                return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+                
+            except Exception as e:
+                logger.error(f"Error processing palette response: {e}")
+                return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
+        
+        except (JigsawStackConnectionError, JigsawStackAuthenticationError):
+            # Re-raise the connection and authentication errors
+            raise
         except Exception as e:
+            # For other errors, use the fallback palettes instead of failing
             logger.error(f"Error generating multiple color palettes: {str(e)}")
             return self._get_default_palettes(num_palettes, f"Logo: {logo_description}. Theme: {theme_description}")
     
@@ -402,6 +503,133 @@ Design requirements:
                 "description": f"A cool and refreshing palette for: {prompt}"
             }
         ][:num_palettes]
+
+    async def get_variation(self, image_url: str, model: str = "stable-diffusion-xl") -> bytes:
+        """
+        Generate a variation of the provided image using the JigsawStack API.
+        
+        Args:
+            image_url: URL of the image to generate a variation from
+            model: The model to use for generation
+            
+        Returns:
+            bytes: Binary data of the generated image
+            
+        Raises:
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If variation generation fails
+        """
+        try:
+            logger.info(f"Generating variation of image {image_url}")
+            endpoint = f"{self.api_url}/v1/stability/variation"
+            
+            payload = {
+                "image_url": image_url,
+                "model": model
+            }
+            
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        endpoint, 
+                        headers=self.headers, 
+                        json=payload, 
+                        timeout=60.0  # Variations can take longer
+                    )
+            except httpx.ConnectError as e:
+                raise JigsawStackConnectionError(
+                    message=f"Failed to connect to JigsawStack API for variation: {str(e)}",
+                    details={"endpoint": endpoint}
+                )
+            except httpx.TimeoutException as e:
+                raise JigsawStackConnectionError(
+                    message=f"JigsawStack API timed out during variation request: {str(e)}",
+                    details={"endpoint": endpoint, "timeout": "60.0"}
+                )
+                
+            if response.status_code == 401 or response.status_code == 403:
+                raise JigsawStackAuthenticationError(
+                    message="Authentication failed with JigsawStack API during variation request",
+                    details={"status_code": response.status_code}
+                )
+                
+            if response.status_code != 200:
+                error_details = {"status_code": response.status_code, "response_text": response.text}
+                error_message = f"Failed to generate image variation. Status: {response.status_code}"
+                logger.error(f"{error_message}. Response: {response.text}")
+                raise JigsawStackGenerationError(
+                    message=error_message,
+                    details=error_details
+                )
+                
+            # Get the image data from the response
+            try:
+                response_json = response.json()
+                if not response_json.get("success"):
+                    error_message = "Variation generation reported failure"
+                    logger.error(f"{error_message}. Response: {response_json}")
+                    raise JigsawStackGenerationError(
+                        message=error_message,
+                        details={"api_response": response_json}
+                    )
+                    
+                if "image_url" not in response_json:
+                    error_message = "No image URL in successful variation response"
+                    logger.error(f"{error_message}. Response: {response_json}")
+                    raise JigsawStackGenerationError(
+                        message=error_message,
+                        details={"api_response": response_json}
+                    )
+                    
+                # Get the binary image data from the URL
+                image_url = response_json["image_url"]
+                logger.info(f"Variation generated successfully. Downloading from: {image_url}")
+                
+                # Download the image
+                try:
+                    async with httpx.AsyncClient() as client:
+                        image_response = await client.get(image_url, timeout=30.0)
+                        
+                    if image_response.status_code != 200:
+                        error_message = f"Failed to download variation image. Status: {image_response.status_code}"
+                        logger.error(error_message)
+                        raise JigsawStackGenerationError(
+                            message=error_message,
+                            details={"status_code": image_response.status_code, "image_url": image_url}
+                        )
+                        
+                    return image_response.content
+                except httpx.ConnectError as e:
+                    raise JigsawStackConnectionError(
+                        message=f"Failed to connect to image URL: {str(e)}",
+                        details={"image_url": image_url}
+                    )
+                except httpx.TimeoutException as e:
+                    raise JigsawStackConnectionError(
+                        message=f"Timed out downloading image: {str(e)}",
+                        details={"image_url": image_url, "timeout": "30.0"}
+                    )
+                except Exception as e:
+                    raise JigsawStackGenerationError(
+                        message=f"Error downloading variation image: {str(e)}",
+                        details={"image_url": image_url}
+                    )
+            except Exception as e:
+                raise JigsawStackGenerationError(
+                    message=f"Error processing variation response: {str(e)}",
+                    details={"response_text": response.text}
+                )
+        
+        except (JigsawStackConnectionError, JigsawStackAuthenticationError, JigsawStackGenerationError):
+            # Re-raise these exceptions
+            raise
+        except Exception as e:
+            # Catch any other exceptions and convert to a JigsawStackGenerationError
+            raise JigsawStackGenerationError(
+                message=f"Unexpected error generating image variation: {str(e)}",
+                details={"image_url": image_url, "model": model}
+            )
 
 
 @lru_cache()

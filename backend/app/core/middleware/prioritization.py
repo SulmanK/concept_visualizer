@@ -6,11 +6,18 @@ health checks when the server is busy.
 """
 
 import asyncio
+import logging
 import time
 from typing import Callable, Awaitable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+
+from app.core.exceptions import ApplicationError
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Track active generation processes
 active_generation_count = 0
@@ -48,6 +55,8 @@ class PrioritizationMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         method = request.method
         
+        logger.debug(f"Processing request: {method} {path}")
+        
         # Identify if this is a heavy endpoint (concept generation/refinement)
         is_high_priority = (
             ("/api/concept/generate" in path or 
@@ -61,42 +70,77 @@ class PrioritizationMiddleware(BaseHTTPMiddleware):
         is_session_endpoint = "/api/session" in path
         
         global active_generation_count
-        
-        # For high priority endpoints, increment the counter and acquire semaphore
-        if is_high_priority:
-            active_generation_count += 1
-            async with generation_semaphore:
-                try:
-                    # Process the request with priority
-                    start_time = time.time()
-                    response = await call_next(request)
-                    process_time = time.time() - start_time
-                    response.headers["X-Process-Time"] = str(process_time)
-                    return response
-                finally:
-                    active_generation_count -= 1
-        
-        # For health checks when server is busy, use a cached response if possible
-        elif is_health_check and active_generation_count > 5:
-            # If we're very busy with generations, serve a quick cached response for health checks
-            return Response(
-                content='{"status":"ok"}',
-                media_type="application/json",
-                headers={"X-From-Cache": "true"}
-            )
-        
-        # Session endpoints should not be rate limited at all
-        elif is_session_endpoint:
-            # Process session requests normally, without any rate limiting
-            start_time = time.time()
-            response = await call_next(request)
-            process_time = time.time() - start_time
-            response.headers["X-Process-Time"] = str(process_time)
-            return response
-        
-        # For other endpoints, process normally
         start_time = time.time()
-        response = await call_next(request)
-        process_time = time.time() - start_time
-        response.headers["X-Process-Time"] = str(process_time)
-        return response 
+        
+        try:
+            # For high priority endpoints, increment the counter and acquire semaphore
+            if is_high_priority:
+                logger.debug(f"Processing high priority request: {path}, active generations: {active_generation_count}")
+                active_generation_count += 1
+                try:
+                    # Use the semaphore to limit concurrent generation requests
+                    async with generation_semaphore:
+                        try:
+                            # Process the request with priority
+                            response = await call_next(request)
+                            process_time = time.time() - start_time
+                            response.headers["X-Process-Time"] = str(process_time)
+                            logger.debug(f"High priority request completed in {process_time:.2f}s: {path}")
+                            return response
+                        except Exception as e:
+                            logger.error(f"Error processing high priority request: {str(e)}")
+                            # Let the exception propagate to be handled by error handlers
+                            raise
+                finally:
+                    # Always decrement the counter, even if there was an error
+                    active_generation_count -= 1
+            
+            # For health checks when server is busy, use a cached response if possible
+            elif is_health_check and active_generation_count > 5:
+                logger.debug(f"Returning cached health check response due to high load ({active_generation_count} active generations)")
+                # If we're very busy with generations, serve a quick cached response for health checks
+                return Response(
+                    content='{"status":"ok","from_cache":true,"active_generations":' + str(active_generation_count) + '}',
+                    media_type="application/json",
+                    headers={"X-From-Cache": "true"}
+                )
+            
+            # Session endpoints should not be rate limited at all
+            elif is_session_endpoint:
+                logger.debug(f"Processing session request: {path}")
+                # Process session requests normally, without any rate limiting
+                response = await call_next(request)
+                process_time = time.time() - start_time
+                response.headers["X-Process-Time"] = str(process_time)
+                logger.debug(f"Session request completed in {process_time:.2f}s: {path}")
+                return response
+            
+            # For other endpoints, process normally
+            else:
+                logger.debug(f"Processing standard request: {path}")
+                response = await call_next(request)
+                process_time = time.time() - start_time
+                response.headers["X-Process-Time"] = str(process_time)
+                logger.debug(f"Standard request completed in {process_time:.2f}s: {path}")
+                return response
+                
+        except Exception as e:
+            # Log the error but don't handle it - let it propagate to FastAPI's error handlers
+            process_time = time.time() - start_time
+            logger.error(f"Error in prioritization middleware ({process_time:.2f}s): {str(e)}")
+            
+            # For security reasons, we don't want to expose internal errors directly
+            # So we'll create a generic error response for true 500 errors
+            # For ApplicationErrors, they should be caught by a proper error handler later
+            if not isinstance(e, ApplicationError):
+                # Very basic error response for truly unexpected errors
+                # This will be rare as most errors should be caught and processed by error handlers
+                return Response(
+                    content='{"error":true,"detail":"Internal server error","status_code":500}',
+                    media_type="application/json",
+                    status_code=HTTP_500_INTERNAL_SERVER_ERROR,
+                    headers={"X-Process-Time": str(process_time)}
+                )
+            
+            # Let application errors (and others) propagate to be handled by the error handlers
+            raise 

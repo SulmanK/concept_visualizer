@@ -13,6 +13,13 @@ from typing import List, Optional, Dict, Any, Tuple
 
 from fastapi import Depends
 
+from app.core.exceptions import (
+    ConceptError, 
+    JigsawStackError, 
+    JigsawStackConnectionError,
+    JigsawStackAuthenticationError,
+    JigsawStackGenerationError
+)
 from app.models.response import ColorPalette, GenerationResponse
 from app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 
@@ -46,7 +53,10 @@ class ConceptService:
             GenerationResponse: The generated concept with image URL and color palette
             
         Raises:
-            Exception: If there is an error during generation
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If generation fails due to API errors
+            ConceptError: If there is an error during concept generation
         """
         logger.info(f"Generating concept with descriptions: {logo_description}, {theme_description}")
         
@@ -84,9 +94,19 @@ class ConceptService:
                 color_palette=palette,
                 created_at=datetime.datetime.utcnow().isoformat()
             )
+        except JigsawStackError as e:
+            # Re-raise specific JigsawStack errors
+            logger.error(f"JigsawStack API error during concept generation: {str(e)}")
+            raise
         except Exception as e:
             logger.error(f"Error generating concept: {str(e)}")
-            raise
+            raise ConceptError(
+                message=f"Failed to generate concept: {str(e)}",
+                details={
+                    "logo_description": logo_description,
+                    "theme_description": theme_description
+                }
+            )
 
     async def generate_concept_with_palettes(
         self, logo_description: str, theme_description: str, num_palettes: int = 3
@@ -105,7 +125,10 @@ class ConceptService:
             - variation_images: List of dictionaries with palette info and image data
             
         Raises:
-            Exception: If there is an error during generation
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If generation fails due to API errors
+            ConceptError: If there is an error during concept generation
         """
         self.logger.info(f"Generating concept with {num_palettes} palette variations")
         
@@ -120,6 +143,7 @@ class ConceptService:
             
             # 2. Generate a separate image for each palette
             variation_images = []
+            failed_palettes = []
             
             for palette in palettes:
                 name = palette["name"]
@@ -144,15 +168,44 @@ class ConceptService:
                     variation_images.append(variation)
                     
                     self.logger.info(f"Generated image for palette '{name}' successfully")
+                except JigsawStackError as e:
+                    self.logger.error(f"JigsawStack error generating image for palette '{name}': {e}")
+                    failed_palettes.append(name)
                 except Exception as e:
                     self.logger.error(f"Error generating image for palette '{name}': {e}")
+                    failed_palettes.append(name)
                     # Continue with other palettes even if one fails
             
+            # If we failed to generate any images, raise an error
+            if len(variation_images) == 0 and len(palettes) > 0:
+                raise ConceptError(
+                    message="Failed to generate any images for the provided palettes",
+                    details={
+                        "failed_palettes": failed_palettes,
+                        "logo_description": logo_description,
+                        "theme_description": theme_description
+                    }
+                )
+                
             return palettes, variation_images
             
+        except JigsawStackError as e:
+            # Re-raise specific JigsawStack errors
+            self.logger.error(f"JigsawStack API error during palette generation: {str(e)}")
+            raise
+        except ConceptError:
+            # Re-raise ConceptError
+            raise
         except Exception as e:
             self.logger.error(f"Error in generate_concept_with_palettes: {e}")
-            raise
+            raise ConceptError(
+                message=f"Failed to generate concept with palettes: {str(e)}",
+                details={
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
+                    "num_palettes": num_palettes
+                }
+            )
 
     async def refine_concept(
         self,
@@ -176,7 +229,10 @@ class ConceptService:
             GenerationResponse: The refined concept with image URL and color palette
             
         Raises:
-            Exception: If there is an error during refinement
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If refinement fails due to API errors
+            ConceptError: If there is an error during concept refinement
         """
         logger.info(f"Refining concept with prompt: {refinement_prompt}")
         
@@ -230,9 +286,21 @@ class ConceptService:
                 original_image_url=original_image_url,
                 refinement_prompt=refinement_prompt
             )
+        except JigsawStackError as e:
+            # Re-raise specific JigsawStack errors
+            logger.error(f"JigsawStack API error during concept refinement: {str(e)}")
+            raise
         except Exception as e:
             logger.error(f"Error refining concept: {str(e)}")
-            raise
+            raise ConceptError(
+                message=f"Failed to refine concept: {str(e)}",
+                details={
+                    "original_image_url": original_image_url,
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
+                    "refinement_prompt": refinement_prompt
+                }
+            )
             
     async def generate_color_palettes(
             self, 
@@ -249,53 +317,41 @@ class ConceptService:
             num_palettes: Number of different palettes to generate
             
         Returns:
-            List of color palette dictionaries, each with:
-                - name: Name of the palette
-                - colors: List of hex color codes
-                - description: Description of the palette
+            List[Dict[str, Any]]: List of palette dictionaries with name, colors, and description
+            
+        Raises:
+            JigsawStackConnectionError: If connection to the API fails
+            JigsawStackAuthenticationError: If authentication fails
+            JigsawStackGenerationError: If generation fails due to API errors
+            ConceptError: If there is an error during palette generation
         """
-        self.logger.info(f"Generating {num_palettes} color palettes")
-        
-        # Define some common palette names for better results
-        palette_names = [
-            "Primary Palette", "Accent Palette", "Neutral Palette", 
-            "Vibrant Palette", "Complementary Palette", "Monochromatic Palette", 
-            "Analogous Palette", "Triadic Palette", "Modern Palette",
-            "Earthy Palette", "Pastel Palette", "Bold Palette"
-        ]
-        
         try:
-            # Get multiple palettes in a single call to JigsawStack
-            self.logger.info(f"Making a single LLM call to generate {num_palettes} color palettes")
-            
-            # Use the logo description if provided
-            logo_desc = logo_description or "generic logo"
+            combined_description = f"{theme_description}"
+            if logo_description:
+                combined_description += f" for a logo described as: {logo_description}"
                 
-            # Generate palettes with suggested names
-            
             palettes = await self.client.generate_multiple_palettes(
-                logo_description=logo_desc,
+                logo_description=logo_description or "Generic logo",
                 theme_description=theme_description,
                 num_palettes=num_palettes
             )
             
-            self.logger.info(f"Generated {len(palettes)} color palettes successfully in a single call")
-            
-            # Ensure we have the expected palette names if possible
-            for i, palette in enumerate(palettes):
-                if i < len(palette_names) and palette["name"] == "Unnamed Palette":
-                    palette["name"] = palette_names[i]
-                    
             return palettes
             
+        except JigsawStackError as e:
+            # Re-raise specific JigsawStack errors
+            logger.error(f"JigsawStack API error during palette generation: {str(e)}")
+            raise
         except Exception as e:
-            self.logger.error(f"Error generating color palettes: {e}")
-            # Return a default palette in case of error
-            return [{
-                "name": "Default Palette",
-                "colors": ["#4F46E5", "#818CF8", "#C4B5FD", "#F5F3FF", "#1E1B4B"],
-                "description": f"Default palette for: {theme_description}"
-            }]
+            logger.error(f"Error generating color palettes: {str(e)}")
+            raise ConceptError(
+                message=f"Failed to generate color palettes: {str(e)}",
+                details={
+                    "theme_description": theme_description,
+                    "logo_description": logo_description,
+                    "num_palettes": num_palettes
+                }
+            )
 
 
 @lru_cache()

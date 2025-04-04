@@ -298,20 +298,38 @@
       - [ ] Write tests for rate limiting functions
       - [ ] Write tests for masking utilities
 
-  - [ ] **2. Core Module Refactoring** (NEXT PRIORITY)
-    - [ ] Refactor supabase.py (585 lines) into smaller modules:
-      - [ ] Create supabase/ directory with package structure
-      - [ ] Extract session_storage.py module for session-related operations
-      - [ ] Extract concept_storage.py module for concept storage operations
-      - [ ] Extract image_storage.py module for image storage operations
-      - [ ] Create client.py module for base client functionality
-      - [ ] Create __init__.py to provide a clean interface
-    - [ ] Refactor rate_limiter.py (262 lines) into better organized modules:
-      - [ ] Create limiter/ directory with package structure
-      - [ ] Extract config.py for core limiter configuration 
-      - [ ] Extract redis_store.py for Redis integration
-      - [ ] Ensure proper type hints and documentation
-    - [ ] Ensure proper error handling and logging throughout core modules
+  - [ ] **2. Core Module Refactoring** (COMPLETED)
+    - [x] Refactor `supabase.py` into smaller modules
+      - [x] Create `supabase/` directory with proper package structure
+      - [x] Extract `client.py` for core client functionality
+      - [x] Extract `session_storage.py` for session management
+      - [x] Extract `concept_storage.py` for concept storage
+      - [x] Extract `image_storage.py` for image handling
+      - [x] Create `__init__.py` to provide a clean interface
+      - [x] Update imports across codebase to use new modules
+      - [x] Remove original supabase.py file
+    - [x] Refactor `rate_limiter.py` into better organized modules
+      - [x] Create `limiter/` directory with proper package structure
+      - [x] Extract `config.py` for core limiter configuration
+      - [x] Extract `redis_store.py` for Redis integration
+      - [x] Extract `keys.py` for key generation operations
+      - [x] Extract `decorators.py` for rate limiting decorators
+      - [x] Create `__init__.py` to provide a clean interface
+      - [x] Update imports across codebase to use new modules
+    - [x] Create domain-specific exceptions for core modules
+      - [x] Create `exceptions.py` for custom exception classes
+      - [x] Define domain-specific exception hierarchy
+      - [x] Add proper exception handling to FastAPI app
+      - [x] Update services to use domain-specific exceptions
+      - [x] Improve error messages and documentation
+    - [x] Ensure proper error handling and logging throughout core modules
+      - [x] Add appropriate try/except blocks
+      - [x] Use specific exception types
+      - [x] Include detailed logging
+      - [x] Update `supabase/client.py` to use proper error handling
+      - [x] Update `limiter/redis_store.py` for better error handling
+      - [x] Improve error handling in configuration module
+      - [x] Enhance middleware error handling
 
   - [ ] **3. Service Layer Refactoring** (AFTER CORE)
     - [ ] Refactor concept_service.py (314 lines) into smaller modules:

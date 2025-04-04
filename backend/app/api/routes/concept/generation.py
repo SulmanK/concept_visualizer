@@ -216,11 +216,8 @@ async def generate_concept_with_palettes(
         
         for palette in palettes:
             # Apply each palette to the base image using the new OpenCV method
-            from app.core.supabase import get_supabase_client
-            supabase_client = get_supabase_client()
-            
             # Transform the image with the current palette
-            palette_image_path = await supabase_client.apply_color_palette(
+            palette_image_path = await commons.image_service.apply_color_palette(
                 base_image_path,
                 palette["colors"],
                 session_id
@@ -228,7 +225,7 @@ async def generate_concept_with_palettes(
             
             if palette_image_path:
                 # Get public URL
-                palette_image_url = supabase_client.get_image_url(
+                palette_image_url = commons.image_service.get_image_url(
                     palette_image_path, 
                     "palette-images"
                 )

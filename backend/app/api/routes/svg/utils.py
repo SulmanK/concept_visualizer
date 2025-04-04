@@ -8,6 +8,7 @@ import base64
 import logging
 from io import BytesIO
 from PIL import Image
+from app.core.limiter import get_redis_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -56,7 +57,6 @@ def increment_svg_rate_limit(limiter, user_id: str, endpoint: str, period: str =
     try:
         # Use the same Redis client getter as the main rate limiter 
         # to ensure we're accessing Redis the same way
-        from app.core.rate_limiter import get_redis_client
         redis_client = get_redis_client()
         
         if not redis_client:

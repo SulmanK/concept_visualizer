@@ -21,8 +21,9 @@ from app.services.session_service import SessionService, get_session_service
 from app.services.concept_service import ConceptService, get_concept_service
 from app.services.image_service import ImageService, get_image_service
 from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
-from app.utils.security import mask_id, mask_ip
+from app.utils.security.mask import mask_id, mask_ip
 from app.api.routes.svg.utils import create_simple_svg_from_image, increment_svg_rate_limit
+from app.core.limiter import get_redis_client
 
 # Import error handling
 from app.api.errors import ValidationError, ServiceUnavailableError
@@ -53,8 +54,8 @@ async def convert_to_svg(
         ServiceUnavailableError: If the service fails to convert the image
     """
     try:
-        limiter = None
-        if req:
+        # Handle rate limiting manually instead of using the decorator
+        if req and hasattr(req.app.state, 'limiter'):
             limiter = req.app.state.limiter
             try:
                 # Use session ID for rate limiting (key_func is now get_session_id)
@@ -63,18 +64,35 @@ async def convert_to_svg(
                 # Log the rate limiting attempt
                 logger.info(f"Checking rate limit '{rate_limit}' for SVG conversion")
                 
-                # Try-except block for the rate limit to handle connection issues
-                try:
-                    # Fix the await syntax - limiter.limit returns a function, not an awaitable
-                    limit_func = limiter.limit(rate_limit)
-                    # Apply the limit function to the request, but don't await it (it's not an async function)
-                    limit_func(req)
-                    logger.info("SlowAPI rate limit check passed for SVG conversion")
-                except Exception as e:
-                    logger.error(f"SlowAPI rate limiting error in SVG conversion: {str(e)}")
-                    # Continue even if rate limiting fails
+                # Manual rate limit check using keys directly
+                user_id = req.cookies.get("concept_session", get_remote_address(req))
+                masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
+                user_key = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
+                
+                # Use the custom increment function to check the current rate limit
+                # And we'll increment it later only if the conversion is successful
+                redis_client = get_redis_client()
+                if redis_client:
+                    # Check the count but don't increment yet
+                    for key in [f"svg:{user_key}:hour", f"POST:/api/svg/convert-to-svg:{user_key}:hour"]:
+                        try:
+                            count = redis_client.get(key)
+                            if count and int(count) >= 20:  # 20/hour limit
+                                logger.warning(f"Rate limit exceeded for {masked_user_id}: {int(count)}/20 requests")
+                                raise ServiceUnavailableError(
+                                    detail="Rate limit exceeded for SVG conversion. Please try again later."
+                                )
+                        except ValueError:
+                            # If the count can't be parsed, continue
+                            pass
+                        except Exception as e:
+                            if not isinstance(e, ServiceUnavailableError):
+                                logger.error(f"Error checking rate limit: {str(e)}")
+                
             except Exception as e:
-                logger.error(f"Error checking rate limit for SVG conversion: {str(e)}")
+                if isinstance(e, ServiceUnavailableError):
+                    raise
+                logger.error(f"Error in rate limit check for SVG conversion: {str(e)}")
                 # Continue even if rate limiting fails
         
         # Validate the request

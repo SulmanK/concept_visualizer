@@ -13,10 +13,11 @@ import uuid
 from io import BytesIO
 from PIL import Image
 
-from ..core.supabase import get_supabase_client, SupabaseClient
+from ..core.supabase import SupabaseClient, get_supabase_client
+from ..core.supabase.image_storage import ImageStorage
 from .jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 from .image_processing import apply_palette_with_masking_optimized
-from ..utils.mask import mask_id, mask_path
+from ..utils.security.mask import mask_id, mask_path
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -36,6 +37,7 @@ class ImageService:
             jigsawstack_client: Client for JigsawStack API
         """
         self.supabase_client = supabase_client
+        self.image_storage = ImageStorage(supabase_client)
         self.jigsawstack_client = jigsawstack_client
         self.logger = logging.getLogger("image_service")
     
@@ -89,7 +91,7 @@ class ImageService:
                 
             # Get public URL
             self.logger.info(f"Getting public URL for image: {masked_filename}")
-            public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
+            public_url = self.image_storage.get_image_url(storage_path, "concept-images")
             
             return storage_path, public_url
         except Exception as e:
@@ -143,7 +145,7 @@ class ImageService:
             masked_filename = mask_path(unique_filename)
             
             # Upload to Supabase Storage
-            result = self.supabase_client.client.storage.from_("concept-images").upload(
+            result = self.image_storage.upload(
                 path=unique_filename,
                 file=image_data,
                 file_options={"content-type": f"image/{format_ext}"}
@@ -158,7 +160,7 @@ class ImageService:
                 
             # Get public URL
             self.logger.info(f"Getting public URL for refined image: {masked_filename}")
-            public_url = self.supabase_client.get_image_url(storage_path, "concept-images")
+            public_url = self.image_storage.get_image_url(storage_path, "concept-images")
             
             return storage_path, public_url
         except Exception as e:
@@ -189,7 +191,7 @@ class ImageService:
         masked_base_path = mask_path(base_image_path)
         masked_session = mask_id(session_id)
         
-        base_image_url = self.supabase_client.get_image_url(base_image_path, "concept-images")
+        base_image_url = self.image_storage.get_image_url(base_image_path, "concept-images")
         if not base_image_url:
             self.logger.error(f"Failed to get URL for base image: {masked_base_path}")
             return []
@@ -211,7 +213,7 @@ class ImageService:
                 masked_filename = mask_path(unique_filename)
                 
                 # Upload to Supabase Storage
-                result = self.supabase_client.client.storage.from_("palette-images").upload(
+                result = self.image_storage.upload(
                     path=unique_filename,
                     file=palette_image_data,
                     file_options={"content-type": "image/png"}
@@ -222,7 +224,7 @@ class ImageService:
                     continue
                 
                 # Get public URL
-                palette_image_url = self.supabase_client.get_image_url(
+                palette_image_url = self.image_storage.get_image_url(
                     unique_filename, 
                     "palette-images"
                 )
