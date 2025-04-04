@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ErrorMessage } from '../../../../components/ui';
 
 export interface ExportOptionsProps {
   /**
@@ -53,6 +54,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [processedImageUrl, setProcessedImageUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAutoProcessing, setIsAutoProcessing] = useState<boolean>(false);
+  const [error, setError] = useState<{ message: string; type: string } | null>(null);
   
   // Process the image when format or size changes
   useEffect(() => {
@@ -94,18 +96,47 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
     };
   }, [selectedFormat, selectedSize, imageUrl, processedImageUrl, isProcessing]);
 
-  // Helper function to process image for preview
+  // Clear error on format or size change
+  useEffect(() => {
+    setError(null);
+  }, [selectedFormat, selectedSize]);
+
   const processImageForPreview = async () => {
-    setIsProcessing(true);
     try {
-      const url = await processImage(imageUrl, selectedFormat, selectedSize);
-      setProcessedImageUrl(url);
-      return url;
+      // Clear any previous errors
+      setError(null);
+      
+      setIsAutoProcessing(true);
+      const result = await processImage(imageUrl, selectedFormat, selectedSize);
+      setProcessedImageUrl(result);
+      setIsAutoProcessing(false);
+      return result;
     } catch (error) {
-      console.error('Error processing image:', error);
+      console.error('Error processing image for preview:', error);
+      setIsAutoProcessing(false);
+      
+      // Set an appropriate error message
+      if (error instanceof Error) {
+        // Check for rate limit errors
+        if (error.name === 'RateLimitError' || error.message.includes('rate limit')) {
+          setError({
+            message: 'SVG conversion limit reached. Please try again later or choose a different format.',
+            type: 'rateLimit'
+          });
+        } else {
+          setError({
+            message: `Failed to process image: ${error.message}`,
+            type: 'generic'
+          });
+        }
+      } else {
+        setError({
+          message: 'An unexpected error occurred',
+          type: 'generic'
+        });
+      }
+      
       return null;
-    } finally {
-      setIsProcessing(false);
     }
   };
   
@@ -295,8 +326,65 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       });
       
       if (!response.ok) {
+        // Handle rate limit errors (HTTP 429)
+        if (response.status === 429) {
+          // Try to parse the rate limit error details
+          const errorData = await response.json().catch(() => ({}));
+          
+          // Get rate limit info from response if available
+          let errorMessage = 'SVG conversion rate limit exceeded. Please try again later.';
+          let rateLimitDetails = {
+            limit: 20,
+            current: 20,
+            period: 'hour',
+            resetAfterSeconds: 3600
+          };
+          
+          if (errorData && errorData.detail) {
+            // Extract rate limit details if available
+            if (typeof errorData.detail === 'object') {
+              const detail = errorData.detail;
+              rateLimitDetails = {
+                limit: detail.limit || 20,
+                current: detail.current || 0,
+                period: detail.period || 'hour',
+                resetAfterSeconds: detail.reset_after_seconds || 3600
+              };
+              errorMessage = detail.message || errorMessage;
+            } else {
+              errorMessage = errorData.detail;
+            }
+          }
+          
+          // Set error in component state instead of creating dynamic component
+          setError({
+            message: `SVG conversion limit reached (${rateLimitDetails.current}/${rateLimitDetails.limit}). Please try again later or select a different format.`,
+            type: 'rateLimit'
+          });
+          
+          // Create a better error with rate limit info for logging
+          const rateLimitError = new Error(errorMessage);
+          Object.assign(rateLimitError, {
+            status: 429,
+            rateLimitInfo: rateLimitDetails,
+            name: 'RateLimitError'
+          });
+          
+          // No longer automatically switching to PNG format
+          // Just throw the error and let the user decide what to do
+          
+          throw rateLimitError;
+        }
+        
         const errorText = await response.text();
         console.error('SVG conversion API response error:', response.status, errorText);
+        
+        // Set component error state
+        setError({
+          message: `SVG conversion failed (HTTP ${response.status}). Please try a different format.`,
+          type: 'server'
+        });
+        
         throw new Error(`SVG conversion failed: ${response.status} - ${errorText}`);
       }
       
@@ -304,6 +392,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       console.log('SVG conversion response:', data);
       
       if (!data.success) {
+        setError({
+          message: data.message || 'SVG conversion failed. Please try a different format.',
+          type: 'server'
+        });
         throw new Error(data.message || 'SVG conversion failed');
       }
       
@@ -313,6 +405,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       // Check if the SVG data is valid
       if (!svgData.startsWith('<?xml') && !svgData.startsWith('<svg')) {
         console.warn('Received invalid SVG data, falling back to original image');
+        setError({
+          message: 'Received invalid SVG data. Please try a different format.',
+          type: 'server'
+        });
         return url;
       }
       
@@ -321,10 +417,23 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       const objectUrl = URL.createObjectURL(blob);
       console.log('Created SVG object URL:', objectUrl);
       
+      // Clear any previous errors if successful
+      setError(null);
+      
       return objectUrl;
     } catch (error) {
       console.error('Error in SVG conversion:', error);
-      throw error;
+      
+      // If not already handled above, set a generic error
+      if (!error.name || error.name !== 'RateLimitError') {
+        setError({
+          message: error instanceof Error ? error.message : 'SVG conversion failed. Please try again or select a different format.',
+          type: 'generic'
+        });
+      }
+      
+      // Always return null to signal conversion failure
+      return null;
     }
   };
   
@@ -586,120 +695,133 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   };
   
   return (
-    <div className="flex flex-col">
-      <div className="space-y-4">
-        {/* Format selection - keeping this on its own line for better readability */}
-        <div>
-          <h4 className="text-sm font-semibold text-indigo-700 mb-3">Format</h4>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {Object.entries(formatInfo).map(([format, info]) => (
-              <button 
-                key={format}
-                className={`flex-1 border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
-                  ${selectedFormat === format ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
-                  ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
-                onClick={() => setSelectedFormat(format as ExportFormat)}
-                title={info.desc}
-                disabled={isProcessing || isAutoProcessing}
-              >
-                <div className="text-indigo-600 font-bold text-sm sm:text-md flex justify-center">.{format.toUpperCase()}</div>
-                <div className="text-xs text-gray-500 mt-1 sm:mt-2">{info.title}</div>
-              </button>
-            ))}
-          </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+      {/* Error message */}
+      {error && (
+        <div className="mb-4">
+          <ErrorMessage 
+            message={error.message}
+            type={error.type as any}
+            onDismiss={() => setError(null)}
+          />
         </div>
+      )}
 
-        {/* Size selection */}
-        <div>
-          <h4 className="text-sm font-semibold text-indigo-700 mb-3">Size</h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            {Object.entries(sizeMap).map(([size, label]) => (
-              <button 
-                key={size}
-                className={`border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
-                  ${selectedSize === size ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
-                  ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
-                onClick={() => setSelectedSize(size as ExportSize)}
-                disabled={isProcessing || isAutoProcessing}
-              >
-                <div className={`font-medium flex justify-center text-sm sm:text-base ${selectedSize === size ? 'text-indigo-700' : 'text-indigo-600'}`}>
-                  {size.charAt(0).toUpperCase() + size.slice(1)}
-                </div>
-                <div className="text-xs text-gray-500 mt-1 sm:mt-2">{label}</div>
-              </button>
-            ))}
+      <div className="flex flex-col">
+        <div className="space-y-4">
+          {/* Format selection - keeping this on its own line for better readability */}
+          <div>
+            <h4 className="text-sm font-semibold text-indigo-700 mb-3">Format</h4>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {Object.entries(formatInfo).map(([format, info]) => (
+                <button 
+                  key={format}
+                  className={`flex-1 border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
+                    ${selectedFormat === format ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
+                    ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
+                  onClick={() => setSelectedFormat(format as ExportFormat)}
+                  title={info.desc}
+                  disabled={isProcessing || isAutoProcessing}
+                >
+                  <div className="text-indigo-600 font-bold text-sm sm:text-md flex justify-center">.{format.toUpperCase()}</div>
+                  <div className="text-xs text-gray-500 mt-1 sm:mt-2">{info.title}</div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
-      
-      {/* Status indicator */}
-      <div className="mt-4">
-        {isAutoProcessing && (
-          <div className="text-xs text-indigo-600 flex items-center">
-            <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Preparing preview with selected options...
+
+          {/* Size selection */}
+          <div>
+            <h4 className="text-sm font-semibold text-indigo-700 mb-3">Size</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {Object.entries(sizeMap).map(([size, label]) => (
+                <button 
+                  key={size}
+                  className={`border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
+                    ${selectedSize === size ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
+                    ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
+                  onClick={() => setSelectedSize(size as ExportSize)}
+                  disabled={isProcessing || isAutoProcessing}
+                >
+                  <div className={`font-medium flex justify-center text-sm sm:text-base ${selectedSize === size ? 'text-indigo-700' : 'text-indigo-600'}`}>
+                    {size.charAt(0).toUpperCase() + size.slice(1)}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 sm:mt-2">{label}</div>
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-        {!isAutoProcessing && processedImageUrl && (
-          <div className="text-xs text-green-600 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
-            Ready to preview and download
-          </div>
-        )}
-      </div>
-      
-      {/* Download controls */}
-      <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-0">
-          <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize]}
         </div>
         
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          <button 
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[100px] border border-indigo-200 text-indigo-600 font-medium rounded-lg hover:bg-indigo-50 transition-colors flex justify-center items-center"
-            onClick={handlePreview}
-            disabled={isProcessing || isAutoProcessing}
-          >
-            {(isProcessing || isAutoProcessing) ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
-              </span>
-            ) : (
-              <span className="text-sm sm:text-base">Preview</span>
-            )}
-          </button>
-          <button 
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[120px] bg-gradient-to-r from-indigo-600 to-indigo-400 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex justify-center items-center"
-            onClick={handleDownloadClick}
-            disabled={isProcessing || isAutoProcessing}
-            data-testid="download-button"
-          >
-            {(isProcessing || isAutoProcessing) ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
-              </span>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                <span className="text-sm sm:text-base">Download</span>
-              </>
-            )}
-          </button>
+        {/* Status indicator */}
+        <div className="mt-4">
+          {isAutoProcessing && (
+            <div className="text-xs text-indigo-600 flex items-center">
+              <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Preparing preview with selected options...
+            </div>
+          )}
+          {!isAutoProcessing && processedImageUrl && (
+            <div className="text-xs text-green-600 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              Ready to preview and download
+            </div>
+          )}
+        </div>
+        
+        {/* Download controls */}
+        <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-0">
+            <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize]}
+          </div>
+          
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+            <button 
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[100px] border border-indigo-200 text-indigo-600 font-medium rounded-lg hover:bg-indigo-50 transition-colors flex justify-center items-center"
+              onClick={handlePreview}
+              disabled={isProcessing || isAutoProcessing}
+            >
+              {(isProcessing || isAutoProcessing) ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                </span>
+              ) : (
+                <span className="text-sm sm:text-base">Preview</span>
+              )}
+            </button>
+            <button 
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[120px] bg-gradient-to-r from-indigo-600 to-indigo-400 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex justify-center items-center"
+              onClick={handleDownloadClick}
+              disabled={isProcessing || isAutoProcessing}
+              data-testid="download-button"
+            >
+              {(isProcessing || isAutoProcessing) ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                </span>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm sm:text-base">Download</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

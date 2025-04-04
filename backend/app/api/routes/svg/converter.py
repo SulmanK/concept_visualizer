@@ -10,7 +10,7 @@ import tempfile
 import base64
 import traceback
 from io import BytesIO
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, HTTPException
 from PIL import Image
 from slowapi.util import get_remote_address
 import vtracer
@@ -33,10 +33,11 @@ from app.services.interfaces import (
     StorageServiceInterface
 )
 from app.api.dependencies import CommonDependencies, get_or_create_session
-from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
+from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
 from app.utils.security.mask import mask_id, mask_ip
 from app.api.routes.svg.utils import create_simple_svg_from_image, increment_svg_rate_limit
 from app.core.limiter import get_redis_client
+from app.utils.api_limits.endpoints import apply_rate_limit
 
 # Configure logging
 logger = logging.getLogger("svg_converter_api")
@@ -64,46 +65,14 @@ async def convert_to_svg(
         ServiceUnavailableError: If the service fails to convert the image
     """
     try:
-        # Handle rate limiting manually instead of using the decorator
+        # Apply rate limiting using the centralized function
         if req and hasattr(req.app.state, 'limiter'):
-            limiter = req.app.state.limiter
-            try:
-                # Use session ID for rate limiting (key_func is now get_session_id)
-                rate_limit = "20/hour"
-                
-                # Log the rate limiting attempt
-                logger.info(f"Checking rate limit '{rate_limit}' for SVG conversion")
-                
-                # Manual rate limit check using keys directly
-                user_id = req.cookies.get("concept_session", get_remote_address(req))
-                masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
-                user_key = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
-                
-                # Use the custom increment function to check the current rate limit
-                # And we'll increment it later only if the conversion is successful
-                redis_client = get_redis_client()
-                if redis_client:
-                    # Check the count but don't increment yet
-                    for key in [f"svg:{user_key}:hour", f"POST:/api/svg/convert-to-svg:{user_key}:hour"]:
-                        try:
-                            count = redis_client.get(key)
-                            if count and int(count) >= 20:  # 20/hour limit
-                                logger.warning(f"Rate limit exceeded for {masked_user_id}: {int(count)}/20 requests")
-                                raise ServiceUnavailableError(
-                                    detail="Rate limit exceeded for SVG conversion. Please try again later."
-                                )
-                        except ValueError:
-                            # If the count can't be parsed, continue
-                            pass
-                        except Exception as e:
-                            if not isinstance(e, ServiceUnavailableError):
-                                logger.error(f"Error checking rate limit: {str(e)}")
-                
-            except Exception as e:
-                if isinstance(e, ServiceUnavailableError):
-                    raise
-                logger.error(f"Error in rate limit check for SVG conversion: {str(e)}")
-                # Continue even if rate limiting fails
+            await apply_rate_limit(
+                req=req,
+                endpoint="/svg/convert-to-svg",
+                rate_limit="20/hour",
+                period="hour"
+            )
         
         # Validate the request
         # Extract the image data from base64
@@ -205,28 +174,6 @@ async def convert_to_svg(
                     with open(temp_out_path, "w") as f:
                         f.write(svg_content)
                     
-                    # Only increment rate limit counter AFTER successful conversion
-                    if req and hasattr(req.app.state, 'limiter'):
-                        # The user ID will be extracted from cookies in the key_func
-                        user_id = req.cookies.get("concept_session", get_remote_address(req))
-                        masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
-                        user_key = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
-                        
-                        logger.info(f"Incrementing rate limit for user: {masked_user_id} after successful conversion")
-                        
-                        # Use our fixed increment_svg_rate_limit function
-                        success = increment_svg_rate_limit(
-                            req.app.state.limiter, 
-                            user_key, 
-                            "/api/svg/convert-to-svg", 
-                            "hour"
-                        )
-                        
-                        if success:
-                            logger.info("Rate limit counter incremented successfully in Redis for SVG conversion")
-                        else:
-                            logger.warning("Failed to increment rate limit counter in Redis for SVG conversion")
-                    
                     return SVGConversionResponse(
                         svg_data=svg_content,
                         success=True,
@@ -239,25 +186,6 @@ async def convert_to_svg(
                     create_simple_svg_from_image(image, temp_out_path)
                     with open(temp_out_path, "r") as svg_file:
                         svg_content = svg_file.read()
-                    
-                    # Even with fallback, we had a successful conversion, so increment the counter
-                    if req and hasattr(req.app.state, 'limiter'):
-                        user_id = req.cookies.get("concept_session", get_remote_address(req))
-                        masked_user_id = mask_id(user_id) if "concept_session" in req.cookies else mask_ip(user_id)
-                        user_key = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
-                        
-                        logger.info(f"Incrementing rate limit for user: {masked_user_id} after fallback conversion")
-                        success = increment_svg_rate_limit(
-                            req.app.state.limiter, 
-                            user_key, 
-                            "/api/svg/convert-to-svg", 
-                            "hour"
-                        )
-                        
-                        if success:
-                            logger.info("Rate limit counter incremented successfully in Redis for fallback SVG conversion")
-                        else:
-                            logger.warning("Failed to increment rate limit counter in Redis for fallback SVG conversion")
                     
                     return SVGConversionResponse(
                         svg_data=svg_content,
@@ -279,6 +207,9 @@ async def convert_to_svg(
                     
     except ValidationError:
         # Re-raise validation errors directly
+        raise
+    except HTTPException:
+        # Re-raise HTTP exceptions (like our 429 error from apply_rate_limit)
         raise
     except Exception as e:
         logger.error(f"Error converting image to SVG: {str(e)}")
