@@ -332,18 +332,45 @@
       - [x] Enhance middleware error handling
 
   - [ ] **3. Service Layer Refactoring** (AFTER CORE)
-    - [ ] Refactor concept_service.py (314 lines) into smaller modules:
-      - [ ] Create concept/ directory with package structure
-      - [ ] Extract generation.py module for concept generation
-      - [ ] Extract refinement.py module for concept refinement
-      - [ ] Extract palette.py module for palette generation
-    - [ ] Refactor image_service.py (259 lines) and image_processing.py (311 lines):
-      - [ ] Create image/ directory with package structure
-      - [ ] Extract processing.py module for image processing operations
-      - [ ] Extract storage.py module for image storage operations
-      - [ ] Extract conversion.py module for format conversion operations
-    - [ ] Refactor session_service.py into session/ package
-    - [ ] Improve separation of concerns in all service modules
+    - [x] Refactor concept_service.py (370 lines) into smaller modules:
+      - [x] Create concept/ directory with package structure
+      - [x] Create concept/__init__.py to expose service functionality
+      - [x] Extract generation.py module for concept generation
+      - [x] Extract refinement.py module for concept refinement
+      - [x] Extract palette.py module for palette generation and color operations
+      - [x] Update imports in all files that use concept_service
+    - [x] Refactor image_service.py (261 lines) and image_processing.py (311 lines):
+      - [x] Create image/ directory with package structure
+      - [x] Create image/__init__.py to expose service functionality
+      - [x] Extract processing.py module for image processing operations
+      - [x] Extract storage.py module for image storage operations
+      - [x] Extract conversion.py module for format conversion operations
+      - [x] Create service.py module implementing ImageServiceInterface
+      - [x] Update imports in all files that use image_service and image_processing
+    - [x] Refactor session_service.py (217 lines):
+      - [x] Create session/ directory with package structure
+      - [x] Create session/__init__.py to expose service functionality
+      - [x] Extract manager.py module for session management operations
+      - [x] Update imports in all files that use session_service
+    - [x] Organize jigsawstack/ module:
+      - [x] Ensure proper structure with client.py and appropriate submodules
+      - [x] Clean up and optimize JigsawStackClient implementation
+    - [x] Create interfaces/ directory for service abstractions:
+      - [x] Create interfaces/__init__.py
+      - [x] Create interfaces/concept_service.py with base interface
+      - [x] Create interfaces/storage_service.py with base interface
+      - [x] Create interfaces/image_service.py with base interface
+      - [x] Create interfaces/session_service.py with base interface
+    - [x] Implement storage/ directory for storage services:
+      - [x] Create storage/ directory structure
+      - [x] Create storage/__init__.py to expose storage functionality
+      - [x] Move concept_storage_service.py to storage/concept_storage.py
+      - [x] Refactor as needed for proper separation of concerns
+    - [x] Improve separation of concerns in all service modules
+      - [x] Ensure services depend on interfaces rather than implementations
+      - [x] Use dependency injection to connect components
+      - [x] Improve error handling patterns
+      - [x] Add comprehensive unit tests for refactored services
 
   - [ ] **4. Models Refactoring** (FINAL LAYER)
     - [ ] Organize models into domain-specific modules:

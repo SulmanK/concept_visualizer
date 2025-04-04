@@ -10,19 +10,25 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from slowapi.util import get_remote_address
+from fastapi.responses import JSONResponse
 
 from app.models.request import PromptRequest
 from app.models.response import GenerationResponse
 from app.models.concept import ConceptSummary, ConceptDetail
-from app.services.session_service import SessionService, get_session_service
-from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
-from app.services.image_service import ImageService, get_image_service
-from app.services.concept_service import ConceptService, get_concept_service
-from app.utils.api_limits import apply_rate_limit
-
-# Add imports for new modules
+from app.services.session import get_session_service
+from app.services.image import get_image_service
+from app.services.concept import get_concept_service
+from app.services.storage import get_concept_storage_service
+from app.services.interfaces import (
+    ConceptServiceInterface,
+    SessionServiceInterface, 
+    ImageServiceInterface,
+    StorageServiceInterface
+)
 from app.api.dependencies import CommonDependencies, get_or_create_session
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
+from app.utils.api_limits import apply_rate_limit
+from app.utils.security.mask import mask_id
 
 # Configure logging
 logger = logging.getLogger("concept_storage_api")

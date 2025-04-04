@@ -9,16 +9,23 @@ import traceback
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
+from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.models.request import PromptRequest
 from app.models.response import GenerationResponse, PaletteVariation
-from app.services.concept_service import ConceptService, get_concept_service
-from app.services.session_service import SessionService, get_session_service
-from app.services.image_service import ImageService, get_image_service
-from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
 from app.utils.api_limits import apply_rate_limit
-
-# Add new imports for dependencies and errors
+from app.services.concept import get_concept_service
+from app.services.session import get_session_service
+from app.services.image import get_image_service
+from app.services.storage import get_concept_storage_service
+from app.services.interfaces import (
+    ConceptServiceInterface,
+    SessionServiceInterface, 
+    ImageServiceInterface,
+    StorageServiceInterface
+)
 from app.api.dependencies import CommonDependencies, get_or_create_session
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
 

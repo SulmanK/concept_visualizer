@@ -8,14 +8,23 @@ API route handlers to reduce code duplication and improve maintainability.
 import logging
 from typing import Tuple, Optional
 
-from fastapi import Depends, Cookie, Request, Response
+from fastapi import Depends, Cookie, Request, Response, HTTPException
 from slowapi.util import get_remote_address
+from fastapi.security import APIKeyHeader, APIKeyQuery
 
-from app.services.concept_service import ConceptService, get_concept_service
-from app.services.session_service import SessionService, get_session_service
-from app.services.image_service import ImageService, get_image_service
-from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
-from app.core.supabase import get_supabase_client
+from app.core.config import settings
+from app.core.supabase.client import get_supabase_client
+from app.services.concept import get_concept_service
+from app.services.session import get_session_service
+from app.services.image import get_image_service
+from app.services.storage import get_concept_storage_service
+from app.services.interfaces import (
+    ConceptServiceInterface,
+    SessionServiceInterface, 
+    ImageServiceInterface,
+    StorageServiceInterface
+)
+from app.services.jigsawstack.client import get_jigsawstack_client
 
 # Configure logging
 logger = logging.getLogger("api_dependencies")
@@ -36,7 +45,7 @@ def get_session_id(session_id: Optional[str] = Cookie(None, alias="concept_sessi
 
 async def get_or_create_session(
     response: Response,
-    session_service: SessionService = Depends(get_session_service),
+    session_service: SessionServiceInterface = Depends(get_session_service),
     session_id: Optional[str] = Depends(get_session_id),
     client_session_id: Optional[str] = None
 ) -> Tuple[str, bool]:
@@ -101,10 +110,10 @@ class CommonDependencies:
     
     def __init__(
         self,
-        concept_service: ConceptService = Depends(get_concept_service),
-        session_service: SessionService = Depends(get_session_service),
-        image_service: ImageService = Depends(get_image_service),
-        storage_service: ConceptStorageService = Depends(get_concept_storage_service)
+        concept_service: ConceptServiceInterface = Depends(get_concept_service),
+        session_service: SessionServiceInterface = Depends(get_session_service),
+        image_service: ImageServiceInterface = Depends(get_image_service),
+        storage_service: StorageServiceInterface = Depends(get_concept_storage_service)
     ):
         """Initialize with all common service dependencies."""
         self.concept_service = concept_service

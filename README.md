@@ -71,7 +71,7 @@ cp .env.example .env
 # Edit .env with your specific configuration
 
 # Run the development server
-uvicorn app.main:app --reload
+cd backend && uv run uvicorn app.main:app --reload
 ```
 
 ### Frontend

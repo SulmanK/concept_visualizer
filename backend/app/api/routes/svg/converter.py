@@ -14,19 +14,29 @@ from fastapi import APIRouter, Body, Request
 from PIL import Image
 from slowapi.util import get_remote_address
 import vtracer
+import io
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import StreamingResponse, JSONResponse
 
 from app.models.request import SVGConversionRequest
 from app.models.response import SVGConversionResponse
-from app.services.session_service import SessionService, get_session_service
-from app.services.concept_service import ConceptService, get_concept_service
-from app.services.image_service import ImageService, get_image_service
-from app.services.concept_storage_service import ConceptStorageService, get_concept_storage_service
+from app.services.session import get_session_service
+from app.services.concept import get_concept_service
+from app.services.image import get_image_service
+from app.services.storage import get_concept_storage_service
+from app.services.interfaces import (
+    ConceptServiceInterface,
+    SessionServiceInterface, 
+    ImageServiceInterface,
+    StorageServiceInterface
+)
+from app.api.dependencies import CommonDependencies, get_or_create_session
+from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
 from app.utils.security.mask import mask_id, mask_ip
 from app.api.routes.svg.utils import create_simple_svg_from_image, increment_svg_rate_limit
 from app.core.limiter import get_redis_client
-
-# Import error handling
-from app.api.errors import ValidationError, ServiceUnavailableError
 
 # Configure logging
 logger = logging.getLogger("svg_converter_api")

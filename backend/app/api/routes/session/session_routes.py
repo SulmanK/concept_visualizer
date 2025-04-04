@@ -8,14 +8,14 @@ import logging
 import traceback
 from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict, Any
 from slowapi.util import get_remote_address
 
-from app.services.session_service import SessionService, get_session_service
-
-# Add imports for new dependencies and errors
+from app.services.session import get_session_service
+from app.services.interfaces import SessionServiceInterface
 from app.api.dependencies import get_or_create_session
-from app.api.errors import ServiceUnavailableError, ValidationError, AuthenticationError
+from app.api.errors import ServiceUnavailableError, ValidationError, AuthenticationError, ResourceNotFoundError
+from app.utils.security.mask import mask_id
 
 # Configure logging
 logger = logging.getLogger("session_api")
@@ -41,7 +41,7 @@ class SessionResponse(BaseModel):
 async def create_session(
     response: Response,
     req: Request,
-    session_service: SessionService = Depends(get_session_service),
+    session_service: SessionServiceInterface = Depends(get_session_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """Create a new session or return the existing one.
@@ -75,7 +75,7 @@ async def sync_session(
     request: SessionSyncRequest,
     response: Response,
     req: Request,
-    session_service: SessionService = Depends(get_session_service),
+    session_service: SessionServiceInterface = Depends(get_session_service),
     session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """Synchronize the client session with the server.

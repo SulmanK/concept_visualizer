@@ -8,8 +8,9 @@ import logging
 import httpx
 import json
 from functools import lru_cache
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, TypedDict, Union
 
+from fastapi import Depends
 from app.core.config import settings, get_masked_value
 from app.utils.security.mask import mask_id
 from app.core.exceptions import (
@@ -20,6 +21,26 @@ from app.core.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Define TypedDict for better type hints
+class PaletteColor(TypedDict):
+    """Color definition with hex value and name."""
+    hex: str
+    name: str
+
+
+class Palette(TypedDict):
+    """Color palette definition."""
+    name: str
+    description: str
+    colors: List[PaletteColor]
+
+
+class GenerationResponse(TypedDict):
+    """Response from image generation API."""
+    url: str  # URL to the generated image
+    id: str   # Image ID
 
 
 class JigsawStackClient:
@@ -44,8 +65,12 @@ class JigsawStackClient:
         logger.info(f"Initialized JigsawStack client with API URL: {api_url}")
     
     async def generate_image(
-        self, logo_description: str, width: int = 512, height: int = 512, model: str = "stable-diffusion-xl"
-    ) -> bytes:
+        self, 
+        prompt: str, 
+        width: int = 512, 
+        height: int = 512, 
+        model: str = "stable-diffusion-xl"
+    ) -> Dict[str, str]:
         """
         Generate an image using the JigsawStack API.
         
@@ -56,7 +81,7 @@ class JigsawStackClient:
             model: The model to use for generation
             
         Returns:
-            bytes: Binary image data that can be uploaded to storage
+            Dictionary containing image URL and ID
             
         Raises:
             JigsawStackConnectionError: If connection to the API fails
@@ -64,7 +89,7 @@ class JigsawStackClient:
             JigsawStackGenerationError: If the image generation fails
         """
         try:
-            logger.info(f"Generating image with prompt: {logo_description}")
+            logger.info(f"Generating image with prompt: {prompt}")
             
             # Determine aspect ratio based on dimensions
             aspect_ratio = "1:1"  # Default
@@ -73,7 +98,8 @@ class JigsawStackClient:
             elif height > width:
                 aspect_ratio = "9:16"
             
-            prompt = f"""Create a professional logo design based on this description: {logo_description}.
+            # Enhance the prompt for logo generation
+            enhanced_prompt = f"""Create a professional logo design based on this description: {prompt}.
 
 Design requirements:
 - Create a minimalist, scalable vector-style logo
@@ -89,57 +115,74 @@ Design requirements:
             # Use the correct endpoint according to API reference
             endpoint = f"{self.api_url}/v1/ai/image_generation"
             payload = {
-                "prompt": prompt,
+                "prompt": enhanced_prompt,
                 "aspect_ratio": aspect_ratio,
                 "steps": 30,
                 "advance_config": {
-                    "negative_prompt": "blurry, low quality, complex backgrounds, photorealistic elements,",
+                    "negative_prompt": "blurry, low quality, complex backgrounds, photorealistic elements, text that is not part of the logo design",
                     "guidance": 7.5
                 }
             }
             
-            try:
-                async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                try:
                     response = await client.post(
                         endpoint, 
                         headers=self.headers, 
-                        json=payload, 
-                        timeout=30.0
+                        json=payload
                     )
-            except httpx.ConnectError as e:
-                raise JigsawStackConnectionError(
-                    message=f"Failed to connect to JigsawStack API: {str(e)}",
-                    details={"endpoint": endpoint}
-                )
-            except httpx.TimeoutException as e:
-                raise JigsawStackConnectionError(
-                    message=f"JigsawStack API timed out: {str(e)}",
-                    details={"endpoint": endpoint, "timeout": "30.0"}
-                )
+                except httpx.ConnectError as e:
+                    raise JigsawStackConnectionError(
+                        message=f"Failed to connect to JigsawStack API: {str(e)}",
+                        details={"endpoint": endpoint}
+                    )
+                except httpx.TimeoutException as e:
+                    raise JigsawStackConnectionError(
+                        message=f"JigsawStack API timed out: {str(e)}",
+                        details={"endpoint": endpoint, "timeout": "30.0"}
+                    )
                 
-            if response.status_code == 401 or response.status_code == 403:
-                raise JigsawStackAuthenticationError(
-                    message="Authentication failed with JigsawStack API",
-                    details={"status_code": response.status_code}
-                )
-            
-            if response.status_code != 200:
-                error_details = f"Status: {response.status_code}, Response: {response.text}"
-                logger.error(f"Image generation API error: {error_details}")
-                raise JigsawStackGenerationError(
-                    message=f"Image generation failed",
-                    content_type="image",
-                    prompt=logo_description,
-                    details={
-                        "status_code": response.status_code,
-                        "endpoint": endpoint,
-                        "response_text": response.text[:200]  # Only include part of the response
+                # Handle authentication errors
+                if response.status_code in (401, 403):
+                    raise JigsawStackAuthenticationError(
+                        message="Authentication failed with JigsawStack API",
+                        details={"status_code": response.status_code}
+                    )
+                
+                # Handle other error responses
+                if response.status_code != 200:
+                    logger.error(
+                        f"Image generation API error: Status {response.status_code}, "
+                        f"Response: {response.text[:200]}..."
+                    )
+                    raise JigsawStackGenerationError(
+                        message="Image generation failed",
+                        content_type="image",
+                        prompt=prompt,
+                        details={
+                            "status_code": response.status_code,
+                            "endpoint": endpoint,
+                            "response_text": response.text[:200]  # Limit response text size
+                        }
+                    )
+                
+                # Parse response JSON
+                try:
+                    result = response.json()
+                    logger.info("Image generation successful")
+                    return {
+                        "url": result["output"]["image_url"],
+                        "id": result.get("id", "unknown")
                     }
-                )
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.error(f"Failed to parse image generation response: {str(e)}")
+                    raise JigsawStackGenerationError(
+                        message=f"Failed to parse image generation response: {str(e)}",
+                        content_type="image",
+                        prompt=prompt,
+                        details={"response_text": response.text[:200]}
+                    )
                 
-            logger.info("Image generation successful, returning binary data")
-            return response.content
-            
         except (JigsawStackConnectionError, JigsawStackAuthenticationError, JigsawStackGenerationError):
             # Re-raise domain-specific exceptions we've already created
             raise
@@ -149,7 +192,7 @@ Design requirements:
             raise JigsawStackGenerationError(
                 message=f"Unexpected error during image generation: {str(e)}",
                 content_type="image",
-                prompt=logo_description
+                prompt=prompt
             )
     
     async def refine_image(
