@@ -364,6 +364,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
    ```bash
    supabase secrets set MY_SUPABASE_URL=<your-supabase-url>
    supabase secrets set MY_SERVICE_ROLE_KEY=<your-service-role-key>
+   supabase secrets set STORAGE_BUCKET_CONCEPT=<your-concept-bucket>
+   supabase secrets set STORAGE_BUCKET_PALETTE=<your-palette-bucket>
    ```
 5. Schedule the function to run daily:
     GitHub Actions
