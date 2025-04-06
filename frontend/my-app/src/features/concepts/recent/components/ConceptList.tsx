@@ -18,6 +18,12 @@ export const ConceptList: React.FC = () => {
       return;
     }
     
+    // If variationIndex is -1, it means the original image is selected
+    if (variationIndex === -1) {
+      navigate(`/refine/${conceptId}`);
+      return;
+    }
+    
     const variation = concept.color_variations && 
                       variationIndex < concept.color_variations.length ? 
                       concept.color_variations[variationIndex] : null;
@@ -33,8 +39,24 @@ export const ConceptList: React.FC = () => {
   
   // Handle navigation to the concept details page
   const handleViewDetails = (conceptId: string, variationIndex: number) => {
+    console.log('handleViewDetails called with:', { conceptId, variationIndex });
+    
     const concept = recentConcepts?.find(c => c.id === conceptId);
     if (!concept) {
+      console.log('Concept not found, navigating to default:', `/concepts/${conceptId}`);
+      navigate(`/concepts/${conceptId}`);
+      return;
+    }
+    
+    console.log('Concept found:', { 
+      id: concept.id, 
+      hasVariations: (concept.color_variations?.length || 0) > 0,
+      variationsCount: concept.color_variations?.length || 0 
+    });
+    
+    // If variationIndex is -1, it means the original image is selected
+    if (variationIndex === -1) {
+      console.log('Original image selected, navigating to:', `/concepts/${conceptId}`);
       navigate(`/concepts/${conceptId}`);
       return;
     }
@@ -43,11 +65,18 @@ export const ConceptList: React.FC = () => {
                       variationIndex < concept.color_variations.length ? 
                       concept.color_variations[variationIndex] : null;
     
+    console.log('Selected variation:', { 
+      index: variationIndex, 
+      variation: variation ? { id: variation.id, name: variation.palette_name } : null 
+    });
+    
     const variationId = variation ? variation.id : null;
     
     if (variationId) {
+      console.log('Navigating to variation:', `/concepts/${conceptId}?colorId=${variationId}`);
       navigate(`/concepts/${conceptId}?colorId=${variationId}`);
     } else {
+      console.log('No valid variation found, navigating to default:', `/concepts/${conceptId}`);
       navigate(`/concepts/${conceptId}`);
     }
   };

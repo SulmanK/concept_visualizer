@@ -65,9 +65,9 @@ const ConceptDetailContent: React.FC = () => {
             // If the specified colorId doesn't exist, fall back to the first variation
             setSelectedVariation(conceptData.color_variations[0]);
           }
-        } else if (conceptData.color_variations && conceptData.color_variations.length > 0) {
-          // If no colorId specified, use the first variation as default
-          setSelectedVariation(conceptData.color_variations[0]);
+        } else {
+          // If no colorId specified, use original image (null variation)
+          setSelectedVariation(null);
         }
         
         setLoading(false);

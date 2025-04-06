@@ -56,16 +56,29 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [isAutoProcessing, setIsAutoProcessing] = useState<boolean>(false);
   const [error, setError] = useState<{ message: string; type: string } | null>(null);
   
+  // Add a dedicated effect to track and log imageUrl changes for debugging
+  useEffect(() => {
+    console.log(`ExportOptions: Processing ${variationName || 'original'} image:`, 
+      imageUrl ? `${imageUrl.substring(0, 50)}...` : 'undefined');
+    
+    // Reset processed URL when image changes
+    setProcessedImageUrl('');
+  }, [imageUrl, variationName]);
+
   // Process the image when format or size changes
   useEffect(() => {
-    // Reset the processed URL when selections change
+    // Reset the processed URL when selections change or when the image URL changes
     setProcessedImageUrl('');
-  }, [selectedFormat, selectedSize]);
+  }, [selectedFormat, selectedSize, imageUrl]);
 
   // Preprocess the image when format/size selection changes
   useEffect(() => {
     // Auto-process the image when selections change to prepare it for preview/download
     let isMounted = true;
+    
+    // Add debug logging to track imageUrl changes
+    console.log('ExportOptions: imageUrl changed to:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'undefined');
+    
     const preprocessImage = async () => {
       // Don't start auto-processing if there's already a manual processing happening
       // or if we already have a processed URL for the current selections
@@ -439,20 +452,20 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   
   const handlePreview = async () => {
     try {
-      if (!processedImageUrl) {
-        // Don't proceed until we have a processed image
-        const url = await processImageForPreview();
-        if (!url) {
-          // If processing failed, fall back to the original URL
-          window.open(imageUrl, '_blank');
-          return;
-        }
+      // Always process the current image URL for preview to ensure we have the latest version
+      console.log('Preview button clicked, processing latest image URL');
+      const url = await processImageForPreview();
+      if (!url) {
+        // If processing failed, fall back to the original URL
+        console.log('Image processing failed, falling back to original URL');
+        window.open(imageUrl, '_blank');
+        return;
       }
       
       // Check if the URL is an SVG object URL
-      if (processedImageUrl.startsWith('blob:') && selectedFormat === 'svg') {
+      if (url.startsWith('blob:') && selectedFormat === 'svg') {
         // For SVG, we might need to fetch the content and create a proper viewable HTML
-        const response = await fetch(processedImageUrl);
+        const response = await fetch(url);
         const svgText = await response.text();
         
         // Create a simple HTML document that can display the SVG properly
@@ -482,7 +495,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         window.open(htmlUrl, '_blank');
       } else {
         // For other formats, just open the processed image
-        window.open(processedImageUrl, '_blank');
+        window.open(url, '_blank');
       }
     } catch (error) {
       console.error('Error previewing image:', error);
@@ -504,18 +517,15 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       setIsProcessing(true);
       
       try {
-        // If we already have a processed URL, use it
-        if (processedImageUrl) {
-          await downloadProcessedImage(processedImageUrl, fileExtension);
+        // Always process the current image URL to ensure we have the latest version
+        console.log('Processing latest image URL for download');
+        const url = await processImage(imageUrl, selectedFormat, selectedSize);
+        if (url) {
+          await downloadProcessedImage(url, fileExtension);
         } else {
-          // Otherwise process the image first
-          const url = await processImage(imageUrl, selectedFormat, selectedSize);
-          if (url) {
-            await downloadProcessedImage(url, fileExtension);
-          } else {
-            // Fallback to original URL if processing fails
-            await downloadProcessedImage(imageUrl, fileExtension);
-          }
+          // Fallback to original URL if processing fails
+          console.log('Image processing failed, falling back to original URL');
+          await downloadProcessedImage(imageUrl, fileExtension);
         }
       } catch (error) {
         console.error('Error in direct download:', error);
@@ -695,132 +705,146 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-      {/* Error message */}
-      {error && (
-        <div className="mb-4">
-          <ErrorMessage 
-            message={error.message}
-            type={error.type as any}
-            onDismiss={() => setError(null)}
-          />
+    <div className="space-y-5">
+      {/* Add an indicator to show which image is being processed */}
+      <div className="p-3 bg-indigo-50 rounded-md border border-indigo-100 text-sm">
+        <p className="font-medium text-indigo-700 mb-1">Currently processing:</p>
+        <div className="flex items-center text-indigo-600">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+          </svg>
+          <span className="truncate">{variationName || 'Original'} image</span>
         </div>
-      )}
-
-      <div className="flex flex-col">
-        <div className="space-y-4">
-          {/* Format selection - keeping this on its own line for better readability */}
-          <div>
-            <h4 className="text-sm font-semibold text-indigo-700 mb-3">Format</h4>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {Object.entries(formatInfo).map(([format, info]) => (
-                <button 
-                  key={format}
-                  className={`flex-1 border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
-                    ${selectedFormat === format ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
-                    ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
-                  onClick={() => setSelectedFormat(format as ExportFormat)}
-                  title={info.desc}
-                  disabled={isProcessing || isAutoProcessing}
-                >
-                  <div className="text-indigo-600 font-bold text-sm sm:text-md flex justify-center">.{format.toUpperCase()}</div>
-                  <div className="text-xs text-gray-500 mt-1 sm:mt-2">{info.title}</div>
-                </button>
-              ))}
-            </div>
+      </div>
+      
+      {/* Format and size selection options */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
+        {/* Error message */}
+        {error && (
+          <div className="mb-4">
+            <ErrorMessage 
+              message={error.message}
+              type={error.type as any}
+              onDismiss={() => setError(null)}
+            />
           </div>
+        )}
 
-          {/* Size selection */}
-          <div>
-            <h4 className="text-sm font-semibold text-indigo-700 mb-3">Size</h4>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-              {Object.entries(sizeMap).map(([size, label]) => (
-                <button 
-                  key={size}
-                  className={`border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
-                    ${selectedSize === size ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
-                    ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
-                  onClick={() => setSelectedSize(size as ExportSize)}
-                  disabled={isProcessing || isAutoProcessing}
-                >
-                  <div className={`font-medium flex justify-center text-sm sm:text-base ${selectedSize === size ? 'text-indigo-700' : 'text-indigo-600'}`}>
-                    {size.charAt(0).toUpperCase() + size.slice(1)}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 sm:mt-2">{label}</div>
-                </button>
-              ))}
+        <div className="flex flex-col">
+          <div className="space-y-4">
+            {/* Format selection - keeping this on its own line for better readability */}
+            <div>
+              <h4 className="text-sm font-semibold text-indigo-700 mb-3">Format</h4>
+              <div className="flex flex-wrap gap-2 sm:gap-3">
+                {Object.entries(formatInfo).map(([format, info]) => (
+                  <button 
+                    key={format}
+                    className={`flex-1 border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
+                      ${selectedFormat === format ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
+                      ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
+                    onClick={() => setSelectedFormat(format as ExportFormat)}
+                    title={info.desc}
+                    disabled={isProcessing || isAutoProcessing}
+                  >
+                    <div className="text-indigo-600 font-bold text-sm sm:text-md flex justify-center">.{format.toUpperCase()}</div>
+                    <div className="text-xs text-gray-500 mt-1 sm:mt-2">{info.title}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-        
-        {/* Status indicator */}
-        <div className="mt-4">
-          {isAutoProcessing && (
-            <div className="text-xs text-indigo-600 flex items-center">
-              <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Preparing preview with selected options...
+
+            {/* Size selection */}
+            <div>
+              <h4 className="text-sm font-semibold text-indigo-700 mb-3">Size</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                {Object.entries(sizeMap).map(([size, label]) => (
+                  <button 
+                    key={size}
+                    className={`border rounded-lg p-2 sm:p-3 hover:shadow-md transition-all cursor-pointer text-center
+                      ${selectedSize === size ? 'border-indigo-400 bg-indigo-50 shadow-sm' : 'border-indigo-200 hover:border-indigo-300'}
+                      ${(isProcessing || isAutoProcessing) ? 'opacity-75 cursor-wait' : ''}`}
+                    onClick={() => setSelectedSize(size as ExportSize)}
+                    disabled={isProcessing || isAutoProcessing}
+                  >
+                    <div className={`font-medium flex justify-center text-sm sm:text-base ${selectedSize === size ? 'text-indigo-700' : 'text-indigo-600'}`}>
+                      {size.charAt(0).toUpperCase() + size.slice(1)}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 sm:mt-2">{label}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-          {!isAutoProcessing && processedImageUrl && (
-            <div className="text-xs text-green-600 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              Ready to preview and download
-            </div>
-          )}
-        </div>
-        
-        {/* Download controls */}
-        <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-0">
-            <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize]}
           </div>
           
-          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            <button 
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[100px] border border-indigo-200 text-indigo-600 font-medium rounded-lg hover:bg-indigo-50 transition-colors flex justify-center items-center"
-              onClick={handlePreview}
-              disabled={isProcessing || isAutoProcessing}
-            >
-              {(isProcessing || isAutoProcessing) ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
-                </span>
-              ) : (
-                <span className="text-sm sm:text-base">Preview</span>
-              )}
-            </button>
-            <button 
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[120px] bg-gradient-to-r from-indigo-600 to-indigo-400 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex justify-center items-center"
-              onClick={handleDownloadClick}
-              disabled={isProcessing || isAutoProcessing}
-              data-testid="download-button"
-            >
-              {(isProcessing || isAutoProcessing) ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
-                </span>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm sm:text-base">Download</span>
-                </>
-              )}
-            </button>
+          {/* Status indicator */}
+          <div className="mt-4">
+            {isAutoProcessing && (
+              <div className="text-xs text-indigo-600 flex items-center">
+                <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Preparing preview with selected options...
+              </div>
+            )}
+            {!isAutoProcessing && processedImageUrl && (
+              <div className="text-xs text-green-600 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Ready to preview and download
+              </div>
+            )}
+          </div>
+          
+          {/* Download controls */}
+          <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-0">
+              <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize]}
+            </div>
+            
+            <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+              <button 
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[100px] border border-indigo-200 text-indigo-600 font-medium rounded-lg hover:bg-indigo-50 transition-colors flex justify-center items-center"
+                onClick={handlePreview}
+                disabled={isProcessing || isAutoProcessing}
+              >
+                {(isProcessing || isAutoProcessing) ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                  </span>
+                ) : (
+                  <span className="text-sm sm:text-base">Preview</span>
+                )}
+              </button>
+              <button 
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 min-w-[90px] sm:min-w-[120px] bg-gradient-to-r from-indigo-600 to-indigo-400 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all flex justify-center items-center"
+                onClick={handleDownloadClick}
+                disabled={isProcessing || isAutoProcessing}
+                data-testid="download-button"
+              >
+                {(isProcessing || isAutoProcessing) ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm sm:text-base">Download</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

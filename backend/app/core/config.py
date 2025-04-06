@@ -38,6 +38,7 @@ class Settings(BaseSettings):
         SUPABASE_URL: URL for Supabase project
         SUPABASE_KEY: API key (anon or service role) for Supabase
         SUPABASE_JWT_SECRET: Secret key for generating Supabase-compatible JWTs
+        SUPABASE_SERVICE_ROLE: Service role key for Supabase with elevated permissions
         LOG_LEVEL: Log level for the application
         ENVIRONMENT: Environment the application is running in
         UPSTASH_REDIS_ENDPOINT: Endpoint for Upstash Redis
@@ -64,6 +65,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "https://your-project-id.supabase.co"
     SUPABASE_KEY: str = "your-api-key"
     SUPABASE_JWT_SECRET: str = ""  # JWT secret for generating tokens
+    SUPABASE_SERVICE_ROLE: str = ""  # Service role key with elevated permissions
     
     # Storage bucket settings
     STORAGE_BUCKET_PALETTE: str = "your-bucket-name"
@@ -172,6 +174,7 @@ if settings.LOG_LEVEL == "DEBUG":
     logger.debug(f"Supabase URL: {get_masked_value(settings.SUPABASE_URL, 8)}")
     logger.debug(f"Supabase key: {get_masked_value(settings.SUPABASE_KEY)}")
     logger.debug(f"Supabase JWT secret: {get_masked_value(settings.SUPABASE_JWT_SECRET)}")
+    logger.debug(f"Supabase service role: {get_masked_value(settings.SUPABASE_SERVICE_ROLE)}")
     logger.debug(f"Redis endpoint: {get_masked_value(settings.UPSTASH_REDIS_ENDPOINT, 8)}")
     logger.debug(f"Redis password: {get_masked_value(settings.UPSTASH_REDIS_PASSWORD)}")
     logger.debug(f"Storage bucket (palette): {get_masked_value(settings.STORAGE_BUCKET_PALETTE, 3)}")

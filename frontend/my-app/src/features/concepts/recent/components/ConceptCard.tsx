@@ -90,10 +90,22 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     e.preventDefault(); // Prevent navigation when clicking on color circles
     e.stopPropagation(); // Prevent the card click from triggering
 
+    console.log('Palette click - before state update:', { 
+      currentIndex: selectedVariationIndex, 
+      newIndex: index, 
+      isOriginal: index === -1 
+    });
+
     setSelectedVariationIndex(index);
+    
+    console.log('Palette click - after state update:', { 
+      newIndex: index, 
+      isOriginal: index === -1 
+    });
     
     // If onColorClick is provided and it's a variation (not original)
     if (onColorClick && concept.color_variations && index >= 0) {
+      console.log('Calling onColorClick with variation ID:', concept.color_variations[index].id);
       onColorClick(concept.color_variations[index].id);
     }
   };
@@ -126,12 +138,19 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   const handleViewDetails = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Add debug logging
+    console.log('View Details clicked with variation index:', selectedVariationIndex);
+    
+    const currentIndex = selectedVariationIndex; // Capture the current index value to ensure it's consistent
+    
     if (onViewDetails) {
-      onViewDetails(concept.id, selectedVariationIndex);
+      console.log('Calling onViewDetails with:', concept.id, currentIndex);
+      onViewDetails(concept.id, currentIndex);
     } else {
       // If no callback provided, navigate to concept details page with selected variation
-      if (selectedVariationIndex >= 0 && concept.color_variations) {
-        const variation = concept.color_variations?.[selectedVariationIndex];
+      if (currentIndex >= 0 && concept.color_variations) {
+        const variation = concept.color_variations?.[currentIndex];
         const variationId = variation ? variation.id : null;
         
         if (variationId) {

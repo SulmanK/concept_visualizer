@@ -108,13 +108,40 @@ const LandingPageContent: React.FC = () => {
     }
   };
   
-  const handleViewDetails = (conceptId: string) => {
+  const handleViewDetails = (conceptId: string, variationIndex: number = -1) => {
     // Check if this is a sample concept
     if (conceptId.startsWith('sample-')) {
       alert('This is a sample concept. Please generate a real concept to view details.');
       return;
     }
-    navigate(`/concepts/${conceptId}`);
+    
+    // If variationIndex is -1, it means the original image is selected
+    if (variationIndex === -1) {
+      navigate(`/concepts/${conceptId}`);
+      return;
+    }
+    
+    // Find the concept
+    const concept = recentConcepts.find(c => c.id === conceptId);
+    if (!concept) {
+      navigate(`/concepts/${conceptId}`);
+      return;
+    }
+    
+    // Get the variation ID if available
+    const variation = concept.color_variations && 
+                      variationIndex < concept.color_variations.length ? 
+                      concept.color_variations[variationIndex] : null;
+    
+    // If we have a variation, use its ID, otherwise just use the concept ID
+    const variationId = variation ? variation.id : null;
+    
+    // Navigate to the concept details page with variation ID as query parameter if available
+    if (variationId) {
+      navigate(`/concepts/${conceptId}?colorId=${variationId}`);
+    } else {
+      navigate(`/concepts/${conceptId}`);
+    }
   };
   
   const handleGetStarted = () => {

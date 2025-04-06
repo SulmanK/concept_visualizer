@@ -21,7 +21,7 @@ interface ConceptData {
 interface RecentConceptsSectionProps {
   concepts: ConceptData[];
   onEdit: (conceptId: string, variationIndex: number) => void;
-  onViewDetails: (conceptId: string) => void;
+  onViewDetails: (conceptId: string, variationIndex?: number) => void;
   isLoading?: boolean;
 }
 
@@ -113,7 +113,10 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
                         const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
                         onEdit(concept.id, adjustedIndex);
                       }}
-                      onViewDetails={() => onViewDetails(concept.id)}
+                      onViewDetails={(index: number) => {
+                        const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
+                        onViewDetails(concept.id, adjustedIndex);
+                      }}
                       // Pass image_url directly for sample concepts
                       sampleImageUrl={isSampleConcept ? concept.image_url : undefined}
                     />

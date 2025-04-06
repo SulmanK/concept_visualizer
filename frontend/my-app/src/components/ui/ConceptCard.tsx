@@ -125,8 +125,9 @@ export interface ConceptCardProps {
   
   /**
    * Handler for view details button click
+   * @param index The selected variation index
    */
-  onViewDetails?: () => void;
+  onViewDetails?: (index: number) => void;
   
   /**
    * Text to display on the edit button (default: "Edit")
@@ -307,7 +308,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           
           {onViewDetails && (
             <button 
-              onClick={onViewDetails}
+              onClick={() => onViewDetails(selectedVariationIndex)}
               className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
             >
               <span className="mr-1">View Details</span>
