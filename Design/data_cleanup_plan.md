@@ -6,7 +6,7 @@ We need to implement an automated process that removes concepts and their associ
 
 ## Solution Overview
 
-We'll implement a Python-based Supabase Edge Function that:
+We'll implement a TypeScript-based Supabase Edge Function that:
 
 1. Queries the database for concepts older than 3 days
 2. Deletes associated color variations from the database
@@ -45,12 +45,11 @@ CREATE TABLE color_variations (
 
 ### 1. Create a Supabase Edge Function
 
-We'll set up a Python-based edge function:
+We'll set up a TypeScript-based edge function:
 
 ```
-/backend/functions/cleanup-old-data/
-  ├── index.ts       # Entry point wrapper for the edge function
-  └── handler.py     # Python implementation of the cleanup logic
+/backend/supabase/functions/cleanup-old-data/
+  └── index.ts       # TypeScript implementation of the cleanup logic
 ```
 
 ### 2. Database Operations
@@ -61,251 +60,7 @@ The function will:
 2. Delete associated color variations (due to foreign key constraints)
 3. Delete the concept records themselves
 
-```python
-# SQL query to get old concepts
-sql_query = """
-SELECT id, image_path 
-FROM concepts 
-WHERE created_at < NOW() - INTERVAL '3 days'
-"""
-
-# SQL query to get associated color variations
-sql_variations_query = """
-SELECT id, image_path 
-FROM color_variations 
-WHERE concept_id = ANY($1)
-"""
-
-# SQL to delete color variations
-sql_delete_variations = """
-DELETE FROM color_variations 
-WHERE concept_id = ANY($1)
-"""
-
-# SQL to delete concepts
-sql_delete_concepts = """
-DELETE FROM concepts 
-WHERE id = ANY($1)
-"""
-```
-
-### 3. Storage Cleanup
-
-After database records are deleted, we'll remove the associated files from storage:
-
-1. Extract storage paths from image_path fields
-2. Delete files from appropriate storage buckets
-
-```python
-# Delete concept images
-for concept_path in concept_paths:
-    # Parse session_id and file path
-    supabase.storage.from_('concept-images').remove(concept_path)
-
-# Delete color variation images
-for variation_path in variation_paths:
-    # Parse session_id and file path
-    supabase.storage.from_('palette-images').remove(variation_path)
-```
-
-### 4. Scheduling
-
-Deploy as a Supabase Edge Function that runs on a schedule:
-
-- Set up a CRON trigger to run daily
-- Log output for monitoring
-
-## Error Handling and Monitoring
-
-- Implement try/except blocks around critical operations
-- Log errors and operation counts
-- Create separate transactions for different steps to ensure partial completion if errors occur
-
-## Implementation
-
-### Edge Function Entry Point (index.ts)
-
-```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-
-const handler = async (_req: Request) => {
-  try {
-    // Run the Python script
-    const command = new Deno.Command("python3", {
-      args: ["handler.py"],
-      stdout: "piped",
-      stderr: "piped",
-    });
-    
-    const process = command.spawn();
-    const output = await process.output();
-    const outStr = new TextDecoder().decode(output.stdout);
-    const errStr = new TextDecoder().decode(output.stderr);
-    
-    if (errStr) {
-      console.error("Error running cleanup script:", errStr);
-      return new Response(JSON.stringify({ error: errStr }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" }
-      });
-    }
-    
-    return new Response(JSON.stringify({ message: "Cleanup completed", details: outStr }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  } catch (error) {
-    console.error("Failed to run cleanup script:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-}
-
-serve(handler);
-```
-
-### Python Handler (handler.py)
-
-```python
-#!/usr/bin/env python3
-import os
-import json
-import logging
-from typing import List, Dict, Any, Tuple
-from datetime import datetime, timedelta
-import requests
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("cleanup-old-data")
-
-# Supabase connection info
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-STORAGE_BUCKET_CONCEPT = "concept-images"
-STORAGE_BUCKET_PALETTE = "palette-images"
-
-if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
-    logger.error("Missing Supabase credentials")
-    raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be provided")
-
-# Helper function to make REST API calls to Supabase
-def supabase_request(method: str, endpoint: str, data=None, params=None) -> dict:
-    """Make a request to Supabase REST API."""
-    url = f"{SUPABASE_URL}{endpoint}"
-    headers = {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-    }
-    
-    response = requests.request(
-        method=method,
-        url=url,
-        headers=headers,
-        json=data,
-        params=params
-    )
-    
-    if response.status_code >= 400:
-        logger.error(f"Error {response.status_code}: {response.text}")
-        response.raise_for_status()
-    
-    if response.content:
-        return response.json()
-    return {}
-
-# Storage functions
-def delete_from_storage(bucket: str, path: str) -> bool:
-    """Delete a file from Supabase storage."""
-    try:
-        endpoint = f"/storage/v1/object/{bucket}/{path}"
-        supabase_request("DELETE", endpoint)
-        logger.info(f"Deleted from {bucket}: {path}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to delete from {bucket}: {path}, Error: {str(e)}")
-        return False
-
-def main():
-    """Main cleanup function."""
-    try:
-        # 1. Get concepts older than 3 days
-        logger.info("Fetching concepts older than 3 days...")
-        rpc_endpoint = "/rest/v1/rpc/get_old_concepts"
-        old_concepts = supabase_request("POST", rpc_endpoint, data={
-            "days_threshold": 3
-        })
-        
-        if not old_concepts:
-            logger.info("No old concepts found")
-            return
-        
-        concept_ids = [concept["id"] for concept in old_concepts]
-        concept_paths = [concept["image_path"] for concept in old_concepts]
-        
-        logger.info(f"Found {len(concept_ids)} concepts to delete")
-        
-        # 2. Get associated color variations
-        logger.info("Fetching associated color variations...")
-        rpc_endpoint = "/rest/v1/rpc/get_variations_for_concepts"
-        variations = supabase_request("POST", rpc_endpoint, data={
-            "concept_ids": concept_ids
-        })
-        
-        variation_paths = [var["image_path"] for var in variations]
-        logger.info(f"Found {len(variation_paths)} color variations to delete")
-        
-        # 3. Delete color variations from database
-        logger.info("Deleting color variations from database...")
-        rpc_endpoint = "/rest/v1/rpc/delete_variations_for_concepts"
-        supabase_request("POST", rpc_endpoint, data={
-            "concept_ids": concept_ids
-        })
-        
-        # 4. Delete concepts from database
-        logger.info("Deleting concepts from database...")
-        rpc_endpoint = "/rest/v1/rpc/delete_concepts"
-        supabase_request("POST", rpc_endpoint, data={
-            "concept_ids": concept_ids
-        })
-        
-        # 5. Delete files from storage
-        deleted_concept_files = 0
-        for path in concept_paths:
-            if path and delete_from_storage(STORAGE_BUCKET_CONCEPT, path):
-                deleted_concept_files += 1
-                
-        deleted_variation_files = 0
-        for path in variation_paths:
-            if path and delete_from_storage(STORAGE_BUCKET_PALETTE, path):
-                deleted_variation_files += 1
-        
-        logger.info(f"Deleted {deleted_concept_files}/{len(concept_paths)} concept files")
-        logger.info(f"Deleted {deleted_variation_files}/{len(variation_paths)} variation files")
-        
-        print(json.dumps({
-            "deleted_concepts": len(concept_ids),
-            "deleted_variations": len(variation_paths),
-            "deleted_concept_files": deleted_concept_files,
-            "deleted_variation_files": deleted_variation_files
-        }))
-        
-    except Exception as e:
-        logger.error(f"Error during cleanup: {str(e)}")
-        raise
-
-if __name__ == "__main__":
-    main()
-```
-
-## Database Function Setup
-
-We need to create stored procedures in Supabase to efficiently query and delete data:
+We'll use database functions created in SQL:
 
 ```sql
 -- Function to get concepts older than specified days
@@ -349,16 +104,232 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
+### 3. Storage Cleanup
+
+After database records are deleted, we'll remove the associated files from storage:
+
+1. Extract storage paths from image_path fields
+2. Delete files from appropriate storage buckets
+
+```typescript
+// Delete concept images
+let deletedConceptFiles = 0;
+for (const path of conceptPaths) {
+  if (path && await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path)) {
+    deletedConceptFiles++;
+  }
+}
+
+// Delete variation images
+let deletedVariationFiles = 0;
+for (const path of variationPaths) {
+  if (path && await deleteFromStorage(STORAGE_BUCKET_PALETTE, path)) {
+    deletedVariationFiles++;
+  }
+}
+```
+
+### 4. Scheduling
+
+Deploy as a Supabase Edge Function and use GitHub Actions for scheduling:
+
+- Set up a GitHub Actions workflow with a CRON trigger to run daily
+- Log output for monitoring
+
+## Error Handling and Monitoring
+
+- Implement try/catch blocks around critical operations
+- Log errors and operation counts
+- Create separate sections for different operations to ensure proper error handling
+
+## Implementation
+
+### Edge Function (index.ts)
+
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+// Get environment variables
+const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') || '';
+const supabaseKey = Deno.env.get('MY_SERVICE_ROLE_KEY') || '';
+
+// Create Supabase client
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Storage bucket names from environment variables
+const STORAGE_BUCKET_CONCEPT = Deno.env.get('STORAGE_BUCKET_CONCEPT') || '';
+const STORAGE_BUCKET_PALETTE = Deno.env.get('STORAGE_BUCKET_PALETTE') || '';
+
+// Function to delete a file from storage
+async function deleteFromStorage(bucketName: string, path: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .storage
+      .from(bucketName)
+      .remove([path]);
+    
+    if (error) {
+      console.error(`Error deleting ${path} from ${bucketName}:`, error.message);
+      return false;
+    }
+    
+    console.log(`Deleted ${path} from ${bucketName}`);
+    return true;
+  } catch (err) {
+    console.error(`Failed to delete ${path} from ${bucketName}:`, err);
+    return false;
+  }
+}
+
+serve(async (req) => {
+  try {
+    console.log("Starting data cleanup process");
+    console.log(`Using buckets: ${STORAGE_BUCKET_CONCEPT} and ${STORAGE_BUCKET_PALETTE}`);
+    
+    // 1. Get concepts older than 3 days
+    console.log("Fetching concepts older than 3 days...");
+    const { data: oldConcepts, error: conceptsError } = await supabase
+      .rpc('get_old_concepts', { days_threshold: 3 });
+    
+    if (conceptsError) {
+      throw new Error(`Error fetching old concepts: ${conceptsError.message}`);
+    }
+    
+    if (!oldConcepts || oldConcepts.length === 0) {
+      console.log("No old concepts found");
+      return new Response(JSON.stringify({ 
+        message: "No old concepts to clean up" 
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    
+    const conceptIds = oldConcepts.map(c => c.id);
+    const conceptPaths = oldConcepts.map(c => c.image_path).filter(Boolean);
+    
+    console.log(`Found ${conceptIds.length} concepts to delete`);
+    
+    // 2. Get variations for those concepts
+    console.log("Fetching associated color variations...");
+    const { data: variations, error: variationsError } = await supabase
+      .rpc('get_variations_for_concepts', { concept_ids: conceptIds });
+    
+    if (variationsError) {
+      throw new Error(`Error fetching variations: ${variationsError.message}`);
+    }
+    
+    const variationPaths = variations ? variations.map(v => v.image_path).filter(Boolean) : [];
+    console.log(`Found ${variationPaths.length} color variations to delete`);
+    
+    // 3. Delete variations from database
+    console.log("Deleting color variations from database...");
+    const { error: deleteVariationsError } = await supabase
+      .rpc('delete_variations_for_concepts', { concept_ids: conceptIds });
+    
+    if (deleteVariationsError) {
+      throw new Error(`Error deleting variations: ${deleteVariationsError.message}`);
+    }
+    
+    // 4. Delete concepts from database
+    console.log("Deleting concepts from database...");
+    const { error: deleteConceptsError } = await supabase
+      .rpc('delete_concepts', { concept_ids: conceptIds });
+    
+    if (deleteConceptsError) {
+      throw new Error(`Error deleting concepts: ${deleteConceptsError.message}`);
+    }
+    
+    // 5. Delete files from storage
+    console.log("Deleting files from storage...");
+    
+    // Delete concept images
+    let deletedConceptFiles = 0;
+    for (const path of conceptPaths) {
+      if (path && await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path)) {
+        deletedConceptFiles++;
+      }
+    }
+    
+    // Delete variation images
+    let deletedVariationFiles = 0;
+    for (const path of variationPaths) {
+      if (path && await deleteFromStorage(STORAGE_BUCKET_PALETTE, path)) {
+        deletedVariationFiles++;
+      }
+    }
+    
+    console.log(`Deleted ${deletedConceptFiles}/${conceptPaths.length} concept files`);
+    console.log(`Deleted ${deletedVariationFiles}/${variationPaths.length} variation files`);
+    
+    // Return success response
+    return new Response(JSON.stringify({
+      message: "Cleanup completed successfully",
+      deleted_concepts: conceptIds.length,
+      deleted_variations: variationPaths.length,
+      deleted_concept_files: deletedConceptFiles,
+      deleted_variation_files: deletedVariationFiles
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+    
+  } catch (error) {
+    console.error("Error during cleanup:", error);
+    
+    return new Response(JSON.stringify({ 
+      error: error instanceof Error ? error.message : "Unknown error during cleanup" 
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+});
+```
+
+## GitHub Actions Workflow for Scheduling (.github/workflows/schedule-cleanup.yml)
+
+```yaml
+name: Schedule Data Cleanup
+
+on:
+  schedule:
+    # Run at midnight every day (UTC)
+    - cron: '0 0 * * *'
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  call-cleanup-function:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Call Cleanup Edge Function
+        run: |
+          curl -L -X POST 'https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data' \
+            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
+            -H 'Content-Type: application/json'
+      
+      - name: Log completion
+        if: ${{ success() }}
+        run: echo "Data cleanup function executed successfully"
+      
+      - name: Log failure
+        if: ${{ failure() }}
+        run: echo "Failed to execute data cleanup function"
+```
+
 ## Deployment Steps
 
 1. Create the SQL functions in Supabase
-2. Create the edge function files:
+2. Create the edge function file:
    - `backend/supabase/functions/cleanup-old-data/index.ts`
-   - `backend/supabase/functions/cleanup-old-data/handler.py`
 3. Deploy the edge function:
    ```bash
-   cd backend/edge-functions
-   supabase functions deploy cleanup-old-data --no-verify-jwt
+   cd backend
+   supabase functions deploy cleanup-old-data --project-ref pstdcfittpjhxzynbdbu --no-verify-jwt
    ```
 4. Set up environment variables:
    ```bash
@@ -460,8 +431,8 @@ SELECT COUNT(*) FROM color_variations WHERE concept_id NOT IN (SELECT id FROM co
 To monitor the function's execution:
 
 1. View the function logs in the Supabase dashboard
-2. Set up alerts for function failures
-3. Consider implementing a reporting mechanism that sends an email or notification with cleanup statistics
+2. Review GitHub Actions execution logs
+3. Consider implementing a notification system for cleanup operations
 
 ## Next Steps
 
