@@ -147,7 +147,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   };
   
   // Get the current image URL based on selection
-  const currentImageUrl = currentVariation?.image_url || concept.base_image_url;
+  const currentImageUrl = currentVariation?.image_url || concept.image_url || concept.base_image_url;
   
   // Use a consistent neutral background color
   const neutralBackgroundColor = '#f0f0f5';

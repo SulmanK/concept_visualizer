@@ -1,0 +1,469 @@
+2025-04-05 13:29:58 - app.services.jigsawstack.client - INFO - Creating JigsawStack client with API key: sk_684c7***...
+2025-04-05 13:29:58 - app.services.jigsawstack.client - INFO - Initialized JigsawStack client with API URL: https://api.jigsawstack.com
+2025-04-05 13:29:59 - rate_limiting - INFO - Checking rate limit '10/month' for session
+2025-04-05 13:29:59 - concept_service - INFO - Generating 7 color palettes for: Please man
+2025-04-05 13:29:59 - concept_service.palette - INFO - Generating 7 color palettes for: Please man
+2025-04-05 13:29:59 - app.services.jigsawstack.client - INFO - Generating 7 color palettes based on logo and theme descriptions
+2025-04-05 13:29:59 - app.services.jigsawstack.client - INFO - Sending request to prompt engine with combined logo and theme description
+2025-04-05 13:30:04 - app.services.jigsawstack.client - INFO - Response status code: 200
+2025-04-05 13:30:04 - app.services.jigsawstack.client - INFO - Raw API response structure: ['success', 'result', 'message']
+2025-04-05 13:30:04 - concept_service.palette - INFO - Successfully generated 7 palettes
+2025-04-05 13:30:04 - concept_generation_api - INFO - Generated 7 distinct color palettes
+2025-04-05 13:30:04 - concept_generation_api - INFO - Generating base image for concept with prompt: Test this again
+2025-04-05 13:30:04 - app.services.image.service - INFO - Generating image for session=a8caeb07***, concept=None, size=512x512, prompt_length=15
+2025-04-05 13:30:04 - app.services.jigsawstack.client - INFO - Generating image with prompt: Test this again
+2025-04-05 13:30:08 - app.services.jigsawstack.client - INFO - Image generation successful (binary response)
+2025-04-05 13:30:09 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:09 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:09 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=False, using bucket_name=concept-images
+2025-04-05 13:30:09 - app.services.image.storage - INFO - PATH: a8caeb07***/concept_20250405133008.png
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/concept_20250405133008.png, bucket=concept-images, is_palette=False, expiry=259200s
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Extracted session_id for JWT: a8caeb07***
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Signed URL endpoint: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Requesting signed URL with expiresIn=259200
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Signed URL response status: 200
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Sign response keys: ['signedURL']
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Sign response content: {'signedURL': '/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E'}
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Using relative signedURL: /object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Converted to absolute URL: https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/concept_20250405133008.png
+2025-04-05 13:30:09 - app.services.image.service - INFO - Stored generated image: url=https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E, path=a8caeb07***/concept_20250405133008.png
+2025-04-05 13:30:09 - concept_generation_api - INFO - Creating 7 color variations using OpenCV
+2025-04-05 13:30:09 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:09 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:09 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:09 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:09 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:09 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:09 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:09 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Palette colors: ['#2E3A87', '#5D72E9', '#A7B5FF', '#FFFFFF', '#8294FF']
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:09 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Converted palette to BGR: [(135, 58, 46), (233, 114, 93), (255, 181, 167), (255, 255, 255), (255, 148, 130)]
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Target color: (135, 58, 46)
+2025-04-05 13:30:14 - app.services.image.processing - INFO - HSV shift values - H: 86, S: 21.00, V: 1.00
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Target color: (233, 114, 93)
+2025-04-05 13:30:14 - app.services.image.processing - INFO - HSV shift values - H: 86, S: 19.12, V: 7.52
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:14 - app.services.image.processing - INFO - Target color: (255, 181, 167)
+2025-04-05 13:30:15 - app.services.image.processing - INFO - HSV shift values - H: 95, S: 12.57, V: 2.36
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:15 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.23
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Target color: (255, 148, 130)
+2025-04-05 13:30:15 - app.services.image.processing - INFO - HSV shift values - H: 101, S: 13.89, V: 4.72
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:15 - app.services.image.processing - INFO - Successfully encoded result, size: 668194 bytes
+2025-04-05 13:30:15 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:15 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133015.png
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133015.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133015.png
+2025-04-05 13:30:15 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133015.png
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133015.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:15 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133015.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.Iz6DL-kTgQ3rbJaG7-ZM7tqu1rh8GKQ04UzwZqxZM48&_cb=1743874215?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjE1LCJleHAiOjE3NDQxMzM0MTUsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.R6WiNj0KNrER4PoEutDOCmhsOJBj0ELOTb-5kbColr0&_cb=1743874215
+2025-04-05 13:30:15 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:15 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:15 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:15 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:15 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:16 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:16 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:16 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Palette colors: ['#795548', '#A1887F', '#E6DDC4', '#FFFFFF', '#BCAAA4']
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:16 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:21 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:21 - app.services.image.processing - INFO - Converted palette to BGR: [(72, 85, 121), (127, 136, 161), (196, 221, 230), (255, 255, 255), (164, 170, 188)]
+2025-04-05 13:30:21 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:21 - app.services.image.processing - INFO - Target color: (72, 85, 121)
+2025-04-05 13:30:21 - app.services.image.processing - INFO - HSV shift values - H: -22, S: 12.88, V: 0.90
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Target color: (127, 136, 161)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - HSV shift values - H: -22, S: 6.75, V: 5.19
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Target color: (196, 221, 230)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - HSV shift values - H: 2, S: 5.43, V: 2.13
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.23
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Target color: (164, 170, 188)
+2025-04-05 13:30:22 - app.services.image.processing - INFO - HSV shift values - H: -7, S: 3.67, V: 3.48
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:22 - app.services.image.processing - INFO - Successfully encoded result, size: 689409 bytes
+2025-04-05 13:30:22 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:23 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133022.png
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133022.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133022.png
+2025-04-05 13:30:23 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133022.png
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133022.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:23 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133022.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.xkayQFEgJIiY2tRLtVh1_tTy_9xSw5UJk3YL6OpK41w&_cb=1743874223?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjIzLCJleHAiOjE3NDQxMzM0MjMsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.nJayL59hGUN7kK9hN66VmR6o_eo3vjkMczkR-q26lBw&_cb=1743874223
+2025-04-05 13:30:23 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:23 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:23 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:23 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:23 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:23 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:23 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:23 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Palette colors: ['#388E3C', '#66BB6A', '#A5D6A7', '#FFFFFF', '#81C784']
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:23 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9153900146484375)), ((30, 31, 31), np.float64(0.0795583724975586)), ((106, 107, 108), np.float64(0.0018529891967773438)), ((78, 79, 80), np.float64(0.001674652099609375)), ((54, 55, 56), np.float64(0.0015239715576171875))]
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Converted palette to BGR: [(60, 142, 56), (106, 187, 102), (167, 214, 165), (255, 255, 255), (132, 199, 129)]
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Target color: (60, 142, 56)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - HSV shift values - H: 31, S: 19.25, V: 1.05
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Target color: (106, 187, 102)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - HSV shift values - H: 31, S: 14.50, V: 6.03
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Processing dominant color 3/5: (106, 107, 108)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - Target color: (167, 214, 165)
+2025-04-05 13:30:28 - app.services.image.processing - INFO - HSV shift values - H: 46, S: 11.60, V: 1.98
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Processing dominant color 4/5: (78, 79, 80)
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:29 - app.services.image.processing - INFO - HSV shift values - H: -15, S: 0.00, V: 3.19
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Processing dominant color 5/5: (54, 55, 56)
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Target color: (132, 199, 129)
+2025-04-05 13:30:29 - app.services.image.processing - INFO - HSV shift values - H: 46, S: 10.00, V: 3.55
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:29 - app.services.image.processing - INFO - Successfully encoded result, size: 633777 bytes
+2025-04-05 13:30:29 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:29 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133029.png
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133029.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133029.png
+2025-04-05 13:30:29 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133029.png
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133029.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:29 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133029.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.oe-MBGMOHQ-qq0XOycRABUJRkx9GjsZUKxQWWMx8oEg&_cb=1743874229?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjI5LCJleHAiOjE3NDQxMzM0MjksImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ._QDXtQ7Roh9oCysdhPPq8CjS-uC2eSmH0JU9gF4QVeY&_cb=1743874229
+2025-04-05 13:30:29 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:29 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:29 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:29 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:29 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:29 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:29 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:30 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Palette colors: ['#673AB7', '#9575CD', '#D1C4E9', '#FFFFFF', '#B39DDB']
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:30 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Converted palette to BGR: [(183, 58, 103), (205, 117, 149), (233, 196, 209), (255, 255, 255), (219, 157, 179)]
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Target color: (183, 58, 103)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - HSV shift values - H: 101, S: 21.75, V: 1.36
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Target color: (205, 117, 149)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - HSV shift values - H: 101, S: 13.62, V: 6.61
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Target color: (233, 196, 209)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - HSV shift values - H: 111, S: 5.71, V: 2.16
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.23
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Target color: (219, 157, 179)
+2025-04-05 13:30:33 - app.services.image.processing - INFO - HSV shift values - H: 116, S: 8.00, V: 4.06
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:33 - app.services.image.processing - INFO - Successfully encoded result, size: 760139 bytes
+2025-04-05 13:30:33 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:34 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133033.png
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133033.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133033.png
+2025-04-05 13:30:34 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133033.png
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133033.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:34 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133033.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.jNSHXhZ7Ibh5W26Xq7GLSZxw3s-9ItIDY8w5R_l9vZ8&_cb=1743874234?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjM0LCJleHAiOjE3NDQxMzM0MzQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.zRzi3LNHw6EYKyONzVJ40Dp6kILohVZX_2-T4p2qhKM&_cb=1743874234
+2025-04-05 13:30:34 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:34 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:34 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:34 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:34 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:34 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:34 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:34 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Palette colors: ['#FF5722', '#FF7043', '#FFB300', '#FFFFFF', '#FF8A65']
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:34 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Converted palette to BGR: [(34, 87, 255), (67, 112, 255), (0, 179, 255), (255, 255, 255), (101, 138, 255)]
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Target color: (34, 87, 255)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - HSV shift values - H: -23, S: 27.62, V: 1.89
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Target color: (67, 112, 255)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - HSV shift values - H: -23, S: 23.50, V: 8.23
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Target color: (0, 179, 255)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - HSV shift values - H: 1, S: 36.43, V: 2.36
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.23
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Target color: (101, 138, 255)
+2025-04-05 13:30:39 - app.services.image.processing - INFO - HSV shift values - H: -8, S: 17.11, V: 4.72
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:39 - app.services.image.processing - INFO - Successfully encoded result, size: 743052 bytes
+2025-04-05 13:30:39 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:40 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133039.png
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133039.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133039.png
+2025-04-05 13:30:40 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133039.png
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133039.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:40 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133039.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.eQOdaHWS6vreKQwdUD_ogQEJPNKToIpjUNRQW3D76LA&_cb=1743874240?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQwLCJleHAiOjE3NDQxMzM0NDAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.4X_zcJPyYr3CEwE3OZHGcepUl2Qa8mWEwx4Z7oI31xc&_cb=1743874240
+2025-04-05 13:30:40 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:40 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:40 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:40 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:40 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:40 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:40 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:40 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Palette colors: ['#000000', '#FFFFFF', '#FF0000', '#F0F0F0', '#808080']
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:40 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Converted palette to BGR: [(0, 0, 0), (255, 255, 255), (0, 0, 255), (240, 240, 240), (128, 128, 128)]    
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Target color: (0, 0, 0)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - HSV shift values - H: -30, S: 0.00, V: 0.00
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - HSV shift values - H: -30, S: 0.00, V: 8.23
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Target color: (0, 0, 255)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - HSV shift values - H: -20, S: 36.43, V: 2.36
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Target color: (240, 240, 240)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.04
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - Target color: (128, 128, 128)
+2025-04-05 13:30:43 - app.services.image.processing - INFO - HSV shift values - H: -15, S: 0.00, V: 2.37
+2025-04-05 13:30:44 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:44 - app.services.image.processing - INFO - Successfully encoded result, size: 163307 bytes
+2025-04-05 13:30:44 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:44 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133044.png
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133044.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133044.png
+2025-04-05 13:30:44 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133044.png
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133044.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:44 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133044.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.cnGmGRBrOrcn2ZeGcHMJHnTEsckX3-QvAGz97diwZD8&_cb=1743874244?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjQ0LCJleHAiOjE3NDQxMzM0NDQsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.ZfU_LnqBlOecjHuRnIkDNJMkTeXnHG9HnGvzF4T_GWU&_cb=1743874244
+2025-04-05 13:30:44 - app.services.image.service - INFO - Applying color palette to image: ('https://pstdcfittpjhxzynbdbu.supabase.co/object/sign/concept-images/a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJjb25jZXB0LWltYWdlcy9hOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTcvY29uY2VwdF8yMDI1MDQwNTEzMzAwOC5wbmciLCJpYXQiOjE3NDM4NzQyMDksImV4cCI6MTc0NDEzMzQwOX0.3OqQZmsdU99Sv5xjZnjrOjlTRJirGunch69YDxmIw_E', 'a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png')
+2025-04-05 13:30:44 - app.services.image.service - INFO - Image provided as (url, path) tuple, using path for direct access
+2025-04-05 13:30:44 - app.services.image.service - INFO - Extracted path from signed URL: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:44 - app.services.image.service - INFO - Using direct storage path: a8caeb07-2322-4d9b-8581-141df78b1217/concept_20250405133008.png
+2025-04-05 13:30:44 - app.services.image.storage - INFO - Directly accessing image with path: a8caeb07***/concept_20250405133008.png in bucket: concept-images        
+2025-04-05 13:30:44 - app.services.image.service - INFO - Successfully retrieved image using direct path
+2025-04-05 13:30:44 - app.services.image.service - INFO - Image data type: <class 'bytes'>, size: 366864
+2025-04-05 13:30:45 - app.services.image.service - INFO - Successfully validated and converted image, size: 363436
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Applying palette to image, data type: <class 'bytes'>
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Palette colors: ['#FF4081', '#3F51B5', '#BDBDBD', '#FFFFFF', '#7986CB']
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Converting image to OpenCV format...
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Processing binary image data: 363436 bytes
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Image loaded successfully, shape: (1024, 1024, 3), dtype: uint8
+2025-04-05 13:30:45 - app.services.image.processing - INFO - Finding 5 dominant colors...
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Found dominant colors: [((131, 135, 135), np.float64(0.9154167175292969)), ((30, 31, 31), np.float64(0.07945060729980469)), ((105, 107, 108), np.float64(0.0018901824951171875)), ((77, 77, 79), np.float64(0.0017919540405273438)), ((52, 53, 54), np.float64(0.0014505386352539062))]
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Converted palette to BGR: [(129, 64, 255), (181, 81, 63), (189, 189, 189), (255, 255, 255), (203, 134, 121)]
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing dominant color 1/5: (131, 135, 135)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Target color: (129, 64, 255)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - HSV shift values - H: 140, S: 23.88, V: 1.89
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing dominant color 2/5: (30, 31, 31)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Target color: (181, 81, 63)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - HSV shift values - H: 85, S: 20.75, V: 5.84
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing dominant color 3/5: (105, 107, 108)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Target color: (189, 189, 189)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - HSV shift values - H: -20, S: 0.00, V: 1.75
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing dominant color 4/5: (77, 77, 79)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Target color: (255, 255, 255)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - HSV shift values - H: 0, S: 0.00, V: 3.23
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing dominant color 5/5: (52, 53, 54)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Target color: (203, 134, 121)
+2025-04-05 13:30:49 - app.services.image.processing - INFO - HSV shift values - H: 100, S: 11.44, V: 3.76
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Processing complete, encoding result as PNG...
+2025-04-05 13:30:49 - app.services.image.processing - INFO - Successfully encoded result, size: 696110 bytes
+2025-04-05 13:30:49 - app.services.image.service - INFO - Storing palette-adjusted image for session=a8caeb07***, concept=None
+2025-04-05 13:30:50 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133049.png
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133049.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Stored image for session a8caeb07*** at a8caeb07***/adjusted_20250405133049.png
+2025-04-05 13:30:50 - app.services.image.service - INFO - Palette-adjusted image stored, URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250
+2025-04-05 13:30:50 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - PATH: a8caeb07***/adjusted_20250405133049.png
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Getting signed URL for path=a8caeb07***/adjusted_20250405133049.png, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Extracted session_id from path: a8caeb07***
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250
+2025-04-05 13:30:50 - app.services.image.service - INFO - Direct signed URL: https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250
+2025-04-05 13:30:50 - app.services.image.storage - INFO - -------- DEBUG URL GENERATION --------
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET CONFIG: concept_bucket=concept-images, palette_bucket=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - BUCKET SELECTION: is_palette=True, using bucket_name=palette-images
+2025-04-05 13:30:50 - app.services.image.storage - INFO - PATH: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Getting signed URL for path=https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250, bucket=palette-images, is_palette=True, expiry=259200s
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Special handling for palette image URL generation
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Extracted session_id from path: https:***
+2025-04-05 13:30:50 - app.services.image.storage - INFO - Using direct URL for palette image: https:***//pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/token/palette-images/a8caeb07-2322-4d9b-8581-141df78b1217/adjusted_20250405133049.png?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJhOGNhZWIwNy0yMzIyLTRkOWItODU4MS0xNDFkZjc4YjEyMTciLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6ImE4Y2FlYjA3LTIzMjItNGQ5Yi04NTgxLTE0MWRmNzhiMTIxNyJ9fQ.FBOT2lh2emGNXEd7O_Jf--t7FrhvYTbhPYiSSreTUik&_cb=1743874250?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL3BzdGRjZml0dHBqaHh6eW5iZGJ1LnN1cGFiYXNlLmNvIiwiaWF0IjoxNzQzODc0MjUwLCJleHAiOjE3NDQxMzM0NTAsImF1ZCI6Imh0dHBzOi8vcHN0ZGNmaXR0cGpoeHp5bmJkYnUuc3VwYWJhc2UuY28iLCJyb2xlIjoiYW5vbiIsInN1YiI6IiIsInNlc3Npb25faWQiOiJodHRwczoiLCJhcHBfbWV0YWRhdGEiOnsic2Vzc2lvbl9pZCI6Imh0dHBzOiJ9fQ.Fe71h-YFrHgVduUGCTV1Bbnyz0EdEF3OjjCNXF-84Us&_cb=1743874250
+2025-04-05 13:30:50 - concept_storage_service - INFO - Storing concept for session: a8caeb07***
+2025-04-05 13:30:50 - concept_storage_service - INFO - Stored concept with ID: 4cfa4d26***
+2025-04-05 13:30:50 - concept_storage_service - INFO - Stored 7 color variations
+2025-04-05 13:30:58 - health_limits_api - INFO - Generating fresh rate limits data

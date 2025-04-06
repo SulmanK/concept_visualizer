@@ -29,6 +29,7 @@ from app.services.interfaces import (
 )
 from app.api.dependencies import CommonDependencies, get_or_create_session
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
+from app.core.config import settings
 
 # Configure logging
 logger = logging.getLogger("concept_generation_api")
@@ -84,12 +85,13 @@ async def generate_concept(
         )
         
         # Generate base image and store it in Supabase Storage
-        base_image_path, base_image_url = await commons.image_service.generate_and_store_image(
+        # The new API returns (image_path, image_url)
+        image_path, image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
             session_id
         )
         
-        if not base_image_path or not base_image_url:
+        if not image_path or not image_url:
             raise ServiceUnavailableError(detail="Failed to generate or store image")
         
         # Generate color palettes
@@ -100,7 +102,7 @@ async def generate_concept(
         
         # Apply color palettes to create variations and store in Supabase Storage
         palette_variations = await commons.image_service.create_palette_variations(
-            base_image_path,
+            image_path,
             raw_palettes,
             session_id
         )
@@ -111,7 +113,8 @@ async def generate_concept(
                 "session_id": session_id,
                 "logo_description": request.logo_description,
                 "theme_description": request.theme_description,
-                "base_image_path": base_image_path,
+                "image_path": image_path,
+                "image_url": image_url,
                 "color_palettes": palette_variations
             }
         )
@@ -127,12 +130,13 @@ async def generate_concept(
             created_at = stored_concept.get("created_at", created_at)
             
         # Return the combined response
+        # The response model now has validators that handle URL conversion
         return GenerationResponse(
             prompt_id=concept_id,
             logo_description=request.logo_description,
             theme_description=request.theme_description,
             created_at=created_at,
-            image_url=base_image_url,
+            image_url=image_url,
             variations=[
                 PaletteVariation(
                     name=p["name"],
@@ -223,12 +227,12 @@ async def generate_concept_with_palettes(
         
         # Generate a single high-quality base image
         logger.info(f"Generating base image for concept with prompt: {request.logo_description}")
-        base_image_path, base_image_url = await commons.image_service.generate_and_store_image(
+        image_path, image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
             session_id
         )
         
-        if not base_image_path or not base_image_url:
+        if not image_path or not image_url:
             raise ServiceUnavailableError(detail="Failed to generate or store base image")
         
         # Apply different color palettes using OpenCV transformation
@@ -238,20 +242,15 @@ async def generate_concept_with_palettes(
         for palette in palettes:
             # Apply each palette to the base image using the new OpenCV method
             # Transform the image with the current palette
-            palette_image_path = await commons.image_service.apply_color_palette(
-                base_image_path,
+            # Pass both URL and path to allow direct access to the original image
+            palette_image_path, palette_image_url = await commons.image_service.apply_color_palette(
+                (image_url, image_path),  # Pass the full tuple so service can use path for direct access
                 palette["colors"],
                 session_id
             )
             
-            if palette_image_path:
-                # Get public URL
-                palette_image_url = commons.image_service.get_image_url(
-                    palette_image_path, 
-                    "palette-images"
-                )
-                
-                # Create variation with URL for response
+            if palette_image_path and palette_image_url:
+                # Create variation with path and URL for response
                 variation = {
                     "name": palette["name"],
                     "colors": palette["colors"],
@@ -271,7 +270,8 @@ async def generate_concept_with_palettes(
                 "session_id": session_id,
                 "logo_description": request.logo_description,
                 "theme_description": request.theme_description,
-                "base_image_path": base_image_path,
+                "image_path": image_path,
+                "image_url": image_url,
                 "color_palettes": palette_variations
             }
         )
@@ -287,12 +287,13 @@ async def generate_concept_with_palettes(
             created_at = stored_concept.get("created_at", created_at)
             
         # Return the combined response
+        # The response model now has validators that handle URL conversion
         return GenerationResponse(
             prompt_id=concept_id,
             logo_description=request.logo_description,
             theme_description=request.theme_description,
             created_at=created_at,
-            image_url=base_image_url,
+            image_url=image_url,
             variations=[
                 PaletteVariation(
                     name=p["name"],

@@ -65,7 +65,7 @@ export const RefinementPage: React.FC = () => {
             // If color variation not found, fall back to base concept
             setOriginalConcept({
               id: conceptData.id,
-              imageUrl: conceptData.base_image_url,
+              imageUrl: conceptData.image_url || conceptData.base_image_url,
               logoDescription: conceptData.logo_description,
               themeDescription: conceptData.theme_description,
             });
@@ -74,7 +74,7 @@ export const RefinementPage: React.FC = () => {
           // No color variation specified, use base concept
           setOriginalConcept({
             id: conceptData.id,
-            imageUrl: conceptData.base_image_url,
+            imageUrl: conceptData.image_url || conceptData.base_image_url,
             logoDescription: conceptData.logo_description,
             themeDescription: conceptData.theme_description,
           });

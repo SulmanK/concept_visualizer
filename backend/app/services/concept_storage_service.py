@@ -128,19 +128,20 @@ class ConceptStorageService:
                 masked_base_path = mask_path(concept_data["base_image_path"])
                 self.logger.debug(f"Processing concept: {masked_concept_id}, base path: {masked_base_path}")
                 
-                # Add public URLs for all images
-                base_image_url = self.image_storage.get_image_url(
+                # Add authenticated URLs for all images
+                base_image_url = await self.image_storage.authenticate_url(
                     concept_data["base_image_path"], 
-                    "concept-images"
+                    session_id
                 )
                 
                 # Process color variations 
                 variations = []
                 if "color_variations" in concept_data and concept_data["color_variations"]:
                     for variation in concept_data["color_variations"]:
-                        image_url = self.image_storage.get_image_url(
+                        image_url = await self.image_storage.authenticate_url(
                             variation["image_path"], 
-                            "palette-images"
+                            session_id,
+                            is_palette=True
                         )
                         
                         variations.append(ColorPalette(
@@ -192,19 +193,20 @@ class ConceptStorageService:
                 self.logger.warning(f"Concept {masked_concept_id} not found or access denied")
                 return None
                 
-            # Add public URLs for all images
-            base_image_url = self.image_storage.get_image_url(
+            # Add authenticated URLs for all images
+            base_image_url = await self.image_storage.authenticate_url(
                 concept_data["base_image_path"], 
-                "concept-images"
+                session_id
             )
             
             # Process color variations 
             variations = []
             if "color_variations" in concept_data and concept_data["color_variations"]:
                 for variation in concept_data["color_variations"]:
-                    image_url = self.image_storage.get_image_url(
+                    image_url = await self.image_storage.authenticate_url(
                         variation["image_path"], 
-                        "palette-images"
+                        session_id,
+                        is_palette=True
                     )
                     
                     variations.append(ColorPalette(

@@ -3,7 +3,7 @@ import { GenerationResponse, ColorPalette } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ColorPalette as ColorPaletteComponent } from '../ui/ColorPalette';
-import { supabase, getPublicImageUrl } from '../../services/supabaseClient';
+import { supabase, getSignedImageUrl } from '../../services/supabaseClient';
 
 // Define styles using JavaScript objects like in ConceptForm.tsx
 const containerStyle = {
@@ -272,15 +272,74 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
     if (!url) return '';
     
-    // If the URL already has the domain in it, return it as is
+    // If the URL is already a signed URL, use it directly
+    if (url.includes('/object/sign/') && url.includes('token=')) {
+      console.log('URL is already a signed URL, using directly');
+      
+      // Check if this is a double-signed URL (a URL within a URL)
+      if (url.includes('/object/sign/') && 
+          url.indexOf('/object/sign/') !== url.lastIndexOf('/object/sign/')) {
+        console.log('Detected doubly-signed URL, extracting the inner URL');
+        
+        // Extract the path part after the second "palette-images/" or "concept-images/"
+        const bucketName = bucketType === 'concept' ? 'concept-images' : 'palette-images';
+        const partAfterFirstBucket = url.split(`${bucketName}/`)[1];
+        
+        if (partAfterFirstBucket && partAfterFirstBucket.includes(`${bucketName}/`)) {
+          // Find the second bucket occurrence and extract the real path
+          const realPath = partAfterFirstBucket.split(`${bucketName}/`)[1].split('?')[0];
+          console.log('Extracted real path:', realPath);
+          
+          // Create a proper signed URL with the extracted path
+          return getSignedImageUrl(realPath, bucketType as 'concept' | 'palette');
+        }
+      }
+      
+      // If URL is relative, make it absolute
+      if (url.startsWith('/')) {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+        return `${supabaseUrl}${url}`;
+      }
+      
+      return url;
+    }
+    
+    // If the URL already has the domain in it but isn't a signed URL
     if (url.startsWith('http')) {
+      // Check for duplicated URLs (a common error pattern)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+      if (url.includes(`${supabaseUrl}/storage/v1/object/public/`) && 
+          url.includes(supabaseUrl, url.indexOf('/storage/v1/object/public/') + 20)) {
+        
+        // Extract the correct portion of the URL
+        const dupeIndex = url.indexOf(supabaseUrl, url.indexOf('/storage/v1/object/public/') + 20);
+        if (dupeIndex > 0) {
+          console.log('Fixed malformed URL with duplicated base URL');
+          return url.substring(dupeIndex);
+        }
+      }
+      
+      // Extract clean path from URL if possible
+      const bucketName = bucketType === 'concept' ? 'concept-images' : 'palette-images';
+      
+      // Check if this is a non-signed URL with the bucket in the path
+      if (url.includes(`/storage/v1/object/public/${bucketName}/`)) {
+        const pathParts = url.split(`/storage/v1/object/public/${bucketName}/`);
+        if (pathParts.length > 1) {
+          const cleanPath = pathParts[1].split('?')[0];
+          console.log('Extracted clean path from URL:', cleanPath);
+          return getSignedImageUrl(cleanPath, bucketType as 'concept' | 'palette');
+        }
+      }
+      
+      // This is a complete URL, use it directly
       return url;
     }
     
     // Otherwise, assume it's a path/key and format it appropriately for Supabase
     try {
       // Assume the URL is a path in the Supabase bucket
-      return getPublicImageUrl(url, bucketType as 'concept' | 'palette');
+      return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
     } catch (error) {
       console.error('Error formatting URL:', error);
       return '';

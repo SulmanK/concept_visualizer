@@ -145,11 +145,26 @@ const LandingPageContent: React.FC = () => {
         colorVariations.push(['#4F46E5', '#60A5FA', '#1E293B']); // Fallback colors
       }
       
+      // Debug image URLs
+      console.log(`Concept ${concept.id} original image:`, {
+        image_url: concept.image_url,
+        base_image_url: concept.base_image_url,
+        has_variations: concept.color_variations && concept.color_variations.length > 0
+      });
+      
       // Get images from color variations
-      const images = concept.color_variations?.map(variation => variation.image_url) || [];
+      const images = concept.color_variations?.map(variation => {
+        // Debug each variation's image URL
+        console.log(`Variation ${variation.id} image:`, {
+          image_url: variation.image_url,
+          image_path: variation.image_path
+        });
+        return variation.image_url;
+      }) || [];
       
       // Include original image for proper selection and display
-      const originalImage = concept.base_image_url || '';
+      // Update to use the new field name with fallback to the old field name
+      const originalImage = concept.image_url || concept.base_image_url || '';
       
       return {
         id: concept.id,

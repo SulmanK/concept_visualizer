@@ -35,7 +35,8 @@ class ConceptStorage:
                 - session_id: UUID of the session
                 - logo_description: User's logo description
                 - theme_description: User's theme description
-                - base_image_path: Path to the base image in Supabase Storage
+                - image_path: Path to the base image in Supabase Storage
+                - image_url: Optional URL to the base image (signed URL)
             
         Returns:
             Created concept data or None on error
@@ -57,6 +58,7 @@ class ConceptStorage:
                 - colors: JSONB array of hex color codes
                 - description: Optional description of the palette
                 - image_path: Path to the palette variation image in Storage
+                - image_url: Optional URL to the variation image (signed URL)
             
         Returns:
             Created color variation data or None on error

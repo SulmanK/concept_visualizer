@@ -90,18 +90,67 @@ backend/
 │   │   │   └── palette.py     # Color palette generation
 │   │   ├── storage/      # Storage services
 │   │   │   ├── __init__.py
-│   │   │   └── concept_storage.py # Concept storage logic
+│   │   │   ├── interfaces.py    # Storage service interfaces
+│   │   │   ├── factory.py       # Factory functions for storage services
+│   │   │   ├── concept/         # Concept storage services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── persistence.py  # Basic concept persistence
+│   │   │   │   ├── query.py        # Concept querying operations
+│   │   │   │   └── factory.py      # Factory functions
+│   │   │   ├── palette/         # Palette storage services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── persistence.py  # Palette persistence
+│   │   │   │   └── factory.py      # Factory functions
+│   │   │   └── utils.py          # Shared storage utilities
 │   │   ├── image/        # Image processing services
-│   │   │   ├── __init__.py
-│   │   │   ├── processing.py # Image manipulation
-│   │   │   ├── conversion.py # Format conversion
-│   │   │   └── storage.py    # Image storage operations
+│   │   │   ├── __init__.py      # Export factory functions and interfaces
+│   │   │   ├── interfaces/      # Service interfaces
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── generation.py    # Image generation interfaces
+│   │   │   │   ├── storage.py       # Storage interfaces
+│   │   │   │   ├── processing.py    # Processing interfaces
+│   │   │   │   └── conversion.py    # Conversion interfaces
+│   │   │   ├── generation/      # Image generation services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── jigsawstack.py   # JigsawStack implementation
+│   │   │   │   └── factory.py       # Factory functions
+│   │   │   ├── storage/         # Storage services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── supabase.py      # Supabase implementation
+│   │   │   │   ├── metadata.py      # Metadata management
+│   │   │   │   └── factory.py       # Factory functions
+│   │   │   ├── processing/      # Image processing services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── color.py         # Color operations
+│   │   │   │   ├── transformation.py # Image transformations
+│   │   │   │   ├── filters.py       # Visual filters
+│   │   │   │   └── factory.py       # Factory functions
+│   │   │   ├── conversion/      # Format conversion services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── format.py        # Format conversion
+│   │   │   │   ├── svg.py           # SVG-specific operations
+│   │   │   │   ├── enhancement.py   # Image enhancement
+│   │   │   │   └── factory.py       # Factory functions
+│   │   │   ├── service.py       # Main image service (uses composition)
+│   │   │   └── factory.py       # Main factory functions
 │   │   ├── session/      # Session services
-│   │   │   ├── __init__.py
-│   │   │   └── session_service.py # Session management
+│   │   │   ├── __init__.py      # Export factory functions and interfaces
+│   │   │   ├── interfaces.py    # Session service interfaces
+│   │   │   ├── auth.py          # Session authentication service
+│   │   │   ├── persistence.py   # Session persistence service
+│   │   │   ├── lifecycle.py     # Session lifecycle management
+│   │   │   ├── manager.py       # Main session service (uses composition)
+│   │   │   └── factory.py       # Factory functions
 │   │   └── jigsawstack/  # External API integration
-│   │       ├── __init__.py
-│   │       └── client.py # API client implementation
+│   │       ├── __init__.py      # Export factory functions and classes
+│   │       ├── base.py          # Base client with common functionality
+│   │       ├── image.py         # Image generation/refinement client
+│   │       ├── palette.py       # Color palette generation client
+│   │       ├── interfaces.py    # Client interfaces
+│   │       ├── utils.py         # Shared utilities
+│   │       ├── exceptions.py    # Client-specific exceptions
+│   │       ├── factory.py       # Factory functions for clients
+│   │       └── client.py        # Legacy client (uses composition)
 │   ├── models/           # Data models
 │   │   ├── __init__.py
 │   │   ├── common/       # Shared model components

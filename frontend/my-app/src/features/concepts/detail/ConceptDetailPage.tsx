@@ -178,7 +178,7 @@ const ConceptDetailContent: React.FC = () => {
             {/* Main image - either selected variation or base image */}
             <div className="rounded-lg overflow-hidden shadow-md mb-6">
               <img 
-                src={selectedVariation ? selectedVariation.image_url : concept.base_image_url} 
+                src={selectedVariation ? selectedVariation.image_url : concept.image_url || concept.base_image_url} 
                 alt={concept.logo_description}
                 className="w-full h-auto object-contain bg-indigo-50"
               />
@@ -209,7 +209,7 @@ const ConceptDetailContent: React.FC = () => {
                       title="Original image without color transformation"
                     >
                       <img 
-                        src={concept.base_image_url} 
+                        src={concept.image_url || concept.base_image_url} 
                         alt="Original" 
                         className="w-full h-full object-cover"
                       />
@@ -411,7 +411,7 @@ const ConceptDetailContent: React.FC = () => {
                     </summary>
                     <div className="p-5 border-t border-indigo-100">
                       <ExportOptions
-                        imageUrl={concept.base_image_url}
+                        imageUrl={concept.image_url || concept.base_image_url}
                         conceptTitle={concept.logo_description || 'Concept'}
                         variationName="Original"
                         onDownload={(format, size) => {

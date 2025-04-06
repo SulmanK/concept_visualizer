@@ -194,23 +194,25 @@ class ImageService(ImageServiceInterface):
     def store_image(
         self, 
         image_data: Union[bytes, BytesIO, UploadFile], 
+        session_id: str,
         concept_id: Optional[str] = None,
         file_name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False
-    ) -> str:
+    ) -> Tuple[str, str]:
         """
-        Store an image and return its public URL.
+        Store an image and return its path and signed URL.
         
         Args:
             image_data: Image data as bytes, BytesIO, or UploadFile
+            session_id: Session ID for access control
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name
             metadata: Optional metadata to store with the image
             is_palette: Whether this is a palette image
             
         Returns:
-            Public URL of the stored image
+            Tuple[str, str]: (image_path, image_url)
             
         Raises:
             ImageError: If storage fails
@@ -219,6 +221,7 @@ class ImageService(ImageServiceInterface):
             # Use the storage service to store the image
             return self.storage.store_image(
                 image_data=image_data,
+                session_id=session_id,
                 concept_id=concept_id,
                 file_name=file_name,
                 metadata=metadata,
@@ -243,17 +246,65 @@ class ImageService(ImageServiceInterface):
             ImageError: If retrieval fails
         """
         try:
+            # Convert relative signed URLs to full URLs if needed
+            if image_url_or_path.startswith("/object/sign/"):
+                full_url = f"{settings.SUPABASE_URL}{image_url_or_path}"
+                self.logger.info(f"Converting relative signed URL to full URL: {full_url}")
+                image_url_or_path = full_url
+            
             # Check if it's an external URL or a storage path
             if image_url_or_path.startswith(("http://", "https://")):
-                # It's an external URL, download it
-                response = httpx.get(image_url_or_path, timeout=10.0)
-                response.raise_for_status()
+                # It's an external URL, fetch it
+                async_fetch = False
+                try:
+                    response = httpx.get(image_url_or_path)
+                    if response.status_code != 200:
+                        raise ImageError(f"Failed to fetch image from URL: {response.status_code}")
+                    return response.content
+                except Exception as e:
+                    if "Running in async context" in str(e):
+                        # Need to use async client
+                        async_fetch = True
+                    else:
+                        # Re-raise if it's not an async context error
+                        raise
+                
+                if async_fetch:
+                    # This will be executed inside an async function
+                    # We need to use AsyncClient but can't await here
+                    # Return a placeholder or throw an informative error
+                    raise ImageError("Unable to fetch image URL in synchronous context. Use async method.")
+            
+            # Check if it's a signed URL from our Supabase storage
+            elif '/object/sign/' in image_url_or_path:
+                # Extract the real path from signed URL
+                path_parts = image_url_or_path.split('/object/sign/')
+                if len(path_parts) > 1:
+                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
+                    bucket_parts = bucket_path.split('/', 1)
+                    if len(bucket_parts) > 1:
+                        bucket_name = bucket_parts[0]
+                        path = bucket_parts[1]
+                        
+                        # Determine if it's a palette image
+                        is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
+                        
+                        self.logger.info(f"Extracted path from signed URL: {path}")
+                        # Use storage service directly with the path
+                        return self.storage.get_image(path, is_palette=is_palette)
+                
+                # If we can't extract a path or it doesn't match expected format,
+                # try to use the URL directly
+                response = httpx.get(image_url_or_path)
+                if response.status_code != 200:
+                    raise ImageError(f"Failed to fetch image from signed URL: {response.status_code}")
                 return response.content
+            
+            # Otherwise it's a storage path
             else:
-                # It's a storage path, use the storage service
                 return self.storage.get_image(image_url_or_path, is_palette=is_palette)
                 
-        except (httpx.HTTPError, ImageStorageError) as e:
+        except Exception as e:
             error_msg = f"Failed to get image {image_url_or_path}: {str(e)}"
             self.logger.error(error_msg)
             raise ImageError(error_msg)
@@ -349,235 +400,350 @@ class ImageService(ImageServiceInterface):
     async def generate_and_store_image(
         self, 
         prompt: str,
+        session_id: str,
         concept_id: Optional[str] = None,
-        session_id: Optional[str] = None,
         width: int = 512,
         height: int = 512,
         store: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False
-    ) -> Tuple[Optional[str], Optional[str]]:
+    ) -> Tuple[str, str]:
         """
-        Generate an image based on a prompt and store it in Supabase.
+        Generate an image from a prompt and optionally store it.
         
         Args:
             prompt: Text prompt for image generation
+            session_id: Session ID for access control
             concept_id: Optional concept ID to associate with the image
-            session_id: Optional session ID to organize images
             width: Image width
             height: Image height
-            store: Whether to store the generated image
+            store: Whether to store the image
             metadata: Optional metadata to store with the image
             is_palette: Whether this is a palette image
             
         Returns:
-            Tuple of (storage_path, public_url) or (None, None) on error
+            Tuple of (image_path, image_url)
             
         Raises:
-            ImageGenerationError: If image generation fails
-            ImageError: If image storage fails
+            ImageGenerationError: If generation fails
+            ImageError: If storage fails
         """
         try:
-            # Generate image using JigsawStack
-            self.logger.info(f"Generating image with prompt: {prompt}")
+            # Mask sensitive data in logs
+            masked_session_id = mask_id(session_id)
+            masked_concept_id = mask_id(concept_id) if concept_id else None
             
-            generation_result = await self.jigsawstack.generate_image(
+            self.logger.info(
+                f"Generating image for session={masked_session_id}, "
+                f"concept={masked_concept_id}, size={width}x{height}, "
+                f"prompt_length={len(prompt) if prompt else 0}"
+            )
+            
+            # Generate image
+            response = await self.jigsawstack.generate_image(
                 prompt=prompt,
                 width=width,
                 height=height
             )
             
-            if not generation_result or 'url' not in generation_result:
-                raise ImageGenerationError("Failed to generate image: Invalid response from generation service")
+            # Check if we received valid image data
+            if not response:
+                raise ImageGenerationError("No response received from generation API")
                 
-            # Only store if requested
-            if store:
-                # Check if we got binary data directly
-                if 'binary_data' in generation_result:
-                    image_data = generation_result['binary_data']
-                    self.logger.info("Using direct binary image data from generation result")
-                else:
-                    # Download the generated image from URL
-                    image_url = generation_result['url']
-                    self.logger.info(f"Downloading generated image from URL: {image_url}")
-                    
-                    # Handle file:// URLs for temp files
-                    if image_url.startswith('file://'):
-                        # Load from local file
-                        local_path = image_url[7:]  # Remove 'file://' prefix
-                        with open(local_path, 'rb') as f:
-                            image_data = f.read()
-                        # Clean up the temp file
-                        try:
-                            import os
-                            os.remove(local_path)
-                            self.logger.debug(f"Cleaned up temporary file: {local_path}")
-                        except Exception as e:
-                            self.logger.warning(f"Failed to clean up temporary file {local_path}: {str(e)}")
-                    else:
-                        # Download from remote URL
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(image_url)
-                            response.raise_for_status()
-                            image_data = response.content
-                
-                # Store it in our storage
+            # The JigsawStack client returns binary data in 'binary_data' field
+            image_data = None
+            if response.get("binary_data"):
+                image_data = response["binary_data"]
+            elif response.get("image_data"):
+                image_data = response["image_data"]
+            elif response.get("url") and response["url"].startswith("http"):
+                # We got a URL, try to download the image
+                self.logger.info(f"Downloading image from URL: {response['url']}")
                 try:
-                    # Add prompt and generation details to metadata
-                    if metadata is None:
-                        metadata = {}
-                    
-                    metadata.update({
-                        "prompt": prompt,
-                        "generation_service": "jigsawstack",
-                        "width": width,
-                        "height": height,
-                    })
-                    
-                    # Create a folder path with session_id if provided
-                    storage_concept_id = concept_id
-                    if session_id and concept_id:
-                        storage_concept_id = f"{session_id}/{concept_id}"
-                        self.logger.info(f"Storing image with session {mask_id(session_id)} and concept {mask_id(concept_id)}")
-                    elif session_id:
-                        storage_concept_id = session_id
-                        self.logger.info(f"Storing image with session {mask_id(session_id)}")
-                    
-                    # Store the image
-                    stored_url = self.storage.store_image(
-                        image_data=image_data,
-                        concept_id=storage_concept_id,
-                        metadata=metadata,
-                        is_palette=is_palette
-                    )
-                    
-                    # Extract the image path from the URL
-                    # The URL format is typically: {base_url}/storage/v1/object/public/{bucket}/{path}
-                    if stored_url:
-                        from urllib.parse import urlparse
-                        parsed_url = urlparse(stored_url)
-                        path_parts = parsed_url.path.split('/')
-                        # Find the bucket name in the path
-                        bucket_index = -1
-                        bucket_name = self.storage.palette_bucket if is_palette else self.storage.concept_bucket
-                        for i, part in enumerate(path_parts):
-                            if part == bucket_name:
-                                bucket_index = i
-                                break
-                        
-                        # Extract the path after the bucket name
-                        if bucket_index >= 0 and bucket_index < len(path_parts) - 1:
-                            image_path = '/'.join(path_parts[bucket_index+1:])
-                        else:
-                            # Fallback: use the last part of the URL as the path
-                            image_path = path_parts[-1]
-                            
-                        self.logger.info(f"Generated and stored image at path: {mask_path(image_path)}")
-                        return image_path, stored_url
-                    
-                    self.logger.error("Failed to store image: No URL returned")
-                    return None, None
-                    
-                except ImageStorageError as e:
-                    self.logger.error(f"Failed to store generated image: {str(e)}")
-                    return None, generation_result.get('url')
-            else:
-                # Not storing, just return None for path and the generation URL
-                return None, generation_result.get('url')
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        img_response = await client.get(response["url"])
+                        if img_response.status_code == 200:
+                            image_data = img_response.content
+                except Exception as e:
+                    self.logger.error(f"Failed to download image from URL: {str(e)}")
+            
+            if not image_data:
+                raise ImageGenerationError("No image data received from generation API")
+            
+            # Store the image if requested
+            image_path = None
+            image_url = None
+            
+            if store and image_data:
+                # Get timestamp for unique filename
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                
+                # Create a descriptive filename
+                if is_palette:
+                    file_name = f"palette_{timestamp}.png"
+                else:
+                    file_name = f"concept_{timestamp}.png"
+                
+                # Create metadata including the prompt
+                storage_metadata = {
+                    "prompt": prompt[:255] if prompt else "",  # Truncate long prompts
+                    "width": width,
+                    "height": height,
+                    "generated_at": timestamp
+                }
+                
+                # Add any custom metadata
+                if metadata:
+                    storage_metadata.update(metadata)
+                
+                # Store the image and get the path and URL
+                image_path, image_url = self.store_image(
+                    image_data=image_data,
+                    session_id=session_id,
+                    concept_id=concept_id,
+                    file_name=file_name,
+                    metadata=storage_metadata,
+                    is_palette=is_palette
+                )
+                
+                self.logger.info(
+                    f"Stored generated image: path={mask_path(image_path)}, "
+                    f"url={mask_path(image_url) if image_url else 'None'}"
+                )
+            
+            return image_path, image_url
             
         except Exception as e:
-            error_msg = f"Failed to generate and store image: {str(e)}"
+            error_msg = f"Failed to generate or store image: {str(e)}"
             self.logger.error(error_msg)
-            raise ImageGenerationError(error_msg)
-
+            
+            if "generation" in str(e).lower():
+                raise ImageGenerationError(error_msg)
+            else:
+                raise ImageError(error_msg)
+                
     async def apply_color_palette(
         self, 
-        base_image_path: str, 
+        base_image_path: Union[str, Tuple[str, str]], 
         palette_colors: List[str], 
         session_id: str,
         blend_strength: float = 0.75
-    ) -> str:
+    ) -> Tuple[str, str]:
         """
         Apply a color palette to an image and store the result.
         
         Args:
-            base_image_path: Path to the source image in storage
-            palette_colors: List of hex color codes to apply
-            session_id: Session ID for organizing images
-            blend_strength: How strongly to apply the colors (0.0-1.0)
+            base_image_path: Path to the base image in storage, full URL, or tuple of (url, path)
+            palette_colors: List of hex color codes
+            session_id: Session ID for access control
+            blend_strength: Strength of the palette application (0-1)
             
         Returns:
-            Path to the color-modified image in storage if successful
+            Tuple[str, str]: (image_path, image_url) - The storage path and signed URL
             
         Raises:
-            ImageProcessingError: If processing fails
-            ImageStorageError: If storage fails
+            ImageError: If processing or storage fails
         """
         try:
-            self.logger.info(f"Applying color palette to image: {mask_path(base_image_path)}")
+            self.logger.info(f"Applying color palette to image: {base_image_path}")
             
-            # Get the source image URL for the concept image
+            # Check if this is a newly stored image with path in generate_and_store_image
+            # Get the relative path section that might be used for direct access
+            stored_image_path = None
+            
+            # Check for the image path returned with the URL from generate_and_store_image
+            if isinstance(base_image_path, tuple) and len(base_image_path) == 2:
+                self.logger.info("Image provided as (url, path) tuple, using path for direct access")
+                url, stored_path = base_image_path
+                base_image_path = url  # Use the URL for the rest of the function
+                stored_image_path = stored_path  # Keep the path for direct access
+            
+            # Extract actual path from URL if needed
+            is_signed_url = False
+            actual_path = None
+            base_url = None
+            
+            # Check if it's a full URL with domain
+            if isinstance(base_image_path, str) and base_image_path.startswith(("http://", "https://")):
+                is_signed_url = '/object/sign/' in base_image_path
+                base_url = base_image_path
+            # Check if it's a relative URL starting with /object/sign/
+            elif isinstance(base_image_path, str) and base_image_path.startswith("/object/sign/"):
+                is_signed_url = True
+                # Convert to full URL
+                base_url = f"{settings.SUPABASE_URL}{base_image_path}"
+                self.logger.info(f"Converting relative URL to full URL: {base_url}")
+            
+            if is_signed_url:
+                # Extract the real path from signed URL
+                path_parts = base_image_path.split('/object/sign/')
+                if len(path_parts) > 1:
+                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
+                    bucket_parts = bucket_path.split('/', 1)
+                    if len(bucket_parts) > 1:
+                        # Skip storing bucket_name since we don't use it here
+                        # Just get the path without bucket
+                        actual_path = bucket_parts[1]
+                        self.logger.info(f"Extracted path from signed URL: {actual_path}")
+            
+            # Get the base image - try multiple methods in order of reliability
             try:
-                base_image_url = self.get_image_url(base_image_path, settings.STORAGE_BUCKET_CONCEPT)
-                self.logger.info(f"Retrieved image URL for: {mask_path(base_image_path)}")
-            except Exception as e:
-                self.logger.error(f"Failed to get image URL for {mask_path(base_image_path)}: {str(e)}")
-                raise ImageProcessingError(f"Failed to get image URL: {str(e)}")
-            
-            # Apply the palette using the optimized masking approach
-            from app.services.image.processing import apply_palette_with_masking_optimized
-            try:
-                palette_image_data = apply_palette_with_masking_optimized(
-                    base_image_url,
-                    palette_colors,
-                    blend_strength=blend_strength
-                )
-                self.logger.info(f"Successfully applied palette to image ({len(palette_image_data)} bytes)")
-            except Exception as e:
-                self.logger.error(f"Error in palette application algorithm: {str(e)}")
-                raise ImageProcessingError(f"Failed to apply palette algorithm: {str(e)}")
-            
-            # Generate a unique filename for the palette variation
-            import uuid
-            unique_id = str(uuid.uuid4())
-            file_name = f"palette_{unique_id}.png"
-            palette_image_path = f"{session_id}/{file_name}"
-            
-            # Store the modified image
-            try:
-                stored_url = self.storage.store_image(
-                    image_data=palette_image_data,
-                    concept_id=session_id,
-                    file_name=file_name,
-                    is_palette=True
-                )
+                # ATTEMPT 1: If we have the stored path directly from generate_and_store_image,
+                # use it for the most reliable access
+                if stored_image_path:
+                    self.logger.info(f"Using direct storage path: {stored_image_path}")
+                    try:
+                        # Use the new method for direct access via admin API
+                        base_image_data = self.storage.get_image_by_path(stored_image_path, is_palette=False)
+                        self.logger.info("Successfully retrieved image using direct path")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to get image by direct path, will try alternatives: {str(e)}")
+                        raise e  # Re-raise to try next method
                 
-                if not stored_url:
-                    raise ImageProcessingError("Failed to store palette image")
+                # ATTEMPT 2: If we have a valid path from the signed URL, try direct access
+                elif actual_path:
+                    # Ensure path includes session_id
+                    path_parts = actual_path.split('/')
+                    if len(path_parts) > 0 and path_parts[0] != session_id:
+                        # Add session_id prefix if missing
+                        path_with_session = f"{session_id}/{actual_path}"
+                    else:
+                        path_with_session = actual_path
+                        
+                    self.logger.info(f"Trying direct storage access with path: {path_with_session}")
+                    try:
+                        # Try direct access with admin privileges
+                        base_image_data = self.storage.get_image_by_path(path_with_session, is_palette=False)
+                        self.logger.info("Successfully retrieved image using extracted path")
+                    except Exception as e:
+                        self.logger.warning(f"Failed with direct path access, will try HTTP: {str(e)}")
+                        raise e  # Re-raise to try next method
+                
+                # ATTEMPT 3: For signed URLs, try direct HTTP request
+                elif is_signed_url and base_url:
+                    self.logger.info(f"Attempting to fetch image via HTTP from signed URL: {base_url}")
+                    try:
+                        # Use the async method to fetch the image
+                        base_image_data = await self.get_image_async(base_url)
+                        self.logger.info("Successfully retrieved image from signed URL via HTTP")
+                    except Exception as e:
+                        self.logger.warning(f"Failed to fetch from signed URL via HTTP: {str(e)}")
+                        raise e  # Re-raise to try other methods
+                
+                # ATTEMPT 4: For non-signed URLs or simple paths
+                else:
+                    # Try the async method first if it looks like a URL
+                    if isinstance(base_image_path, str) and base_image_path.startswith(("http://", "https://")):
+                        self.logger.info(f"Attempting to fetch from URL: {base_image_path}")
+                        base_image_data = await self.get_image_async(base_image_path)
+                    else:
+                        # Must be a simple path
+                        full_path = base_image_path
+                        if isinstance(full_path, str) and not full_path.startswith(session_id):
+                            full_path = f"{session_id}/{full_path}"
+                        self.logger.info(f"Retrieving using standard storage access: {full_path}")
+                        base_image_data = self.storage.get_image(full_path)
+            
+            except Exception as e:
+                # All attempts failed
+                error_msg = f"All methods failed to retrieve image: {str(e)}"
+                self.logger.error(error_msg)
+                raise ImageError(error_msg)
+            
+            # Apply the palette
+            try:
+                # Ensure the image data is valid before processing
+                if base_image_data is None:
+                    raise ImageError("Image data is None, cannot apply palette")
+                
+                # Debug the image data
+                self.logger.info(f"Image data type: {type(base_image_data)}, size: {len(base_image_data) if hasattr(base_image_data, '__len__') else 'unknown'}")
+                
+                # Ensure we have valid image data by opening and re-encoding with PIL
+                try:
+                    from PIL import Image
+                    from io import BytesIO
                     
-                self.logger.info(f"Successfully stored palette image at: {mask_path(palette_image_path)}")
+                    # Try to open the image to validate it
+                    img = Image.open(BytesIO(base_image_data))
+                    # Convert to RGB if it's not already
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
+                    # Re-encode to ensure we have valid image data
+                    buffer = BytesIO()
+                    img.save(buffer, format="PNG")
+                    validated_image_data = buffer.getvalue()
+                    
+                    self.logger.info(f"Successfully validated and converted image, size: {len(validated_image_data)}")
+                    
+                    # Now pass the validated image data to the palette function
+                    adjusted_image = apply_palette_with_masking_optimized(
+                        validated_image_data,
+                        palette_colors=palette_colors,
+                        blend_strength=blend_strength
+                    )
+                except Exception as e:
+                    self.logger.error(f"Error validating image data: {str(e)}")
+                    # Try with the original data
+                    adjusted_image = apply_palette_with_masking_optimized(
+                        base_image_data,
+                        palette_colors=palette_colors,
+                        blend_strength=blend_strength
+                    )
             except Exception as e:
-                self.logger.error(f"Failed to store palette image: {str(e)}")
-                raise ImageStorageError(f"Failed to store palette image: {str(e)}")
-                
-            return palette_image_path
+                raise ImageError(f"Failed to apply palette: {str(e)}")
+            
+            # Generate a unique file name
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_name = f"adjusted_{timestamp}.png"
+            
+            # Extract concept_id from base_image_path if available
+            # Path format is session_id/concept_id/filename or session_id/filename
+            # Use the extracted path to get parts
+            path_for_concept = actual_path or stored_image_path or (base_image_path if isinstance(base_image_path, str) else "")
+            path_parts = path_for_concept.split('/')
+            concept_id = None
+            if len(path_parts) >= 3:
+                # Format is session_id/concept_id/filename
+                concept_id = path_parts[1]
+            
+            # Store the adjusted image in the palette-images bucket
+            self.logger.info(f"Storing palette-adjusted image for session={mask_id(session_id)}, concept={mask_id(concept_id) if concept_id else None}")
+            # Flag to indicate this is a palette image
+            palette_image_path, palette_image_url = self.store_image(
+                image_data=adjusted_image,
+                session_id=session_id,
+                concept_id=concept_id,
+                file_name=file_name,
+                metadata={
+                    "base_image": str(base_image_path)[:255] if isinstance(base_image_path, str) else "tuple",
+                    "palette_colors": ",".join(palette_colors),
+                    "blend_strength": blend_strength,
+                    "operation": "palette_adjustment"
+                },
+                is_palette=True
+            )
+            
+            self.logger.info(f"Stored adjusted image at path: {palette_image_path}")
+            
+            return palette_image_path, palette_image_url
             
         except Exception as e:
-            self.logger.error(f"Error applying color palette: {str(e)}")
-            if isinstance(e, (ImageProcessingError, ImageStorageError)):
-                raise
-            raise ImageProcessingError(f"Failed to apply color palette: {str(e)}")
+            error_msg = f"Failed to apply color palette: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageError(error_msg)
 
     def get_image_url(self, image_path: str, bucket_name: str) -> str:
         """
-        Get the public URL for an image in storage.
+        Get a signed URL for an image in storage.
         
         Args:
             image_path: Path to the image in storage
             bucket_name: Name of the bucket (e.g., "concept-images" or "palette-images")
             
         Returns:
-            Public URL for the image
+            Signed URL for the image with 3-day expiration
             
         Raises:
             ImageError: If URL generation fails
@@ -587,9 +753,104 @@ class ImageService(ImageServiceInterface):
             # Compare with settings values instead of hardcoded strings
             is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
             
-            # Use the storage service to get the URL
-            return self.storage.get_public_url(image_path, is_palette=is_palette)
+            # Use the storage service to get the signed URL
+            return self.storage.get_signed_url(image_path, is_palette=is_palette)
             
         except Exception as e:
-            self.logger.error(f"Error getting image URL: {str(e)}")
-            raise ImageError(f"Failed to get image URL: {str(e)}") 
+            self.logger.error(f"Error getting signed image URL: {str(e)}")
+            raise ImageError(f"Failed to get signed image URL: {str(e)}")
+
+    def get_image_with_token(
+        self,
+        path: str,
+        token: str,
+        is_palette: bool = False
+    ) -> bytes:
+        """
+        Get image data using a JWT token for authentication.
+        
+        Args:
+            path: Path to the image in storage
+            token: JWT token for authentication
+            is_palette: Whether this is a palette image
+            
+        Returns:
+            Image data as bytes
+            
+        Raises:
+            ImageError: If retrieval fails
+        """
+        try:
+            return self.storage.get_image_with_token(
+                path=path,
+                token=token,
+                is_palette=is_palette
+            )
+        except (ImageStorageError, ImageNotFoundError) as e:
+            # Re-raise as ImageError
+            raise ImageError(f"Failed to get image with token: {str(e)}")
+
+    async def get_image_async(self, image_url_or_path: str, is_palette: bool = False) -> bytes:
+        """
+        Asynchronously retrieve an image by URL or storage path.
+        
+        Args:
+            image_url_or_path: URL or storage path of the image
+            is_palette: Whether this is a palette image
+            
+        Returns:
+            Image data as bytes
+            
+        Raises:
+            ImageError: If retrieval fails
+        """
+        try:
+            # Convert relative signed URLs to full URLs if needed
+            if image_url_or_path.startswith("/object/sign/"):
+                full_url = f"{settings.SUPABASE_URL}{image_url_or_path}"
+                self.logger.info(f"Converting relative signed URL to full URL: {full_url}")
+                image_url_or_path = full_url
+            
+            # Check if it's an external URL or a storage path
+            if image_url_or_path.startswith(("http://", "https://")):
+                # It's an external URL, fetch it asynchronously
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_url_or_path)
+                    if response.status_code != 200:
+                        raise ImageError(f"Failed to fetch image from URL: {response.status_code}")
+                    return response.content
+            
+            # Check if it's a signed URL from our Supabase storage
+            elif '/object/sign/' in image_url_or_path:
+                # Extract the real path from signed URL
+                path_parts = image_url_or_path.split('/object/sign/')
+                if len(path_parts) > 1:
+                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
+                    bucket_parts = bucket_path.split('/', 1)
+                    if len(bucket_parts) > 1:
+                        bucket_name = bucket_parts[0]
+                        path = bucket_parts[1]
+                        
+                        # Determine if it's a palette image
+                        is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
+                        
+                        self.logger.info(f"Extracted path from signed URL: {path}")
+                        # Use storage service directly with the path
+                        return self.storage.get_image(path, is_palette=is_palette)
+                
+                # If we can't extract a path or it doesn't match expected format,
+                # try to use the URL directly
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_url_or_path)
+                    if response.status_code != 200:
+                        raise ImageError(f"Failed to fetch image from signed URL: {response.status_code}")
+                    return response.content
+            
+            # Otherwise it's a storage path
+            else:
+                return self.storage.get_image(image_url_or_path, is_palette=is_palette)
+                
+        except Exception as e:
+            error_msg = f"Failed to get image asynchronously {image_url_or_path}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageError(error_msg) 

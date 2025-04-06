@@ -21,6 +21,7 @@ export interface ColorVariation {
   name: string;
   colors: string[];
   image_url: string;
+  image_path?: string;
   description?: string;
 }
 
@@ -61,7 +62,8 @@ export interface StoredConcept {
   title?: string;
   logo_description: string;
   theme_description: string;
-  base_image_url: string;
+  image_url: string;
+  image_path?: string;
   created_at: string;
   color_variations?: ColorVariation[];
 } 

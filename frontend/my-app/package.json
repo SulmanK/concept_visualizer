@@ -25,10 +25,12 @@
     "@supabase/supabase-js": "^2.49.4",
     "@types/js-cookie": "^3.0.6",
     "@types/uuid": "^10.0.0",
+    "axios": "^1.8.4",
     "js-cookie": "^3.0.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.22.1",
+    "supabase": "^2.20.5",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

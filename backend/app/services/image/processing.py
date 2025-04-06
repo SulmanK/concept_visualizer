@@ -15,12 +15,12 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
-def download_image(image_url_or_data: Union[str, BytesIO]) -> np.ndarray:
+def download_image(image_url_or_data: Union[str, BytesIO, bytes]) -> np.ndarray:
     """
     Download or read an image and convert to OpenCV format.
     
     Args:
-        image_url_or_data: URL of the image to download or BytesIO object
+        image_url_or_data: URL of the image to download, BytesIO object, or raw bytes
         
     Returns:
         Image as a numpy array in BGR format (OpenCV default)
@@ -29,6 +29,23 @@ def download_image(image_url_or_data: Union[str, BytesIO]) -> np.ndarray:
         Exception: If image download or conversion fails
     """
     try:
+        # Handle bytes input
+        if isinstance(image_url_or_data, bytes):
+            logger.info(f"Processing binary image data: {len(image_url_or_data)} bytes")
+            try:
+                # Try to decode directly with OpenCV
+                nparr = np.frombuffer(image_url_or_data, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                if img is not None:
+                    return img
+            except Exception as e:
+                logger.warning(f"Failed to decode with OpenCV: {str(e)}, trying PIL")
+            
+            # Fallback to PIL
+            image = Image.open(BytesIO(image_url_or_data))
+            image_rgb = np.array(image.convert("RGB"))
+            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+        
         # Handle BytesIO input
         if isinstance(image_url_or_data, BytesIO):
             image = Image.open(image_url_or_data)
@@ -225,7 +242,7 @@ def create_color_mask(image: np.ndarray, target_color: Tuple[int, int, int], thr
 
 
 def apply_palette_with_masking_optimized(
-    image_url_or_data: Union[str, BytesIO], 
+    image_url_or_data: Union[str, BytesIO, bytes], 
     palette_colors: List[str], 
     blend_strength: float = 0.75
 ) -> bytes:
@@ -233,7 +250,7 @@ def apply_palette_with_masking_optimized(
     Apply a color palette to an image using simplified masking and recoloring.
     
     Args:
-        image_url_or_data: URL of the image or BytesIO object
+        image_url_or_data: URL of the image, BytesIO object, or raw bytes
         palette_colors: List of hex color codes
         blend_strength: How strongly to apply the new colors (0.0-1.0)
         
@@ -244,15 +261,42 @@ def apply_palette_with_masking_optimized(
         Exception: If image processing fails
     """
     try:
+        # Debug input
+        logger.info(f"Applying palette to image, data type: {type(image_url_or_data)}")
+        logger.info(f"Palette colors: {palette_colors}")
+        
+        if image_url_or_data is None:
+            logger.error("Image data is None, cannot process")
+            raise ValueError("Image data cannot be None")
+            
+        # For binary data, log the size
+        if isinstance(image_url_or_data, bytes):
+            logger.info(f"Processing binary image data: {len(image_url_or_data)} bytes")
+        elif isinstance(image_url_or_data, BytesIO):
+            logger.info(f"Processing BytesIO image data: {image_url_or_data.getbuffer().nbytes} bytes")
+        elif isinstance(image_url_or_data, str):
+            logger.info(f"Processing image from URL or path: {image_url_or_data[:100]}...")
+        
         # Download/read image
+        logger.info("Converting image to OpenCV format...")
         image = download_image(image_url_or_data)
+        
+        # Verify image data
+        if image is None:
+            logger.error("Failed to load image, returned None from download_image")
+            raise ValueError("Image could not be loaded or decoded")
+            
+        logger.info(f"Image loaded successfully, shape: {image.shape}, dtype: {image.dtype}")
         
         # Find dominant colors in original image
         max_colors = min(5, len(palette_colors))
+        logger.info(f"Finding {max_colors} dominant colors...")
         dominant_colors = find_dominant_colors(image, max_colors)
+        logger.info(f"Found dominant colors: {dominant_colors}")
         
         # Convert palette hex colors to BGR
         palette_bgr = [hex_to_bgr(color) for color in palette_colors[:max_colors]]
+        logger.info(f"Converted palette to BGR: {palette_bgr}")
         
         # Create a copy of the original image for recoloring
         result = image.copy()
@@ -262,11 +306,14 @@ def apply_palette_with_masking_optimized(
             if i >= len(palette_bgr):
                 break
                 
+            logger.info(f"Processing dominant color {i+1}/{len(dominant_colors)}: {dom_color}")
+            
             # Create mask for this dominant color
             mask = create_color_mask(image, dom_color)
             
             # Get the palette color to use
             target_color = palette_bgr[i]
+            logger.info(f"Target color: {target_color}")
             
             # Create HSV versions for color shifting
             hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
@@ -277,6 +324,8 @@ def apply_palette_with_masking_optimized(
             h_shift = int(target_hsv[0]) - int(dom_hsv[0])
             s_scale = float(target_hsv[1]) / max(1.0, float(dom_hsv[1]))  # Scale saturation
             v_scale = float(target_hsv[2]) / max(1.0, float(dom_hsv[2]))  # Value ratio for preserving lighting
+            
+            logger.info(f"HSV shift values - H: {h_shift}, S: {s_scale:.2f}, V: {v_scale:.2f}")
             
             # Apply the shift to the entire image
             shifted_hsv = hsv_image.copy()
@@ -302,11 +351,16 @@ def apply_palette_with_masking_optimized(
         
         # Make sure we have a valid image type before encoding
         result = result.astype(np.uint8)
+        logger.info(f"Processing complete, encoding result as PNG...")
         
         # Convert the result to bytes
         _, buffer = cv2.imencode('.png', result)
-        return buffer.tobytes()
+        result_bytes = buffer.tobytes()
+        logger.info(f"Successfully encoded result, size: {len(result_bytes)} bytes")
+        return result_bytes
         
     except Exception as e:
         logger.error(f"Error applying palette with masking: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise 

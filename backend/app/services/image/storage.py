@@ -7,7 +7,8 @@ from Supabase storage.
 
 import logging
 import uuid
-from typing import Optional, Dict, Any, Union, List
+import requests
+from typing import Optional, Dict, Any, Union, List, Tuple
 from io import BytesIO
 from datetime import datetime
 
@@ -17,6 +18,8 @@ from PIL import Image
 
 from app.core.exceptions import ImageNotFoundError, ImageStorageError
 from app.core.config import settings
+from app.utils.jwt_utils import create_supabase_jwt, create_supabase_jwt_for_storage
+from app.utils.security import mask_id, mask_path
 
 logger = logging.getLogger(__name__)
 
@@ -39,23 +42,25 @@ class ImageStorageService:
     def store_image(
         self, 
         image_data: Union[bytes, BytesIO, UploadFile], 
+        session_id: str,
         concept_id: Optional[str] = None,
         file_name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False
-    ) -> str:
+    ) -> Tuple[str, str]:
         """
-        Store an image in the storage bucket.
+        Store an image in the storage bucket with session ID metadata.
         
         Args:
             image_data: Image data as bytes, BytesIO or UploadFile
+            session_id: Session ID for access control
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name (generated if not provided)
             metadata: Optional metadata to store with the image
             is_palette: Whether the image is a palette (uses palette-images bucket)
             
         Returns:
-            Public URL of the stored image
+            Tuple[str, str]: (image_path, image_url)
             
         Raises:
             ImageStorageError: If image storage fails
@@ -93,61 +98,68 @@ class ImageStorageService:
                 # Extract extension from provided file_name
                 if "." in file_name:
                     ext = file_name.split(".")[-1].lower()
-                
-            # Create subfolder path based on concept_id if provided
-            path = f"{concept_id}/{file_name}" if concept_id else file_name
-                
-            # Upload to storage
-            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                # Set content type based on extension
-                content_type = "image/png"  # Default content type
-                if ext == "jpg" or ext == "jpeg":
-                    content_type = "image/jpeg"
-                elif ext == "gif":
-                    content_type = "image/gif"
-                elif ext == "webp":
-                    content_type = "image/webp"
-                
-                # Set file options with correct content type
-                file_options = {"content-type": content_type}
-                
-                self.supabase.client.storage.from_(bucket_name).upload(
-                    path=path,
-                    file=content,
-                    file_options=file_options
-                )
-                
-                # Get the public URL
-                image_url = self.supabase.client.storage.from_(bucket_name).get_public_url(path)
-            else:
-                # Direct access if storage attribute exists on the client
-                # Set content type based on extension
-                content_type = "image/png"  # Default content type
-                if ext == "jpg" or ext == "jpeg":
-                    content_type = "image/jpeg"
-                elif ext == "gif":
-                    content_type = "image/gif"
-                elif ext == "webp":
-                    content_type = "image/webp"
-                
-                # Set file options with correct content type
-                file_options = {"content-type": content_type}
-                
-                self.supabase.storage.from_(bucket_name).upload(
-                    path=path,
-                    file=content,
-                    file_options=file_options
-                )
-                
-                # Get the public URL
-                image_url = self.supabase.storage.from_(bucket_name).get_public_url(path)
             
-            # Store metadata if provided and we really need to store it
-            # Currently we're not storing metadata so skip this to avoid errors
-            # if metadata and concept_id:
-            #     self._store_image_metadata(path, concept_id, bucket_name, metadata)
+            # Create path with session_id as the first folder segment
+            # This is CRITICAL for our RLS policy to work
+            if concept_id:
+                path = f"{session_id}/{concept_id}/{file_name}"
+            else:
+                path = f"{session_id}/{file_name}"
                 
-            return image_url
+            # Set content type based on extension
+            content_type = "image/png"  # Default content type
+            if ext == "jpg" or ext == "jpeg":
+                content_type = "image/jpeg"
+            elif ext == "gif":
+                content_type = "image/gif"
+            elif ext == "webp":
+                content_type = "image/webp"
+            
+            # Create JWT token for authentication (for Supabase Storage RLS)
+            token = create_supabase_jwt(session_id)
+            
+            # Prepare file metadata including session ID
+            file_metadata = {"owner_session_id": session_id}
+            if metadata:
+                file_metadata.update(metadata)
+                
+            # Use direct HTTP request with requests library for JWT authorization
+            # Get the API endpoint directly from settings instead of client objects
+            api_url = settings.SUPABASE_URL
+            api_key = settings.SUPABASE_KEY
+                
+            # Construct the storage upload URL
+            upload_url = f"{api_url}/storage/v1/object/{bucket_name}/{path}"
+            
+            # Set headers with JWT token and other required headers
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "apikey": api_key,
+                "Content-Type": content_type,
+                "x-upsert": "true"  # Update if exists
+            }
+            
+            # Upload the file with requests
+            response = requests.post(
+                upload_url,
+                headers=headers,
+                data=content
+            )
+            
+            # Check if upload was successful
+            if response.status_code not in (200, 201):
+                self.logger.error(f"Upload failed with status {response.status_code}: {response.text}")
+                raise ImageStorageError(f"Failed to upload image: {response.text}")
+                
+            # Generate signed URL with 3-day expiration
+            image_url = self.get_signed_url(path, is_palette=is_palette)
+            
+            # Log success with masked session ID
+            masked_session_id = mask_id(session_id)
+            masked_path = mask_path(path)
+            self.logger.info(f"Stored image for session {masked_session_id} at {masked_path}")
+                
+            return path, image_url
             
         except Exception as e:
             error_msg = f"Failed to store image: {str(e)}"
@@ -286,11 +298,8 @@ class ImageStorageService:
                 if "name" in item and not item.get("id", "").endswith("/"):  # Skip folders
                     full_path = f"{path}/{item['name']}" if path else item["name"]
                     
-                    # Get public URL based on the available access pattern
-                    if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                        url = self.supabase.client.storage.from_(bucket_name).get_public_url(full_path)
-                    else:
-                        url = self.supabase.storage.from_(bucket_name).get_public_url(full_path)
+                    # Get signed URL instead of public URL
+                    url = self.get_signed_url(full_path, is_palette)
                     
                     images.append({
                         "path": full_path,
@@ -309,31 +318,263 @@ class ImageStorageService:
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
 
-    def get_public_url(self, image_path: str, is_palette: bool = False) -> str:
+    def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 259200) -> str:
         """
-        Get the public URL for an image in storage.
+        Get a signed URL for an image with 3-day expiration by default.
         
         Args:
-            image_path: Path to the image in storage
-            is_palette: Whether this is a palette image (uses palette-images bucket)
+            path: Path to the image in storage
+            is_palette: Whether the image is a palette (uses palette-images bucket)
+            expiry_seconds: Expiration time in seconds (default: 3 days / 259200 seconds)
             
         Returns:
-            Public URL for the image
+            Signed URL of the image with temporary access
+        """
+        # Select the appropriate bucket
+        bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+        
+        # ENHANCED LOGGING: Debug actual bucket configuration values
+        self.logger.info(f"-------- DEBUG URL GENERATION --------")
+        self.logger.info(f"BUCKET CONFIG: concept_bucket={self.concept_bucket}, palette_bucket={self.palette_bucket}")
+        self.logger.info(f"BUCKET SELECTION: is_palette={is_palette}, using bucket_name={bucket_name}")
+        self.logger.info(f"PATH: {mask_path(path)}")
+        
+        # Log some useful information
+        self.logger.info(f"Getting signed URL for path={mask_path(path)}, bucket={bucket_name}, is_palette={is_palette}, expiry={expiry_seconds}s")
+        
+        try:
+            # Use Supabase's SDK to create a signed URL
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                response = self.supabase.client.storage.from_(bucket_name).create_signed_url(
+                    path=path,
+                    expires_in=expiry_seconds
+                )
+            else:
+                # Legacy client compatibility
+                response = self.supabase.storage.from_(bucket_name).create_signed_url(
+                    path=path,
+                    expires_in=expiry_seconds
+                )
+            
+            self.logger.info(f"SDK create_signed_url response: {response}")
+            
+            # Check for signedUrl (lowercase u) or signedURL (uppercase URL)
+            if response and isinstance(response, dict):
+                # Extract data field if it exists (newer SDK versions)
+                data = response.get('data', response)
+                
+                # Check if we got data
+                if not data:
+                    self.logger.warning(f"No data in signed URL response: {response}")
+                    
+                if isinstance(data, dict):
+                    # Try each known field name for the signed URL
+                    signed_url = data.get('signedUrl') or data.get('signedURL')
+                    
+                    if signed_url:
+                        self.logger.info(f"Generated signed URL: {mask_path(signed_url)}")
+                        
+                        # Ensure the URL is absolute
+                        if signed_url.startswith('/'):
+                            from app.core.config import settings
+                            signed_url = f"{settings.SUPABASE_URL}{signed_url}"
+                            self.logger.info(f"Converted to absolute URL: {mask_path(signed_url)}")
+                            
+                        return signed_url
+            
+            self.logger.warning(f"Failed to generate signed URL with SDK: {response}")
+            
+            # Fallback to manual REST API approach
+            from app.utils.jwt_utils import create_supabase_jwt_for_storage
+            from app.core.config import settings
+            
+            # Generate a signed URL using REST API directly
+            api_url = settings.SUPABASE_URL
+            api_key = settings.SUPABASE_KEY
+            
+            # Create a proper JWT token specifically for signed URL
+            expiry = int(datetime.now().timestamp()) + expiry_seconds
+            jwt_token = create_supabase_jwt_for_storage(f"{bucket_name}/{path}", expiry)
+            
+            # Build the signed URL manually
+            signed_url = f"{api_url}/storage/v1/object/sign/{bucket_name}/{path}?token={jwt_token}"
+            self.logger.info(f"Created manual signed URL: {mask_path(signed_url)}")
+            
+            return signed_url
+            
+        except Exception as e:
+            self.logger.error(f"Error generating signed URL: {str(e)}")
+            
+            # Last resort fallback
+            try:
+                # Try to generate a signed URL using direct API call
+                from app.utils.jwt_utils import create_supabase_jwt_for_storage
+                from app.core.config import settings
+                
+                expiry = int(datetime.now().timestamp()) + expiry_seconds
+                jwt_token = create_supabase_jwt_for_storage(f"{bucket_name}/{path}", expiry)
+                
+                fallback_url = f"{settings.SUPABASE_URL}/storage/v1/object/sign/{bucket_name}/{path}?token={jwt_token}"
+                self.logger.warning(f"Using fallback URL: {mask_path(fallback_url)}")
+                return fallback_url
+            except Exception as inner_e:
+                self.logger.error(f"Even fallback method failed: {str(inner_e)}")
+                return f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{path}"
+
+    async def authenticate_url(self, path: str, session_id: str, is_palette: bool = False) -> str:
+        """
+        Get a signed URL for authenticated access.
+        
+        Args:
+            path: Path to the image in storage
+            session_id: Session ID for authentication
+            is_palette: Whether the image is a palette
+            
+        Returns:
+            Signed URL with temporary access
+        """
+        # Use our get_signed_url method which returns signed URLs
+        return self.get_signed_url(path, is_palette)
+
+    def get_image_with_token(
+        self,
+        path: str,
+        token: str,
+        is_palette: bool = False
+    ) -> bytes:
+        """
+        Get image data using a JWT token for authentication.
+        
+        Args:
+            path: Path to the image in storage
+            token: JWT token for authentication
+            is_palette: Whether this is a palette image
+            
+        Returns:
+            Image data as bytes
             
         Raises:
-            ImageStorageError: If URL generation fails
+            ImageNotFoundError: If image doesn't exist
+            ImageStorageError: On other errors
+        """
+        try:
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            
+            # Set Authorization header with the JWT token
+            headers = {
+                "Authorization": f"Bearer {token}"
+            }
+            
+            # Fetch image using the token
+            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                response = self.supabase.client.storage.from_(bucket_name).download(
+                    path=path,
+                    headers=headers
+                )
+            else:
+                response = self.supabase.storage.from_(bucket_name).download(
+                    path=path,
+                    headers=headers
+                )
+                
+            return response
+            
+        except Exception as e:
+            error_msg = f"Failed to get image {path}: {str(e)}"
+            self.logger.error(error_msg)
+            
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise ImageNotFoundError(f"Image not found: {path}")
+                
+            # Access denied errors
+            if "403" in str(e) or "forbidden" in str(e).lower() or "access denied" in str(e).lower():
+                self.logger.warning(f"Access denied to image {path}, possibly due to JWT validation failure")
+                raise ImageStorageError(f"Access denied to image: {path}")
+                
+            raise ImageStorageError(error_msg)
+
+    def get_image_by_path(self, path: str, is_palette: bool = False) -> bytes:
+        """
+        Retrieve an image from storage using the exact path we know exists.
+        This method is for internal use after storing an image when we know
+        the path is valid and want to avoid using a signed URL that may have 
+        cache or CDN issues.
+        
+        Args:
+            path: Path of the image in storage (e.g. session_id/concept_id/filename)
+            is_palette: Whether the image is a palette (uses palette-images bucket)
+            
+        Returns:
+            Image data as bytes
+            
+        Raises:
+            ImageNotFoundError: If image is not found
+            ImageStorageError: If image retrieval fails
         """
         try:
             # Select the appropriate bucket
             bucket_name = self.palette_bucket if is_palette else self.concept_bucket
             
-            # Get the public URL
-            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                return self.supabase.client.storage.from_(bucket_name).get_public_url(image_path)
-            else:
-                return self.supabase.storage.from_(bucket_name).get_public_url(image_path)
-                
-        except Exception as e:
-            error_msg = f"Failed to get public URL for image {image_path}: {str(e)}"
+            self.logger.info(f"Directly accessing image with path: {mask_path(path)} in bucket: {bucket_name}")
+            
+            # For Supabase, use the low-level REST API to get the file
+            # This bypasses any caching issues with signed URLs
+            api_url = settings.SUPABASE_URL
+            api_key = settings.SUPABASE_KEY  # Use the regular key instead of service key
+            
+            # Create a JWT token for access (we need this for bucket access)
+            session_id = path.split('/')[0]  # First segment is session_id
+            from app.utils.jwt_utils import create_supabase_jwt
+            token = create_supabase_jwt(session_id)
+            
+            # First try the standard object download path (using JWT for RLS)
+            download_url = f"{api_url}/storage/v1/object/{bucket_name}/{path}"
+            
+            # Set headers with JWT token for RLS
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "apikey": api_key
+            }
+            
+            # Get the file using JWT token for RLS authentication
+            response = requests.get(
+                download_url,
+                headers=headers
+            )
+            
+            # Check if successful
+            if response.status_code == 200:
+                return response.content
+            
+            # If standard access fails, try using the direct Supabase client download
+            # This works through our regular SDK methods
+            try:
+                if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                    response = self.supabase.client.storage.from_(bucket_name).download(path)
+                else:
+                    response = self.supabase.storage.from_(bucket_name).download(path)
+                return response
+            except Exception as e:
+                # If that also fails, log the error and continue to raise the original error
+                self.logger.warning(f"Failed to get image through SDK: {str(e)}")
+            
+            # Handle errors from original REST API call
+            error_msg = f"Failed to get image {path} (status: {response.status_code}): {response.text}"
             self.logger.error(error_msg)
+            
+            if response.status_code == 404:
+                raise ImageNotFoundError(f"Image not found: {path}")
+            
+            raise ImageStorageError(error_msg)
+            
+        except (ImageNotFoundError, ImageStorageError):
+            # Re-raise specific errors
+            raise
+        except Exception as e:
+            error_msg = f"Failed to get image {path}: {str(e)}"
+            self.logger.error(error_msg)
+            
+            if "404" in str(e) or "not found" in str(e).lower():
+                raise ImageNotFoundError(f"Image not found: {path}")
+                
             raise ImageStorageError(error_msg) 

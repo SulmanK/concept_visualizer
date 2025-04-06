@@ -15,6 +15,7 @@ interface ConceptData {
   initials: string;
   images?: string[];
   originalImage?: string;
+  image_url?: string;
 }
 
 interface RecentConceptsSectionProps {

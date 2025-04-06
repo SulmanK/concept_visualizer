@@ -45,7 +45,7 @@ class ImageServiceInterface(abc.ABC):
             image_type: Type of image (original, refined, thumbnail)
             
         Returns:
-            Public URL of the stored image
+            Signed URL of the stored image
             
         Raises:
             StorageError: If storing fails

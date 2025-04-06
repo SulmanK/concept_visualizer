@@ -191,7 +191,7 @@ export const RefinementSelectionPage: React.FC = () => {
           <div className="flex items-center cursor-pointer" onClick={() => toggleExpandConcept(concept.id)}>
             <div className="w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-indigo-100">
               <img 
-                src={concept.base_image_url} 
+                src={concept.image_url || concept.base_image_url} 
                 alt={concept.logo_description || 'Concept'} 
                 className="w-full h-full object-cover"
               />
@@ -256,11 +256,11 @@ export const RefinementSelectionPage: React.FC = () => {
                 <div 
                   className={`w-32 h-32 m-2 rounded-md overflow-hidden border-2 cursor-pointer hover:shadow-md transition-all flex flex-col
                     ${isOriginalSelected ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-indigo-100 hover:border-indigo-300'}`}
-                  onClick={() => handleSelectVariation(concept.id, concept.base_image_url, true)}
+                  onClick={() => handleSelectVariation(concept.id, concept.image_url || concept.base_image_url, true)}
                 >
                   <div className="h-24 overflow-hidden">
                     <img 
-                      src={concept.base_image_url} 
+                      src={concept.image_url || concept.base_image_url} 
                       alt="Original" 
                       className="w-full h-full object-cover" 
                     />

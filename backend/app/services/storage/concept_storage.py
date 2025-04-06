@@ -40,7 +40,8 @@ class ConceptStorageService(StorageServiceInterface):
                 - session_id: Session ID to associate with the concept
                 - logo_description: User's logo description
                 - theme_description: User's theme description
-                - base_image_path: Path to the generated base image
+                - image_path: Path to the generated base image
+                - image_url: URL to the generated base image (optional)
                 - color_palettes: Optional list of color palette dictionaries
                 
         Returns:
@@ -52,7 +53,8 @@ class ConceptStorageService(StorageServiceInterface):
         try:
             # Extract required fields
             session_id = concept_data.get("session_id")
-            base_image_path = concept_data.get("base_image_path")
+            image_path = concept_data.get("image_path")
+            image_url = concept_data.get("image_url")
             logo_description = concept_data.get("logo_description", "")
             theme_description = concept_data.get("theme_description", "")
             color_palettes = concept_data.get("color_palettes", [])
@@ -66,8 +68,12 @@ class ConceptStorageService(StorageServiceInterface):
                 "session_id": session_id,
                 "logo_description": logo_description,
                 "theme_description": theme_description,
-                "base_image_path": base_image_path
+                "image_path": image_path
             }
+            
+            # Add image_url if provided
+            if image_url:
+                core_concept_data["image_url"] = image_url
             
             # Store the concept
             concept = self.concept_storage.store_concept(core_concept_data)
@@ -92,6 +98,11 @@ class ConceptStorageService(StorageServiceInterface):
                         "description": palette.get("description"),
                         "image_path": palette.get("image_path")
                     }
+                    
+                    # Add image_url if provided
+                    if palette.get("image_url"):
+                        variation["image_url"] = palette.get("image_url")
+                        
                     variations.append(variation)
                 
                 variations_result = self.concept_storage.store_color_variations(variations)
@@ -127,7 +138,7 @@ class ConceptStorageService(StorageServiceInterface):
                 self.logger.warning(f"Concept {masked_concept_id} not found")
                 raise NotFoundError(f"Concept with ID {masked_concept_id} not found")
             
-            # Add public URLs for images
+            # Add signed URLs for images
             base_image_url = self.image_storage.get_image_url(
                 concept_data["base_image_path"], 
                 "concept-images"
@@ -292,7 +303,7 @@ class ConceptStorageService(StorageServiceInterface):
             else:
                 concepts = self.concept_storage.get_recent_concepts(None, limit, offset)
             
-            # Add public URLs for all images
+            # Add signed URLs for all images
             for concept in concepts:
                 base_image_url = self.image_storage.get_image_url(
                     concept["base_image_path"], 

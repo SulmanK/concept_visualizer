@@ -27,6 +27,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "redis>=5.0.0",
     "upstash-redis>=1.0.0",
+    "python-jose>=3.3.0",
 ]
 
 [project.optional-dependencies]

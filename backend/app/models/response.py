@@ -6,7 +6,8 @@ This module defines the response models used across the API endpoints.
 
 from typing import List, Optional, Dict, Any
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, AnyUrl, field_validator
+import re
 
 
 class ColorPalette(BaseModel):
@@ -29,7 +30,16 @@ class PaletteVariation(BaseModel):
     name: str = Field(..., description="Name of the palette variation")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
-    image_url: HttpUrl = Field(..., description="URL of the image with this palette")
+    image_url: str = Field(..., description="URL of the image with this palette")
+    
+    @field_validator('image_url')
+    @classmethod
+    def ensure_absolute_url(cls, v):
+        """Ensure the URL is absolute by adding Supabase URL if needed."""
+        from app.core.config import settings
+        if v and v.startswith('/object/sign/'):
+            return f"{settings.SUPABASE_URL}{v}"
+        return v
 
 
 class GenerationResponse(BaseModel):
@@ -41,7 +51,7 @@ class GenerationResponse(BaseModel):
     created_at: str = Field(..., description="Creation timestamp")
     
     # For backward compatibility - points to the first variation
-    image_url: HttpUrl = Field(..., description="URL of the default generated image")
+    image_url: str = Field(..., description="URL of the default generated image")
     color_palette: Optional[ColorPalette] = Field(
         None,
         description="Generated color palette (deprecated format, kept for backward compatibility)"
@@ -54,7 +64,7 @@ class GenerationResponse(BaseModel):
     )
     
     # Optional fields for refinement responses
-    original_image_url: Optional[HttpUrl] = Field(
+    original_image_url: Optional[str] = Field(
         None,
         description="URL of the original image (for refinements)"
     )
@@ -62,6 +72,17 @@ class GenerationResponse(BaseModel):
         None,
         description="Prompt used for refinement"
     )
+    
+    @field_validator('image_url', 'original_image_url')
+    @classmethod
+    def ensure_absolute_url(cls, v):
+        """Ensure the URL is absolute by adding Supabase URL if needed."""
+        if not v:
+            return v
+        from app.core.config import settings
+        if v.startswith('/object/sign/'):
+            return f"{settings.SUPABASE_URL}{v}"
+        return v
 
 
 class SVGConversionResponse(BaseModel):

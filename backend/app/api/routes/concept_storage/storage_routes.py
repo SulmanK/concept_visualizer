@@ -156,7 +156,7 @@ async def get_recent_concepts(
         if is_new_session:
             return []
         
-        # Get recent concepts with public image URLs using commons
+        # Get recent concepts with signed image URLs using commons
         return await commons.storage_service.get_recent_concepts(session_id)
     except Exception as e:
         logger.error(f"Error fetching recent concepts: {str(e)}")

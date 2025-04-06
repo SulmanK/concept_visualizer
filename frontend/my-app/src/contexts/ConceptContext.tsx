@@ -3,9 +3,9 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { fetchRecentConcepts, ConceptData, ColorVariationData, getPublicImageUrl } from '../services/supabaseClient';
+import { fetchRecentConcepts, ConceptData, ColorVariationData, supabase } from '../services/supabaseClient';
 import { getSessionId, syncSession } from '../services/sessionManager';
-import { supabase } from '../services/supabaseClient';
+import { getBucketName } from '../services/configService';
 
 interface ConceptContextType {
   // Recent concepts data
@@ -105,34 +105,21 @@ export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) =>
         console.error('Error syncing session, will try to fetch concepts anyway:', syncError);
       }
       
-      // Now fetch the concepts from Supabase
+      // Use the improved fetchRecentConcepts function that handles signed URLs
       console.log('Fetching recent concepts from Supabase...');
-      const { data: recentConcepts, error: fetchError } = await supabase
-        .from('concepts')
-        .select('*, color_variations(*)')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-        
-      if (fetchError) {
-        throw new Error(`Error fetching concepts: ${fetchError.message}`);
-      }
+      const concepts = await fetchRecentConcepts(sessionId, 10);
       
-      console.log(`Received ${recentConcepts?.length || 0} concepts from Supabase`);
-      
-      // Process concepts to add image URLs
-      if (recentConcepts && recentConcepts.length > 0) {
-        const processedConcepts = recentConcepts.map(concept => ({
-          ...concept,
-          base_image_url: getPublicImageUrl(concept.base_image_path, 'concept'),
-          color_variations: (concept.color_variations || []).map((variation: any) => ({
-            ...variation,
-            image_url: getPublicImageUrl(variation.image_path, 'palette')
-          }))
-        }));
+      if (concepts && concepts.length > 0) {
+        // Log the first concept's image URL fields to help with debugging
+        const firstConcept = concepts[0];
+        console.log(`First concept image URLs:`, {
+          image_url: firstConcept.image_url,
+          base_image_url: firstConcept.base_image_url,
+          has_variations: firstConcept.color_variations && firstConcept.color_variations.length > 0
+        });
         
-        setRecentConcepts(processedConcepts);
-        console.log(`Processed and set ${processedConcepts.length} concepts`);
+        setRecentConcepts(concepts);
+        console.log(`Processed and set ${concepts.length} concepts`);
       } else {
         console.log('No concepts found for the current session');
         setRecentConcepts([]);

@@ -30,8 +30,8 @@ class ConceptSummary(APIBaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     logo_description: str = Field(..., description="Description of the logo")
     theme_description: str = Field(..., description="Description of the theme/color scheme")
-    base_image_url: str = Field(..., description="URL to the base concept image")
-    base_image_path: str = Field(..., description="Storage path for the base concept image")
+    image_url: str = Field(..., description="URL to the concept image")
+    image_path: str = Field(..., description="Storage path for the concept image")
     color_variations: List[ColorPalette] = Field(..., description="Color variations for this concept")
 
 
@@ -43,8 +43,8 @@ class ConceptDetail(APIBaseModel):
     session_id: uuid.UUID = Field(..., description="ID of the session that created this concept")
     logo_description: str = Field(..., description="Description of the logo")
     theme_description: str = Field(..., description="Description of the theme/color scheme")
-    base_image_url: str = Field(..., description="URL to the base concept image")
-    base_image_path: str = Field(..., description="Storage path for the base concept image")
+    image_url: str = Field(..., description="URL to the concept image")
+    image_path: str = Field(..., description="Storage path for the concept image")
     color_variations: List[ColorPalette] = Field(..., description="Color variations for this concept")
 
 
@@ -54,7 +54,8 @@ class ConceptCreate(APIBaseModel):
     session_id: uuid.UUID = Field(..., description="ID of the session creating this concept")
     logo_description: str = Field(..., description="Description of the logo")
     theme_description: str = Field(..., description="Description of the theme/color scheme")
-    base_image_path: str = Field(..., description="Storage path for the base concept image")
+    image_path: str = Field(..., description="Storage path for the concept image")
+    image_url: Optional[str] = Field(None, description="URL to the concept image")
     
 
 class ColorVariationCreate(APIBaseModel):
@@ -65,3 +66,4 @@ class ColorVariationCreate(APIBaseModel):
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
     image_path: str = Field(..., description="Storage path for the variation image") 
+    image_url: Optional[str] = Field(None, description="URL to the variation image") 

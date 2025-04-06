@@ -49,7 +49,7 @@ class ImageService:
             session_id: Current session ID
             
         Returns:
-            Tuple of (storage_path, public_url) or (None, None) on error
+            Tuple of (storage_path, signed_url) or (None, None) on error
         """
         try:
             # Generate image using JigsawStack
@@ -89,11 +89,11 @@ class ImageService:
             # Set the storage path
             storage_path = unique_filename
                 
-            # Get public URL
-            self.logger.info(f"Getting public URL for image: {masked_filename}")
-            public_url = self.image_storage.get_image_url(storage_path, "concept-images")
+            # Get signed URL
+            self.logger.info(f"Getting signed URL for image: {masked_filename}")
+            signed_url = self.image_storage.get_image_url(storage_path, "concept-images")
             
-            return storage_path, public_url
+            return storage_path, signed_url
         except Exception as e:
             self.logger.error(f"Error in generate_and_store_image: {e}")
             return None, None
@@ -114,7 +114,7 @@ class ImageService:
             strength: How much to change the original (0.0-1.0)
             
         Returns:
-            Tuple of (storage_path, public_url) or (None, None) on error
+            Tuple of (storage_path, signed_url) or (None, None) on error
         """
         try:
             # Refine image using JigsawStack
@@ -131,38 +131,41 @@ class ImageService:
             
             self.logger.info(f"Image refined successfully. Binary data received: {len(image_data)} bytes")
                 
-            # Generate a unique filename and upload to Supabase Storage
-            masked_session = mask_id(session_id)
-            self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {masked_session}")
-            
-            # Determine image format
-            img = Image.open(BytesIO(image_data))
-            format_ext = img.format.lower() if img.format else "png"
-            
-            # Generate a unique filename with the correct extension
-            unique_id = str(uuid.uuid4())
-            unique_filename = f"{session_id}/{unique_id}.{format_ext}"
-            masked_filename = mask_path(unique_filename)
-            
-            # Upload to Supabase Storage
-            result = self.image_storage.upload(
-                path=unique_filename,
-                file=image_data,
-                file_options={"content-type": f"image/{format_ext}"}
-            )
-            
-            if not result:
-                self.logger.error("Failed to upload refined image to Supabase Storage")
+            # Generate a unique filename and upload to Supabase Storage using store_image method
+            try:
+                # Determine image format
+                img = Image.open(BytesIO(image_data))
+                format_ext = img.format.lower() if img.format else "png"
+                
+                # Generate a unique ID and filename
+                unique_id = str(uuid.uuid4())
+                filename = f"{unique_id}.{format_ext}"
+                unique_filename = f"{session_id}/{filename}"
+                
+                # Log the operation with masked paths
+                masked_session = mask_id(session_id)
+                masked_filename = mask_path(unique_filename)
+                self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {masked_session}")
+                
+                # Store the image using the store_image method
+                signed_url = self.image_storage.store_image(
+                    image_data=image_data,
+                    session_id=session_id,
+                    file_name=filename
+                )
+                
+                if not signed_url:
+                    self.logger.error("Failed to upload refined image to Supabase Storage")
+                    return None, None
+                
+                # Set the storage path to the consistent filename
+                storage_path = unique_filename
+                self.logger.info(f"Getting signed URL for refined image: {masked_filename}")
+                
+                return storage_path, signed_url
+            except Exception as e:
+                self.logger.error(f"Failed to upload refined image: {str(e)}")
                 return None, None
-                
-            # Set the storage path
-            storage_path = unique_filename
-                
-            # Get public URL
-            self.logger.info(f"Getting public URL for refined image: {masked_filename}")
-            public_url = self.image_storage.get_image_url(storage_path, "concept-images")
-            
-            return storage_path, public_url
         except Exception as e:
             self.logger.error(f"Error in refine_and_store_image: {e}")
             return None, None
@@ -209,33 +212,39 @@ class ImageService:
                 
                 # Generate a unique filename for the palette variation
                 unique_id = str(uuid.uuid4())
-                unique_filename = f"{session_id}/palette_{unique_id}.png"
-                masked_filename = mask_path(unique_filename)
+                filename = f"palette_{unique_id}.png"
                 
-                # Upload to Supabase Storage
-                result = self.image_storage.upload(
-                    path=unique_filename,
-                    file=palette_image_data,
-                    file_options={"content-type": "image/png"}
-                )
-                
-                if not result:
-                    self.logger.error(f"Failed to upload palette variation: {palette['name']}")
+                # Upload to Supabase Storage using store_image method
+                try:
+                    # The store_image method will use the palette bucket and return a tuple of (path, url)
+                    palette_image_path, palette_image_url = self.image_storage.store_image(
+                        image_data=palette_image_data,
+                        session_id=session_id,
+                        file_name=filename,
+                        is_palette=True
+                    )
+                    
+                    if not palette_image_path or not palette_image_url:
+                        self.logger.error(f"Failed to upload palette variation: {palette['name']}")
+                        continue
+                    
+                    # For debugging - log the path and URL received
+                    self.logger.info(f"Stored palette variation at path: {palette_image_path}")
+                    self.logger.info(f"Received palette image URL: {palette_image_url}")
+                    
+                    # Add paths to palette dict
+                    palette_copy = palette.copy()
+                    # Store both the path and the full signed URL
+                    palette_copy["image_path"] = palette_image_path
+                    palette_copy["image_url"] = palette_image_url
+                    # Add the bucket information explicitly to help with retrieval
+                    palette_copy["bucket"] = self.image_storage.palette_bucket
+                    result_palettes.append(palette_copy)
+                    
+                    self.logger.info(f"Created palette variation: {mask_path(palette_image_path)}")
+                except Exception as e:
+                    self.logger.error(f"Error creating palette variation: {str(e)}")
                     continue
-                
-                # Get public URL
-                palette_image_url = self.image_storage.get_image_url(
-                    unique_filename, 
-                    "palette-images"
-                )
-                
-                self.logger.info(f"Created palette variation: {masked_filename}")
-                
-                # Add paths to palette dict
-                palette_copy = palette.copy()
-                palette_copy["image_path"] = unique_filename
-                palette_copy["image_url"] = palette_image_url
-                result_palettes.append(palette_copy)
                 
             except Exception as e:
                 self.logger.error(f"Error creating palette variation: {str(e)}")
