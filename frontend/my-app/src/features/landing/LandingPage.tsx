@@ -198,8 +198,10 @@ const LandingPageContent: React.FC = () => {
       ],
       gradient: { from: 'blue-400', to: 'indigo-500' },
       initials: 'TC',
-      images: ['/samples/tech-company.png'],
-      originalImage: '/samples/tech-company.png' // Include original image
+      // Don't use the images array for samples
+      images: [],
+      // Use simple path directly without going through Supabase storage
+      image_url: '/samples/sample-1.png'
     },
     {
       id: 'sample-fs',
@@ -211,8 +213,10 @@ const LandingPageContent: React.FC = () => {
       ],
       gradient: { from: 'indigo-400', to: 'purple-500' },
       initials: 'FS',
-      images: ['/samples/fashion-studio.png'],
-      originalImage: '/samples/fashion-studio.png' // Include original image
+      // Don't use the images array for samples
+      images: [],
+      // Use simple path directly without going through Supabase storage
+      image_url: '/samples/sample-2.png'
     },
     {
       id: 'sample-ep',
@@ -224,8 +228,10 @@ const LandingPageContent: React.FC = () => {
       ],
       gradient: { from: 'blue-400', to: 'teal-500' },
       initials: 'EP',
-      images: ['/samples/eco-product.png'],
-      originalImage: '/samples/eco-product.png' // Include original image
+      // Don't use the images array for samples
+      images: [],
+      // Use simple path directly without going through Supabase storage  
+      image_url: '/samples/sample-3.png'
     },
   ];
   

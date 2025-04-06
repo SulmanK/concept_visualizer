@@ -132,6 +132,12 @@ export interface ConceptCardProps {
    * Text to display on the edit button (default: "Edit")
    */
   editButtonText?: string;
+  
+  /**
+   * Direct image URL for sample concepts
+   * This bypasses the Supabase storage processing
+   */
+  sampleImageUrl?: string;
 }
 
 /**
@@ -148,6 +154,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   onEdit,
   onViewDetails,
   editButtonText = "Edit",
+  sampleImageUrl
 }) => {
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
@@ -181,6 +188,12 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   
   // Get the processed image URL for the current selected variation
   const currentImageUrl = (() => {
+    // If sample image URL is provided, use it directly
+    if (sampleImageUrl) {
+      console.log(`ConceptCard: ${title} - Using sample image URL: ${sampleImageUrl}`);
+      return sampleImageUrl;
+    }
+    
     // Debug what images are available
     console.log(`ConceptCard: ${title} - Selected variation: ${selectedVariationIndex}`);
     console.log(`ConceptCard: ${title} - Has images array: ${images ? 'yes' : 'no'}, length: ${images?.length || 0}`);
@@ -204,7 +217,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   })();
   
   return (
-    <div className="overflow-hidden rounded-lg shadow-modern border border-indigo-100 bg-white/90 backdrop-blur-sm hover-lift hover:shadow-modern-hover transition-all duration-300 scale-in">
+    <div className="overflow-hidden rounded-lg shadow-modern border border-indigo-100 bg-white/90 backdrop-blur-sm hover-lift hover:shadow-modern-hover transition-all duration-300 scale-in h-full flex flex-col">
       {/* Header with image or gradient + initials */}
       <div 
         className={`h-40 p-4 flex items-center justify-center`}
@@ -231,7 +244,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       </div>
       
       {/* Content area */}
-      <div className="p-4">
+      <div className="p-4 flex-grow flex flex-col">
         <h4 className="font-semibold text-indigo-900">{title}</h4>
         <p className="text-sm text-gray-600 mt-1">{description}</p>
         
@@ -252,43 +265,55 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           )}
           
           {/* Color variations */}
-          {hasVariations && colorVariations.map((variation, index) => {
-            const color = variation[0] || '#4F46E5';
-            const isLight = isLightColor(color);
+          {colorVariations.map((colorSet, variationIndex) => {
+            // Adjust the index to account for the original option
+            const displayIndex = includeOriginal ? variationIndex + 1 : variationIndex;
+            
+            // Get the primary color (first color in the set)
+            const primaryColor = colorSet[0] || '#4F46E5';
             
             return (
               <button 
-                key={`${color}-${index}`}
-                onClick={() => handleVariationSelect(includeOriginal ? index + 1 : index)}
-                className={`inline-block w-6 h-6 rounded-full transition-all duration-300 ${
-                  selectedVariationIndex === (includeOriginal ? index + 1 : index) 
-                    ? 'ring-2 ring-indigo-500 ring-offset-2' 
-                    : 'hover-scale'
-                } ${isLight ? 'border-2 border-gray-400' : ''}`}
-                style={{ backgroundColor: color }}
-                title={`Color Palette ${index + 1}`}
-              />
+                key={`variation-${variationIndex}`}
+                onClick={() => handleVariationSelect(displayIndex)}
+                className={`inline-block w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  selectedVariationIndex === displayIndex ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
+                }`}
+                style={{ backgroundColor: primaryColor, color: isLightColor(primaryColor) ? '#1E293B' : 'white' }}
+                title={`Color variation ${variationIndex + 1}`}
+              >
+                <span className="text-xs">{variationIndex + 1}</span>
+              </button>
             );
           })}
         </div>
+
+        {/* Spacer to push buttons to bottom */}
+        <div className="flex-grow"></div>
         
-        {/* Actions */}
+        {/* Action buttons */}
         <div className="mt-4 flex justify-between">
           {onEdit && (
             <button 
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
               onClick={() => onEdit(selectedVariationIndex)}
+              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
               {editButtonText}
             </button>
           )}
           
           {onViewDetails && (
             <button 
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
               onClick={onViewDetails}
+              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
             >
-              View Details
+              <span className="mr-1">View Details</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
             </button>
           )}
         </div>
