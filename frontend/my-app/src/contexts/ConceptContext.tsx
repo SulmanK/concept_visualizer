@@ -2,10 +2,12 @@
  * Context for managing concept data throughout the application
  */
 
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
-import { fetchRecentConcepts, ConceptData, ColorVariationData, supabase } from '../services/supabaseClient';
-import { getBucketName } from '../services/configService';
+import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect } from 'react';
+import { ConceptData } from '../services/supabaseClient';
 import { useAuth } from './AuthContext';
+import { useRecentConcepts } from '../hooks/useConceptQueries';
+import { useQueryClient } from '@tanstack/react-query';
+import { eventService, AppEvent } from '../services/eventService';
 
 interface ConceptContextType {
   // Recent concepts data
@@ -14,7 +16,7 @@ interface ConceptContextType {
   errorLoadingConcepts: string | null;
   
   // Actions
-  refreshConcepts: () => Promise<void>;
+  refreshConcepts: () => void;
   clearError: () => void;
 }
 
@@ -23,7 +25,7 @@ const ConceptContext = createContext<ConceptContextType>({
   recentConcepts: [],
   loadingConcepts: false,
   errorLoadingConcepts: null,
-  refreshConcepts: async () => {},
+  refreshConcepts: () => {},
   clearError: () => {}
 });
 
@@ -38,65 +40,55 @@ interface ConceptProviderProps {
  * Provider component for concept data
  */
 export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) => {
-  const { user, isLoading: authLoading } = useAuth();
-  const [recentConcepts, setRecentConcepts] = useState<ConceptData[]>([]);
-  const [loadingConcepts, setLoadingConcepts] = useState<boolean>(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [errorLoadingConcepts, setErrorLoadingConcepts] = useState<string | null>(null);
   
-  // Fetch concepts when authentication is ready
-  useEffect(() => {
-    if (!authLoading && user) {
-      console.log('ConceptContext: Auth ready, refreshing concepts');
-      refreshConcepts();
+  // Use React Query to fetch concepts
+  const { 
+    data: recentConcepts = [], 
+    isLoading: loadingConcepts, 
+    error 
+  } = useRecentConcepts(user?.id, 10);
+  
+  // Update error state from React Query error
+  React.useEffect(() => {
+    if (error) {
+      console.error('Error loading concepts:', error);
+      setErrorLoadingConcepts(error instanceof Error ? error.message : 'Unknown error loading concepts');
+    } else {
+      setErrorLoadingConcepts(null);
     }
-  }, [authLoading, user]);
+  }, [error]);
   
   /**
    * Refresh the list of concepts from the API
    */
-  const refreshConcepts = async () => {
-    console.log('Refreshing concepts');
-    setLoadingConcepts(true);
-    setErrorLoadingConcepts(null);
-    
-    // Get the current user ID
-    const userId = user?.id;
-    console.log(`Refreshing concepts for user ID: ${userId}`);
-    
-    if (!userId) {
-      console.error('No user ID available, cannot fetch concepts');
-      setErrorLoadingConcepts('No user ID available');
-      setLoadingConcepts(false);
-      return;
-    }
-    
-    try {
-      // Use the improved fetchRecentConcepts function that handles signed URLs
-      console.log('Fetching recent concepts from Supabase...');
-      const concepts = await fetchRecentConcepts(userId, 10);
-      
-      if (concepts && concepts.length > 0) {
-        // Log the first concept's image URL fields to help with debugging
-        const firstConcept = concepts[0];
-        console.log(`First concept image URLs:`, {
-          image_url: firstConcept.image_url,
-          base_image_url: firstConcept.base_image_url,
-          has_variations: firstConcept.color_variations && firstConcept.color_variations.length > 0
-        });
-        
-        setRecentConcepts(concepts);
-        console.log(`Processed and set ${concepts.length} concepts`);
-      } else {
-        console.log('No concepts found for the current user');
-        setRecentConcepts([]);
-      }
-    } catch (error) {
-      console.error('Error refreshing concepts:', error);
-      setErrorLoadingConcepts(error instanceof Error ? error.message : 'Unknown error loading concepts');
-    } finally {
-      setLoadingConcepts(false);
-    }
+  const refreshConcepts = () => {
+    console.log('Manually refreshing concepts via React Query');
+    // Invalidate the query cache to trigger a refetch
+    queryClient.invalidateQueries({ queryKey: ['concepts', 'recent', user?.id] });
   };
+  
+  // Listen for global concept events and refresh data
+  useEffect(() => {
+    // Listen for concept created and updated events
+    const createdUnsubscribe = eventService.subscribe(AppEvent.CONCEPT_CREATED, () => {
+      console.log('[ConceptContext] Concept created event received, refreshing data');
+      refreshConcepts();
+    });
+    
+    const updatedUnsubscribe = eventService.subscribe(AppEvent.CONCEPT_UPDATED, () => {
+      console.log('[ConceptContext] Concept updated event received, refreshing data');
+      refreshConcepts();
+    });
+    
+    // Clean up subscriptions on unmount
+    return () => {
+      createdUnsubscribe();
+      updatedUnsubscribe();
+    };
+  }, [user?.id]); // Re-subscribe when user changes
   
   /**
    * Clear any error messages

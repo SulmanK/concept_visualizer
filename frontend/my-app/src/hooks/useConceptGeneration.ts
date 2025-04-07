@@ -12,6 +12,7 @@ import {
 import { useConceptContext } from '../contexts/ConceptContext';
 import { RateLimitError } from '../services/apiClient';
 import { useErrorHandling } from './useErrorHandling';
+import { eventService, AppEvent } from '../services/eventService';
 
 export interface ConceptGenerationState {
   status: FormStatus;
@@ -91,6 +92,9 @@ export function useConceptGeneration() {
         
         // Refresh the recent concepts list after successful generation
         await refreshConcepts();
+        
+        // Emit an event to notify other components about the concept creation
+        eventService.emit(AppEvent.CONCEPT_CREATED, result);
       }
     } catch (err) {
       console.error('Concept generation error:', err);

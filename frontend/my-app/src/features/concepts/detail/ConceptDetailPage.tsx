@@ -2,84 +2,71 @@
  * Component for displaying detailed concept information
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
-import { ErrorBoundary } from '../../../components/ui';
-import { fetchConceptDetail, ConceptData, ColorVariationData } from '../../../services/supabaseClient';
-import { getSessionId } from '../../../services/sessionManager';
+import { ErrorBoundary, OptimizedImage } from '../../../components/ui';
+import { ColorVariationData } from '../../../services/supabaseClient';
+import { useAuth } from '../../../contexts/AuthContext';
 import { ExportOptions } from './components/ExportOptions';
+import { useConceptDetail } from '../../../hooks/useConceptQueries';
+import { eventService, AppEvent } from '../../../services/eventService';
 
 /**
  * Component to display concept details
  */
 const ConceptDetailContent: React.FC = () => {
-  const { conceptId } = useParams<{ conceptId: string }>();
+  const params = useParams();
+  const conceptId = params.conceptId || '';
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get('colorId');
   const showExport = searchParams.get('showExport') === 'true';
+  const { user } = useAuth();
   
-  const [concept, setConcept] = useState<ConceptData | null>(null);
+  // Use React Query to fetch the concept detail
+  const { 
+    data: concept, 
+    isLoading: loading, 
+    error: queryError 
+  } = useConceptDetail(conceptId, user?.id);
+  
   const [selectedVariation, setSelectedVariation] = useState<ColorVariationData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Load concept details when component mounts
+  // Update error state based on query error
   useEffect(() => {
-    const loadConceptDetail = async () => {
-      if (!conceptId) {
-        setError('No concept ID provided');
-        setLoading(false);
-        return;
-      }
-      
-      const sessionId = getSessionId();
-      if (!sessionId) {
-        setError('No session found');
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const conceptData = await fetchConceptDetail(conceptId, sessionId);
-        
-        if (!conceptData) {
-          setError('Concept not found');
-          setLoading(false);
-          return;
-        }
-        
-        setConcept(conceptData);
-        
-        // If colorId is provided in the URL, select that specific variation
-        if (colorId && conceptData.color_variations) {
-          const foundVariation = conceptData.color_variations.find(v => v.id === colorId);
-          if (foundVariation) {
-            setSelectedVariation(foundVariation);
-          } else {
-            // If the specified colorId doesn't exist, fall back to the first variation
-            setSelectedVariation(conceptData.color_variations[0]);
-          }
+    if (queryError) {
+      setError('Error loading concept details');
+      console.error('Error loading concept:', queryError);
+    } else if (!conceptId) {
+      setError('No concept ID provided');
+    } else if (!concept && !loading) {
+      setError('Concept not found');
+    } else {
+      setError(null);
+    }
+  }, [queryError, concept, conceptId, loading]);
+  
+  // Set selected variation when concept or colorId changes
+  useEffect(() => {
+    if (concept && concept.color_variations) {
+      // If colorId is provided in the URL, select that specific variation
+      if (colorId) {
+        const foundVariation = concept.color_variations.find(v => v.id === colorId);
+        if (foundVariation) {
+          setSelectedVariation(foundVariation);
         } else {
-          // If no colorId specified, use original image (null variation)
-          setSelectedVariation(null);
+          // If the specified colorId doesn't exist, fall back to the first variation
+          setSelectedVariation(concept.color_variations[0]);
         }
-        
-        setLoading(false);
-      } catch (err) {
-        setError('Error loading concept details');
-        setLoading(false);
-        console.error('Error loading concept:', err);
+      } else {
+        // If no colorId specified, use original image (null variation)
+        setSelectedVariation(null);
       }
-    };
-    
-    loadConceptDetail();
-  }, [conceptId, colorId]);
+    }
+  }, [concept, colorId]);
   
   // Handle loading state
   if (loading) {
@@ -176,11 +163,14 @@ const ConceptDetailContent: React.FC = () => {
           {/* Left column - Images */}
           <div className="w-full md:w-1/2">
             {/* Main image - either selected variation or base image */}
-            <div className="rounded-lg overflow-hidden shadow-md mb-6">
-              <img 
-                src={selectedVariation ? selectedVariation.image_url : concept.image_url || concept.base_image_url} 
+            <div className="rounded-lg overflow-hidden shadow-md mb-6 bg-indigo-50 flex items-center justify-center" style={{ aspectRatio: '1/1', padding: '40px' }}>
+              <OptimizedImage 
+                src={selectedVariation ? (selectedVariation.image_url || '') : (concept.image_url || concept.base_image_url || '')} 
                 alt={concept.logo_description}
-                className="w-full h-auto object-contain bg-indigo-50"
+                className="max-w-full max-h-full w-auto h-auto object-contain"
+                objectFit="scale-down"
+                lazy={false} // Load this image immediately as it's above the fold
+                backgroundColor="#EEF2FF"
               />
             </div>
             
@@ -194,44 +184,50 @@ const ConceptDetailContent: React.FC = () => {
               </div>
             </div>
             
-            {/* Variations thumbnails */}
+            {/* Color variations */}
             {concept.color_variations && concept.color_variations.length > 0 && (
-              <div>
-                <h3 className="text-md font-semibold text-indigo-700 mb-4">
-                  Select a Color Palette ({concept.color_variations && concept.color_variations.length + 1} options)
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-6">
-                  {/* Base image thumbnail */}
-                  <div className="flex flex-col items-center">
-                    <button 
-                      onClick={() => setSelectedVariation(null)}
-                      className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-3 ${!selectedVariation ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-transparent'} hover:shadow-lg transition duration-200 ease-in-out transform hover:scale-105`}
-                      title="Original image without color transformation"
-                    >
-                      <img 
-                        src={concept.image_url || concept.base_image_url} 
-                        alt="Original" 
-                        className="w-full h-full object-cover"
+              <div className="mt-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Base/original image option */}
+                  <div 
+                    className={`flex flex-col items-center cursor-pointer rounded-lg overflow-hidden transition-all ${
+                      selectedVariation === null ? 'ring-2 ring-indigo-500 shadow-md transform scale-[1.02]' : 'shadow hover:shadow-md'
+                    }`}
+                    onClick={() => setSelectedVariation(null)}
+                  >
+                    <div className="w-full aspect-square bg-indigo-50 overflow-hidden flex items-center justify-center p-3">
+                      <OptimizedImage
+                        src={concept.image_url || concept.base_image_url || ''}
+                        alt="Original concept"
+                        className="max-w-full max-h-full w-auto h-auto object-contain"
+                        objectFit="scale-down"
+                        lazy={true}
+                        backgroundColor="#EEF2FF"
                       />
-                    </button>
-                    <span className="text-sm font-semibold text-indigo-800 mt-2 text-center bg-indigo-50 px-2 py-1 rounded-md w-full shadow-sm">Original</span>
+                    </div>
+                    <span className="text-xs font-semibold text-indigo-800 mt-2 text-center truncate px-2 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem] shadow-sm">Original</span>
                   </div>
                   
-                  {/* Variation thumbnails */}
-                  {concept.color_variations.map((variation) => (
-                    <div key={variation.id} className="flex flex-col items-center">
-                      <button
-                        onClick={() => setSelectedVariation(variation)}
-                        className={`w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 border-3 ${selectedVariation?.id === variation.id ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-transparent'} hover:shadow-lg transition duration-200 ease-in-out transform hover:scale-105`}
-                        title={variation.palette_name}
-                      >
-                        <img 
-                          src={variation.image_url} 
-                          alt={variation.palette_name} 
-                          className="w-full h-full object-cover"
+                  {/* Variations */}
+                  {concept.color_variations.map(variation => (
+                    <div 
+                      key={variation.id}
+                      className={`flex flex-col items-center cursor-pointer rounded-lg overflow-hidden transition-all ${
+                        selectedVariation?.id === variation.id ? 'ring-2 ring-indigo-500 shadow-md transform scale-[1.02]' : 'shadow hover:shadow-md'
+                      }`}
+                      onClick={() => setSelectedVariation(variation)}
+                    >
+                      <div className="w-full aspect-square bg-indigo-50 overflow-hidden flex items-center justify-center p-3">
+                        <OptimizedImage
+                          src={variation.image_url || ''}
+                          alt={variation.palette_name}
+                          className="max-w-full max-h-full w-auto h-auto object-contain"
+                          objectFit="scale-down"
+                          lazy={true}
+                          backgroundColor="#EEF2FF"
                         />
-                      </button>
-                      <span className="text-sm font-semibold text-indigo-800 mt-2 text-center truncate px-2 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem] shadow-sm">{variation.palette_name}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-indigo-800 mt-2 text-center truncate px-2 py-1 bg-indigo-50 rounded-md w-full max-w-[6rem] shadow-sm">{variation.palette_name}</span>
                     </div>
                   ))}
                 </div>
@@ -436,6 +432,9 @@ const ConceptDetailContent: React.FC = () => {
  * Wrapper component with ErrorBoundary
  */
 export const ConceptDetailPage: React.FC = () => {
+  const params = useParams();
+  const conceptId = params.conceptId || '';
+  
   return (
     <ErrorBoundary
       errorMessage="We're having trouble loading this concept. Please try again or return to the home page."

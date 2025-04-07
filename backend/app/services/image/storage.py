@@ -444,7 +444,7 @@ class ImageStorageService:
                                 signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
                             signed_url = f"{settings.SUPABASE_URL}{signed_url}"
                             self.logger.info(f"Converted to absolute URL: {mask_path(signed_url)}")
-                        
+                            
                         return signed_url
             
             self.logger.warning(f"Failed to generate signed URL with SDK: {response}")

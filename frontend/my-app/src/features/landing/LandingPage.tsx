@@ -8,6 +8,7 @@ import { HowItWorks } from './components/HowItWorks';
 import { ConceptFormSection } from './components/ConceptFormSection';
 import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
+import { eventService, AppEvent } from '../../services/eventService';
 
 /**
  * Main landing page content component
@@ -34,6 +35,16 @@ const LandingPageContent: React.FC = () => {
     // to prevent an infinite loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Listen for concept update events to refresh the list
+  useEffect(() => {
+    const unsubscribe = eventService.subscribe(AppEvent.CONCEPT_UPDATED, () => {
+      console.log('[LandingPage] Concept updated event received, refreshing concepts');
+      refreshConcepts();
+    });
+    
+    return () => unsubscribe();
+  }, [refreshConcepts]);
   
   // Steps for how it works section
   const howItWorksSteps = [

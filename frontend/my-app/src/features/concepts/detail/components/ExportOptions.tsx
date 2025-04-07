@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ErrorMessage } from '../../../../components/ui';
+import { apiClient, RateLimitError } from '../../../../services/apiClient';
 
 export interface ExportOptionsProps {
   /**
-   * URL of the image to export
+   * URL of the image to process and download
    */
-  imageUrl: string;
+  imageUrl: string | undefined;
   
   /**
    * Title/name of the concept
@@ -20,10 +21,10 @@ export interface ExportOptionsProps {
   /**
    * Callback when the download button is clicked
    */
-  onDownload?: (format: string, size: string) => void;
+  onDownload?: (format: ExportFormat, size: ExportSize) => void;
 }
 
-type ExportFormat = 'png' | 'svg' | 'jpg';
+type ExportFormat = 'png' | 'jpg' | 'svg';
 type ExportSize = 'small' | 'medium' | 'large' | 'original';
 
 const sizeMap = {
@@ -46,7 +47,7 @@ const sizePixels = {
 export const ExportOptions: React.FC<ExportOptionsProps> = ({
   imageUrl,
   conceptTitle,
-  variationName,
+  variationName = '',
   onDownload
 }) => {
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('png');
@@ -54,74 +55,128 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [processedImageUrl, setProcessedImageUrl] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isAutoProcessing, setIsAutoProcessing] = useState<boolean>(false);
-  const [error, setError] = useState<{ message: string; type: string } | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  // Track already revoked blob URLs to prevent double revocation
+  const revokedUrlsRef = useRef<Set<string>>(new Set());
   
+  // Safe URL revocation function to prevent revoking the same URL twice
+  const safeRevokeObjectURL = (url: string) => {
+    if (!url.startsWith('blob:')) return;
+    
+    if (!revokedUrlsRef.current.has(url)) {
+      console.log('Revoking blob URL:', url);
+      URL.revokeObjectURL(url);
+      revokedUrlsRef.current.add(url);
+    } else {
+      console.log('URL already revoked, skipping:', url);
+    }
+  };
+  
+  // Function to reset the component state when something goes wrong
+  const resetState = () => {
+    console.log('Resetting component state');
+    
+    // Clean up any existing blob URL
+    if (processedImageUrl && processedImageUrl.startsWith('blob:')) {
+      safeRevokeObjectURL(processedImageUrl);
+    }
+    
+    // Reset all state values
+    setProcessedImageUrl('');
+    setIsProcessing(false);
+    setIsAutoProcessing(false);
+  };
+  
+  // Handle case where imageUrl is undefined
+  useEffect(() => {
+    if (!imageUrl) {
+      setErrorMessage('No image URL available for export. Please try again later.');
+      resetState();
+    } else {
+      setErrorMessage('');
+      console.log('ExportOptions: Processing Original image:', imageUrl.substring(0, 50) + '...');
+    }
+  }, [imageUrl]);
+
   // Add a dedicated effect to track and log imageUrl changes for debugging
   useEffect(() => {
     console.log(`ExportOptions: Processing ${variationName || 'original'} image:`, 
       imageUrl ? `${imageUrl.substring(0, 50)}...` : 'undefined');
     
     // Reset processed URL when image changes
-    setProcessedImageUrl('');
+    if (processedImageUrl) {
+      // Clean up any blob URLs before resetting
+      if (processedImageUrl.startsWith('blob:')) {
+        console.log('Cleaning up blob URL on image change:', processedImageUrl);
+        safeRevokeObjectURL(processedImageUrl);
+      }
+      setProcessedImageUrl('');
+    }
   }, [imageUrl, variationName]);
 
-  // Process the image when format or size changes
+  // Remove the auto-processing effect
   useEffect(() => {
     // Reset the processed URL when selections change or when the image URL changes
-    setProcessedImageUrl('');
-  }, [selectedFormat, selectedSize, imageUrl]);
-
-  // Preprocess the image when format/size selection changes
-  useEffect(() => {
-    // Auto-process the image when selections change to prepare it for preview/download
-    let isMounted = true;
-    
-    // Add debug logging to track imageUrl changes
-    console.log('ExportOptions: imageUrl changed to:', imageUrl ? imageUrl.substring(0, 50) + '...' : 'undefined');
-    
-    const preprocessImage = async () => {
-      // Don't start auto-processing if there's already a manual processing happening
-      // or if we already have a processed URL for the current selections
-      if (!processedImageUrl && !isProcessing && isMounted) {
-        setIsAutoProcessing(true);
-        try {
-          console.log('Auto-processing image with format:', selectedFormat, 'size:', selectedSize);
-          const url = await processImage(imageUrl, selectedFormat, selectedSize);
-          if (isMounted) {
-            console.log('Auto-processing complete');
-            setProcessedImageUrl(url);
-          }
-        } catch (error) {
-          console.error('Error preprocessing image:', error);
-        } finally {
-          if (isMounted) {
-            setIsAutoProcessing(false);
-          }
-        }
+    if (processedImageUrl) {
+      // Clean up any blob URLs before resetting
+      if (processedImageUrl.startsWith('blob:')) {
+        console.log('Cleaning up blob URL on format/size change:', processedImageUrl);
+        safeRevokeObjectURL(processedImageUrl);
       }
-    };
-    
-    preprocessImage();
-    
-    // Cleanup function to handle component unmount
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedFormat, selectedSize, imageUrl, processedImageUrl, isProcessing]);
+      setProcessedImageUrl('');
+    }
+  }, [selectedFormat, selectedSize, imageUrl]);
 
   // Clear error on format or size change
   useEffect(() => {
-    setError(null);
+    setErrorMessage('');
   }, [selectedFormat, selectedSize]);
 
+  // Add error recovery mechanism - if there's an error in processing, reset after a timeout
+  useEffect(() => {
+    if (errorMessage && (isProcessing || isAutoProcessing)) {
+      console.log('Error detected while processing, resetting state after delay');
+      const timeoutId = setTimeout(() => {
+        resetState();
+      }, 2000); // Reset state after 2 seconds
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [errorMessage, isProcessing, isAutoProcessing]);
+
   const processImageForPreview = async () => {
+    if (!imageUrl) {
+      setErrorMessage('No image URL available for processing');
+      resetState();
+      return null;
+    }
+    
+    // Don't start if already processing
+    if (isProcessing || isAutoProcessing) {
+      console.log('Already processing image, skipping new request');
+      return processedImageUrl || null;
+    }
+    
     try {
       // Clear any previous errors
-      setError(null);
+      setErrorMessage('');
       
       setIsAutoProcessing(true);
-      const result = await processImage(imageUrl, selectedFormat, selectedSize);
-      setProcessedImageUrl(result);
+      // Process the image with the current format and size
+      console.log('Processing image for preview');
+      
+      // Add a timeout to prevent hanging
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error('SVG conversion timed out after 20 seconds')), 20000);
+      });
+      
+      // Race the image processing against the timeout
+      const result = await Promise.race([
+        processImage(imageUrl, selectedFormat, selectedSize),
+        timeoutPromise
+      ]);
+      
+      setProcessedImageUrl(result || '');
       setIsAutoProcessing(false);
       return result;
     } catch (error) {
@@ -132,21 +187,15 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       if (error instanceof Error) {
         // Check for rate limit errors
         if (error.name === 'RateLimitError' || error.message.includes('rate limit')) {
-          setError({
-            message: 'SVG conversion limit reached. Please try again later or choose a different format.',
-            type: 'rateLimit'
-          });
+          setErrorMessage('SVG conversion limit reached. Please try again later or choose a different format.');
+        } else if (error.message.includes('timed out')) {
+          setErrorMessage('SVG conversion timed out. Please try again or choose a different format.');
+          resetState(); // Ensure full reset on timeout
         } else {
-          setError({
-            message: `Failed to process image: ${error.message}`,
-            type: 'generic'
-          });
+          setErrorMessage(`Failed to process image: ${error.message}`);
         }
       } else {
-        setError({
-          message: 'An unexpected error occurred',
-          type: 'generic'
-        });
+        setErrorMessage('An unexpected error occurred');
       }
       
       return null;
@@ -155,16 +204,31 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   
   // Function to process the image according to format and size
   const processImage = async (
-    url: string, 
+    url: string | undefined, 
     format: ExportFormat, 
     size: ExportSize
-  ): Promise<string> => {
+  ): Promise<string | null> => {
+    if (!url) {
+      setErrorMessage('No image URL available for processing');
+      return null;
+    }
+    
     return new Promise((resolve, reject) => {
       // Handle SVG format separately with server-side conversion
       if (format === 'svg') {
         // For SVG we need to use our backend conversion API
         handleSvgConversion(url, size)
-          .then(resolve)
+          .then(result => {
+            if (result === null) {
+              // If SVG conversion fails with null, try PNG as fallback
+              console.warn('SVG conversion returned null, using PNG fallback');
+              processToPng(url, size)
+                .then(resolve)
+                .catch(reject);
+            } else {
+              resolve(result);
+            }
+          })
           .catch(error => {
             console.warn('SVG conversion failed, using PNG fallback:', error);
             // Fallback to PNG if SVG conversion fails
@@ -296,7 +360,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   };
 
   // Function to handle SVG conversion via backend API
-  const handleSvgConversion = async (url: string, size: ExportSize): Promise<string> => {
+  const handleSvgConversion = async (url: string, size: ExportSize): Promise<string | null> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     try {
       // First convert the image to a data URL if it's not already
       let imageData = url;
@@ -315,100 +382,35 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       
       // Prepare the request to the backend - use the correct API path
       // The server has the route at /api/svg/convert-to-svg
-      const apiUrl = '/api/svg/convert-to-svg';
+      const apiUrl = 'svg/convert-to-svg'; // Changed from '/api/svg/convert-to-svg'
       
       console.log('Sending SVG conversion request to:', apiUrl);
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          image_data: imageData,
-          max_size: sizePixels[size],
-          color_mode: 'color', 
-          hierarchical: true,
-          filter_speckle_size: 4,
-          corner_threshold: 60.0,
-          length_threshold: 4.0,
-          splice_threshold: 45.0, 
-          path_precision: 8,
-          color_quantization_steps: 16
-        }),
+      // Use apiClient instead of fetch to ensure authentication headers are included
+      const { data } = await apiClient.post<{
+        success: boolean;
+        message?: string;
+        svg_data: string;
+      }>(apiUrl, {
+        image_data: imageData,
+        max_size: sizePixels[size],
+        color_mode: 'color', 
+        hierarchical: true,
+        filter_speckle_size: 4,
+        corner_threshold: 60.0,
+        length_threshold: 4.0,
+        splice_threshold: 45.0, 
+        path_precision: 8,
+        color_quantization_steps: 16
       });
       
-      if (!response.ok) {
-        // Handle rate limit errors (HTTP 429)
-        if (response.status === 429) {
-          // Try to parse the rate limit error details
-          const errorData = await response.json().catch(() => ({}));
-          
-          // Get rate limit info from response if available
-          let errorMessage = 'SVG conversion rate limit exceeded. Please try again later.';
-          let rateLimitDetails = {
-            limit: 20,
-            current: 20,
-            period: 'hour',
-            resetAfterSeconds: 3600
-          };
-          
-          if (errorData && errorData.detail) {
-            // Extract rate limit details if available
-            if (typeof errorData.detail === 'object') {
-              const detail = errorData.detail;
-              rateLimitDetails = {
-                limit: detail.limit || 20,
-                current: detail.current || 0,
-                period: detail.period || 'hour',
-                resetAfterSeconds: detail.reset_after_seconds || 3600
-              };
-              errorMessage = detail.message || errorMessage;
-            } else {
-              errorMessage = errorData.detail;
-            }
-          }
-          
-          // Set error in component state instead of creating dynamic component
-          setError({
-            message: `SVG conversion limit reached (${rateLimitDetails.current}/${rateLimitDetails.limit}). Please try again later or select a different format.`,
-            type: 'rateLimit'
-          });
-          
-          // Create a better error with rate limit info for logging
-          const rateLimitError = new Error(errorMessage);
-          Object.assign(rateLimitError, {
-            status: 429,
-            rateLimitInfo: rateLimitDetails,
-            name: 'RateLimitError'
-          });
-          
-          // No longer automatically switching to PNG format
-          // Just throw the error and let the user decide what to do
-          
-          throw rateLimitError;
-        }
-        
-        const errorText = await response.text();
-        console.error('SVG conversion API response error:', response.status, errorText);
-        
-        // Set component error state
-        setError({
-          message: `SVG conversion failed (HTTP ${response.status}). Please try a different format.`,
-          type: 'server'
-        });
-        
-        throw new Error(`SVG conversion failed: ${response.status} - ${errorText}`);
-      }
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
-      const data = await response.json();
       console.log('SVG conversion response:', data);
       
       if (!data.success) {
-        setError({
-          message: data.message || 'SVG conversion failed. Please try a different format.',
-          type: 'server'
-        });
+        setErrorMessage(data.message || 'SVG conversion failed. Please try a different format.');
         throw new Error(data.message || 'SVG conversion failed');
       }
       
@@ -418,11 +420,14 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       // Check if the SVG data is valid
       if (!svgData.startsWith('<?xml') && !svgData.startsWith('<svg')) {
         console.warn('Received invalid SVG data, falling back to original image');
-        setError({
-          message: 'Received invalid SVG data. Please try a different format.',
-          type: 'server'
-        });
+        setErrorMessage('Received invalid SVG data. Please try a different format.');
         return url;
+      }
+      
+      // Clean up any existing blob URL before creating a new one
+      if (processedImageUrl && processedImageUrl.startsWith('blob:')) {
+        console.log('Cleaning up previous blob URL:', processedImageUrl);
+        safeRevokeObjectURL(processedImageUrl);
       }
       
       // For safer handling, create a Blob and use an Object URL instead of base64
@@ -431,18 +436,27 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       console.log('Created SVG object URL:', objectUrl);
       
       // Clear any previous errors if successful
-      setError(null);
+      setErrorMessage('');
       
       return objectUrl;
-    } catch (error) {
+    } catch (error: unknown) {
+      // Clear the timeout if there was an error
+      clearTimeout(timeoutId);
+      
       console.error('Error in SVG conversion:', error);
       
-      // If not already handled above, set a generic error
-      if (!error.name || error.name !== 'RateLimitError') {
-        setError({
-          message: error instanceof Error ? error.message : 'SVG conversion failed. Please try again or select a different format.',
-          type: 'generic'
-        });
+      // If it's an abort error, show a timeout message
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setErrorMessage('SVG conversion timed out. Please try again or select a different format.');
+        return null;
+      }
+      
+      // If it's a rate limit error, handle it
+      if (error instanceof RateLimitError) {
+        setErrorMessage(`SVG conversion limit reached (${error.current}/${error.limit}). Please try again later or select a different format.`);
+      } else {
+        // Set a generic error
+        setErrorMessage(error instanceof Error ? error.message : 'SVG conversion failed. Please try again or select a different format.');
       }
       
       // Always return null to signal conversion failure
@@ -451,10 +465,28 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   };
   
   const handlePreview = async () => {
+    if (!imageUrl) {
+      setErrorMessage('No image URL available for preview');
+      resetState();
+      return;
+    }
+    
     try {
-      // Always process the current image URL for preview to ensure we have the latest version
       console.log('Preview button clicked, processing latest image URL');
+      setIsAutoProcessing(true);
+      
+      // Check if we already have a processed image for the current format and size
+      if (processedImageUrl && selectedFormat === 'svg' && processedImageUrl.startsWith('blob:')) {
+        console.log('Using existing processed SVG URL:', processedImageUrl);
+        setIsAutoProcessing(false);
+        openImagePreview(processedImageUrl);
+        return;
+      }
+      
+      // Process the image if we don't have a processed version yet
       const url = await processImageForPreview();
+      setIsAutoProcessing(false);
+      
       if (!url) {
         // If processing failed, fall back to the original URL
         console.log('Image processing failed, falling back to original URL');
@@ -462,8 +494,30 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         return;
       }
       
-      // Check if the URL is an SVG object URL
-      if (url.startsWith('blob:') && selectedFormat === 'svg') {
+      openImagePreview(url);
+    } catch (error) {
+      console.error('Error previewing image:', error);
+      setIsAutoProcessing(false);
+      
+      if (error instanceof Error) {
+        setErrorMessage(`Preview failed: ${error.message}`);
+      } else {
+        setErrorMessage('Preview failed due to an unknown error');
+      }
+      
+      // Reset state after a slight delay
+      setTimeout(resetState, 1000);
+      
+      // Fall back to original URL
+      window.open(imageUrl, '_blank');
+    }
+  };
+  
+  // Helper function to open image preview
+  const openImagePreview = async (url: string) => {
+    // Check if the URL is an SVG object URL
+    if (url.startsWith('blob:') && selectedFormat === 'svg') {
+      try {
         // For SVG, we might need to fetch the content and create a proper viewable HTML
         const response = await fetch(url);
         const svgText = await response.text();
@@ -493,22 +547,43 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         
         // Open in a new tab
         window.open(htmlUrl, '_blank');
-      } else {
-        // For other formats, just open the processed image
+        
+        // Clean up the temporary blob URL after a delay
+        setTimeout(() => {
+          safeRevokeObjectURL(htmlUrl);
+        }, 1000);
+      } catch (error) {
+        console.error('Error creating SVG preview:', error);
         window.open(url, '_blank');
       }
-    } catch (error) {
-      console.error('Error previewing image:', error);
-      // Fall back to original URL
-      window.open(imageUrl, '_blank');
+    } else {
+      // For other formats, just open the processed image
+      window.open(url, '_blank');
     }
   };
   
+  // Clean up any blob URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up blob URLs when the component unmounts
+      if (processedImageUrl && processedImageUrl.startsWith('blob:')) {
+        console.log('Cleaning up blob URL on unmount:', processedImageUrl);
+        safeRevokeObjectURL(processedImageUrl);
+      }
+    };
+  }, [processedImageUrl]);
+
   // Modified button click handler that bypasses the parent's onDownload if needed
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent any default behavior
     e.stopPropagation(); // Stop propagation to parent elements
-    console.log('Download button click intercepted');
+    console.log('Download button clicked, processing image for download');
+    
+    // Check if we have a valid image URL
+    if (!imageUrl) {
+      setErrorMessage('No image URL available for download');
+      return;
+    }
     
     // Force direct download immediately without using the parent's callback
     const forceDirectDownload = async () => {
@@ -517,9 +592,35 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       setIsProcessing(true);
       
       try {
-        // Always process the current image URL to ensure we have the latest version
-        console.log('Processing latest image URL for download');
-        const url = await processImage(imageUrl, selectedFormat, selectedSize);
+        // Check if we already have a processed image for the current format and size
+        let url: string | null = null;
+        
+        if (processedImageUrl && selectedFormat === 'svg' && processedImageUrl.startsWith('blob:')) {
+          console.log('Using existing processed SVG URL for download:', processedImageUrl);
+          url = processedImageUrl;
+        } else {
+          // Process the image if we don't have a processed version yet
+          console.log('Processing latest image URL for download');
+          
+          // Add a timeout to prevent hanging
+          const timeoutPromise = new Promise<null>((_, reject) => {
+            setTimeout(() => reject(new Error('Image processing timed out after 20 seconds')), 20000);
+          });
+          
+          // Race the image processing against the timeout
+          try {
+            url = await Promise.race([
+              processImage(imageUrl, selectedFormat, selectedSize),
+              timeoutPromise
+            ]);
+          } catch (processingError) {
+            console.error('Error during image processing:', processingError);
+            setErrorMessage(processingError instanceof Error ? 
+              processingError.message : 'Failed to process image for download');
+            url = null;
+          }
+        }
+        
         if (url) {
           await downloadProcessedImage(url, fileExtension);
         } else {
@@ -529,6 +630,14 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         }
       } catch (error) {
         console.error('Error in direct download:', error);
+        if (error instanceof Error) {
+          setErrorMessage(`Download failed: ${error.message}`);
+        } else {
+          setErrorMessage('Download failed due to an unknown error');
+        }
+        
+        // Reset state after a slight delay
+        setTimeout(resetState, 1000);
       } finally {
         setIsProcessing(false);
       }
@@ -581,7 +690,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
             setTimeout(() => {
               document.body.removeChild(a);
               if (downloadUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(downloadUrl);
+                safeRevokeObjectURL(downloadUrl);
               }
               console.log('Download click event completed and cleaned up');
             }, 300);
@@ -619,7 +728,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
             setTimeout(() => {
               document.body.removeChild(iframe);
               if (downloadUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(downloadUrl);
+                safeRevokeObjectURL(downloadUrl);
               }
             }, 1000);
           } catch (iframeError) {
@@ -720,12 +829,12 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       {/* Format and size selection options */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
         {/* Error message */}
-        {error && (
+        {errorMessage && (
           <div className="mb-4">
             <ErrorMessage 
-              message={error.message}
-              type={error.type as any}
-              onDismiss={() => setError(null)}
+              message={errorMessage}
+              type="generic"
+              onDismiss={() => setErrorMessage('')}
             />
           </div>
         )}
@@ -784,15 +893,29 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Preparing preview with selected options...
+                Processing image with selected settings...
               </div>
             )}
-            {!isAutoProcessing && processedImageUrl && (
+            {isProcessing && (
+              <div className="text-xs text-indigo-600 flex items-center">
+                <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Preparing download...
+              </div>
+            )}
+            {!isAutoProcessing && !isProcessing && processedImageUrl && (
               <div className="text-xs text-green-600 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                Ready to preview and download
+                Ready for download
+              </div>
+            )}
+            {!isAutoProcessing && !isProcessing && !processedImageUrl && (
+              <div className="text-xs text-gray-600">
+                Click preview or download to process the image
               </div>
             )}
           </div>
@@ -800,7 +923,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           {/* Download controls */}
           <div className="mt-4 pt-4 sm:mt-5 sm:pt-5 border-t border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-0">
-              <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize]}
+              <span className="font-medium">Selected:</span> {selectedFormat.toUpperCase()}, {sizeMap[selectedSize as ExportSize]}
             </div>
             
             <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
@@ -815,7 +938,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                    <span className="text-sm sm:text-base">Processing</span>
                   </span>
                 ) : (
                   <span className="text-sm sm:text-base">Preview</span>
@@ -833,7 +956,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="text-sm sm:text-base">{isAutoProcessing ? 'Preparing' : 'Processing'}</span>
+                    <span className="text-sm sm:text-base">
+                      {isProcessing ? 'Downloading' : 'Processing'}
+                    </span>
                   </span>
                 ) : (
                   <>

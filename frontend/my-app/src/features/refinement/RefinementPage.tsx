@@ -7,17 +7,19 @@ import { ComparisonView } from './components/ComparisonView';
 import { RefinementActions } from './components/RefinementActions';
 import { Card } from '../../components/ui/Card';
 import { fetchConceptDetail } from '../../services/supabaseClient';
-import { getSessionId } from '../../services/sessionManager';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Main page component for the Concept Refinement feature
  */
 export const RefinementPage: React.FC = () => {
-  const { conceptId } = useParams<{ conceptId: string }>();
+  const params = useParams();
+  const conceptId = params.conceptId || '';
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get('colorId');
+  const { user, isLoading: authLoading } = useAuth();
   
   const [originalConcept, setOriginalConcept] = useState<any>(null);
   const [isLoadingConcept, setIsLoadingConcept] = useState<boolean>(true);
@@ -32,16 +34,20 @@ export const RefinementPage: React.FC = () => {
         return;
       }
       
-      const sessionId = getSessionId();
-      if (!sessionId) {
-        setConceptLoadError('No session found');
+      // Wait for auth to finish loading
+      if (authLoading) {
+        return;
+      }
+      
+      if (!user || !user.id) {
+        setConceptLoadError('Not authenticated');
         setIsLoadingConcept(false);
         return;
       }
       
       try {
         setIsLoadingConcept(true);
-        const conceptData = await fetchConceptDetail(conceptId, sessionId);
+        const conceptData = await fetchConceptDetail(conceptId, user.id);
         
         if (!conceptData) {
           setConceptLoadError('Concept not found');
@@ -89,7 +95,7 @@ export const RefinementPage: React.FC = () => {
     };
     
     loadConcept();
-  }, [conceptId, colorId]);
+  }, [conceptId, colorId, authLoading, user]);
   
   const { 
     refineConcept, 

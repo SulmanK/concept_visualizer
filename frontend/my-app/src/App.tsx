@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import PageTransition from './components/layout/PageTransition';
@@ -6,11 +6,38 @@ import { ConceptProvider } from './contexts/ConceptContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './hooks/useToast';
 import { ErrorBoundary, OfflineStatus } from './components/ui';
-import { LandingPage } from './features/landing';
-import { ConceptDetailPage } from './features/concepts/detail';
-import { RecentConceptsPage } from './features/concepts/recent';
-import { CreateConceptPage } from './features/concepts/create';
-import { RefinementPage, RefinementSelectionPage } from './features/refinement';
+
+// Lazy load pages instead of importing them directly
+const LandingPage = lazy(() => import('./features/landing').then(module => ({ default: module.LandingPage })));
+const ConceptDetailPage = lazy(() => import('./features/concepts/detail').then(module => ({ default: module.ConceptDetailPage })));
+const RecentConceptsPage = lazy(() => import('./features/concepts/recent').then(module => ({ default: module.RecentConceptsPage })));
+const CreateConceptPage = lazy(() => import('./features/concepts/create').then(module => ({ default: module.CreateConceptPage })));
+const RefinementPage = lazy(() => import('./features/refinement').then(module => ({ default: module.RefinementPage })));
+const RefinementSelectionPage = lazy(() => import('./features/refinement').then(module => ({ default: module.RefinementSelectionPage })));
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh',
+    background: 'linear-gradient(135deg, #f5f7ff 0%, #c3cfe2 100%)'
+  }}>
+    <div style={{ 
+      padding: '20px', 
+      borderRadius: '8px', 
+      backgroundColor: 'white',
+      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }}>
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <p className="mt-4 text-indigo-600 font-medium">Loading...</p>
+    </div>
+  </div>
+);
 
 // Import animations CSS
 import './styles/animations.css';
@@ -53,31 +80,33 @@ const AppRoutes = () => {
   
   return (
     <PageTransition transitionType={getTransitionType(location.pathname)}>
-      <Routes location={location}>
-        {/* Main application routes */}
-        <Route path="/" element={<MainLayout />}>
-          {/* Make LandingPage the default homepage */}
-          <Route index element={<LandingPage />} />
-          
-          {/* Create page */}
-          <Route path="create" element={<CreateConceptPage />} />
-          
-          {/* Concept detail page */}
-          <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-          
-          {/* Recent concepts page */}
-          <Route path="recent" element={<RecentConceptsPage />} />
-          
-          {/* Refinement selection page */}
-          <Route path="refine" element={<RefinementSelectionPage />} />
-          
-          {/* Refinement page with concept ID */}
-          <Route path="refine/:conceptId" element={<RefinementPage />} />
-          
-          {/* Fallback for unknown routes */}
-          <Route path="*" element={<div>Page not found</div>} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes location={location}>
+          {/* Main application routes */}
+          <Route path="/" element={<MainLayout />}>
+            {/* Make LandingPage the default homepage */}
+            <Route index element={<LandingPage />} />
+            
+            {/* Create page */}
+            <Route path="create" element={<CreateConceptPage />} />
+            
+            {/* Concept detail page */}
+            <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
+            
+            {/* Recent concepts page */}
+            <Route path="recent" element={<RecentConceptsPage />} />
+            
+            {/* Refinement selection page */}
+            <Route path="refine" element={<RefinementSelectionPage />} />
+            
+            {/* Refinement page with concept ID */}
+            <Route path="refine/:conceptId" element={<RefinementPage />} />
+            
+            {/* Fallback for unknown routes */}
+            <Route path="*" element={<div>Page not found</div>} />
+          </Route>
+        </Routes>
+      </Suspense>
     </PageTransition>
   );
 };

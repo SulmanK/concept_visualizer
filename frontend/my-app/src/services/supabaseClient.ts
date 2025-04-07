@@ -271,6 +271,19 @@ export const getSignedImageUrl = (path: string, bucketType: 'concept' | 'palette
   if (path.includes('/object/sign/') && path.includes('token=')) {
     console.log(`Path is already a complete signed URL: ${path.substring(0, 50)}...`);
     
+    // Check if this URL is missing the /storage/v1/ segment
+    if (!path.includes('/storage/v1/') && path.includes('/object/sign/')) {
+      const fixedUrl = path.replace('/object/sign/', '/storage/v1/object/sign/');
+      console.log(`Fixed URL with proper /storage/v1/ path: ${fixedUrl.substring(0, 50)}...`);
+      
+      // Ensure the URL is absolute by adding the Supabase URL if it's relative
+      if (fixedUrl.startsWith('/')) {
+        return `${SUPABASE_URL}${fixedUrl}`;
+      }
+      
+      return fixedUrl;
+    }
+    
     // Check if this is a double-signed URL (a URL within a URL)
     if (path.indexOf('/object/sign/') !== path.lastIndexOf('/object/sign/')) {
       console.log('Detected doubly-signed URL, attempting to fix it');
@@ -310,6 +323,13 @@ export const getSignedImageUrl = (path: string, bucketType: 'concept' | 'palette
   
   // If path already looks like a complete URL with http, return it directly
   if (path.startsWith('http')) {
+    // Check if this URL is missing the /storage/v1/ segment
+    if (path.includes('/object/sign/') && !path.includes('/storage/v1/')) {
+      const fixedUrl = path.replace('/object/sign/', '/storage/v1/object/sign/');
+      console.log(`Fixed http URL with proper /storage/v1/ path: ${fixedUrl.substring(0, 50)}...`);
+      return fixedUrl;
+    }
+    
     // Check if this is a malformed URL with duplicated base URL
     // Example: https://project.supabase.co/storage/v1/object/public/bucket/https://project.supabase.co/...
     if (path.includes(`${SUPABASE_URL}/storage/v1/object/public/`) && 
@@ -464,31 +484,52 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
   // Process each concept using async operations to get signed URLs
   const processedConcepts = await Promise.all((data || []).map(async (concept) => {
     try {
-      // Generate base image URL for the concept - use signed URL
-      const base_image_path = concept.base_image_path || '';
-      let base_image_url = concept.base_image_url || '';
+      // Get image paths and urls, handling both old and new field names
+      const image_path = concept.image_path || concept.base_image_path || '';
+      let image_url = concept.image_url || concept.base_image_url || '';
       
-      // If we already have a signed URL in base_image_url, use it
-      if (base_image_url && (base_image_url.includes('/object/sign/') || base_image_url.includes('token='))) {
-        console.log(`Concept already has a signed URL: ${base_image_url.substring(0, 50)}...`);
-      } else {
-        // Otherwise, try to get a signed URL
+      console.log(`Processing concept ID ${concept.id}:`, {
+        has_image_url: !!concept.image_url,
+        has_base_image_url: !!concept.base_image_url,
+        image_path,
+        image_url_snippet: image_url ? image_url.substring(0, 50) + '...' : 'none'
+      });
+      
+      // If we don't have a valid signed URL, generate one
+      if (!image_url || (!image_url.includes('/object/sign/') && !image_url.includes('token='))) {
+        console.log(`Concept needs a new signed URL for path: ${image_path}`);
+        // Get a signed URL for the image path
         try {
           const { data: signedData } = await supabase.storage
             .from(getBucketName('concept'))
-            .createSignedUrl(base_image_path, 3600);
+            .createSignedUrl(image_path, 3600);
             
           if (signedData?.signedUrl) {
-            base_image_url = signedData.signedUrl;
-            console.log(`Created signed URL for base image: ${base_image_url.substring(0, 50)}...`);
+            image_url = signedData.signedUrl;
+            console.log(`Created signed URL for image: ${image_url.substring(0, 50)}...`);
           } else {
             // Fallback to token-based URL
-            base_image_url = getSignedImageUrl(base_image_path, 'concept');
-            console.log(`Falling back to token-based URL for base image: ${base_image_url.substring(0, 50)}...`);
+            image_url = getSignedImageUrl(image_path, 'concept');
+            console.log(`Falling back to token-based URL for image: ${image_url.substring(0, 50)}...`);
           }
         } catch (e) {
-          console.warn(`Error creating signed URL for base image: ${e}`);
-          base_image_url = getSignedImageUrl(base_image_path, 'concept');
+          console.warn(`Error creating signed URL for image: ${e}`);
+          // Try the fallback method
+          image_url = getSignedImageUrl(image_path, 'concept');
+        }
+      } else {
+        console.log(`Concept already has a signed URL: ${image_url.substring(0, 50)}...`);
+        
+        // Ensure URL has proper format with /storage/v1/
+        if (image_url.startsWith('/') || (image_url.includes('/object/sign/') && !image_url.includes('/storage/v1/'))) {
+          const fixedUrl = image_url.replace('/object/sign/', '/storage/v1/object/sign/');
+          // Add SUPABASE_URL prefix if it's a relative URL
+          if (fixedUrl.startsWith('/')) {
+            image_url = `${SUPABASE_URL}${fixedUrl}`;
+          } else {
+            image_url = fixedUrl;
+          }
+          console.log(`Fixed URL format: ${image_url.substring(0, 50)}...`);
         }
       }
       
@@ -504,36 +545,49 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
           const colors = Array.isArray(variation.colors) ? variation.colors : [];
           
           // Generate image URL for this variation - use signed URL
-          const image_path = variation.image_path || '';
-          let image_url = variation.image_url || '';
+          const variation_image_path = variation.image_path || '';
+          let variation_image_url = variation.image_url || '';
           
-          // If we already have a signed URL in image_url, use it
-          if (image_url && (image_url.includes('/object/sign/') || image_url.includes('token='))) {
-            console.log(`Variation already has a signed URL: ${image_url.substring(0, 50)}...`);
-          } else {
-            // Otherwise, try to get a signed URL
+          // If we don't have a valid signed URL, generate one
+          if (!variation_image_url || (!variation_image_url.includes('/object/sign/') && !variation_image_url.includes('token='))) {
+            console.log(`Variation ${index} needs a new signed URL for path: ${variation_image_path}`);
+            // Get a signed URL for the variation image path
             try {
               const { data: signedData } = await supabase.storage
                 .from(getBucketName('palette'))
-                .createSignedUrl(image_path, 3600);
+                .createSignedUrl(variation_image_path, 3600);
                 
               if (signedData?.signedUrl) {
-                image_url = signedData.signedUrl;
-                console.log(`Created signed URL for variation ${index}: ${image_url.substring(0, 50)}...`);
+                variation_image_url = signedData.signedUrl;
+                console.log(`Created signed URL for variation ${index}: ${variation_image_url.substring(0, 50)}...`);
               } else {
                 // Fallback to token-based URL
-                image_url = getSignedImageUrl(image_path, 'palette');
-                console.log(`Falling back to token-based URL for variation ${index}: ${image_url.substring(0, 50)}...`);
+                variation_image_url = getSignedImageUrl(variation_image_path, 'palette');
+                console.log(`Falling back to token-based URL for variation ${index}: ${variation_image_url.substring(0, 50)}...`);
               }
             } catch (e) {
               console.warn(`Error creating signed URL for variation ${index}: ${e}`);
-              image_url = getSignedImageUrl(image_path, 'palette');
+              variation_image_url = getSignedImageUrl(variation_image_path, 'palette');
+            }
+          } else {
+            console.log(`Variation ${index} already has a signed URL: ${variation_image_url.substring(0, 50)}...`);
+            
+            // Ensure URL has proper format with /storage/v1/
+            if (variation_image_url.startsWith('/') || (variation_image_url.includes('/object/sign/') && !variation_image_url.includes('/storage/v1/'))) {
+              const fixedUrl = variation_image_url.replace('/object/sign/', '/storage/v1/object/sign/');
+              // Add SUPABASE_URL prefix if it's a relative URL
+              if (fixedUrl.startsWith('/')) {
+                variation_image_url = `${SUPABASE_URL}${fixedUrl}`;
+              } else {
+                variation_image_url = fixedUrl;
+              }
+              console.log(`Fixed variation URL format: ${variation_image_url.substring(0, 50)}...`);
             }
           }
           
           // Debug this variation
           console.log(`    ◦ Variation ${index}: "${variation.palette_name || 'Unnamed'}"`);
-          console.log(`      - Image path: ${image_path}`);
+          console.log(`      - Image path: ${variation_image_path}`);
           console.log(`      - Colors: ${colors.length} colors, first color: ${colors[0] || 'none'}`);
           
           return {
@@ -543,8 +597,8 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
             concept_id: variation.concept_id || concept.id,
             palette_name: variation.palette_name || 'Color Palette',
             colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-            image_path: image_path,
-            image_url: image_url,
+            image_path: variation_image_path,
+            image_url: variation_image_url,
             created_at: variation.created_at || new Date().toISOString()
           };
         }));
@@ -555,8 +609,11 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
       // Return the processed concept with URLs
       return {
         ...concept,
-        base_image_path: base_image_path,
-        base_image_url: base_image_url,
+        // Support both old and new field names to ensure backward compatibility
+        base_image_path: image_path,
+        base_image_url: image_url,
+        image_path: image_path,
+        image_url: image_url,
         color_variations: variations
       };
     } catch (error) {
