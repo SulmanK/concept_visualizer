@@ -15,6 +15,8 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    // Set a shorter refresh threshold (5 minutes before expiry)
+    detectSessionInUrl: true,
   },
   global: {
     headers: {
@@ -22,6 +24,40 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     },
   }
 });
+
+/**
+ * Validate and refresh token if needed
+ * @returns Promise with refreshed session data if needed
+ */
+export const validateAndRefreshToken = async (): Promise<Session | null> => {
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // If no session, create one
+    if (!session) {
+      console.log('No active session found, creating new anonymous session');
+      return initializeAnonymousAuth();
+    }
+    
+    // Check if token is about to expire (within 5 minutes)
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = session.expires_at || 0;
+    
+    if (expiresAt - now < 300) {
+      console.log(`Token expires in ${expiresAt - now} seconds, refreshing now`);
+      // Refresh the session
+      const { data } = await supabase.auth.refreshSession();
+      return data.session;
+    }
+    
+    // Token is still valid
+    return session;
+  } catch (error) {
+    console.error('Error validating/refreshing token:', error);
+    return null;
+  }
+};
 
 /**
  * Initialize anonymous authentication
@@ -45,7 +81,18 @@ export const initializeAnonymousAuth = async (): Promise<Session | null> => {
       console.log('Anonymous sign-in successful');
       return data.session;
     } else {
-      console.log('Using existing session');
+      // If session exists but is near expiry, refresh it
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = session.expires_at || 0;
+      
+      if (expiresAt - now < 300) {
+        console.log(`Existing session expires soon (${expiresAt - now}s), refreshing`);
+        const { data } = await supabase.auth.refreshSession();
+        console.log('Session refreshed successfully');
+        return data.session;
+      }
+      
+      console.log('Using existing valid session');
       return session;
     }
   } catch (error) {

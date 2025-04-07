@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { 
   supabase, 
@@ -16,6 +16,7 @@ interface AuthContextType {
   error: Error | null;
   signOut: () => Promise<boolean>;
   linkEmail: (email: string) => Promise<boolean>;
+  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +27,63 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [isAnonymous, setIsAnonymous] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
+  const refreshTimerRef = useRef<number | null>(null);
+  
+  // Function to refresh authentication
+  const refreshAuth = async (): Promise<void> => {
+    try {
+      console.log('Proactively refreshing authentication token');
+      const authSession = await initializeAnonymousAuth();
+      if (authSession) {
+        setSession(authSession);
+        setUser(authSession.user);
+        
+        // Check if user is anonymous
+        const anonymous = await isAnonymousUser();
+        setIsAnonymous(anonymous);
+      }
+    } catch (err) {
+      console.error('Error refreshing authentication:', err);
+    }
+  };
+  
+  // Set up token refresh timer
+  useEffect(() => {
+    // Clear any existing timer
+    if (refreshTimerRef.current) {
+      window.clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    
+    if (!session) return;
+    
+    // Calculate time until refresh is needed (5 minutes before expiration)
+    const expiresAt = session.expires_at;
+    if (!expiresAt) return;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const timeUntilRefresh = (expiresAt - now - 300) * 1000; // 5 minutes before expiry, in ms
+    
+    console.log(`Token expires in ${(expiresAt - now)} seconds, will refresh in ${timeUntilRefresh/1000} seconds`);
+    
+    // Set a timer to refresh if token is valid but will expire
+    if (timeUntilRefresh > 0) {
+      refreshTimerRef.current = window.setTimeout(() => {
+        refreshAuth();
+      }, timeUntilRefresh);
+    } else {
+      // If token is already close to expiry, refresh immediately
+      refreshAuth();
+    }
+    
+    // Cleanup function
+    return () => {
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [session]);
   
   useEffect(() => {
     // Initialize auth on mount
@@ -112,7 +170,8 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     isLoading,
     error,
     signOut: handleSignOut,
-    linkEmail: handleLinkEmail
+    linkEmail: handleLinkEmail,
+    refreshAuth
   };
   
   return (

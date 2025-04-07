@@ -60,14 +60,33 @@ async function post<T>(endpoint: string, body: any, options: RequestOptions = {}
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
+    // First check for an existing session
     const { data: { session } } = await supabase.auth.getSession();
+    
+    // If we have a session with a valid token, use it
     if (session?.access_token) {
-      console.log('Using auth token from session');
-      return {
-        'Authorization': `Bearer ${session.access_token}`
-      };
+      const now = Math.floor(Date.now() / 1000);
+      
+      // If token expires in less than 5 minutes, refresh it
+      if (session.expires_at && session.expires_at - now < 300) {
+        console.log('Token is about to expire, refreshing before request');
+        // Refresh the session
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (refreshData.session?.access_token) {
+          console.log('Successfully refreshed token before request');
+          return {
+            'Authorization': `Bearer ${refreshData.session.access_token}`
+          };
+        }
+      } else {
+        console.log('Using existing token for request');
+        return {
+          'Authorization': `Bearer ${session.access_token}`
+        };
+      }
     }
-    console.warn('No session found, attempting to sign in anonymously');
+    
+    console.log('No valid session found, attempting to sign in anonymously');
     // Try to get a new anonymous session
     const newSession = await initializeAnonymousAuth();
     if (newSession?.access_token) {
@@ -76,6 +95,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
         'Authorization': `Bearer ${newSession.access_token}`
       };
     }
+    
     console.error('Failed to get authentication token');
     return {};
   } catch (error) {
@@ -128,16 +148,23 @@ async function request<T>(
     if (!response.ok) {
       // Handle 401 Unauthorized - try to refresh auth and retry
       if (response.status === 401 && retryAuth) {
-        console.log('Authentication failed, trying to refresh session and retry');
-        // Force a new anonymous session
-        await initializeAnonymousAuth();
+        console.log('Authentication failed (401), refreshing session and retrying');
+        
+        // Refresh the token using the proper refresh mechanism
+        const { data } = await supabase.auth.refreshSession();
+        
+        if (!data.session) {
+          // If refresh failed, try initializing a new session
+          await initializeAnonymousAuth();
+        }
+        
         // Retry the request once with fresh token, but prevent infinite retries
         return request<T>(endpoint, { 
           method, 
           headers, 
           body, 
           withCredentials,
-          retryAuth: false 
+          retryAuth: false // Prevent infinite retry loop
         });
       }
       

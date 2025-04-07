@@ -42,6 +42,51 @@
   - [x] Modify getImageUrl function to check for existing URL first
   - [x] Fix any URL processing logic to prevent double-signing
 
+## Rate Limit Optimization Tasks
+
+### Backend Changes
+- [ ] **Non-Counting Rate Limit Endpoint**
+  - [ ] Create new `GET /api/health/rate-limits-status` endpoint
+  - [ ] Mark as non-counting against user limits
+  - [ ] Use same implementation as current rate limits but exempt from counting
+
+- [ ] **Rate Limit Headers Implementation**
+  - [ ] Create `app/api/middleware/rate_limit_headers.py` with RateLimitHeadersMiddleware
+  - [ ] Implement middleware to add X-RateLimit-* headers to all responses
+  - [ ] Register middleware in app factory
+  - [ ] Update common dependencies to ensure limiter info is in request state
+
+- [ ] **Endpoint Exemption Configuration**
+  - [ ] Define NON_COUNTING_ENDPOINTS in app/api/routes/health/__init__.py
+  - [ ] Update rate limiter config to support endpoint exemptions
+  - [ ] Add non-counting pattern to rate limit middleware
+  - [ ] Test exemption patterns work correctly
+
+### Frontend Changes
+- [ ] **Enhanced Rate Limit Service**
+  - [ ] Add client-side caching to rateLimitService.ts
+  - [ ] Implement extractRateLimitHeaders function
+  - [ ] Create updateRateLimitCache utility
+  - [ ] Add helper to map API endpoints to rate limit categories
+
+- [ ] **Improved Rate Limit Hook**
+  - [ ] Update useRateLimits hook to use cache
+  - [ ] Add decrementRateLimit function for optimistic updates
+  - [ ] Implement resetRateLimits function
+  - [ ] Add endpoint-specific limit access helpers
+
+- [ ] **API Client Enhancement**
+  - [ ] Update apiClient to extract rate limit headers from all responses
+  - [ ] Modify API response handlers to update rate limit cache
+  - [ ] Add specific error handling for rate limit errors
+  - [ ] Update error display with rate limit recovery information
+
+- [ ] **UI Components Update**
+  - [ ] Modify RateLimitDisplay component to use enhanced hook
+  - [ ] Implement optimistic updates in UI
+  - [ ] Add visual indicators for rate limit status
+  - [ ] Improve error messaging for rate limit violations
+
 ## Supabase Anonymous Auth Migration
 - [ ] **Database Schema Migration**
   - [x] Create new concepts table with user_id instead of session_id
@@ -326,43 +371,36 @@
 
     - [ ] **Further Service Refactoring - Large Modules** (NEW FOCUS)
       - [ ] **Image Service Modules** (High Priority)
-        - [ ] Refactor service.py (595 lines) into specialized classes:
-          - [ ] Create ImageGenerationService for JigsawStack image generation
-          - [ ] Create ImageTransformationService for processing operations
-          - [ ] Create ImageStorageService to handle storage operations
-          - [ ] Update ImageService to use composition with these specialized services
-        - [ ] Refactor storage.py (339 lines):
-          - [ ] Create StorageClient for low-level operations
-          - [ ] Create MetadataService for managing image metadata
-          - [ ] Create PermissionsService for access control
-        - [ ] Refactor processing.py (312 lines) by functionality:
-          - [ ] Create ColorProcessor for palette and color operations
-          - [ ] Create ImageTransformer for non-color transformations
-          - [ ] Create FilterService for applying visual filters
-        - [ ] Refactor conversion.py (282 lines):
-          - [ ] Create FormatConverter for basic format conversions
-          - [ ] Create SVGProcessor for vector-specific operations
-          - [ ] Create EnhancementService for image enhancement operations
+        - [ ] Create ImageGenerationService for JigsawStack image generation
+        - [ ] Create ImageTransformationService for processing operations
+        - [ ] Create ImageStorageService to handle storage operations
+        - [ ] Update ImageService to use composition with these specialized services
+        - [ ] Create StorageClient for low-level operations
+        - [ ] Create MetadataService for managing image metadata
+        - [ ] Create PermissionsService for access control
+        - [ ] Create ColorProcessor for palette and color operations
+        - [ ] Create ImageTransformer for non-color transformations
+        - [ ] Create FilterService for applying visual filters
+        - [ ] Create FormatConverter for basic format conversions
+        - [ ] Create SVGProcessor for vector-specific operations
+        - [ ] Create EnhancementService for image enhancement operations
           
       - [ ] **JigsawStack Client Refactoring** (High Priority)
-        - [ ] Refactor client.py (865 lines) into specialized modules:
-          - [ ] Create BaseJigsawClient for authentication and common request handling
-          - [ ] Create JigsawImageClient for image generation operations
-          - [ ] Create JigsawPaletteClient for color palette operations
-          - [ ] Create JigsawRefinementClient for image refinement operations
-          - [ ] Extract common utilities into a separate jigsawstack/utils.py module
-          - [ ] Create proper interfaces for each client type
-          - [ ] Update service dependencies to use the appropriate specialized clients
+        - [ ] Create BaseJigsawClient for authentication and common request handling
+        - [ ] Create JigsawImageClient for image generation operations
+        - [ ] Create JigsawPaletteClient for color palette operations
+        - [ ] Create JigsawRefinementClient for image refinement operations
+        - [ ] Extract common utilities into a separate jigsawstack/utils.py module
+        - [ ] Create proper interfaces for each client type
+        - [ ] Update service dependencies to use the appropriate specialized clients
           
       - [ ] **Session and Storage Services** (Medium Priority)
-        - [ ] Refactor SessionService for better separation of concerns:
-          - [ ] Create SessionAuthService for authentication aspects
-          - [ ] Create SessionPersistenceService for storage operations
-          - [ ] Create SessionLifecycleService for creation/expiration
-        - [ ] Improve ConceptStorageService organization:
-          - [ ] Create PaletteStorageService for palette-specific operations
-          - [ ] Create ConceptQueryService for retrieval operations
-          - [ ] Extract common utilities to a storage/utils.py module
+        - [ ] Create SessionAuthService for authentication aspects
+        - [ ] Create SessionPersistenceService for storage operations
+        - [ ] Create SessionLifecycleService for creation/expiration
+        - [ ] Create PaletteStorageService for palette-specific operations
+        - [ ] Create ConceptQueryService for retrieval operations
+        - [ ] Extract common utilities to a storage/utils.py module
 
       - [ ] **Common Refactoring Tasks**
         - [ ] Create comprehensive interfaces for all services
