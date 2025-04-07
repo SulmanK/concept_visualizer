@@ -25,6 +25,34 @@ class ApplicationError(Exception):
         super().__init__(message)
 
 
+# Authentication Exceptions
+class AuthenticationError(ApplicationError):
+    """Exception raised for authentication-related errors."""
+    
+    def __init__(
+        self, 
+        message: str = "Authentication error", 
+        token: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with authentication error details.
+        
+        Args:
+            message: Human-readable error message
+            token: Optional token identifier (will be masked for security)
+            details: Additional error details
+        """
+        self.token = token
+        
+        error_details = details or {}
+        if token:
+            # Don't include the full token in logs for security
+            error_details["token"] = token[:4] + "****" if len(token) > 4 else "****"
+            
+        super().__init__(message, error_details)
+
+
 # Supabase/Database Exceptions
 class DatabaseError(ApplicationError):
     """Exception raised when a database operation fails."""

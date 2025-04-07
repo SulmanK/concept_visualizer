@@ -2,7 +2,7 @@
  * Supabase client configuration for Concept Visualizer
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, Session, User } from '@supabase/supabase-js';
 import { getBucketName } from './configService';
 import { tokenService } from './tokenService';
 
@@ -10,8 +10,8 @@ import { tokenService } from './tokenService';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Create default client without JWT initially
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+// Create default client
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -23,8 +23,111 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
-// Export the client as 'supabase' for backward compatibility
-export const supabase = supabaseClient;
+/**
+ * Initialize anonymous authentication
+ * @returns Promise with session data
+ */
+export const initializeAnonymousAuth = async (): Promise<Session | null> => {
+  try {
+    // Check if we have an existing session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // If no session exists, sign in anonymously
+    if (!session) {
+      console.log('No session found, signing in anonymously');
+      const { data, error } = await supabase.auth.signInAnonymously();
+      
+      if (error) {
+        console.error('Error signing in anonymously:', error);
+        throw error;
+      }
+      
+      console.log('Anonymous sign-in successful');
+      return data.session;
+    } else {
+      console.log('Using existing session');
+      return session;
+    }
+  } catch (error) {
+    console.error('Error initializing anonymous auth:', error);
+    return null;
+  }
+};
+
+/**
+ * Get the current user ID
+ * @returns User ID string or null if not authenticated
+ */
+export const getUserId = async (): Promise<string | null> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id || null;
+  } catch (error) {
+    console.error('Error getting user ID:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if the current user is anonymous
+ * @returns Boolean indicating if user is anonymous
+ */
+export const isAnonymousUser = async (): Promise<boolean> => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return false;
+    
+    // Check is_anonymous claim in JWT
+    const claims = session.user.app_metadata;
+    return claims.is_anonymous === true;
+  } catch (error) {
+    console.error('Error checking if user is anonymous:', error);
+    return false;
+  }
+};
+
+/**
+ * Convert anonymous user to permanent by linking email
+ * @param email User's email address
+ * @returns Promise with result
+ */
+export const linkEmailToAnonymousUser = async (email: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase.auth.updateUser({ email });
+    
+    if (error) {
+      console.error('Error linking email to anonymous user:', error);
+      return false;
+    }
+    
+    return !!data.user;
+  } catch (error) {
+    console.error('Error linking email to anonymous user:', error);
+    return false;
+  }
+};
+
+/**
+ * Sign out the current user
+ * @returns Promise with sign out result
+ */
+export const signOut = async (): Promise<boolean> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Error signing out:', error);
+      return false;
+    }
+    
+    // After sign out, initialize a new anonymous session
+    await initializeAnonymousAuth();
+    return true;
+  } catch (error) {
+    console.error('Error signing out:', error);
+    return false;
+  }
+};
 
 /**
  * Get Supabase client with JWT authentication
@@ -32,25 +135,19 @@ export const supabase = supabaseClient;
  */
 export async function getAuthenticatedClient() {
   try {
-    // Get a valid token
-    const token = await tokenService.getToken();
+    // Get the current session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      // We already have a valid session, return the default client
+      return supabase;
+    }
     
-    // Create a new client with the auth header
-    return createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-      global: {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      }
-    });
+    // If no session, try to sign in anonymously
+    await initializeAnonymousAuth();
+    return supabase;
   } catch (error) {
     console.error('Error getting authenticated client:', error);
-    return supabaseClient; // Fallback to default client
+    return supabase; // Fallback to default client
   }
 }
 
@@ -63,7 +160,7 @@ export async function getAuthenticatedClient() {
 export async function getAuthenticatedImageUrl(bucket: string, path: string): Promise<string> {
   try {
     // Use createSignedUrl with 3-day expiration
-    const { data, error } = await supabaseClient.storage
+    const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, 259200); // 3 days in seconds
       
@@ -135,7 +232,7 @@ export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette
   
   try {
     // Use createSignedUrl with 3-day expiration
-    const { data, error } = await supabaseClient.storage
+    const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(cleanPath, 259200); // 3 days in seconds
     
@@ -293,7 +390,7 @@ export const getSignedImageUrl = (path: string, bucketType: 'concept' | 'palette
 
 export interface ConceptData {
   id: string;
-  session_id: string;
+  user_id: string;
   logo_description: string;
   theme_description: string;
   image_path: string;
@@ -317,63 +414,43 @@ export interface ColorVariationData {
 }
 
 /**
- * Fetch recent concepts for the current session
- * 
- * @param sessionId The current session ID
- * @param limit Maximum number of concepts to return
- * @returns List of concepts with their variations
+ * Fetch recent concepts for the current user
+ * @param userId User ID to fetch concepts for
+ * @param limit Maximum number of concepts to fetch
+ * @returns Array of concept data
  */
 export const fetchRecentConcepts = async (
-  sessionId: string,
+  userId: string,
   limit: number = 10
 ): Promise<ConceptData[]> => {
   try {
-    // Check if we have a valid session ID
-    if (!sessionId) {
-      console.error('No session ID provided to fetchRecentConcepts');
-      return [];
-    }
+    console.log(`Attempting to fetch concepts with user ID: ${userId}`);
     
-    console.log(`Attempting to fetch concepts with session ID: ${sessionId}`);
-    
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
       .from('concepts')
       .select('*, color_variations(*)')
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching recent concepts:', error);
+      console.error('Error fetching concepts:', error);
       return [];
     }
 
-    // Check if we found any concepts
     if (!data || data.length === 0) {
-      console.log(`No concepts found for session ${sessionId}`);
+      console.log('No concepts found for this user');
       return [];
     }
     
-    console.log(`Found ${data.length} concepts for session ${sessionId}`);
+    console.log(`Found ${data.length} concepts for user`);
     
-    // Process retrieved data to add proper image URLs
-    const processedConcepts = await processConceptData(data);
+    // Process the data to ensure all concepts have the required fields
+    const concepts = await processConceptData(data);
     
-    // Log detailed information about the first concept for debugging
-    if (processedConcepts.length > 0) {
-      const firstConcept = processedConcepts[0];
-      console.log('First concept details:', {
-        id: firstConcept.id,
-        logo_description: firstConcept.logo_description,
-        base_image_path: firstConcept.base_image_path,
-        base_image_url: firstConcept.base_image_url,
-        variations_count: firstConcept.color_variations?.length || 0
-      });
-    }
-    
-    return processedConcepts;
+    return concepts;
   } catch (error) {
-    console.error('Exception fetching recent concepts:', error);
+    console.error('Error fetching concepts:', error);
     return [];
   }
 };
@@ -397,7 +474,7 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
       } else {
         // Otherwise, try to get a signed URL
         try {
-          const { data: signedData } = await supabaseClient.storage
+          const { data: signedData } = await supabase.storage
             .from(getBucketName('concept'))
             .createSignedUrl(base_image_path, 3600);
             
@@ -436,7 +513,7 @@ async function processConceptData(data: any[]): Promise<ConceptData[]> {
           } else {
             // Otherwise, try to get a signed URL
             try {
-              const { data: signedData } = await supabaseClient.storage
+              const { data: signedData } = await supabase.storage
                 .from(getBucketName('palette'))
                 .createSignedUrl(image_path, 3600);
                 
@@ -551,22 +628,23 @@ function processConceptDataSync(data: any[]): ConceptData[] {
 }
 
 /**
- * Fetch a single concept by ID
- * 
- * @param conceptId The concept ID to fetch
- * @param sessionId The current session ID (for security validation)
- * @returns The concept with its variations or null if not found
+ * Fetch a concept by ID for a specific user
+ * @param conceptId Concept ID to fetch
+ * @param userId User ID the concept should belong to
+ * @returns Concept data or null if not found
  */
 export const fetchConceptDetail = async (
   conceptId: string,
-  sessionId: string
+  userId: string
 ): Promise<ConceptData | null> => {
   try {
-    const { data, error } = await supabaseClient
+    console.log(`Fetching concept detail for concept ID: ${conceptId}, user ID: ${userId}`);
+    
+    const { data, error } = await supabase
       .from('concepts')
       .select('*, color_variations(*)')
       .eq('id', conceptId)
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .single();
 
     if (error) {
@@ -574,98 +652,17 @@ export const fetchConceptDetail = async (
       return null;
     }
 
-    if (!data) return null;
-
-    // Process the concept to add proper image URLs - using signed URLs
-    const base_image_path = data.base_image_path || '';
-    let base_image_url = data.base_image_url || '';
-    
-    // If base_image_url doesn't look like a signed URL, try to get one
-    if (!(base_image_url && (base_image_url.includes('/object/sign/') || base_image_url.includes('token=')))) {
-      try {
-        const { data: signedData } = await supabaseClient.storage
-          .from(getBucketName('concept'))
-          .createSignedUrl(base_image_path, 3600);
-          
-        if (signedData?.signedUrl) {
-          base_image_url = signedData.signedUrl;
-          console.log(`Created signed URL for concept detail base image: ${base_image_url.substring(0, 50)}...`);
-        } else {
-          // Fallback to token-based URL
-          base_image_url = getSignedImageUrl(base_image_path, 'concept');
-        }
-      } catch (e) {
-        console.warn(`Error creating signed URL for concept detail: ${e}`);
-        base_image_url = getSignedImageUrl(base_image_path, 'concept');
-      }
+    if (!data) {
+      console.log('No concept found with that ID for this user');
+      return null;
     }
     
-    // Process variation images if they exist
-    let variations = data.color_variations || [];
+    // Process the data to ensure the concept has the required fields
+    const concepts = await processConceptData([data]);
     
-    if (variations.length > 0) {
-      variations = await Promise.all(variations.map(async (variation: ColorVariationData) => {
-        // Ensure colors is an array
-        const colors = Array.isArray(variation.colors) ? variation.colors : [];
-        
-        // Generate image URL for this variation - use signed URL
-        const image_path = variation.image_path || '';
-        let image_url = variation.image_url || '';
-        
-        // If image_url doesn't look like a signed URL, try to get one
-        if (!(image_url && (image_url.includes('/object/sign/') || image_url.includes('token=')))) {
-          try {
-            const { data: signedData } = await supabaseClient.storage
-              .from(getBucketName('palette'))
-              .createSignedUrl(image_path, 3600);
-              
-            if (signedData?.signedUrl) {
-              image_url = signedData.signedUrl;
-              console.log(`Created signed URL for variation detail: ${image_url.substring(0, 50)}...`);
-            } else {
-              // Fallback to token-based URL
-              image_url = getSignedImageUrl(image_path, 'palette');
-            }
-          } catch (e) {
-            console.warn(`Error creating signed URL for variation detail: ${e}`);
-            image_url = getSignedImageUrl(image_path, 'palette');
-          }
-        }
-        
-        return {
-          ...variation,
-          // Ensure critical fields have default values
-          palette_name: variation.palette_name || 'Color Palette',
-          colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-          image_path,
-          image_url
-        };
-      }));
-    }
-    
-    // Return the processed concept with URLs
-    const processedConcept = {
-      ...data,
-      // Include both new and legacy fields
-      image_path: data.image_path || data.base_image_path || '',
-      image_url: data.image_url || base_image_url,
-      base_image_path,
-      base_image_url,
-      color_variations: variations
-    };
-
-    console.log('Processed concept detail with URLs:', {
-      id: processedConcept.id,
-      imageFields: {
-        image_path: processedConcept.image_path,
-        image_url: processedConcept.image_url,
-        base_image_path: processedConcept.base_image_path,
-        base_image_url: processedConcept.base_image_url,
-      }
-    });
-    return processedConcept;
+    return concepts[0] || null;
   } catch (error) {
-    console.error('Exception fetching concept detail:', error);
+    console.error('Error fetching concept detail:', error);
     return null;
   }
 };
@@ -677,7 +674,7 @@ export const fetchConceptById = async (conceptId: string): Promise<ConceptData |
   try {
     console.log(`Fetching concept with ID: ${conceptId}`);
     
-    const { data, error } = await supabaseClient
+    const { data, error } = await supabase
       .from('concepts')
       .select('*, color_variations(*)')
       .eq('id', conceptId)
@@ -732,7 +729,7 @@ export const getConceptDetails = async (conceptId: string): Promise<{
     // If we don't have a valid URL already, try to get a signed URL
     if (!base_image_url.includes('/object/sign/') && !base_image_url.includes('token=')) {
       try {
-        const { data } = await supabaseClient.storage
+        const { data } = await supabase.storage
           .from(getBucketName('concept'))
           .createSignedUrl(base_image_path, 259200); // 3-day URL
           
@@ -757,7 +754,7 @@ export const getConceptDetails = async (conceptId: string): Promise<{
       // If the URL isn't already signed, get a signed URL
       if (!image_url.includes('/object/sign/') && !image_url.includes('token=')) {
         try {
-          const { data } = await supabaseClient.storage
+          const { data } = await supabase.storage
             .from(getBucketName('palette'))
             .createSignedUrl(image_path, 259200); // 3-day URL
             
@@ -792,4 +789,4 @@ export const getConceptDetails = async (conceptId: string): Promise<{
   }
 };
 
-export default supabaseClient; 
+export default supabase; 

@@ -71,7 +71,7 @@ def mask_ip(ip_address: str) -> str:
 
 
 def mask_id(id_value: str) -> str:
-    """Mask an identifier (session ID or IP) for privacy in logs.
+    """Mask an identifier (user ID or IP) for privacy in logs.
     
     Args:
         id_value: The identifier to mask
@@ -82,13 +82,13 @@ def mask_id(id_value: str) -> str:
     if not id_value:
         return "unknown"
         
-    # Check if this is a session ID or IP format
-    if id_value.startswith("session:"):
-        # Extract and mask the session ID part
-        session_id = id_value[8:]
-        if len(session_id) <= 4:
-            return "session:[ID_TOO_SHORT]"
-        return f"session:{session_id[:4]}{'*' * (len(session_id) - 4)}"
+    # Check if this is a user ID or IP format
+    if id_value.startswith("user:"):
+        # Extract and mask the user ID part
+        user_id = id_value[5:]
+        if len(user_id) <= 4:
+            return "user:[ID_TOO_SHORT]"
+        return f"user:{user_id[:4]}{'*' * (len(user_id) - 4)}"
     elif id_value.startswith("ip:"):
         # Extract and mask the IP part
         ip = id_value[3:]
@@ -114,12 +114,12 @@ def mask_key(key: str) -> str:
     if not key:
         return "unknown"
     
-    # Check if key is in format "session:{session_id}:..."
-    if "session:" in key:
+    # Check if key is in format "user:{user_id}:..."
+    if "user:" in key:
         parts = key.split(":")
         for i, part in enumerate(parts):
-            if i > 0 and parts[i-1] == "session" and len(part) > 4:
-                # This part is likely a session ID
+            if i > 0 and parts[i-1] == "user" and len(part) > 4:
+                # This part is likely a user ID
                 parts[i] = part[:4] + '*' * (len(part) - 4)
     
     # If key contains an IP address, mask it

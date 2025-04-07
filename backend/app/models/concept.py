@@ -29,7 +29,7 @@ class ConceptSummary(BaseModel):
     logo_description: str
     theme_description: str
     base_image_url: str
-    base_image_path: str
+    image_path: str
     color_variations: List[ColorPalette]
 
 
@@ -38,22 +38,24 @@ class ConceptDetail(BaseModel):
     
     id: uuid.UUID
     created_at: datetime
-    session_id: uuid.UUID
+    user_id: uuid.UUID
     logo_description: str
     theme_description: str
     base_image_url: str
-    base_image_path: str
+    image_path: str
     color_variations: List[ColorPalette]
+    is_anonymous: Optional[bool] = True
 
 
 class ConceptCreate(BaseModel):
     """Model for creating a new concept."""
     
-    session_id: uuid.UUID
+    user_id: uuid.UUID
     logo_description: str
     theme_description: str
-    base_image_path: str
-    
+    image_path: str
+    is_anonymous: Optional[bool] = True
+
 
 class ColorVariationCreate(BaseModel):
     """Model for creating a new color variation."""

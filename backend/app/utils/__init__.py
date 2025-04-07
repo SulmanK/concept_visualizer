@@ -11,7 +11,7 @@ from app.utils.logging import setup_logging, get_logger, is_health_check
 from app.utils.api_limits import apply_rate_limit
 
 # Re-export security utilities
-from app.utils.security import mask_id, mask_path, mask_ip, mask_redis_key
+from app.utils.security import mask_id, mask_path, mask_ip, mask_key, mask_url
 
 # Re-export JWT utilities
 from app.utils.jwt_utils import create_supabase_jwt
@@ -29,7 +29,8 @@ __all__ = [
     "mask_id",
     "mask_path",
     "mask_ip",
-    "mask_redis_key",
+    "mask_key",
+    "mask_url",
     
     # JWT utilities
     "create_supabase_jwt",

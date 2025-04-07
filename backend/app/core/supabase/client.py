@@ -5,13 +5,15 @@ This module provides the base SupabaseClient class for interacting with Supabase
 """
 
 import logging
-from typing import Optional
+import jwt
+from typing import Optional, Dict, Any
 
 from supabase import create_client
 from postgrest.exceptions import APIError as PostgrestAPIError
+from fastapi import Request, HTTPException, status
 
 from ..config import settings, get_masked_value
-from ..exceptions import DatabaseError, StorageError
+from ..exceptions import DatabaseError, StorageError, AuthenticationError
 from ...utils.security.mask import mask_id
 
 
@@ -191,6 +193,152 @@ class SupabaseClient:
             )
 
 
+class SupabaseAuthClient:
+    """Client for Supabase authentication."""
+    
+    def __init__(self, url: str = None, key: str = None):
+        """Initialize the Supabase authentication client.
+        
+        Args:
+            url: Supabase project URL (defaults to settings.SUPABASE_URL)
+            key: Supabase API key (defaults to settings.SUPABASE_KEY)
+            
+        Raises:
+            AuthenticationError: If client initialization fails
+        """
+        self.url = url or settings.SUPABASE_URL
+        self.key = key or settings.SUPABASE_KEY
+        self.jwt_secret = settings.SUPABASE_JWT_SECRET
+        self.logger = logging.getLogger("supabase_auth")
+        
+        try:
+            # Initialize Supabase client
+            self.client = create_client(self.url, self.key)
+            self.logger.debug(f"Initialized Supabase auth client")
+        except Exception as e:
+            error_message = f"Failed to initialize Supabase auth client: {str(e)}"
+            self.logger.error(error_message)
+            raise AuthenticationError(
+                message=error_message,
+                details={"url": self.url}
+            )
+    
+    def verify_token(self, token: str) -> Dict[str, Any]:
+        """Verify a JWT token and return the payload.
+        
+        Args:
+            token: JWT token to verify
+            
+        Returns:
+            Token payload with user information
+            
+        Raises:
+            HTTPException: If token is invalid or verification fails
+        """
+        try:
+            # For testing in development, if no JWT secret is available
+            if not self.jwt_secret and settings.ENVIRONMENT == "development":
+                self.logger.warning("JWT verification disabled in development mode")
+                
+                # Simple decode without verification (ONLY FOR DEVELOPMENT)
+                payload = jwt.decode(
+                    token,
+                    options={"verify_signature": False}
+                )
+                return payload
+            
+            # Extract project reference from Supabase URL to use as audience
+            # This handles cases where the token's audience is the project URL
+            project_ref = self.url.strip('/').split('.')[-2].split('/')[-1] if self.url else None
+            expected_audience = project_ref or 'authenticated'
+
+            # In development, be more permissive about audience validation
+            if settings.ENVIRONMENT == "development":
+                self.logger.debug(f"Decoding JWT in development mode with flexible audience validation")
+                # Decode with options that skip audience validation in development
+                payload = jwt.decode(
+                    token,
+                    self.jwt_secret,
+                    algorithms=["HS256"],
+                    options={
+                        "verify_signature": True,
+                        "verify_aud": False  # Skip audience validation in development
+                    }
+                )
+                
+                # Log audience information for debugging
+                if 'aud' in payload:
+                    self.logger.debug(f"Token audience: {payload['aud']}, Expected: {expected_audience}")
+                
+                return payload
+                
+            # In production, do proper validation
+            payload = jwt.decode(
+                token,
+                self.jwt_secret,
+                algorithms=["HS256"],
+                audience=expected_audience,  # Use the expected audience for validation
+                options={"verify_signature": True}
+            )
+            return payload
+        except jwt.ExpiredSignatureError:
+            self.logger.warning(f"Token expired: {mask_id(token[:10])}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired"
+            )
+        except jwt.InvalidTokenError as e:
+            self.logger.warning(f"Invalid token: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid token: {str(e)}"
+            )
+        except Exception as e:
+            self.logger.error(f"Unexpected error verifying token: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error verifying authentication token"
+            )
+    
+    def get_user_from_request(self, request: Request) -> Optional[Dict[str, Any]]:
+        """Extract user information from request authorization header.
+        
+        Args:
+            request: FastAPI request object
+            
+        Returns:
+            User information from token or None if no valid token
+        """
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+            
+        token = auth_header.replace("Bearer ", "")
+        try:
+            payload = self.verify_token(token)
+            
+            # Extract user information from token
+            user_info = {
+                "id": payload.get("sub"),
+                "email": payload.get("email"),
+                "app_metadata": payload.get("app_metadata", {}),
+                "user_metadata": payload.get("user_metadata", {}),
+                "is_anonymous": payload.get("app_metadata", {}).get("is_anonymous", False),
+                "role": payload.get("role", "authenticated"),
+                "token": token
+            }
+            
+            # Log user identification (masked for privacy)
+            self.logger.debug(f"Authenticated user: {mask_id(user_info['id'])}, role: {user_info['role']}")
+            return user_info
+        except HTTPException:
+            # Re-raise HTTP exceptions (already logged in verify_token)
+            raise
+        except Exception as e:
+            self.logger.error(f"Error extracting user from request: {str(e)}")
+            return None
+
+
 def get_supabase_client(session_id: Optional[str] = None) -> SupabaseClient:
     """Create a Supabase client with the specified session ID.
     
@@ -198,9 +346,15 @@ def get_supabase_client(session_id: Optional[str] = None) -> SupabaseClient:
         session_id: Optional session ID to use
         
     Returns:
-        Configured SupabaseClient instance
-        
-    Raises:
-        DatabaseError: If client initialization fails
+        Initialized Supabase client
     """
-    return SupabaseClient(session_id=session_id) 
+    return SupabaseClient(session_id=session_id)
+
+
+def get_supabase_auth_client() -> SupabaseAuthClient:
+    """Create a Supabase auth client.
+    
+    Returns:
+        Initialized Supabase auth client
+    """
+    return SupabaseAuthClient() 

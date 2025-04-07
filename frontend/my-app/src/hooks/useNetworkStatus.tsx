@@ -68,39 +68,35 @@ export const useNetworkStatus = (options?: {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
       
-      const response = await fetch(checkEndpoint, {
-        method: 'HEAD',
-        cache: 'no-store',
-        signal: controller.signal,
-        headers: { 'Cache-Control': 'no-cache' },
-      });
-      
-      clearTimeout(timeoutId);
-      
-      setLastCheckedAt(new Date());
-      const online = response.ok;
-      
-      if (online !== isOnline) {
-        setIsOnline(online);
+      // Try the main endpoint, but if it fails, we'll consider the app online anyway
+      // as long as the browser reports we're online
+      try {
+        const response = await fetch(checkEndpoint, {
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: controller.signal,
+          headers: { 'Cache-Control': 'no-cache' },
+        });
         
-        if (online) {
-          // We're back online
-          setOfflineSince(undefined);
-          if (notifyOnStatusChange) {
-            toast.showSuccess('Your internet connection has been restored');
-          }
-        } else {
-          // We've gone offline
-          setOfflineSince(new Date());
-          if (notifyOnStatusChange) {
-            toast.showWarning('You appear to be offline. Some features may be unavailable.');
-          }
-        }
+        clearTimeout(timeoutId);
+        setLastCheckedAt(new Date());
+        
+        const online = response.ok;
+        updateOnlineStatus(online);
+        return online;
+      } catch (error) {
+        console.warn('Health check endpoint error:', error);
+        // If the health check endpoint fails but the browser says we're online,
+        // we'll consider ourselves online
+        clearTimeout(timeoutId);
+        setLastCheckedAt(new Date());
+        
+        // Use the browser's online status as a fallback
+        updateOnlineStatus(navigator.onLine);
+        return navigator.onLine;
       }
-      
-      return online;
     } catch (error) {
-      // Network error or timeout
+      // Final fallback - network error or timeout
       setLastCheckedAt(new Date());
       
       if (isOnline) {
@@ -114,6 +110,27 @@ export const useNetworkStatus = (options?: {
       return false;
     }
   }, [checkEndpoint, isOnline, notifyOnStatusChange, toast]);
+  
+  // Helper function to update the online status and show notifications
+  const updateOnlineStatus = useCallback((online: boolean) => {
+    if (online !== isOnline) {
+      setIsOnline(online);
+      
+      if (online) {
+        // We're back online
+        setOfflineSince(undefined);
+        if (notifyOnStatusChange) {
+          toast.showSuccess('Your internet connection has been restored');
+        }
+      } else {
+        // We've gone offline
+        setOfflineSince(new Date());
+        if (notifyOnStatusChange) {
+          toast.showWarning('You appear to be offline. Some features may be unavailable.');
+        }
+      }
+    }
+  }, [isOnline, notifyOnStatusChange, toast]);
   
   // Handle browser's online/offline events
   useEffect(() => {

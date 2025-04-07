@@ -4,8 +4,9 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { ApiError, ApiResponse } from '../types';
-import { ensureSession } from '../services/sessionManager';
 import { RateLimitError } from '../services/apiClient';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabaseClient';
 
 // Use the full backend URL instead of a relative path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -21,23 +22,9 @@ interface RequestOptions {
  * Hook for making API requests with error handling
  */
 export function useApi() {
+  const { session, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<ApiError | undefined>(undefined);
-  const [sessionInitialized, setSessionInitialized] = useState<boolean>(false);
-  
-  // Ensure session is initialized
-  useEffect(() => {
-    const initSession = async () => {
-      try {
-        await ensureSession();
-        setSessionInitialized(true);
-      } catch (error) {
-        console.error('Error initializing session:', error);
-      }
-    };
-    
-    initSession();
-  }, []);
   
   /**
    * Reset the error state
@@ -70,8 +57,17 @@ export function useApi() {
       
       console.log(`API Request: ${method} ${url}`);
       
+      // Add auth token to headers if available
+      let authHeaders = {};
+      if (session?.access_token) {
+        authHeaders = {
+          'Authorization': `Bearer ${session.access_token}`
+        };
+      }
+      
       const requestHeaders = {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...headers,
       };
       
@@ -79,7 +75,7 @@ export function useApi() {
         method,
         headers: requestHeaders,
         body: body ? JSON.stringify(body) : undefined,
-        credentials: withCredentials ? 'include' : 'same-origin', // Include cookies
+        credentials: withCredentials ? 'include' : 'same-origin', // Include cookies for backward compatibility
       };
       
       console.log('Request options:', {
@@ -152,7 +148,7 @@ export function useApi() {
       
       return { error: apiError, loading: false };
     }
-  }, []);
+  }, [session]);
   
   /**
    * GET request helper
@@ -184,6 +180,6 @@ export function useApi() {
     loading,
     error,
     clearError,
-    sessionInitialized,
+    authInitialized: !authLoading,
   };
 } 

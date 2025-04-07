@@ -1,97 +1,104 @@
 """
-Rate limiting utilities for API routes.
+Rate limiting utilities for API endpoints.
 
-This module provides utility functions for rate limiting API endpoints.
+This module provides functions for applying rate limits to API endpoints.
 """
 
 import logging
-from typing import Optional
+from typing import Dict, Any, Optional
 from fastapi import Request, HTTPException
 from slowapi.util import get_remote_address
-from app.core.limiter import check_rate_limit, increment_rate_limit
-from app.core.exceptions import RateLimitError
 
-# Configure logging
-logger = logging.getLogger("rate_limiting")
+from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 async def apply_rate_limit(
     req: Request,
     endpoint: str,
     rate_limit: str,
-    period: str = "month"
-) -> None:
+    period: Optional[str] = None
+) -> Dict[str, Any]:
     """
-    Apply rate limiting to a request. If the limit is exceeded, this raises an exception.
+    Apply rate limiting to an endpoint.
     
     Args:
-        req: The FastAPI request object
-        endpoint: The endpoint path for tracking
-        rate_limit: The rate limit string (e.g., "10/month")
-        period: The period for rate limiting (e.g., "month", "hour")
+        req: FastAPI request object
+        endpoint: Name of the endpoint for rate limiting
+        rate_limit: Rate limit string (e.g., "10/minute")
+        period: Time period override (e.g., "minute")
         
     Returns:
-        None
+        Dict containing rate limit information
         
     Raises:
-        HTTPException: If the rate limit is exceeded
+        HTTPException: If rate limit is exceeded
     """
+    # Skip rate limiting if disabled
+    if not settings.RATE_LIMITING_ENABLED:
+        logger.debug("Rate limiting disabled")
+        return {"enabled": False}
+    
+    # Check if limiter is available
     if not hasattr(req.app.state, 'limiter'):
-        logger.warning("No limiter found in app state, skipping rate limiting")
-        return
+        logger.warning("Rate limiter not available")
+        return {"enabled": False}
+    
+    # Get the user ID from auth middleware or fall back to IP
+    user_id = None
+    if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+        user_id = req.state.user.get("id")
+        key_prefix = "user"
+    else:
+        user_id = get_remote_address(req)
+        key_prefix = "ip"
+    
+    # Create a key for the rate limit (e.g., "user:123abc" or "ip:127.0.0.1")
+    key = f"{key_prefix}:{user_id}"
+    
+    logger.info(f"Checking rate limit '{rate_limit}' for {key_prefix}")
+    
+    # Apply rate limiting
+    limiter = req.app.state.limiter
+    is_rate_limited = await limiter.sliding_window_check_rate(
+        rate_limit,
+        key, 
+        endpoint
+    )
+    
+    # Add rate limit headers to the response
+    # These headers follow standard conventions like GitHub API
+    if hasattr(req.state, "limiter_info"):
+        request_limit = req.state.limiter_info["limit"]
+        request_remaining = req.state.limiter_info["remaining"]
+        request_reset = req.state.limiter_info["reset"]
         
-    try:
-        # Extract user identifier
-        user_id = req.cookies.get("concept_session", get_remote_address(req))
-        user_id = f"session:{user_id}" if "concept_session" in req.cookies else f"ip:{user_id}"
+        # Add headers to response
+        resp = getattr(req, "response", None)
+        if resp:
+            resp.headers["X-RateLimit-Limit"] = str(request_limit)
+            resp.headers["X-RateLimit-Remaining"] = str(request_remaining)
+            resp.headers["X-RateLimit-Reset"] = str(request_reset)
+    
+    # If rate limited, raise an exception
+    if is_rate_limited:
+        # Get information about the rate limit for the error message
+        info = getattr(req.state, "limiter_info", {})
+        reset_at = info.get("reset", 0) if info else 0
         
-        # First check if the limit has been exceeded
-        logger.info(f"Checking rate limit '{rate_limit}' for session")
-        limit_status = check_rate_limit(
-            user_id=user_id,
-            endpoint=f"/api{endpoint}",
-            limit=rate_limit
+        # Create a more helpful error message
+        error_message = f"Rate limit exceeded ({rate_limit}). Try again later."
+        
+        # Add Retry-After header if we have reset info
+        headers = {"Retry-After": str(reset_at)} if reset_at else {}
+        
+        logger.warning(f"Rate limit exceeded for {key_prefix} {user_id} on {endpoint}")
+        raise HTTPException(
+            status_code=429, 
+            detail=error_message,
+            headers=headers
         )
-        
-        # If limit is exceeded, raise a 429 Too Many Requests error
-        if limit_status.get("exceeded", False):
-            logger.warning(f"Rate limit exceeded: {limit_status['count']}/{limit_status['limit']} {limit_status['period']}")
-            
-            # Get seconds until reset
-            reset_seconds = limit_status.get("reset_at", 0)
-            
-            # Create a detailed error message
-            detail = {
-                "message": f"Rate limit exceeded: {limit_status['count']}/{limit_status['limit']} requests per {limit_status['period']}",
-                "limit": limit_status['limit'],
-                "current": limit_status['count'],
-                "period": limit_status['period'],
-                "reset_after_seconds": reset_seconds
-            }
-            
-            # Raise a 429 error with reset information
-            raise HTTPException(
-                status_code=429,
-                detail=detail,
-                headers={"Retry-After": str(reset_seconds)}
-            )
-        
-        # Only increment the counter if the request is allowed
-        success = increment_rate_limit(
-            user_id=user_id,
-            endpoint=f"/api{endpoint}",
-            period=period
-        )
-        
-        if success:
-            logger.debug("Rate limit counter incremented successfully")
-        else:
-            logger.warning("Failed to increment rate limit counter in Redis")
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions (like our 429 error)
-        raise
-    except Exception as e:
-        logger.error(f"Error applying rate limit: {str(e)}")
-        # Continue even if rate limiting fails - don't block legitimate requests
-        # due to rate limiting infrastructure errors 
+    
+    return {"enabled": True, "limited": False} 

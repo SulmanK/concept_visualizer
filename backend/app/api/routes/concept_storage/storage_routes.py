@@ -2,30 +2,29 @@
 Concept storage endpoints.
 
 This module provides endpoints for storing and retrieving concepts
-from the database.
+from the database using user authentication.
 """
 
 import logging
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends, Response, Cookie, HTTPException, Request
+from fastapi import APIRouter, Depends, Response, HTTPException, Request
 from slowapi.util import get_remote_address
 from fastapi.responses import JSONResponse
 
 from app.models.request import PromptRequest
 from app.models.response import GenerationResponse
 from app.models.concept import ConceptSummary, ConceptDetail
-from app.services.session import get_session_service
 from app.services.image import get_image_service
 from app.services.concept import get_concept_service
 from app.services.storage import get_concept_storage_service
 from app.services.interfaces import (
     ConceptServiceInterface,
-    SessionServiceInterface, 
     ImageServiceInterface,
     StorageServiceInterface
 )
-from app.api.dependencies import CommonDependencies, get_or_create_session
+from app.api.dependencies import CommonDependencies
+from app.api.middleware.auth_middleware import get_current_user_id
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
 from app.utils.api_limits import apply_rate_limit
 from app.utils.security.mask import mask_id
@@ -59,16 +58,15 @@ async def generate_and_store_concept(
     await apply_rate_limit(req, "/storage/store", "10/month")
     
     try:
-        # Get or create session
-        session_id, _ = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service
-        )
+        # Get user ID from authenticated request
+        user_id = get_current_user_id(req)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
         # Generate base image and store it in Supabase Storage
         base_image_path, base_image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         if not base_image_path or not base_image_url:
@@ -85,17 +83,19 @@ async def generate_and_store_concept(
         palette_variations = await commons.image_service.create_palette_variations(
             base_image_path,
             raw_palettes,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         # Store concept in Supabase database
-        stored_concept = await commons.storage_service.store_concept(
-            session_id=session_id,
-            logo_description=request.logo_description,
-            theme_description=request.theme_description,
-            base_image_path=base_image_path,
-            color_palettes=palette_variations
-        )
+        stored_concept = await commons.storage_service.store_concept({
+            "user_id": user_id,
+            "logo_description": request.logo_description,
+            "theme_description": request.theme_description,
+            "image_path": base_image_path,
+            "image_url": base_image_url,
+            "color_palettes": palette_variations,
+            "is_anonymous": True
+        })
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store concept")
@@ -126,17 +126,15 @@ async def generate_and_store_concept(
 async def get_recent_concepts(
     response: Response,
     req: Request,
-    commons: CommonDependencies = Depends(),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
+    commons: CommonDependencies = Depends()
 ):
     """
-    Get recent concepts for the current session.
+    Get recent concepts for the current user.
     
     Args:
-        response: FastAPI response object for setting cookies
+        response: FastAPI response object
         req: The FastAPI request object for rate limiting
         commons: Common dependencies including services
-        session_id: Optional session ID from cookies
         
     Returns:
         List of recent concepts
@@ -145,19 +143,13 @@ async def get_recent_concepts(
     await apply_rate_limit(req, "/storage/recent", "30/minute", "minute")
     
     try:
-        # Get or create session using dependency
-        session_id, is_new_session = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service,
-            session_id=session_id
-        )
+        # Get user ID from authenticated request
+        user_id = get_current_user_id(req)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
-        # Return empty list for new sessions
-        if is_new_session:
-            return []
-        
-        # Get recent concepts with signed image URLs using commons
-        return await commons.storage_service.get_recent_concepts(session_id)
+        # Get recent concepts with signed image URLs using user_id
+        return await commons.storage_service.get_recent_concepts(user_id)
     except Exception as e:
         logger.error(f"Error fetching recent concepts: {str(e)}")
         raise ServiceUnavailableError(detail=f"Error fetching recent concepts: {str(e)}")
@@ -168,18 +160,16 @@ async def get_concept_detail(
     concept_id: str,
     response: Response,
     req: Request,
-    commons: CommonDependencies = Depends(),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
+    commons: CommonDependencies = Depends()
 ):
     """
     Get detailed information about a specific concept.
     
     Args:
         concept_id: ID of the concept to retrieve
-        response: FastAPI response object for setting cookies
+        response: FastAPI response object
         req: The FastAPI request object for rate limiting
         commons: Common dependencies including services
-        session_id: Optional session ID from cookies
         
     Returns:
         Detailed concept information
@@ -188,15 +178,13 @@ async def get_concept_detail(
     await apply_rate_limit(req, f"/storage/concept/{concept_id}", "30/minute", "minute")
     
     try:
-        # Get or create session using our new dependency
-        session_id, _ = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service,
-            session_id=session_id
-        )
+        # Get user ID from authenticated request
+        user_id = get_current_user_id(req)
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
-        # Get concept detail using storage service from commons
-        concept = await commons.storage_service.get_concept_detail(concept_id, session_id)
+        # Get concept detail using storage service with user_id instead of session_id
+        concept = await commons.storage_service.get_concept_detail(concept_id, user_id)
         
         if not concept:
             # Use our custom error class instead of generic HTTPException

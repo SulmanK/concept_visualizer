@@ -20,9 +20,6 @@ from .concept import (
     PaletteVariation,
 )
 
-# Session models
-from .session.session import SessionBase, SessionCreate, SessionResponse
-
 # SVG models
 from .svg import SVGConversionRequest, SVGConversionResponse
 
@@ -41,11 +38,6 @@ __all__ = [
     "RefinementRequest",
     "GenerationResponse",
     "PaletteVariation",
-    
-    # Session models
-    "SessionBase",
-    "SessionCreate",
-    "SessionResponse",
     
     # SVG models
     "SVGConversionRequest",

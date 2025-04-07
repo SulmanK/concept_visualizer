@@ -8,7 +8,7 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -17,16 +17,14 @@ from app.models.request import RefinementRequest
 from app.models.response import GenerationResponse, PaletteVariation
 from app.utils.api_limits import apply_rate_limit
 from app.services.concept import get_concept_service
-from app.services.session import get_session_service
 from app.services.image import get_image_service
 from app.services.storage import get_concept_storage_service
 from app.services.interfaces import (
     ConceptServiceInterface,
-    SessionServiceInterface, 
     ImageServiceInterface,
     StorageServiceInterface
 )
-from app.api.dependencies import CommonDependencies, get_or_create_session
+from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
 
 # Configure logging
@@ -41,17 +39,15 @@ async def refine_concept(
     response: Response,
     req: Request,
     commons: CommonDependencies = Depends(),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
     Refine an existing concept based on user feedback.
     
     Args:
         request: The refinement request containing feedback and concept ID
-        response: FastAPI response object for setting cookies
+        response: FastAPI response object
         req: The FastAPI request object for rate limiting
         commons: Common dependencies including all services
-        session_id: Optional session ID from cookies
     
     Returns:
         GenerationResponse: The refined concept data
@@ -59,6 +55,7 @@ async def refine_concept(
     Raises:
         ServiceUnavailableError: If there was an error refining the concept
         ValidationError: If the request validation fails
+        HTTPException: If user is not authenticated (401)
     """
     # Apply rate limit
     await apply_rate_limit(req, "/concepts/refine", "10/hour", "hour")
@@ -81,12 +78,10 @@ async def refine_concept(
                 }
             )
         
-        # Get or create session using dependency
-        session_id, _ = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service,
-            session_id=session_id
-        )
+        # Get user ID from commons (which gets it from auth middleware)
+        user_id = commons.user_id
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
         # Refine image and store it in Supabase Storage
         logo_desc = request.logo_description or "the existing logo"
@@ -99,7 +94,7 @@ async def refine_concept(
                 f"Refinement instructions: {request.refinement_prompt}."
             ),
             original_image_url=request.original_image_url,
-            session_id=session_id,
+            user_id=user_id,
             strength=0.7  # Control how much to preserve original image
         )
         
@@ -116,20 +111,22 @@ async def refine_concept(
         palette_variations = await commons.image_service.create_palette_variations(
             refined_image_path,
             raw_palettes,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         # Store concept in Supabase database
         logo_description = request.logo_description or "Refined logo"
         theme_description = request.theme_description or "Refined theme"
         
-        stored_concept = await commons.storage_service.store_concept(
-            session_id=session_id,
-            logo_description=f"{logo_description} - {request.refinement_prompt}",
-            theme_description=theme_description,
-            base_image_path=refined_image_path,
-            color_palettes=palette_variations
-        )
+        stored_concept = await commons.storage_service.store_concept({
+            "user_id": user_id,
+            "logo_description": f"{logo_description} - {request.refinement_prompt}",
+            "theme_description": theme_description,
+            "image_path": refined_image_path,
+            "image_url": refined_image_url,
+            "color_palettes": palette_variations,
+            "is_anonymous": True
+        })
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store refined concept")

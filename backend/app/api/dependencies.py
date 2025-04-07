@@ -6,68 +6,26 @@ API route handlers to reduce code duplication and improve maintainability.
 """
 
 import logging
-from typing import Tuple, Optional
+from typing import Dict, Any, Optional
 
-from fastapi import Depends, Cookie, Request, Response, HTTPException
+from fastapi import Depends, Request
 from slowapi.util import get_remote_address
-from fastapi.security import APIKeyHeader, APIKeyQuery
 
 from app.core.config import settings
 from app.core.supabase.client import get_supabase_client
 from app.services.concept import get_concept_service
-from app.services.session import get_session_service
 from app.services.image import get_image_service
 from app.services.storage import get_concept_storage_service
 from app.services.interfaces import (
     ConceptServiceInterface,
-    SessionServiceInterface, 
     ImageServiceInterface,
     StorageServiceInterface
 )
 from app.services.jigsawstack.client import get_jigsawstack_client
+from app.api.middleware.auth_middleware import get_current_user
 
 # Configure logging
 logger = logging.getLogger("api_dependencies")
-
-
-def get_session_id(session_id: Optional[str] = Cookie(None, alias="concept_session")) -> Optional[str]:
-    """
-    Extract the session ID from the request cookies.
-    
-    Args:
-        session_id: The session ID cookie value
-        
-    Returns:
-        The session ID if it exists, otherwise None
-    """
-    return session_id
-
-
-async def get_or_create_session(
-    response: Response,
-    session_service: SessionServiceInterface = Depends(get_session_service),
-    session_id: Optional[str] = Depends(get_session_id),
-) -> Tuple[str, bool]:
-    """
-    Get an existing session or create a new one.
-    
-    Args:
-        response: FastAPI response object for setting cookies
-        session_service: Service for managing sessions
-        session_id: Session ID from cookies
-        
-    Returns:
-        Tuple of (session_id, is_new_session)
-    """
-    # Pass session_id directly without client_session_id to avoid duplicate parameters
-    session = await session_service.get_or_create_session(session_id)
-    if "id" in session:
-        # Make sure to set the cookie for future requests
-        session_service.set_session_cookie(response, session["id"])
-        return session["id"], session.get("is_new", False)
-    else:
-        # Fallback in case the session format is unexpected
-        return session_id or "", False
 
 
 def get_request_ip(request: Request) -> str:
@@ -95,7 +53,6 @@ def get_common_services():
     """
     return {
         "concept_service": get_concept_service(),
-        "session_service": get_session_service(),
         "image_service": get_image_service(),
         "storage_service": get_concept_storage_service(),
         "supabase_client": get_supabase_client()
@@ -113,12 +70,33 @@ class CommonDependencies:
     def __init__(
         self,
         concept_service: ConceptServiceInterface = Depends(get_concept_service),
-        session_service: SessionServiceInterface = Depends(get_session_service),
         image_service: ImageServiceInterface = Depends(get_image_service),
-        storage_service: StorageServiceInterface = Depends(get_concept_storage_service)
+        storage_service: StorageServiceInterface = Depends(get_concept_storage_service),
+        request: Request = None,
     ):
-        """Initialize with all common service dependencies."""
+        """
+        Initialize with all common service dependencies.
+        
+        Args:
+            concept_service: Service for concept generation and refinement
+            image_service: Service for image processing and storage
+            storage_service: Service for concept storage operations
+            request: FastAPI request object for accessing user information
+        """
         self.concept_service = concept_service
-        self.session_service = session_service
         self.image_service = image_service
-        self.storage_service = storage_service 
+        self.storage_service = storage_service
+        self.request = request
+        self.user = get_current_user(request) if request else None
+        
+    @property
+    def user_id(self) -> Optional[str]:
+        """
+        Get the current user ID.
+        
+        Returns:
+            The current user ID if authenticated, None otherwise
+        """
+        if self.user and "id" in self.user:
+            return self.user["id"]
+        return None 

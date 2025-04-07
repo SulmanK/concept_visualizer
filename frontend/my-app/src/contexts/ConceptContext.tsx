@@ -4,8 +4,8 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { fetchRecentConcepts, ConceptData, ColorVariationData, supabase } from '../services/supabaseClient';
-import { getSessionId, syncSession } from '../services/sessionManager';
 import { getBucketName } from '../services/configService';
+import { useAuth } from './AuthContext';
 
 interface ConceptContextType {
   // Recent concepts data
@@ -38,36 +38,18 @@ interface ConceptProviderProps {
  * Provider component for concept data
  */
 export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) => {
+  const { user, isLoading: authLoading } = useAuth();
   const [recentConcepts, setRecentConcepts] = useState<ConceptData[]>([]);
   const [loadingConcepts, setLoadingConcepts] = useState<boolean>(false);
   const [errorLoadingConcepts, setErrorLoadingConcepts] = useState<string | null>(null);
   
-  // Sync session when component mounts
+  // Fetch concepts when authentication is ready
   useEffect(() => {
-    const initialSync = async () => {
-      console.log('ConceptContext: Performing initial session sync');
-      const sessionId = getSessionId();
-      
-      if (!sessionId) {
-        console.error('ConceptContext: No session ID available for initial sync');
-        return;
-      }
-      
-      try {
-        const syncResult = await syncSession();
-        console.log(`ConceptContext: Initial sync ${syncResult ? 'succeeded' : 'failed'}`);
-        
-        // Only refresh concepts if the sync was successful
-        if (syncResult) {
-          refreshConcepts();
-        }
-      } catch (err) {
-        console.error('ConceptContext: Error during initial sync', err);
-      }
-    };
-    
-    initialSync();
-  }, []);
+    if (!authLoading && user) {
+      console.log('ConceptContext: Auth ready, refreshing concepts');
+      refreshConcepts();
+    }
+  }, [authLoading, user]);
   
   /**
    * Refresh the list of concepts from the API
@@ -77,37 +59,21 @@ export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) =>
     setLoadingConcepts(true);
     setErrorLoadingConcepts(null);
     
-    // Get the current session ID
-    const sessionId = getSessionId();
-    console.log(`Refreshing concepts with session ID: ${sessionId}`);
+    // Get the current user ID
+    const userId = user?.id;
+    console.log(`Refreshing concepts for user ID: ${userId}`);
     
-    if (!sessionId) {
-      console.error('No session ID available, cannot fetch concepts');
-      setErrorLoadingConcepts('No session ID available');
+    if (!userId) {
+      console.error('No user ID available, cannot fetch concepts');
+      setErrorLoadingConcepts('No user ID available');
       setLoadingConcepts(false);
       return;
     }
     
     try {
-      // First try to sync the session to ensure consistency
-      console.log(`Syncing session before fetching concepts`);
-      
-      try {
-        const syncResult = await syncSession();
-        console.log(`Session sync ${syncResult ? 'succeeded' : 'failed'}`);
-        
-        // Get the session ID again in case it was updated by syncSession
-        const updatedSessionId = getSessionId(); 
-        if (updatedSessionId !== sessionId) {
-          console.log(`Session ID changed after sync: ${sessionId} → ${updatedSessionId}`);
-        }
-      } catch (syncError) {
-        console.error('Error syncing session, will try to fetch concepts anyway:', syncError);
-      }
-      
       // Use the improved fetchRecentConcepts function that handles signed URLs
       console.log('Fetching recent concepts from Supabase...');
-      const concepts = await fetchRecentConcepts(sessionId, 10);
+      const concepts = await fetchRecentConcepts(userId, 10);
       
       if (concepts && concepts.length > 0) {
         // Log the first concept's image URL fields to help with debugging
@@ -121,7 +87,7 @@ export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) =>
         setRecentConcepts(concepts);
         console.log(`Processed and set ${concepts.length} concepts`);
       } else {
-        console.log('No concepts found for the current session');
+        console.log('No concepts found for the current user');
         setRecentConcepts([]);
       }
     } catch (error) {

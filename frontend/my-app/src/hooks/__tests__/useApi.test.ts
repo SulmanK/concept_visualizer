@@ -1,5 +1,11 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useApi } from '../useApi';
+import * as AuthContext from '../../contexts/AuthContext';
+
+// Mock the AuthContext
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: jest.fn()
+}));
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -7,6 +13,18 @@ global.fetch = jest.fn();
 describe('useApi Hook', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Setup default mock values for AuthContext
+    (AuthContext.useAuth as jest.Mock).mockReturnValue({
+      session: {
+        access_token: 'mock-access-token',
+        user: { id: 'mock-user-id' }
+      },
+      isLoading: false,
+      user: { id: 'mock-user-id' },
+      isAnonymous: true,
+      error: null
+    });
   });
 
   // Mock successful response
@@ -34,6 +52,7 @@ describe('useApi Hook', () => {
     
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeUndefined();
+    expect(result.current.authInitialized).toBe(true);
   });
 
   test('should handle GET request successfully', async () => {
@@ -55,13 +74,14 @@ describe('useApi Hook', () => {
     expect(response.data).toEqual(mockSuccessResponse);
     expect(result.current.error).toBeUndefined();
     
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/test'), {
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/test'), expect.objectContaining({
       method: 'GET',
-      headers: {
+      headers: expect.objectContaining({
         'Content-Type': 'application/json',
-      },
+        'Authorization': 'Bearer mock-access-token'
+      }),
       body: undefined,
-    });
+    }));
   });
 
   test('should handle POST request successfully', async () => {
@@ -84,13 +104,14 @@ describe('useApi Hook', () => {
     expect(response.data).toEqual(mockSuccessResponse);
     expect(result.current.error).toBeUndefined();
     
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/test'), {
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/test'), expect.objectContaining({
       method: 'POST',
-      headers: {
+      headers: expect.objectContaining({
         'Content-Type': 'application/json',
-      },
+        'Authorization': 'Bearer mock-access-token'
+      }),
       body: JSON.stringify(requestData),
-    });
+    }));
   });
 
   test('should handle API error responses', async () => {
@@ -170,5 +191,37 @@ describe('useApi Hook', () => {
     
     // Verify the error was cleared
     expect(result.current.error).toBeUndefined();
+  });
+  
+  test('should handle request without auth token', async () => {
+    // Mock AuthContext to return no session
+    (AuthContext.useAuth as jest.Mock).mockReturnValue({
+      session: null,
+      isLoading: false,
+      user: null,
+      isAnonymous: true,
+      error: null
+    });
+    
+    (fetch as jest.Mock).mockImplementationOnce(() => mockFetchPromise);
+    
+    const { result } = renderHook(() => useApi());
+    
+    let responsePromise;
+    act(() => {
+      responsePromise = result.current.get('/test');
+    });
+    
+    // Wait for the async operation to complete
+    const response = await responsePromise;
+    
+    // Should not have Authorization header
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/test'), expect.objectContaining({
+      headers: expect.not.objectContaining({
+        'Authorization': expect.anything()
+      })
+    }));
+    
+    expect(response.data).toEqual(mockSuccessResponse);
   });
 }); 

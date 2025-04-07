@@ -46,6 +46,7 @@ class Settings(BaseSettings):
         UPSTASH_REDIS_PORT: Port for Upstash Redis
         STORAGE_BUCKET_PALETTE: Name of the storage bucket for palettes
         STORAGE_BUCKET_CONCEPT: Name of the storage bucket for concepts
+        RATE_LIMITING_ENABLED: Flag to enable/disable rate limiting
     """
     
     # API settings
@@ -81,6 +82,9 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_ENDPOINT: str = "your-redis-url.upstash.io"
     UPSTASH_REDIS_PASSWORD: str = "your-redis-password"
     UPSTASH_REDIS_PORT: int = 6379
+    
+    # Rate limiting settings
+    RATE_LIMITING_ENABLED: bool = False
     
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(

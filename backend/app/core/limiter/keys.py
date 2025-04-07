@@ -12,28 +12,62 @@ from slowapi.util import get_remote_address
 # Configure logging
 logger = logging.getLogger(__name__)
 
-def get_session_id(request: Request) -> str:
+def get_user_id(request: Request) -> str:
     """
-    Get the user's session ID from cookies for rate limiting.
-    Falls back to IP address if session ID isn't available.
+    Get the user's ID from request state for rate limiting.
+    Falls back to IP address if user ID isn't available.
     
     Args:
-        request: The FastAPI request
+        request: FastAPI request object
         
     Returns:
-        str: Session ID or IP address to use as rate limit key
+        str: User ID or IP address to use as rate limit key
     """
-    # First try to get the session_id from cookies
-    session_id = request.cookies.get("concept_session")
+    # First try to get the user_id from request state (set by auth middleware)
+    if hasattr(request, "state") and hasattr(request.state, "user") and request.state.user:
+        user_id = request.state.user.get("id")
+        if user_id:
+            logger.debug(f"Using user_id for rate limiting: {user_id[:4]}****")
+            return f"user:{user_id}"
     
-    if session_id:
-        logger.debug(f"Using session_id for rate limiting: {session_id[:4]}****")
-        return f"session:{session_id}"
-    
-    # Fall back to IP address if no session ID
+    # Fall back to IP address if no user ID
     ip = get_remote_address(request)
-    logger.debug(f"No session ID found, using IP for rate limiting: {ip}")
+    logger.debug(f"No user ID found, using IP for rate limiting: {ip}")
     return f"ip:{ip}"
+
+
+def get_endpoint_key(request: Request) -> str:
+    """
+    Get a unique key for the current endpoint.
+    
+    Args:
+        request: FastAPI request object
+        
+    Returns:
+        str: Unique key for the endpoint
+    """
+    route = request.scope.get("route")
+    if route and hasattr(route, "path"):
+        path = route.path
+        return f"endpoint:{path}"
+    
+    # Fallback to the raw path if route not available
+    path = request.scope.get("path", "unknown")
+    return f"endpoint:{path}"
+
+
+def combine_keys(user_id: str, endpoint_key: str) -> str:
+    """
+    Combine user and endpoint keys for granular rate limiting.
+    
+    Args:
+        user_id: The user identifier (usually user ID or IP)
+        endpoint_key: The endpoint identifier
+        
+    Returns:
+        str: Combined key for rate limiting
+    """
+    return f"{user_id}:{endpoint_key}"
 
 
 def calculate_ttl(period: str) -> int:

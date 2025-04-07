@@ -18,11 +18,28 @@ from ..core.supabase.image_storage import ImageStorage
 from .jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 from .image_processing import apply_palette_with_masking_optimized
 from ..utils.security.mask import mask_id, mask_path
+from ..services.interfaces import ImageServiceInterface
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-class ImageService:
+class ImageProcessingError(Exception):
+    """Exception raised for image processing errors."""
+    
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
+class StorageError(Exception):
+    """Exception raised for storage errors."""
+    
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ImageService(ImageServiceInterface):
     """Service for image generation and storage."""
     
     def __init__(
@@ -41,15 +58,20 @@ class ImageService:
         self.jigsawstack_client = jigsawstack_client
         self.logger = logging.getLogger("image_service")
     
-    async def generate_and_store_image(self, prompt: str, session_id: str) -> Tuple[Optional[str], Optional[str]]:
-        """Generate an image and store it in Supabase.
+    async def generate_and_store_image(self, prompt: str, user_id: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Generate an image based on a prompt and store it in Supabase.
         
         Args:
             prompt: Image generation prompt
-            session_id: Current session ID
+            user_id: Current user ID
             
         Returns:
             Tuple of (storage_path, signed_url) or (None, None) on error
+            
+        Raises:
+            ImageProcessingError: If image generation fails
+            StorageError: If storing the image fails
         """
         try:
             # Generate image using JigsawStack
@@ -58,13 +80,13 @@ class ImageService:
             
             if not image_data:
                 self.logger.error("Failed to generate image: No binary data returned")
-                return None, None
+                raise ImageProcessingError("Failed to generate image: No binary data returned")
             
             self.logger.info(f"Image generated successfully. Binary data received: {len(image_data)} bytes")
                 
             # Generate a unique filename and upload to Supabase Storage
-            masked_session = mask_id(session_id)
-            self.logger.info(f"Uploading image to Supabase Storage, bucket: [concept-images], session: {masked_session}")
+            masked_user_id = mask_id(user_id)
+            self.logger.info(f"Uploading image to Supabase Storage, bucket: [concept-images], user: {masked_user_id}")
             
             # Determine image format
             img = Image.open(BytesIO(image_data))
@@ -72,7 +94,7 @@ class ImageService:
             
             # Generate a unique filename with the correct extension
             unique_id = str(uuid.uuid4())
-            unique_filename = f"{session_id}/{unique_id}.{format_ext}"
+            unique_filename = f"{user_id}/{unique_id}.{format_ext}"
             masked_filename = mask_path(unique_filename)
             
             # Upload to Supabase Storage
@@ -84,7 +106,7 @@ class ImageService:
             
             if not result:
                 self.logger.error("Failed to upload image to Supabase Storage")
-                return None, None
+                raise StorageError("Failed to upload image to Supabase Storage")
                 
             # Set the storage path
             storage_path = unique_filename
@@ -96,25 +118,32 @@ class ImageService:
             return storage_path, signed_url
         except Exception as e:
             self.logger.error(f"Error in generate_and_store_image: {e}")
-            return None, None
+            if isinstance(e, (ImageProcessingError, StorageError)):
+                raise
+            raise ImageProcessingError(f"Error generating and storing image: {str(e)}")
     
     async def refine_and_store_image(
         self, 
         prompt: str, 
         original_image_url: str, 
-        session_id: str,
+        user_id: str,
         strength: float = 0.7
     ) -> Tuple[Optional[str], Optional[str]]:
-        """Refine an image and store the result in Supabase.
+        """
+        Refine an image based on a prompt and store the result in Supabase.
         
         Args:
             prompt: Refinement prompt
             original_image_url: URL of the original image
-            session_id: Current session ID
+            user_id: Current user ID
             strength: How much to change the original (0.0-1.0)
             
         Returns:
             Tuple of (storage_path, signed_url) or (None, None) on error
+            
+        Raises:
+            ImageProcessingError: If image refinement fails
+            StorageError: If storing the image fails
         """
         try:
             # Refine image using JigsawStack
@@ -127,11 +156,11 @@ class ImageService:
             
             if not image_data:
                 self.logger.error("Failed to refine image: No binary data returned")
-                return None, None
+                raise ImageProcessingError("Failed to refine image: No binary data returned")
             
             self.logger.info(f"Image refined successfully. Binary data received: {len(image_data)} bytes")
                 
-            # Generate a unique filename and upload to Supabase Storage using store_image method
+            # Generate a unique filename and upload to Supabase Storage
             try:
                 # Determine image format
                 img = Image.open(BytesIO(image_data))
@@ -140,23 +169,23 @@ class ImageService:
                 # Generate a unique ID and filename
                 unique_id = str(uuid.uuid4())
                 filename = f"{unique_id}.{format_ext}"
-                unique_filename = f"{session_id}/{filename}"
+                unique_filename = f"{user_id}/{filename}"
                 
                 # Log the operation with masked paths
-                masked_session = mask_id(session_id)
+                masked_user_id = mask_id(user_id)
                 masked_filename = mask_path(unique_filename)
-                self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, session: {masked_session}")
+                self.logger.info(f"Uploading refined image to Storage, bucket: concept-images, user: {masked_user_id}")
                 
                 # Store the image using the store_image method
                 signed_url = self.image_storage.store_image(
                     image_data=image_data,
-                    session_id=session_id,
+                    user_id=user_id,
                     file_name=filename
                 )
                 
                 if not signed_url:
                     self.logger.error("Failed to upload refined image to Supabase Storage")
-                    return None, None
+                    raise StorageError("Failed to upload refined image to Supabase Storage")
                 
                 # Set the storage path to the consistent filename
                 storage_path = unique_filename
@@ -165,106 +194,144 @@ class ImageService:
                 return storage_path, signed_url
             except Exception as e:
                 self.logger.error(f"Failed to upload refined image: {str(e)}")
-                return None, None
+                raise StorageError(f"Failed to upload refined image: {str(e)}")
         except Exception as e:
             self.logger.error(f"Error in refine_and_store_image: {e}")
-            return None, None
+            if isinstance(e, (ImageProcessingError, StorageError)):
+                raise
+            raise ImageProcessingError(f"Error refining and storing image: {str(e)}")
     
     async def create_palette_variations(
         self, 
         base_image_path: str, 
         palettes: List[Dict[str, Any]], 
-        session_id: str,
+        user_id: str,
         blend_strength: float = 0.75
     ) -> List[Dict[str, Any]]:
-        """Create variations of an image with different color palettes.
+        """
+        Create variations of an image with different color palettes.
         
         Args:
             base_image_path: Storage path of the base image
             palettes: List of color palette dictionaries
-            session_id: Current session ID
+            user_id: Current user ID
             blend_strength: How strongly to apply the new colors (0.0-1.0)
             
         Returns:
             List of palettes with added image_path and image_url fields
+            
+        Raises:
+            ImageProcessingError: If applying palettes fails
+            StorageError: If storing the variations fails
         """
         result_palettes = []
         
         # Get image URL from storage path
         masked_base_path = mask_path(base_image_path)
-        masked_session = mask_id(session_id)
+        masked_user_id = mask_id(user_id)
         
         base_image_url = self.image_storage.get_image_url(base_image_path, "concept-images")
         if not base_image_url:
             self.logger.error(f"Failed to get URL for base image: {masked_base_path}")
-            return []
-        
-        for palette in palettes:
-            self.logger.info(f"Creating palette variation for palette: {palette['name']} using base image: {masked_base_path}")
+            raise StorageError(f"Failed to get URL for base image: {masked_base_path}")
             
-            try:
-                # Apply palette to image using the optimized masking approach
-                palette_image_data = apply_palette_with_masking_optimized(
-                    base_image_url, 
-                    palette["colors"],
-                    blend_strength=blend_strength
-                )
+        try:
+            # Download the base image
+            self.logger.info(f"Downloading base image for user: {masked_user_id}")
+            base_image_data = await self.jigsawstack_client.download_image(base_image_url)
+            
+            if not base_image_data:
+                self.logger.error("Failed to download base image")
+                raise ImageProcessingError("Failed to download base image")
                 
-                # Generate a unique filename for the palette variation
-                unique_id = str(uuid.uuid4())
-                filename = f"palette_{unique_id}.png"
-                
-                # Upload to Supabase Storage using store_image method
+            # Process each palette
+            for idx, palette in enumerate(palettes):
                 try:
-                    # The store_image method will use the palette bucket and return a tuple of (path, url)
-                    palette_image_path, palette_image_url = self.image_storage.store_image(
-                        image_data=palette_image_data,
-                        session_id=session_id,
-                        file_name=filename,
-                        is_palette=True
+                    # Extract palette data
+                    palette_name = palette.get("name", f"Palette {idx+1}")
+                    palette_colors = palette.get("colors", [])
+                    palette_description = palette.get("description", "")
+                    
+                    self.logger.info(f"Processing palette: {palette_name} with {len(palette_colors)} colors")
+                    
+                    if not palette_colors:
+                        self.logger.warning(f"Empty color palette: {palette_name}, skipping")
+                        continue
+                        
+                    # Apply color palette to the image
+                    colorized_image = await apply_palette_with_masking_optimized(
+                        base_image_data, 
+                        palette_colors,
+                        blend_strength
                     )
                     
-                    if not palette_image_path or not palette_image_url:
-                        self.logger.error(f"Failed to upload palette variation: {palette['name']}")
+                    if not colorized_image:
+                        self.logger.error(f"Failed to apply palette: {palette_name}")
                         continue
                     
-                    # For debugging - log the path and URL received
-                    self.logger.info(f"Stored palette variation at path: {palette_image_path}")
-                    self.logger.info(f"Received palette image URL: {palette_image_url}")
+                    # Generate a unique filename for this variation
+                    unique_id = str(uuid.uuid4())
+                    img = Image.open(BytesIO(colorized_image))
+                    format_ext = img.format.lower() if img.format else "png"
+                    filename = f"{unique_id}.{format_ext}"
+                    unique_filename = f"{user_id}/{filename}"
                     
-                    # Add paths to palette dict
-                    palette_copy = palette.copy()
-                    # Store both the path and the full signed URL
-                    palette_copy["image_path"] = palette_image_path
-                    palette_copy["image_url"] = palette_image_url
-                    # Add the bucket information explicitly to help with retrieval
-                    palette_copy["bucket"] = self.image_storage.palette_bucket
-                    result_palettes.append(palette_copy)
+                    self.logger.info(f"Uploading palette variation: {palette_name}")
+                    # Upload to Supabase Storage in the palette-images bucket
+                    result = self.supabase_client.client.storage.from_("palette-images").upload(
+                        path=unique_filename,
+                        file=colorized_image,
+                        file_options={"content-type": f"image/{format_ext}"}
+                    )
                     
-                    self.logger.info(f"Created palette variation: {mask_path(palette_image_path)}")
+                    if not result:
+                        self.logger.error(f"Failed to upload palette image: {palette_name}")
+                        continue
+                    
+                    # Get a signed URL for the palette image
+                    palette_image_url = self.image_storage.get_image_url(unique_filename, "palette-images")
+                    
+                    # Add the result to our list
+                    result_palettes.append({
+                        "name": palette_name,
+                        "colors": palette_colors,
+                        "description": palette_description,
+                        "image_path": unique_filename,
+                        "image_url": palette_image_url
+                    })
+                    
+                    self.logger.info(f"Successfully processed palette: {palette_name}")
+                    
                 except Exception as e:
-                    self.logger.error(f"Error creating palette variation: {str(e)}")
-                    continue
+                    self.logger.error(f"Error processing palette {palette_name}: {e}")
+                    # Continue with other palettes
+            
+            if not result_palettes:
+                self.logger.warning("No palette variations were successfully created")
+            else:
+                self.logger.info(f"Created {len(result_palettes)} palette variations")
                 
-            except Exception as e:
-                self.logger.error(f"Error creating palette variation: {str(e)}")
-                continue
-                
-        return result_palettes
+            return result_palettes
+            
+        except Exception as e:
+            self.logger.error(f"Error in create_palette_variations: {e}")
+            if isinstance(e, (ImageProcessingError, StorageError)):
+                raise
+            raise ImageProcessingError(f"Error creating palette variations: {str(e)}")
 
 
-# Dependency function for FastAPI routes
 async def get_image_service(
     supabase_client: SupabaseClient = Depends(get_supabase_client),
     jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client)
-) -> ImageService:
-    """Factory function for ImageService.
+) -> ImageServiceInterface:
+    """
+    Get an instance of ImageService.
     
     Args:
-        supabase_client: Supabase client dependency
-        jigsawstack_client: JigsawStack client dependency
+        supabase_client: Client for Supabase operations
+        jigsawstack_client: Client for JigsawStack API
         
     Returns:
-        Configured ImageService instance
+        ImageService: A service for image generation and storage
     """
     return ImageService(supabase_client, jigsawstack_client) 

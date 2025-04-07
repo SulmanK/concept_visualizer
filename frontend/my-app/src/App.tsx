@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import MainLayout from './components/layout/MainLayout';
 import PageTransition from './components/layout/PageTransition';
 import { ConceptProvider } from './contexts/ConceptContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './hooks/useToast';
 import { ErrorBoundary, OfflineStatus } from './components/ui';
-import { debugSessionStatus, getSessionId, ensureSession } from './services/sessionManager';
 import { LandingPage } from './features/landing';
 import { ConceptDetailPage } from './features/concepts/detail';
 import { RecentConceptsPage } from './features/concepts/recent';
@@ -84,71 +84,35 @@ const AppRoutes = () => {
 
 export default function App() {
   const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize session on app load
+  // Set basic debug info for development environment
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        // Ensure a session exists - this will generate a UUID if needed
-        // and sync with the backend
-        const isNewSession = await ensureSession();
-        console.log(`Session initialization completed. New session created: ${isNewSession}`);
-        
-        // Get the session status for debugging
-        const sessionStatus = debugSessionStatus();
-        
-        // Log general app information
-        console.log('===== DEBUG INFORMATION =====');
-        console.log({
-          timestamp: new Date().toISOString(),
-          sessionStatus,
-          sessionId: getSessionId(),
-          isNewSession,
-          supabaseStatus: 'Connected', // We assume it's connected at this point
-          routes: {
-            home: 'http://localhost:5173/',
-            recent: 'http://localhost:5173/recent',
-            concepts: 'http://localhost:5173/concepts/123' // Example
-          },
-          userAgent: navigator.userAgent,
-          screenSize: {
-            width: window.innerWidth,
-            height: window.innerHeight
-          }
-        });
-        console.log('=============================');
-        
-        setDebugInfo({
-          sessionStatus,
-          supabaseStatus: 'Connected',
-        });
-        
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Error initializing session:', error);
-        setIsInitialized(true); // Still mark as initialized to not block UI
-      }
-    };
-    
-    initializeSession();
+    if (process.env.NODE_ENV === 'development') {
+      setDebugInfo({
+        environment: process.env.NODE_ENV,
+        apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'Not configured',
+      });
+    }
   }, []);
 
   return (
     <div style={appStyle}>
       <ToastProvider position="bottom-right" defaultDuration={5000} maxToasts={5}>
         <ErrorBoundary errorMessage="Something went wrong in the application. Please try refreshing the page.">
-          <ConceptProvider>
-            <Router>
-              {/* Offline status notification */}
-              <OfflineStatus 
-                position="top"
-                showConnectionInfo={true}
-              />
-              
-              <AppRoutes />
-            </Router>
-          </ConceptProvider>
+          <AuthProvider>
+            <ConceptProvider>
+              <Router>
+                {/* Offline status notification */}
+                <OfflineStatus 
+                  position="top"
+                  showConnectionInfo={true}
+                />
+                
+                <AppRoutes />
+              </Router>
+            </ConceptProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </ToastProvider>
       
@@ -169,8 +133,8 @@ export default function App() {
           }}
           onClick={() => console.log('Debug info:', debugInfo)}
         >
-          Session: {debugInfo.sessionStatus?.exists ? '✅' : '❌'} | 
-          Supabase: {debugInfo.supabaseStatus === 'Connected' ? '✅' : '❌'}
+          ENV: {debugInfo.environment} | 
+          API: {debugInfo.apiBaseUrl ? '✅' : '❌'}
         </div>
       )}
     </div>

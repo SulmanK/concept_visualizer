@@ -40,13 +40,13 @@ class ImageStorage:
         self.concept_bucket = settings.STORAGE_BUCKET_CONCEPT
         self.palette_bucket = settings.STORAGE_BUCKET_PALETTE
     
-    async def upload_image_from_url(self, image_url: str, bucket: str, session_id: str) -> Optional[str]:
+    async def upload_image_from_url(self, image_url: str, bucket: str, user_id: str) -> Optional[str]:
         """Upload an image from URL to Supabase Storage.
         
         Args:
             image_url: URL of the image to download
             bucket: Storage bucket to upload to
-            session_id: Session ID to use in the image path
+            user_id: User ID to use in the image path
             
         Returns:
             Storage path if successful, None otherwise
@@ -63,7 +63,7 @@ class ImageStorage:
             img_bytes.seek(0)
             
             # Generate a unique filename
-            filename = f"{session_id}/{uuid.uuid4()}.png"
+            filename = f"{user_id}/{uuid.uuid4()}.png"
             
             # Upload to Supabase Storage
             self.client.client.storage.from_(bucket).upload(
@@ -95,13 +95,13 @@ class ImageStorage:
             # Create a JWT token for access
             from app.utils.jwt_utils import create_supabase_jwt
             
-            # First segment is session_id
-            session_id = path.split('/')[0] if '/' in path else None
-            if not session_id:
-                self.logger.warning(f"Invalid path format - cannot extract session ID: {path}")
+            # First segment is user_id
+            user_id = path.split('/')[0] if '/' in path else None
+            if not user_id:
+                self.logger.warning(f"Invalid path format - cannot extract user ID: {path}")
                 return None
                 
-            token = create_supabase_jwt(session_id)
+            token = create_supabase_jwt(user_id)
             
             # Get the base URL
             api_url = self.client.url
@@ -123,7 +123,23 @@ class ImageStorage:
             if response.status_code == 200:
                 data = response.json()
                 if "signedUrl" in data:
-                    return data["signedUrl"]
+                    signed_url = data["signedUrl"]
+                    # Ensure the URL is absolute and correctly formatted
+                    if signed_url.startswith('/'):
+                        # Make sure URL has the correct format with /storage/v1/
+                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                        signed_url = f"{api_url}{signed_url}"
+                    return signed_url
+                elif "signedURL" in data:
+                    signed_url = data["signedURL"]
+                    # Ensure the URL is absolute and correctly formatted
+                    if signed_url.startswith('/'):
+                        # Make sure URL has the correct format with /storage/v1/
+                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                        signed_url = f"{api_url}{signed_url}"
+                    return signed_url
             
             # Fallback to direct URL with token if signed URL fails
             self.logger.warning(f"Failed to get signed URL, using fallback URL with token")
@@ -133,13 +149,13 @@ class ImageStorage:
             self.logger.error(f"Error getting image URL: {str(e)}")
             return None
     
-    async def apply_color_palette(self, image_path: str, palette: List[str], session_id: str) -> Optional[str]:
+    async def apply_color_palette(self, image_path: str, palette: List[str], user_id: str) -> Optional[str]:
         """Apply a color palette to an image and store the result.
         
         Args:
             image_path: Path to the source image in Storage
             palette: List of hex color codes
-            session_id: Session ID for the new image path
+            user_id: User ID for the new image path
             
         Returns:
             Path to the color-modified image if successful, None otherwise
@@ -167,7 +183,7 @@ class ImageStorage:
             # Get the original image
             # Download image from storage
             import uuid
-            output_path = f"{session_id}/{uuid.uuid4()}_palette.png"
+            output_path = f"{user_id}/{uuid.uuid4()}_palette.png"
             
             # Log the operation with masked paths
             self.logger.info(
@@ -179,27 +195,27 @@ class ImageStorage:
             self.logger.error(f"Error applying color palette: {e}")
             return None
     
-    def delete_all_storage_objects(self, bucket: str, session_id: Optional[str] = None) -> bool:
-        """Delete all storage objects for a session or all objects in a bucket.
+    def delete_all_storage_objects(self, bucket: str, user_id: Optional[str] = None) -> bool:
+        """Delete all storage objects for a user or all objects in a bucket.
         
         Args:
             bucket: Storage bucket name
-            session_id: Optional session ID to delete only objects for this session
+            user_id: Optional user ID to delete only objects for this user
             
         Returns:
             True if successful, False otherwise
         """
         try:
-            if session_id:
-                # List all files in the session's folder
-                files = self.client.client.storage.from_(bucket).list(session_id)
+            if user_id:
+                # List all files in the user's folder
+                files = self.client.client.storage.from_(bucket).list(user_id)
                 
                 # Delete each file
                 for file in files:
-                    path = f"{session_id}/{file['name']}"
+                    path = f"{user_id}/{file['name']}"
                     self.client.client.storage.from_(bucket).remove([path])
                     
-                self.logger.info(f"Deleted all storage objects for session ID {mask_id(session_id)}")
+                self.logger.info(f"Deleted all storage objects for user ID {mask_id(user_id)}")
             else:
                 # WARNING: This will delete ALL files in the bucket
                 files = self.client.client.storage.from_(bucket).list()
@@ -219,18 +235,18 @@ class ImageStorage:
     def store_image(
         self, 
         image_data: Union[bytes, BytesIO, UploadFile], 
-        session_id: str,
+        user_id: str,
         concept_id: Optional[str] = None,
         file_name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False,
     ) -> str:
         """
-        Store an image in the storage bucket with session ID metadata.
+        Store an image in the storage bucket with user ID metadata.
         
         Args:
             image_data: Image data as bytes, BytesIO or UploadFile
-            session_id: Session ID for access control
+            user_id: User ID for access control
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name (generated if not provided)
             metadata: Optional metadata to store with the image
@@ -272,11 +288,11 @@ class ImageStorage:
                     
                 file_name = f"{timestamp}_{random_id}.{ext}"
                 
-            # Create path with session_id as the first folder segment
+            # Create path with user_id as the first folder segment
             # This is CRITICAL for our RLS policy to work
-            path = f"{session_id}/{file_name}"
+            path = f"{user_id}/{file_name}"
             if concept_id:
-                path = f"{session_id}/{concept_id}/{file_name}"
+                path = f"{user_id}/{concept_id}/{file_name}"
                 
             # Set content type based on extension
             content_type = "image/png"  # Default
@@ -287,13 +303,13 @@ class ImageStorage:
             elif ext == "webp":
                 content_type = "image/webp"
             
-            # Prepare file metadata including session ID
-            file_metadata = {"owner_session_id": session_id}
+            # Prepare file metadata including user ID
+            file_metadata = {"owner_user_id": user_id}
             if metadata:
                 file_metadata.update(metadata)
             
             # Create JWT token for authentication (for Supabase Storage RLS)
-            token = create_supabase_jwt(session_id)
+            token = create_supabase_jwt(user_id)
             
             # Use direct HTTP request with requests library for JWT authorization
             # Get the API endpoint from settings
@@ -339,7 +355,7 @@ class ImageStorage:
                 # Create a signed URL with 3-day expiration
                 from app.utils.jwt_utils import create_supabase_jwt
                 
-                # First segment is session_id
+                # First segment is user_id
                 token = create_supabase_jwt(path.split('/')[0])
                 
                 # Use signed URL API endpoint
@@ -365,6 +381,25 @@ class ImageStorage:
                     # Check for signed URL in response
                     if "signedUrl" in response_data:
                         image_url = response_data["signedUrl"]
+                        # Ensure the URL is absolute and correctly formatted
+                        if image_url.startswith('/'):
+                            # Make sure URL has the correct format with /storage/v1/
+                            if '/storage/v1/' not in image_url and '/object/sign/' in image_url:
+                                image_url = image_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                            image_url = f"{api_url}{image_url}"
+                        self.logger.info(f"Generated signed URL successfully")
+                        
+                        # Log success with masked path
+                        self.logger.info(f"Successfully uploaded image to {mask_path(path)}")
+                        return image_url
+                    elif "signedURL" in response_data:
+                        image_url = response_data["signedURL"]
+                        # Ensure the URL is absolute and correctly formatted
+                        if image_url.startswith('/'):
+                            # Make sure URL has the correct format with /storage/v1/
+                            if '/storage/v1/' not in image_url and '/object/sign/' in image_url:
+                                image_url = image_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                            image_url = f"{api_url}{image_url}"
                         self.logger.info(f"Generated signed URL successfully")
                         
                         # Log success with masked path

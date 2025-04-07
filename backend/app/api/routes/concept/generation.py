@@ -9,7 +9,7 @@ import traceback
 from typing import Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, Request
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -18,16 +18,14 @@ from app.models.request import PromptRequest
 from app.models.response import GenerationResponse, PaletteVariation
 from app.utils.api_limits import apply_rate_limit
 from app.services.concept import get_concept_service
-from app.services.session import get_session_service
 from app.services.image import get_image_service
 from app.services.storage import get_concept_storage_service
 from app.services.interfaces import (
     ConceptServiceInterface,
-    SessionServiceInterface, 
     ImageServiceInterface,
     StorageServiceInterface
 )
-from app.api.dependencies import CommonDependencies, get_or_create_session
+from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
 from app.core.config import settings
 
@@ -43,17 +41,15 @@ async def generate_concept(
     response: Response,
     req: Request,
     commons: CommonDependencies = Depends(),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
     Generate a new visual concept based on the provided prompt and store it.
     
     Args:
         request: The prompt request containing logo and theme descriptions
-        response: FastAPI response object for setting cookies
+        response: FastAPI response object
         req: The FastAPI request object for rate limiting
         commons: Common dependencies including services
-        session_id: Optional session ID from cookies
     
     Returns:
         GenerationResponse: The generated concept data
@@ -61,7 +57,7 @@ async def generate_concept(
     Raises:
         ServiceUnavailableError: If there was an error generating the concept
         ValidationError: If the request validation fails
-        HTTPException: If rate limit is exceeded (429)
+        HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
     """
     # Apply rate limit - this will now raise an HTTPException if limit is exceeded
     await apply_rate_limit(req, "/concepts/generate", "10/month")
@@ -77,18 +73,16 @@ async def generate_concept(
                 }
             )
         
-        # Get or create session using the dependency
-        session_id, _ = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service,
-            session_id=session_id
-        )
+        # Get user ID from commons (which gets it from auth middleware)
+        user_id = commons.user_id
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
         # Generate base image and store it in Supabase Storage
         # The new API returns (image_path, image_url)
         image_path, image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         if not image_path or not image_url:
@@ -104,20 +98,19 @@ async def generate_concept(
         palette_variations = await commons.image_service.create_palette_variations(
             image_path,
             raw_palettes,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         # Store concept in Supabase database
-        stored_concept = await commons.storage_service.store_concept(
-            concept_data={
-                "session_id": session_id,
-                "logo_description": request.logo_description,
-                "theme_description": request.theme_description,
-                "image_path": image_path,
-                "image_url": image_url,
-                "color_palettes": palette_variations
-            }
-        )
+        stored_concept = await commons.storage_service.store_concept({
+            "user_id": user_id,
+            "logo_description": request.logo_description,
+            "theme_description": request.theme_description,
+            "image_path": image_path,
+            "image_url": image_url,
+            "color_palettes": palette_variations,
+            "is_anonymous": True
+        })
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store concept")
@@ -163,7 +156,6 @@ async def generate_concept_with_palettes(
     req: Request,
     num_palettes: int = 7,
     commons: CommonDependencies = Depends(),
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
 ):
     """
     Generate a new visual concept with multiple color palette variations,
@@ -171,11 +163,10 @@ async def generate_concept_with_palettes(
     
     Args:
         request: The prompt request containing logo and theme descriptions
-        response: FastAPI response object for setting cookies
+        response: FastAPI response object
         req: The FastAPI request object for rate limiting
         num_palettes: Number of distinct palette variations to generate (default: 7)
         commons: Common dependencies including all services
-        session_id: Optional session ID from cookies
     
     Returns:
         GenerationResponse: The generated concept with multiple variations
@@ -183,7 +174,7 @@ async def generate_concept_with_palettes(
     Raises:
         ServiceUnavailableError: If there was an error during generation
         ValidationError: If the request validation fails
-        HTTPException: If rate limit is exceeded (429)
+        HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
     """
     # Apply rate limit - this will now raise an HTTPException if limit is exceeded
     await apply_rate_limit(req, "/concepts/generate-with-palettes", "10/month")
@@ -206,12 +197,10 @@ async def generate_concept_with_palettes(
                 field_errors={"num_palettes": ["Must be between 1 and 15"]}
             )
         
-        # Get or create session
-        session_id, _ = await get_or_create_session(
-            response=response,
-            session_service=commons.session_service,
-            session_id=session_id
-        )
+        # Get user ID from commons (which gets it from auth middleware)
+        user_id = commons.user_id
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Authentication required")
         
         # First, generate color palettes based on the theme description
         palettes = await commons.concept_service.generate_color_palettes(
@@ -229,7 +218,7 @@ async def generate_concept_with_palettes(
         logger.info(f"Generating base image for concept with prompt: {request.logo_description}")
         image_path, image_url = await commons.image_service.generate_and_store_image(
             request.logo_description,
-            session_id
+            user_id  # Use user_id instead of session_id
         )
         
         if not image_path or not image_url:
@@ -246,48 +235,49 @@ async def generate_concept_with_palettes(
             palette_image_path, palette_image_url = await commons.image_service.apply_color_palette(
                 (image_url, image_path),  # Pass the full tuple so service can use path for direct access
                 palette["colors"],
-                session_id
+                user_id  # Use user_id instead of session_id
             )
             
-            if palette_image_path and palette_image_url:
-                # Create variation with path and URL for response
-                variation = {
-                    "name": palette["name"],
-                    "colors": palette["colors"],
-                    "description": palette.get("description", ""),
-                    "image_path": palette_image_path,
-                    "image_url": palette_image_url
-                }
+            if not palette_image_path or not palette_image_url:
+                logger.warning(f"Failed to create palette variation for palette: {palette['name']}")
+                continue
                 
-                palette_variations.append(variation)
-        
+            # Add the variations with the image paths and URLs
+            palette_variations.append({
+                "name": palette["name"],
+                "colors": palette["colors"],
+                "description": palette.get("description", ""),
+                "image_path": palette_image_path,
+                "image_url": palette_image_url
+            })
+            
         if not palette_variations:
-            raise ServiceUnavailableError(detail="Failed to create color variations")
+            raise ServiceUnavailableError(detail="Failed to create any palette variations")
+            
+        logger.info(f"Successfully created {len(palette_variations)} palette variations")
         
-        # Store the concept with all variations
-        stored_concept = await commons.storage_service.store_concept(
-            concept_data={
-                "session_id": session_id,
-                "logo_description": request.logo_description,
-                "theme_description": request.theme_description,
-                "image_path": image_path,
-                "image_url": image_url,
-                "color_palettes": palette_variations
-            }
-        )
+        # Store everything in Supabase database
+        stored_concept = await commons.storage_service.store_concept({
+            "user_id": user_id,
+            "logo_description": request.logo_description,
+            "theme_description": request.theme_description,
+            "image_path": image_path,
+            "image_url": image_url,
+            "color_palettes": palette_variations,
+            "is_anonymous": True
+        })
         
         if not stored_concept:
             raise ServiceUnavailableError(detail="Failed to store concept")
             
-        # Handle case where storage service returns just the ID string
+        # Format response - extract ID if needed
         concept_id = stored_concept
         created_at = datetime.now().isoformat()
         if isinstance(stored_concept, dict):
             concept_id = stored_concept.get("id", stored_concept)
             created_at = stored_concept.get("created_at", created_at)
             
-        # Return the combined response
-        # The response model now has validators that handle URL conversion
+        # Return the combined response (with variations)
         return GenerationResponse(
             prompt_id=concept_id,
             logo_description=request.logo_description,
@@ -296,12 +286,11 @@ async def generate_concept_with_palettes(
             image_url=image_url,
             variations=[
                 PaletteVariation(
-                    name=p["name"],
-                    colors=p["colors"],
-                    description=p.get("description", ""),
-                    image_url=p["image_url"]
-                ) 
-                for p in palette_variations
+                    name=v["name"],
+                    colors=v["colors"],
+                    description=v.get("description", ""),
+                    image_url=v["image_url"]
+                ) for v in palette_variations
             ]
         )
     except (ValidationError, ServiceUnavailableError):

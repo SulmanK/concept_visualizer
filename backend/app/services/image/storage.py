@@ -42,18 +42,18 @@ class ImageStorageService:
     def store_image(
         self, 
         image_data: Union[bytes, BytesIO, UploadFile], 
-        session_id: str,
+        user_id: str,
         concept_id: Optional[str] = None,
         file_name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False
     ) -> Tuple[str, str]:
         """
-        Store an image in the storage bucket with session ID metadata.
+        Store an image in the storage bucket with user ID metadata.
         
         Args:
             image_data: Image data as bytes, BytesIO or UploadFile
-            session_id: Session ID for access control
+            user_id: User ID for access control
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name (generated if not provided)
             metadata: Optional metadata to store with the image
@@ -99,12 +99,12 @@ class ImageStorageService:
                 if "." in file_name:
                     ext = file_name.split(".")[-1].lower()
             
-            # Create path with session_id as the first folder segment
+            # Create path with user_id as the first folder segment
             # This is CRITICAL for our RLS policy to work
             if concept_id:
-                path = f"{session_id}/{concept_id}/{file_name}"
+                path = f"{user_id}/{concept_id}/{file_name}"
             else:
-                path = f"{session_id}/{file_name}"
+                path = f"{user_id}/{file_name}"
                 
             # Set content type based on extension
             content_type = "image/png"  # Default content type
@@ -116,10 +116,10 @@ class ImageStorageService:
                 content_type = "image/webp"
             
             # Create JWT token for authentication (for Supabase Storage RLS)
-            token = create_supabase_jwt(session_id)
+            token = create_supabase_jwt(user_id)
             
-            # Prepare file metadata including session ID
-            file_metadata = {"owner_session_id": session_id}
+            # Prepare file metadata including user ID
+            file_metadata = {"owner_user_id": user_id}
             if metadata:
                 file_metadata.update(metadata)
                 
@@ -154,10 +154,10 @@ class ImageStorageService:
             # Generate signed URL with 3-day expiration
             image_url = self.get_signed_url(path, is_palette=is_palette)
             
-            # Log success with masked session ID
-            masked_session_id = mask_id(session_id)
+            # Log success with masked user ID
+            masked_user_id = mask_id(user_id)
             masked_path = mask_path(path)
-            self.logger.info(f"Stored image for session {masked_session_id} at {masked_path}")
+            self.logger.info(f"Stored image for user {masked_user_id} at {masked_path}")
                 
             return path, image_url
             
@@ -334,16 +334,78 @@ class ImageStorageService:
         bucket_name = self.palette_bucket if is_palette else self.concept_bucket
         
         # ENHANCED LOGGING: Debug actual bucket configuration values
-        self.logger.info(f"-------- DEBUG URL GENERATION --------")
+        self.logger.info("-------- DEBUG URL GENERATION --------")
         self.logger.info(f"BUCKET CONFIG: concept_bucket={self.concept_bucket}, palette_bucket={self.palette_bucket}")
         self.logger.info(f"BUCKET SELECTION: is_palette={is_palette}, using bucket_name={bucket_name}")
+        
+        # Normalize path - ensure it doesn't start with a slash
+        if path.startswith('/'):
+            path = path[1:]
+        
         self.logger.info(f"PATH: {mask_path(path)}")
+        
+        # Extract user_id from the path (first segment)
+        user_id = path.split('/')[0] if '/' in path else path
+        self.logger.info(f"Extracted user_id from path: {mask_id(user_id)}")
         
         # Log some useful information
         self.logger.info(f"Getting signed URL for path={mask_path(path)}, bucket={bucket_name}, is_palette={is_palette}, expiry={expiry_seconds}s")
         
         try:
-            # Use Supabase's SDK to create a signed URL
+            # Try using the service role key if available - this has highest priority for private buckets
+            try:
+                from app.core.config import settings
+                service_role_key = settings.SUPABASE_SERVICE_ROLE
+                if service_role_key:
+                    self.logger.info("Attempting to use service role key for signed URL")
+                    import requests
+                    
+                    # Construct the signed URL endpoint
+                    api_url = settings.SUPABASE_URL
+                    signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket_name}/{path}"
+                    
+                    # Use service role key for authorization
+                    response = requests.post(
+                        signed_url_endpoint,
+                        headers={
+                            "Authorization": f"Bearer {service_role_key}",
+                            "apikey": service_role_key
+                        },
+                        json={"expiresIn": expiry_seconds}
+                    )
+                    
+                    self.logger.info(f"Service role key signed URL response: Status {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        if "signedURL" in result:
+                            signed_url = result["signedURL"]
+                            # Ensure the URL is absolute and correctly formatted
+                            if signed_url.startswith('/'):
+                                # Make sure URL has the correct format with /storage/v1/
+                                if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                                    signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                                signed_url = f"{settings.SUPABASE_URL}{signed_url}"
+                                self.logger.info(f"Converted to absolute URL: {mask_path(signed_url)}")
+                            self.logger.info("Generated signed URL with service role key")
+                            return signed_url
+                        elif "signedUrl" in result:
+                            signed_url = result["signedUrl"]
+                            # Ensure the URL is absolute and correctly formatted
+                            if signed_url.startswith('/'):
+                                # Make sure URL has the correct format with /storage/v1/
+                                if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                                    signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                                signed_url = f"{settings.SUPABASE_URL}{signed_url}"
+                                self.logger.info(f"Converted to absolute URL: {mask_path(signed_url)}")
+                            self.logger.info("Generated signed URL with service role key")
+                            return signed_url
+                    else:
+                        self.logger.warning(f"Service role key request failed: {response.status_code}, {response.text}")
+            except Exception as role_key_error:
+                self.logger.warning(f"Service role key approach failed: {str(role_key_error)}")
+            
+            # Fall back to using Supabase's SDK to create a signed URL
             if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
                 response = self.supabase.client.storage.from_(bucket_name).create_signed_url(
                     path=path,
@@ -374,60 +436,102 @@ class ImageStorageService:
                     if signed_url:
                         self.logger.info(f"Generated signed URL: {mask_path(signed_url)}")
                         
-                        # Ensure the URL is absolute
+                        # Ensure the URL is absolute and correctly formatted
                         if signed_url.startswith('/'):
                             from app.core.config import settings
+                            # Make sure URL has the correct format with /storage/v1/
+                            if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                                signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
                             signed_url = f"{settings.SUPABASE_URL}{signed_url}"
                             self.logger.info(f"Converted to absolute URL: {mask_path(signed_url)}")
-                            
+                        
                         return signed_url
             
             self.logger.warning(f"Failed to generate signed URL with SDK: {response}")
             
             # Fallback to manual REST API approach
-            from app.utils.jwt_utils import create_supabase_jwt_for_storage
+            from app.utils.jwt_utils import create_supabase_jwt
             from app.core.config import settings
             
-            # Generate a signed URL using REST API directly
+            # Generate a JWT token with the user_id
+            jwt_token = create_supabase_jwt(user_id, expiry_seconds)
+            
+            # Build signed URL with the JWT token
             api_url = settings.SUPABASE_URL
             api_key = settings.SUPABASE_KEY
             
-            # Create a proper JWT token specifically for signed URL
-            expiry = int(datetime.now().timestamp()) + expiry_seconds
-            jwt_token = create_supabase_jwt_for_storage(f"{bucket_name}/{path}", expiry)
+            # Construct the signed URL endpoint
+            signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket_name}/{path}"
             
-            # Build the signed URL manually
-            signed_url = f"{api_url}/storage/v1/object/sign/{bucket_name}/{path}?token={jwt_token}"
-            self.logger.info(f"Created manual signed URL: {mask_path(signed_url)}")
+            # Use requests to call the sign endpoint with our JWT
+            import requests
+            response = requests.post(
+                signed_url_endpoint,
+                headers={
+                    "Authorization": f"Bearer {jwt_token}",
+                    "apikey": api_key
+                },
+                json={"expiresIn": expiry_seconds}
+            )
             
-            return signed_url
+            if response.status_code == 200:
+                result = response.json()
+                if "signedURL" in result:
+                    signed_url = result["signedURL"]
+                    # Ensure the URL is absolute and correctly formatted
+                    if signed_url.startswith('/'):
+                        # Make sure URL has the correct format with /storage/v1/
+                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                        signed_url = f"{api_url}{signed_url}"
+                    self.logger.info(f"Manual signed URL created: {mask_path(signed_url)}")
+                    return signed_url
+                elif "signedUrl" in result:
+                    signed_url = result["signedUrl"]
+                    # Ensure the URL is absolute and correctly formatted
+                    if signed_url.startswith('/'):
+                        # Make sure URL has the correct format with /storage/v1/
+                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
+                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                        signed_url = f"{api_url}{signed_url}"
+                    self.logger.info(f"Manual signed URL created: {mask_path(signed_url)}")
+                    return signed_url
+            else:
+                self.logger.warning(f"Manual JWT approach failed: Status {response.status_code}, {response.text}")
+            
+            # If that also failed, create a download URL that will direct through our REST API
+            # This will still require authentication but may be more reliable
+            fallback_url = f"{api_url}/storage/v1/object/download/{bucket_name}/{path}?token={jwt_token}"
+            self.logger.warning(f"Using download URL fallback: {mask_path(fallback_url)}")
+            return fallback_url
             
         except Exception as e:
             self.logger.error(f"Error generating signed URL: {str(e)}")
             
             # Last resort fallback
             try:
-                # Try to generate a signed URL using direct API call
-                from app.utils.jwt_utils import create_supabase_jwt_for_storage
+                # Try to generate an authenticated URL using a different approach
+                from app.utils.jwt_utils import create_supabase_jwt
                 from app.core.config import settings
                 
-                expiry = int(datetime.now().timestamp()) + expiry_seconds
-                jwt_token = create_supabase_jwt_for_storage(f"{bucket_name}/{path}", expiry)
+                jwt_token = create_supabase_jwt(user_id, expiry_seconds)
                 
-                fallback_url = f"{settings.SUPABASE_URL}/storage/v1/object/sign/{bucket_name}/{path}?token={jwt_token}"
+                # For private buckets, the authenticated endpoint is more reliable than public
+                fallback_url = f"{settings.SUPABASE_URL}/storage/v1/object/authenticated/{bucket_name}/{path}?token={jwt_token}"
                 self.logger.warning(f"Using fallback URL: {mask_path(fallback_url)}")
                 return fallback_url
             except Exception as inner_e:
                 self.logger.error(f"Even fallback method failed: {str(inner_e)}")
-                return f"{settings.SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{path}"
+                # Do not return a public URL for a private bucket as it won't work
+                return f"{settings.SUPABASE_URL}/storage/v1/object/authenticated/{bucket_name}/{path}"
 
-    async def authenticate_url(self, path: str, session_id: str, is_palette: bool = False) -> str:
+    async def authenticate_url(self, path: str, user_id: str, is_palette: bool = False) -> str:
         """
         Get a signed URL for authenticated access.
         
         Args:
             path: Path to the image in storage
-            session_id: Session ID for authentication
+            user_id: User ID for authentication
             is_palette: Whether the image is a palette
             
         Returns:
@@ -501,7 +605,7 @@ class ImageStorageService:
         cache or CDN issues.
         
         Args:
-            path: Path of the image in storage (e.g. session_id/concept_id/filename)
+            path: Path of the image in storage (e.g. user_id/concept_id/filename)
             is_palette: Whether the image is a palette (uses palette-images bucket)
             
         Returns:
@@ -523,9 +627,9 @@ class ImageStorageService:
             api_key = settings.SUPABASE_KEY  # Use the regular key instead of service key
             
             # Create a JWT token for access (we need this for bucket access)
-            session_id = path.split('/')[0]  # First segment is session_id
+            user_id = path.split('/')[0]  # First segment is user_id
             from app.utils.jwt_utils import create_supabase_jwt
-            token = create_supabase_jwt(session_id)
+            token = create_supabase_jwt(user_id)
             
             # First try the standard object download path (using JWT for RLS)
             download_url = f"{api_url}/storage/v1/object/{bucket_name}/{path}"

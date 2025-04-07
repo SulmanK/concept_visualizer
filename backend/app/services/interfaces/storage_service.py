@@ -14,8 +14,14 @@ class StorageServiceInterface(abc.ABC):
         Store a concept and return its ID.
         
         Args:
-            concept_data: Data to store
-            
+            concept_data: Concept data to store, including:
+                - user_id: User ID to associate with the concept
+                - logo_description: User's logo description
+                - theme_description: User's theme description
+                - image_path: Path to the generated base image
+                - image_url: URL to the generated base image (optional)
+                - color_palettes: Optional list of color palette dictionaries
+                
         Returns:
             ID of the stored concept
             
@@ -25,15 +31,16 @@ class StorageServiceInterface(abc.ABC):
         pass
     
     @abc.abstractmethod
-    async def get_concept(self, concept_id: str) -> Dict[str, Any]:
+    async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, Any]:
         """
-        Retrieve a concept by ID.
+        Get detailed information about a specific concept.
         
         Args:
             concept_id: ID of the concept to retrieve
+            user_id: User ID for security validation
             
         Returns:
-            Concept data
+            Concept detail data
             
         Raises:
             NotFoundError: If concept not found
@@ -42,57 +49,16 @@ class StorageServiceInterface(abc.ABC):
         pass
     
     @abc.abstractmethod
-    async def update_concept(self, concept_id: str, concept_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Update a concept.
+        Get recent concepts for a user.
         
         Args:
-            concept_id: ID of the concept to update
-            concept_data: Updated data
-            
-        Returns:
-            Updated concept data
-            
-        Raises:
-            NotFoundError: If concept not found
-            StorageError: If update fails
-        """
-        pass
-    
-    @abc.abstractmethod
-    async def delete_concept(self, concept_id: str) -> bool:
-        """
-        Delete a concept.
-        
-        Args:
-            concept_id: ID of the concept to delete
-            
-        Returns:
-            True if deleted successfully
-            
-        Raises:
-            NotFoundError: If concept not found
-            StorageError: If deletion fails
-        """
-        pass
-    
-    @abc.abstractmethod
-    async def list_concepts(
-        self, 
-        session_id: Optional[str] = None, 
-        limit: int = 20, 
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        """
-        List concepts, optionally filtered by session.
-        
-        Args:
-            session_id: Optional session ID to filter by
+            user_id: User ID to retrieve concepts for
             limit: Maximum number of concepts to return
-            offset: Number of concepts to skip
             
         Returns:
-            List of concept data
+            List of recent concepts
             
         Raises:
             StorageError: If retrieval fails
@@ -100,23 +66,17 @@ class StorageServiceInterface(abc.ABC):
         pass
     
     @abc.abstractmethod
-    async def associate_with_session(
-        self, 
-        concept_id: str, 
-        session_id: str
-    ) -> bool:
+    async def delete_all_concepts(self, user_id: str) -> bool:
         """
-        Associate a concept with a session.
+        Delete all concepts for a user.
         
         Args:
-            concept_id: ID of the concept
-            session_id: ID of the session
+            user_id: User ID to delete concepts for
             
         Returns:
-            True if association successful
+            True if successful
             
         Raises:
-            NotFoundError: If concept or session not found
-            StorageError: If association fails
+            StorageError: If deletion fails
         """
         pass 

@@ -42,6 +42,130 @@
   - [x] Modify getImageUrl function to check for existing URL first
   - [x] Fix any URL processing logic to prevent double-signing
 
+## Supabase Anonymous Auth Migration
+- [ ] **Database Schema Migration**
+  - [x] Create new concepts table with user_id instead of session_id
+  - [x] Create new color_variations table 
+  - [x] Set up RLS policies for concepts table
+  - [x] Set up RLS policies for color_variations table
+  - [x] Create storage bucket policies for concept-images and palette-images
+  - [ ] Create indexes for performance optimization
+
+- [ ] **Backend Changes**
+  - [ ] **Authentication Integration**
+    - [x] Create SupabaseAuthClient in app/core/supabase/client.py
+      - [x] Add JWT token verification methods
+      - [x] Add user extraction from request headers
+      - [x] Add error handling for auth failures
+    - [x] Create auth middleware for FastAPI in app/api/middleware/auth_middleware.py
+      - [x] Implement request processing to extract and verify tokens
+      - [x] Add public paths exclusion logic
+      - [x] Set user information in request state
+    - [x] Update app/core/factory.py to register auth middleware
+    - [x] Add JWT secret to app/core/config.py
+    - [x] Create app/core/exceptions.py AuthenticationError class
+  
+  - [ ] **API Dependency Updates**
+    - [x] Create app/api/middleware/auth_middleware.py:
+      - [x] Create get_current_user dependency to extract user from request state
+      - [x] Create get_current_user_id helper to get user ID
+      - [x] Update CommonDependencies to include user information
+      - [x] Remove get_or_create_session dependency
+  
+  - [ ] **Storage Service Updates**
+    - [x] Update app/core/supabase/concept_storage.py:
+      - [x] Modify all methods to use user_id instead of session_id
+      - [x] Update query filters to use user_id
+    - [x] Update app/core/supabase/image_storage.py:
+      - [x] Update storage paths to include user_id
+      - [x] Modify permissions handling for user-specific access
+    - [x] Update app/services/storage/concept_storage.py:
+      - [x] Replace session_id parameters with user_id
+      - [x] Update storage methods to work with user_id
+  
+  - [ ] **Route Handler Updates**
+    - [x] Create app/api/routes/auth/auth_routes.py:
+      - [x] Add signin-anonymous endpoint
+      - [x] Add refresh token endpoint
+      - [x] Add signout endpoint
+    - [x] Create app/api/routes/auth/__init__.py
+    - [x] Update app/api/router.py to include auth routes
+    - [x] Update app/api/routes/concept_storage/storage_routes.py:
+      - [x] Replace session_id cookie with user dependency
+      - [x] Update route handlers to use user_id
+    - [x] Update app/api/routes/concept/generation.py and refinement.py:
+      - [x] Replace session handling with user authentication
+      - [x] Update endpoints to use user_id
+    - [x] Remove app/api/routes/session/ directory entirely
+    - [x] Update app/api/router.py to remove session routes
+  
+  - [ ] **Model Updates**
+    - [x] Update app/models/concept/domain.py to use user_id
+    - [x] Update app/models/concept/request.py and response.py as needed
+    - [x] Remove app/models/session/ directory
+  
+  - [ ] **Utility Updates**
+    - [x] Update app/utils/api_limits to use user_id for rate limiting
+    - [x] Enhance app/utils/jwt_utils.py for Supabase JWT verification
+  
+  - [ ] **Clean Up Legacy Session Code**
+    - [x] Remove `backend/app/services/session/` directory
+    - [x] Remove `backend/app/core/supabase/session_storage.py`
+    - [x] Remove references from SVG converter
+    - [x] Remove SessionServiceInterface
+    - [x] Remove test_session_service.py
+    - [x] Update rate limiter to use user_id instead of session_id
+
+- [x] **Frontend Changes**
+  - [x] **Supabase Auth Client Enhancement**
+    - [x] Update src/services/supabaseClient.ts:
+      - [x] Add signInAnonymously function
+      - [x] Create initializeAnonymousAuth function
+      - [x] Add getUserId, isAnonymousUser, and other auth utilities
+      - [x] Improve error handling for auth operations
+  
+  - [x] **Auth Context Implementation**
+    - [x] Create src/contexts/AuthContext.tsx:
+      - [x] Implement context provider with auth state management
+      - [x] Add auth state listener with Supabase
+      - [x] Create useAuth hook for components
+    - [x] Update src/contexts/ConceptContext.tsx:
+      - [x] Remove session synchronization logic
+      - [x] Use auth context for user identity
+  
+  - [x] **API Client Updates**
+    - [x] Update src/services/apiClient.ts:
+      - [x] Add auth token handling in requests
+      - [x] Create convenience methods (get, post, put, delete)
+      - [x] Implement auth-specific error handling
+    - [x] Update src/hooks/useApi.ts:
+      - [x] Use auth tokens instead of cookies
+      - [x] Update error handling for auth failures
+  
+  - [x] **Component Updates**
+    - [x] Update src/App.tsx:
+      - [x] Replace session initialization with auth initialization
+      - [x] Add AuthProvider to component tree
+      - [x] Remove session debugging code
+    - [x] Update src/features components:
+      - [x] landing/LandingPage.tsx - Use auth instead of session
+      - [x] concepts/detail/ConceptDetailPage.tsx - Use user_id
+      - [x] concepts/recent/RecentConceptsPage.tsx - Use user_id
+      - [x] refinement/RefinementPage.tsx - Use user_id
+    - [x] Update src/hooks components:
+      - [x] useConceptGeneration.ts - Use auth context
+      - [x] useConceptRefinement.ts - Use auth context
+  
+  - [x] **Type Updates**
+    - [x] Update src/types/api.types.ts to include auth types
+    - [x] Update src/types/concept.types.ts to use user_id instead of session_id
+    - [x] Add auth-specific types (User, Session, etc.)
+  
+  - [x] **Session Cleanup**
+    - [x] Remove src/services/sessionManager.ts
+    - [x] Update any imports referencing sessionManager
+    - [x] Clean up session cookie usage throughout the app
+
 ## Backend Refactoring and Production Preparation
 - [ ] **Security Improvements**
   - [ ] Remove API keys and sensitive information from .env files and use environment variables [LATER]

@@ -1,276 +1,348 @@
 """
-Redis integration for rate limiting in the Concept Visualizer API.
+Redis-based storage for rate limiting.
 
-This module provides functions for interacting with Redis for rate limiting purposes.
+This module provides a Redis implementation for the rate limiter storage.
 """
 
+import json
 import logging
+import time
+from typing import Dict, List, Optional, Any, Tuple, Union
 import redis
-import redis.connection
-from typing import Optional, Tuple, Dict
 
 from app.core.config import settings
-from app.core.exceptions import ConfigurationError, RateLimitError
-from app.core.limiter.keys import calculate_ttl, generate_rate_limit_keys
+from app.utils.security.mask import mask_key, mask_id
+
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Store a single Redis client instance to avoid creating multiple connections
-_redis_client = None
 
 def get_redis_client() -> Optional[redis.Redis]:
     """
-    Create and return a Redis client configured with Upstash Redis credentials.
+    Get a configured Redis client for rate limiting.
     
     Returns:
-        redis.Redis: Configured Redis client or None if connection fails
-        
-    Raises:
-        ConfigurationError: If Redis is improperly configured
+        Configured Redis client or None if Redis is not available
     """
-    global _redis_client
+    # Check if Redis is configured
+    if not settings.UPSTASH_REDIS_ENDPOINT or not settings.UPSTASH_REDIS_PASSWORD:
+        logger.info("Redis settings not configured, rate limiting will use in-memory storage")
+        return None
     
-    # Return the existing client if we already have one
-    if _redis_client is not None:
-        try:
-            # Ping to make sure the connection is still alive
-            _redis_client.ping()
-            logger.debug("Using existing Redis connection")
-            return _redis_client
-        except Exception as e:
-            logger.warning(f"Existing Redis connection failed: {str(e)}. Creating new connection.")
-            _redis_client = None
-            
+    # Construct Redis URL from settings
+    # For Upstash, the format is typically redis://username:password@endpoint:port
+    # with a default username of 'default'
+    redis_url = f"redis://default:{settings.UPSTASH_REDIS_PASSWORD}@{settings.UPSTASH_REDIS_ENDPOINT}:{settings.UPSTASH_REDIS_PORT}"
+    
+    # Log with masked endpoint - use mask_id which is better for hostnames
+    masked_endpoint = mask_id(settings.UPSTASH_REDIS_ENDPOINT, visible_chars=8)
+    logger.debug(f"Connecting to Redis using endpoint: {masked_endpoint}")
+    
     try:
-        # Check if we should connect to Redis at all, or skip it completely
-        if not settings.UPSTASH_REDIS_ENDPOINT or settings.UPSTASH_REDIS_ENDPOINT == "your-redis-url.upstash.io":
-            logger.warning("Redis connection disabled - missing or default configuration")
-            return None
-
-        # Create a simple Redis client without using a connection pool
-        # This avoids compatibility issues with different Redis library versions
-        _redis_client = redis.Redis(
+        # Create Redis client
+        client = redis.Redis(
             host=settings.UPSTASH_REDIS_ENDPOINT,
             port=settings.UPSTASH_REDIS_PORT,
             password=settings.UPSTASH_REDIS_PASSWORD,
-            ssl=True,
-            decode_responses=True,
-            socket_timeout=3,
-            socket_keepalive=True,
-            retry_on_timeout=True
+            socket_timeout=2,
+            socket_connect_timeout=2,
+            retry_on_timeout=True,
+            ssl=True,  # Important for Upstash - they require SSL
+            decode_responses=True  # Automatically decode responses to strings
         )
         
-        # Test the connection
-        logger.info("Testing Redis connection...")
-        try:
-            result = _redis_client.ping()
-            if result:
-                logger.info("Successfully connected to Redis")
-                return _redis_client
-            else:
-                logger.warning("Redis ping returned False, connection may be unreliable")
-                return None
-        except redis.exceptions.ConnectionError as e:
-            error_message = f"Redis connection error: {str(e)}"
-            logger.error(error_message)
-            # We return None here rather than raising an exception because we want
-            # the application to fall back to memory storage rather than fail
-            return None
-        except Exception as e:
-            logger.error(f"Redis ping failed: {str(e)}")
-            return None
-            
-    except redis.exceptions.ConnectionError as e:
-        error_message = f"Failed to connect to Redis: {str(e)}"
-        logger.error(error_message)
-        # Fallback to memory storage
-        logger.warning("Falling back to memory storage for rate limiting")
-        return None
+        # Try a ping to make sure the connection works
+        client.ping()
+        logger.info(f"Successfully connected to Redis at {masked_endpoint}")
+        return client
     except Exception as e:
-        error_message = f"Unexpected error connecting to Redis: {str(e)}"
-        logger.error(error_message)
-        if "invalid URL scheme" in str(e) or "NoneType" in str(e):
-            raise ConfigurationError(
-                message="Invalid Redis configuration",
-                config_key="UPSTASH_REDIS_ENDPOINT",
-                details={"error": str(e)}
-            )
-        # Fallback to memory storage for other errors
-        logger.warning("Falling back to memory storage for rate limiting")
+        logger.error(f"Error connecting to Redis: {str(e)}")
         return None
 
-def get_rate_limit_count(user_id: str, endpoint: str, period: str = "month") -> Tuple[int, int]:
-    """
-    Get the current rate limit count for a user and endpoint.
-    
-    Args:
-        user_id: The user identifier (usually session ID or IP)
-        endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
-        period: The time period (minute, hour, day, month)
-        
-    Returns:
-        Tuple[int, int]: Current count and TTL in seconds
-        
-    Raises:
-        RateLimitError: If there's an error retrieving the rate limit
-    """
-    try:
-        redis_client = get_redis_client()
-        if not redis_client:
-            logger.warning("Cannot get rate limit count: Redis not available")
-            return 0, 0
-            
-        keys = generate_rate_limit_keys(user_id, endpoint, period)
-        
-        # Try all possible key formats
-        for key in keys:
-            try:
-                # Get current count and TTL
-                count = redis_client.get(key)
-                if count is not None:
-                    count = int(count)
-                    ttl = redis_client.ttl(key)
-                    logger.debug(f"Found rate limit key: {key} = {count}, TTL: {ttl}s")
-                    return count, ttl
-            except (redis.exceptions.RedisError, ValueError) as e:
-                logger.error(f"Error getting rate limit for key {key}: {str(e)}")
-                continue
-                
-        # No keys found, rate limit not yet set
-        logger.debug(f"No rate limit keys found for {user_id} on {endpoint}")
-        return 0, 0
-        
-    except redis.exceptions.RedisError as e:
-        error_message = f"Redis error getting rate limit: {str(e)}"
-        logger.error(error_message)
-        return 0, 0
-    except Exception as e:
-        error_message = f"Error getting rate limit: {str(e)}"
-        logger.error(error_message)
-        return 0, 0
 
-def check_rate_limit(user_id: str, endpoint: str, limit: str) -> Dict:
-    """
-    Check if a user has exceeded their rate limit.
+class RedisStore:
+    """Redis-based storage for rate limiting data."""
     
-    Args:
-        user_id: The user identifier (usually session ID or IP)
-        endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
-        limit: The rate limit string (e.g., "10/month")
+    def __init__(self, redis_client: redis.Redis, prefix: str = "ratelimit:"):
+        """
+        Initialize with Redis client.
         
-    Returns:
-        Dict: Rate limit status containing:
-            - exceeded: Whether limit is exceeded (bool)
-            - count: Current count (int)
-            - limit: Maximum allowed (int)
-            - period: Time period (str)
-            - reset_at: Seconds until reset (int)
+        Args:
+            redis_client: Configured Redis client
+            prefix: Key prefix for rate limit data in Redis
+        """
+        self.redis = redis_client
+        self.prefix = prefix
+        self.logger = logging.getLogger("redis_store")
+        
+    def _make_key(self, key: str) -> str:
+        """
+        Create a namespaced Redis key.
+        
+        Args:
+            key: Base key to namespace
             
-    Raises:
-        RateLimitError: If there's an error checking the rate limit
-    """
-    try:
-        # Parse the limit string (e.g., "10/month" -> limit=10, period="month")
-        parts = limit.split("/")
-        if len(parts) != 2:
-            logger.error(f"Invalid rate limit format: {limit}")
-            return {"exceeded": False, "error": "Invalid rate limit format"}
-            
-        max_requests = int(parts[0])
-        period = parts[1]
+        Returns:
+            Prefixed Redis key
+        """
+        return f"{self.prefix}{key}"
+    
+    def _log_operation(self, operation: str, key: str, result: Any = None) -> None:
+        """
+        Log a Redis operation with masked key.
         
-        # Get current count
-        current_count, ttl = get_rate_limit_count(user_id, endpoint, period)
-        
-        # Determine if limit is exceeded
-        is_exceeded = current_count >= max_requests
-        
-        if is_exceeded:
-            logger.warning(f"Rate limit exceeded for {user_id} on {endpoint}: {current_count}/{max_requests} {period}")
+        Args:
+            operation: Name of the operation
+            key: Redis key being operated on
+            result: Optional result to include in log
+        """
+        masked_key = mask_key(key)
+        if result is not None:
+            self.logger.debug(f"Redis {operation} on {masked_key}: {result}")
         else:
-            logger.debug(f"Rate limit check for {user_id} on {endpoint}: {current_count}/{max_requests} {period}")
+            self.logger.debug(f"Redis {operation} on {masked_key}")
             
-        return {
-            "exceeded": is_exceeded,
-            "count": current_count,
-            "limit": max_requests,
-            "period": period,
-            "reset_at": ttl
-        }
-    except Exception as e:
-        error_message = f"Error checking rate limit: {str(e)}"
-        logger.error(error_message)
-        # Default to not exceeded on error to prevent false positives
-        return {"exceeded": False, "error": str(e)}
-
-def increment_rate_limit(user_id: str, endpoint: str, period: str = "month") -> bool:
-    """
-    Manually increment a rate limit counter in Redis.
+    def increment(self, key: str, expiry: int, amount: int = 1) -> int:
+        """
+        Increment counter and set expiry.
+        
+        Args:
+            key: Counter key
+            expiry: Expiry time in seconds
+            amount: Amount to increment by
+            
+        Returns:
+            New counter value
+        """
+        redis_key = self._make_key(key)
+        try:
+            # Use a pipeline to ensure atomicity
+            pipe = self.redis.pipeline()
+            pipe.incrby(redis_key, amount)
+            pipe.expire(redis_key, expiry)
+            result = pipe.execute()
+            
+            new_value = result[0]
+            self._log_operation("increment", redis_key, new_value)
+            return new_value
+            
+        except Exception as e:
+            self.logger.error(f"Redis increment failed: {e}")
+            # Return a safe fallback value
+            return 1
     
-    Args:
-        user_id: The user identifier (usually session ID or IP)
-        endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
-        period: The time period (minute, hour, day, month)
+    def get(self, key: str) -> int:
+        """
+        Get current counter value.
         
-    Returns:
-        bool: True if successful, False otherwise
+        Args:
+            key: Counter key
+            
+        Returns:
+            Current counter value or 0 if not found
+        """
+        redis_key = self._make_key(key)
+        try:
+            value = self.redis.get(redis_key)
+            if value is None:
+                return 0
+            result = int(value)
+            self._log_operation("get", redis_key, result)
+            return result
+        except Exception as e:
+            self.logger.error(f"Redis get failed: {e}")
+            return 0
+    
+    def get_with_expiry(self, key: str) -> Tuple[int, int]:
+        """
+        Get counter value with remaining expiry time.
         
-    Raises:
-        RateLimitError: If there's an error updating the rate limit
-    """
-    try:
-        redis_client = get_redis_client()
-        if not redis_client:
-            logger.warning("Cannot increment rate limit: Redis not available")
+        Args:
+            key: Counter key
+            
+        Returns:
+            Tuple of (current value, remaining seconds)
+        """
+        redis_key = self._make_key(key)
+        try:
+            # Use a pipeline to reduce round trips
+            pipe = self.redis.pipeline()
+            pipe.get(redis_key)
+            pipe.ttl(redis_key)
+            result = pipe.execute()
+            
+            value = int(result[0]) if result[0] else 0
+            ttl = max(0, result[1]) if result[1] and result[1] > 0 else 0
+            
+            self._log_operation("get_with_expiry", redis_key, f"value={value}, ttl={ttl}")
+            return (value, ttl)
+            
+        except Exception as e:
+            self.logger.error(f"Redis get_with_expiry failed: {e}")
+            return (0, 0)
+    
+    def get_quota(
+        self, 
+        user_id: str,
+        endpoint: str, 
+        limit: int,
+        period: int
+    ) -> Dict[str, Any]:
+        """
+        Get quota information for a user and endpoint.
+        
+        Args:
+            user_id: The user identifier (usually user ID or IP)
+            endpoint: API endpoint being accessed
+            limit: Maximum requests allowed
+            period: Time period in seconds
+            
+        Returns:
+            Dict with quota information
+        """
+        # Create a key combining user and endpoint
+        key = f"{user_id}:{endpoint}"
+        redis_key = self._make_key(key)
+        
+        try:
+            # Get current count and TTL
+            count, ttl = self.get_with_expiry(key)
+            
+            # Calculate reset time
+            reset_at = int(time.time() + ttl) if ttl > 0 else int(time.time() + period)
+            
+            # Calculate remaining
+            remaining = max(0, limit - count)
+            
+            quota = {
+                "total": limit,
+                "remaining": remaining,
+                "used": count,
+                "reset_at": reset_at,
+            }
+            
+            self._log_operation("get_quota", redis_key, quota)
+            return quota
+            
+        except Exception as e:
+            self.logger.error(f"Redis get_quota failed: {e}")
+            # Return conservative defaults
+            return {
+                "total": limit,
+                "remaining": limit // 2,  # Assume half used to be safe
+                "used": limit // 2,
+                "reset_at": int(time.time() + period),
+            }
+
+    def check_rate_limit(
+        self, 
+        user_id: str, 
+        endpoint: str, 
+        limit: int, 
+        period: int
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """
+        Check if a request is rate limited.
+        
+        Args:
+            user_id: The user identifier (usually user ID or IP)
+            endpoint: API endpoint being accessed
+            limit: Maximum requests allowed
+            period: Time period in seconds
+            
+        Returns:
+            Tuple of (is_allowed, quota_info)
+        """
+        # Create a key combining user and endpoint
+        key = f"{user_id}:{endpoint}"
+        redis_key = self._make_key(key)
+        
+        try:
+            # Get current value
+            count = self.get(key)
+            
+            # Check if already over limit
+            if count >= limit:
+                # Get full quota info
+                quota = self.get_quota(user_id, endpoint, limit, period)
+                self._log_operation("check_rate_limit", redis_key, "DENIED")
+                return (False, quota)
+            
+            # Increment counter
+            new_count = self.increment(key, period)
+            
+            # Check if increment puts us over the limit
+            remaining = max(0, limit - new_count)
+            reset_at = int(time.time() + period)
+            
+            quota = {
+                "total": limit,
+                "remaining": remaining,
+                "used": new_count,
+                "reset_at": reset_at,
+            }
+            
+            is_allowed = new_count <= limit
+            result = "ALLOWED" if is_allowed else "DENIED"
+            self._log_operation("check_rate_limit", redis_key, result)
+            
+            return (is_allowed, quota)
+            
+        except Exception as e:
+            self.logger.error(f"Redis check_rate_limit failed: {e}")
+            # Default to allowing the request but with minimal remaining quota
+            return (True, {
+                "total": limit,
+                "remaining": 1,
+                "used": limit - 1,
+                "reset_at": int(time.time() + period),
+            })
+            
+    def reset(self, key: str) -> bool:
+        """
+        Reset a rate limit counter.
+        
+        Args:
+            key: Counter key to reset
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        redis_key = self._make_key(key)
+        try:
+            self.redis.delete(redis_key)
+            self._log_operation("reset", redis_key)
+            return True
+        except Exception as e:
+            self.logger.error(f"Redis reset failed: {e}")
             return False
             
-        # Get keys and TTL
-        keys = generate_rate_limit_keys(user_id, endpoint, period)
-        ttl = calculate_ttl(period)
+    def clear_all(self) -> bool:
+        """
+        Clear all rate limit data (for testing).
         
-        # Try to increment all possible key formats
-        success = False
-        failed_keys = []
-        
-        for key in keys:
-            try:
-                # Increment and set expiry
-                result = redis_client.incr(key)
-                redis_client.expire(key, ttl)
-                logger.debug(f"Incremented rate limit key: {key} = {result}")
-                success = True
-            except redis.exceptions.RedisError as e:
-                logger.error(f"Redis error incrementing key {key}: {str(e)}")
-                failed_keys.append(key)
-            except Exception as e:
-                logger.error(f"Failed to increment key {key}: {str(e)}")
-                failed_keys.append(key)
-        
-        if not success and failed_keys:
-            raise RateLimitError(
-                message="Failed to increment any rate limit keys",
-                endpoint=endpoint,
-                details={"user_id": user_id, "period": period, "failed_keys": failed_keys}
-            )
-                
-        return success
-    except RateLimitError:
-        # Re-raise RateLimitError
-        raise
-    except redis.exceptions.RedisError as e:
-        error_message = f"Redis error during rate limit operation: {str(e)}"
-        logger.error(error_message)
-        raise RateLimitError(
-            message=error_message,
-            endpoint=endpoint,
-            details={"user_id": user_id, "period": period}
-        )
-    except Exception as e:
-        error_message = f"Error incrementing rate limit: {str(e)}"
-        logger.error(error_message)
-        raise RateLimitError(
-            message=error_message,
-            endpoint=endpoint,
-            details={"user_id": user_id, "period": period}
-        ) 
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Find all keys with our prefix
+            pattern = f"{self.prefix}*"
+            cursor = 0
+            cleared = 0
+            
+            while True:
+                cursor, keys = self.redis.scan(cursor, match=pattern, count=100)
+                if keys:
+                    self.redis.delete(*keys)
+                    cleared += len(keys)
+                    
+                if cursor == 0:
+                    break
+                    
+            self.logger.warning(f"Cleared {cleared} rate limit keys")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Redis clear_all failed: {e}")
+            return False 

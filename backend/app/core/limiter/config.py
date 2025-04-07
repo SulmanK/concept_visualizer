@@ -9,63 +9,83 @@ from fastapi import FastAPI
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.core.limiter.keys import get_session_id
+from app.core.limiter.keys import get_user_id
 from app.core.limiter.decorators import safe_ratelimit
 from app.core.limiter.redis_store import get_redis_client
 from app.core.config import settings
+from app.utils.security.mask import mask_id
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-def setup_rate_limiter(app: FastAPI) -> Limiter:
+def configure_limiter(debug: bool = False) -> Limiter:
     """
-    Configure rate limiting for the FastAPI application.
+    Configure the rate limiter with appropriate settings.
     
-    This function sets up SlowAPI rate limiting with Redis for storage,
-    configures error handling, and applies safe wrappers to handle connection issues.
+    Args:
+        debug: Whether to enable debug mode
+        
+    Returns:
+        Configured Limiter instance
+    """
+    # Set up Redis store
+    redis_client = get_redis_client()
+    
+    # Default rate limits if not configured in settings
+    default_limits = getattr(settings, "DEFAULT_RATE_LIMITS", ["200/day", "50/hour", "10/minute"])
+    
+    # Rate limiting enabled by default
+    rate_limiting_enabled = getattr(settings, "RATE_LIMITING_ENABLED", True)
+    
+    if redis_client:
+        try:
+            # Test Redis connection
+            redis_client.ping()
+            logger.info("Connected to Redis for rate limiting")
+            
+            # Create Redis-backed rate limiter
+            # Use memory storage but with our custom Redis client
+            limiter = Limiter(
+                key_func=get_user_id,  # Use user ID for rate limiting
+                storage_uri="memory://",  # Use memory URI but with Redis storage options
+                storage_options={"client": redis_client},
+                strategy="fixed-window",
+                enabled=rate_limiting_enabled,
+                default_limits=default_limits
+            )
+            
+            logger.info("Rate limiter configured with Redis backend")
+            return limiter
+            
+        except Exception as e:
+            logger.warning(f"Redis connection failed, falling back to in-memory storage: {str(e)}")
+    
+    # Fallback to memory storage
+    logger.info("Configuring rate limiter with memory storage")
+    limiter = Limiter(
+        key_func=get_user_id,
+        storage_uri="memory://",
+        strategy="fixed-window",
+        enabled=rate_limiting_enabled,
+        default_limits=default_limits
+    )
+    
+    return limiter
+
+def setup_limiter_for_app(app: FastAPI) -> None:
+    """
+    Set up rate limiting for a FastAPI application.
     
     Args:
         app: FastAPI application instance
-        
-    Returns:
-        Limiter: Configured rate limiter instance
     """
-    # Create Redis client
-    redis_client = get_redis_client()
+    # Configure limiter
+    limiter = configure_limiter()
     
-    # Configure storage for rate limiter
-    storage_uri = None
-    try:
-        if redis_client:
-            # Format: redis://:{password}@{host}:{port}
-            storage_uri = f"redis://:{settings.UPSTASH_REDIS_PASSWORD}@{settings.UPSTASH_REDIS_ENDPOINT}:{settings.UPSTASH_REDIS_PORT}"
-            logger.info("Using Redis for rate limiting storage")
-        else:
-            logger.warning("Using memory storage for rate limiting")
-        
-        # Initialize rate limiter with session ID instead of IP address
-        limiter = Limiter(
-            key_func=get_session_id,  # Use session ID for rate limiting
-            storage_uri=storage_uri,
-            # Default limits
-            default_limits=["200/day", "50/hour", "10/minute"],
-            strategy="fixed-window"  # Use fixed window strategy for more reliability
-        )
-    except Exception as e:
-        # Fallback to in-memory storage if Redis fails
-        logger.error(f"Error configuring Redis for SlowAPI: {str(e)}")
-        logger.warning("Falling back to memory storage for SlowAPI rate limiter")
-        limiter = Limiter(
-            key_func=get_session_id,
-            # No storage URI = in-memory storage
-            default_limits=["200/day", "50/hour", "10/minute"],
-            strategy="fixed-window"
-        )
-    
-    # Add limiter to the application state
+    # Add limiter to app state
     app.state.limiter = limiter
     
-    # Register the rate limit exceeded handler
+    # Register rate limit exceeded handler
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     
     # Patch the limiter's limit method with our safe version
@@ -88,7 +108,4 @@ def setup_rate_limiter(app: FastAPI) -> Limiter:
             
         return wrapper
         
-    limiter.limit = safe_limit
-    
-    # Pass the modified limiter back
-    return limiter 
+    limiter.limit = safe_limit 
