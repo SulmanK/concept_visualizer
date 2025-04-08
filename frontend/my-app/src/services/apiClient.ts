@@ -3,15 +3,42 @@
  */
 
 import { supabase, initializeAnonymousAuth } from './supabaseClient';
+import { 
+  extractRateLimitHeaders, 
+  formatTimeRemaining, 
+  mapEndpointToCategory, 
+  RateLimitCategory 
+} from './rateLimitService';
+import useToast from '../hooks/useToast';
 
 // Use the full backend URL instead of a relative path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+// Create a toast function for use within this file (outside of React components)
+const toast = (options: Parameters<typeof useToast.showToast>[0]) => {
+  // We'll handle this through a custom event since we can't directly use hooks outside components
+  document.dispatchEvent(
+    new CustomEvent('show-api-toast', { 
+      detail: options 
+    })
+  );
+};
 
 interface RequestOptions {
   headers?: Record<string, string>;
   body?: any;
   withCredentials?: boolean;
   retryAuth?: boolean; // Whether to retry with fresh auth token on 401
+  /**
+   * Whether to show a toast notification on rate limit errors
+   * @default true
+   */
+  showToastOnRateLimit?: boolean;
+  /**
+   * A custom message to show in the toast notification for rate limit errors
+   * If not provided, a default message will be generated
+   */
+  rateLimitToastMessage?: string;
 }
 
 // Custom error class for rate limit errors
@@ -21,8 +48,10 @@ export class RateLimitError extends Error {
   current: number;
   period: string;
   resetAfterSeconds: number;
+  category?: RateLimitCategory; // Added category for context
+  retryAfter?: Date; // Added specific retry time
 
-  constructor(message: string, response: any) {
+  constructor(message: string, response: any, endpoint?: string) {
     super(message);
     this.name = 'RateLimitError';
     this.status = 429;
@@ -30,6 +59,44 @@ export class RateLimitError extends Error {
     this.current = response.current || 0;
     this.period = response.period || 'unknown';
     this.resetAfterSeconds = response.reset_after_seconds || 0;
+    
+    // Try to determine the category from the endpoint
+    if (endpoint) {
+      const category = mapEndpointToCategory(endpoint);
+      if (category !== null) {
+        this.category = category;
+      }
+    }
+    
+    // Calculate the retry-after time if we have reset seconds
+    if (this.resetAfterSeconds > 0) {
+      this.retryAfter = new Date(Date.now() + this.resetAfterSeconds * 1000);
+    }
+  }
+  
+  /**
+   * Get a user-friendly error message for display
+   */
+  getUserFriendlyMessage(): string {
+    const categoryName = this.getCategoryDisplayName();
+    const timeRemaining = formatTimeRemaining(this.resetAfterSeconds);
+    
+    return `${categoryName} limit reached (${this.current}/${this.limit}). Please try again in ${timeRemaining}.`;
+  }
+  
+  /**
+   * Get a display-friendly name for the rate limit category
+   */
+  getCategoryDisplayName(): string {
+    switch(this.category) {
+      case 'generate_concept': return 'Concept generation';
+      case 'refine_concept': return 'Concept refinement';
+      case 'store_concept': return 'Concept storage';
+      case 'get_concepts': return 'Concept retrieval';
+      case 'svg_conversion': return 'SVG conversion';
+      case 'sessions': return 'Session';
+      default: return 'Usage';
+    }
   }
 }
 
@@ -117,7 +184,9 @@ async function request<T>(
     headers = {}, 
     body, 
     withCredentials = true,
-    retryAuth = true
+    retryAuth = true,
+    showToastOnRateLimit = true,
+    rateLimitToastMessage 
   }: RequestOptions & { method: string }
 ): Promise<{ data: T }> {
   try {
@@ -145,6 +214,12 @@ async function request<T>(
     
     const response = await fetch(url, requestOptions);
     
+    // Extract rate limit headers from the response 
+    // Skip for the rate-limits endpoints to avoid circular updates
+    if (!sanitizedEndpoint.includes('/health/rate-limits')) {
+      extractRateLimitHeaders(response, sanitizedEndpoint);
+    }
+    
     if (!response.ok) {
       // Handle 401 Unauthorized - try to refresh auth and retry
       if (response.status === 401 && retryAuth) {
@@ -170,16 +245,69 @@ async function request<T>(
       
       // Handle different error types based on status code
       if (response.status === 429) {
-        // Rate limit exceeded
+        // Extract retry-after header if present
+        const retryAfter = response.headers.get('Retry-After') || response.headers.get('X-RateLimit-Reset');
+        let resetAfterSeconds = 0;
+        
+        if (retryAfter) {
+          // If it's a number in seconds
+          if (!isNaN(Number(retryAfter))) {
+            resetAfterSeconds = Number(retryAfter);
+          } 
+          // If it's a HTTP date format
+          else if (new Date(retryAfter).getTime() > 0) {
+            resetAfterSeconds = Math.ceil((new Date(retryAfter).getTime() - Date.now()) / 1000);
+          }
+        }
+        
+        // Get error data from response
         const errorData = await response.json().catch(() => ({
           message: 'Rate limit exceeded',
+          reset_after_seconds: resetAfterSeconds
         }));
         
-        // Throw a specialized RateLimitError
-        throw new RateLimitError(
+        // If reset seconds wasn't in the header, try to get it from the response body
+        if (resetAfterSeconds === 0 && errorData.reset_after_seconds) {
+          resetAfterSeconds = errorData.reset_after_seconds;
+        }
+        
+        // Ensure reset_after_seconds is included in the error data
+        if (!errorData.reset_after_seconds && resetAfterSeconds > 0) {
+          errorData.reset_after_seconds = resetAfterSeconds;
+        }
+        
+        // Create specialized error with endpoint context
+        const rateLimitError = new RateLimitError(
           errorData.message || 'You have reached your usage limit',
-          errorData
+          errorData,
+          sanitizedEndpoint
         );
+        
+        // Show toast notification if enabled
+        if (showToastOnRateLimit) {
+          const toastMessage = rateLimitToastMessage || rateLimitError.getUserFriendlyMessage();
+          
+          // Dispatch a custom event that components can listen for
+          document.dispatchEvent(
+            new CustomEvent('show-api-toast', { 
+              detail: {
+                title: 'Rate Limit Reached',
+                message: toastMessage,
+                type: 'error',
+                duration: 6000, // Show longer than normal toasts
+                action: {
+                  label: 'View Limits',
+                  onClick: () => {
+                    // Trigger the RateLimitsPanel to open
+                    document.dispatchEvent(new CustomEvent('show-rate-limits'));
+                  }
+                }
+              }
+            })
+          );
+        }
+        
+        throw rateLimitError;
       }
       
       const errorData = await response.json().catch(() => ({

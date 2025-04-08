@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ErrorMessage } from '../../../../components/ui';
 import { apiClient, RateLimitError } from '../../../../services/apiClient';
+import { eventService, AppEvent } from '../../../../services/eventService';
+import { useRateLimitContext } from '../../../../contexts/RateLimitContext';
 
 export interface ExportOptionsProps {
   /**
@@ -58,6 +60,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>('');
   // Track already revoked blob URLs to prevent double revocation
   const revokedUrlsRef = useRef<Set<string>>(new Set());
+  
+  // Get the rate limit context for optimistic updates
+  const { decrementLimit } = useRateLimitContext();
   
   // Safe URL revocation function to prevent revoking the same URL twice
   const safeRevokeObjectURL = (url: string) => {
@@ -386,6 +391,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       
       console.log('Sending SVG conversion request to:', apiUrl);
       
+      // Apply optimistic update BEFORE making the API call
+      // This immediately decrements the count in the UI
+      decrementLimit('svg_conversion');
+      
       // Use apiClient instead of fetch to ensure authentication headers are included
       const { data } = await apiClient.post<{
         success: boolean;
@@ -408,6 +417,12 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       clearTimeout(timeoutId);
       
       console.log('SVG conversion response:', data);
+      
+      // Emit the SVG_CONVERTED event on successful conversion
+      if (data.success && data.svg_data) {
+        // This will trigger a rate limit refresh
+        eventService.emit(AppEvent.SVG_CONVERTED);
+      }
       
       if (!data.success) {
         setErrorMessage(data.message || 'SVG conversion failed. Please try a different format.');
@@ -472,17 +487,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
     }
     
     try {
-      console.log('Preview button clicked, processing latest image URL');
+      console.log('Preview button clicked, processing image URL for size:', selectedSize);
       setIsAutoProcessing(true);
       
-      // Check if we already have a processed image for the current format and size
-      if (processedImageUrl && selectedFormat === 'svg' && processedImageUrl.startsWith('blob:')) {
-        console.log('Using existing processed SVG URL:', processedImageUrl);
-        setIsAutoProcessing(false);
-        openImagePreview(processedImageUrl);
-        return;
-      }
-      
+      // Always regenerate SVG preview instead of trying to reuse existing blob URL
       // Process the image if we don't have a processed version yet
       const url = await processImageForPreview();
       setIsAutoProcessing(false);
@@ -656,7 +664,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   // Helper function to safely download the processed image
   const downloadProcessedImage = async (url: string, fileExtension: string) => {
     console.log('downloadProcessedImage called with:', { url: url.substring(0, 30) + '...', fileExtension });
-    const filename = `${conceptTitle}${variationName ? `-${variationName}` : ''}.${fileExtension}`;
+    const filename = `${conceptTitle}${variationName ? `-${variationName}` : ''}-${selectedSize}.${fileExtension}`;
     console.log('Download filename:', filename);
     
     try {

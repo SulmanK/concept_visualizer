@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
@@ -22,6 +22,21 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
   const toggleRateLimits = () => {
     setShowRateLimits(!showRateLimits);
   };
+  
+  // Add event listener for the show-rate-limits event
+  useEffect(() => {
+    const handleShowRateLimits = () => {
+      setShowRateLimits(true);
+    };
+    
+    // Listen for the custom event triggered by API client on rate limit errors
+    document.addEventListener('show-rate-limits', handleShowRateLimits);
+    
+    // Clean up the listener on unmount
+    return () => {
+      document.removeEventListener('show-rate-limits', handleShowRateLimits);
+    };
+  }, []);
   
   // Using Tailwind classes instead of inline styles for better responsive control
   return (

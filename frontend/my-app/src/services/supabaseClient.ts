@@ -5,6 +5,7 @@
 import { createClient, Session, User } from '@supabase/supabase-js';
 import { getBucketName } from './configService';
 import { tokenService } from './tokenService';
+import { fetchRateLimits } from './rateLimitService';
 
 // Environment variables for Supabase
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -79,6 +80,13 @@ export const initializeAnonymousAuth = async (): Promise<Session | null> => {
       }
       
       console.log('Anonymous sign-in successful');
+      
+      // Force refresh rate limits after creating a new session
+      console.log('Refreshing rate limits after anonymous sign-in');
+      fetchRateLimits(true).catch(err => 
+        console.error('Failed to refresh rate limits after anonymous sign-in:', err)
+      );
+      
       return data.session;
     } else {
       // If session exists but is near expiry, refresh it
@@ -169,6 +177,13 @@ export const signOut = async (): Promise<boolean> => {
     
     // After sign out, initialize a new anonymous session
     await initializeAnonymousAuth();
+    
+    // Force refresh rate limits after signing out and getting a new session
+    console.log('Refreshing rate limits after sign out');
+    fetchRateLimits(true).catch(err => 
+      console.error('Failed to refresh rate limits after sign out:', err)
+    );
+    
     return true;
   } catch (error) {
     console.error('Error signing out:', error);

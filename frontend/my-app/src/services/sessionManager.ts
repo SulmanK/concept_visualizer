@@ -4,6 +4,8 @@
 
 import Cookies from 'js-cookie';
 import { v4 as uuidv4 } from 'uuid';
+// Import the rate limit service to force refresh when session changes
+import { fetchRateLimits } from './rateLimitService';
 
 const SESSION_COOKIE_NAME = 'concept_session';
 // Use the API base URL from environment variables
@@ -40,19 +42,39 @@ export const getSessionId = (): string | null => {
  * @param days Number of days until the cookie expires (default: 30)
  */
 export const setSessionId = (sessionId: string, days: number = 30): void => {
+  const oldSessionId = getSessionId();
   console.log(`SessionManager: Setting session ID (masked: ${maskValue(sessionId)})`);
   Cookies.set(SESSION_COOKIE_NAME, sessionId, { 
     expires: days, 
     sameSite: 'Lax',
     path: '/'
   });
+  
+  // If the session ID changed, force refresh the rate limits
+  if (oldSessionId !== sessionId) {
+    console.log('Session ID changed, refreshing rate limits');
+    // Force refresh rate limits in the next tick to ensure cookie is set first
+    setTimeout(() => {
+      fetchRateLimits(true).catch(err => 
+        console.error('Failed to refresh rate limits after session change:', err)
+      );
+    }, 0);
+  }
 };
 
 /**
  * Remove the session ID cookie
  */
 export const clearSessionId = (): void => {
+  console.log('Clearing session ID and refreshing rate limits');
   Cookies.remove(SESSION_COOKIE_NAME);
+  
+  // Force refresh rate limits after clearing session
+  setTimeout(() => {
+    fetchRateLimits(true).catch(err => 
+      console.error('Failed to refresh rate limits after clearing session:', err)
+    );
+  }, 0);
 };
 
 /**

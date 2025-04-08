@@ -57,9 +57,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
             self.logger.debug(f"Allowing OPTIONS request for CORS: {request.url.path}")
             return await call_next(request)
         
-        # Skip authentication for public paths
         path = request.url.path
-        if self._is_public_path(path):
+        
+        # Handle health/rate-limits endpoints specially - try to authenticate but don't require it
+        is_rate_limits_path = path.startswith("/api/health/rate-limits")
+        
+        # Skip authentication for other public paths
+        if self._is_public_path(path) and not is_rate_limits_path:
             self.logger.debug(f"Skipping auth for public path: {path}")
             return await call_next(request)
             
@@ -83,6 +87,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
             else:
                 # No valid user found in token
+                
+                # For rate limits endpoints, continue without auth
+                if is_rate_limits_path:
+                    self.logger.debug(f"No auth for rate limits path: {path}, continuing anyway")
+                    return await call_next(request)
+                
+                # For other endpoints, require auth
                 self.logger.warning(f"Authentication required for path: {path}")
                 # Add CORS headers to auth errors to prevent CORS issues
                 return JSONResponse(

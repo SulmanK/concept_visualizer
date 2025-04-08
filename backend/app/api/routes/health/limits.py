@@ -35,6 +35,9 @@ async def rate_limits(request: Request, force_refresh: bool = False):
     allowed for each rate-limited endpoint based on the client's session ID.
     It uses caching to reduce the load during busy periods.
     
+    Note: This endpoint itself counts against your rate limits.
+    For a non-counting version, use /rate-limits-status instead.
+    
     Args:
         request: The FastAPI request
         force_refresh: If True, bypass the cache and get fresh data
@@ -45,17 +48,101 @@ async def rate_limits(request: Request, force_refresh: bool = False):
     Raises:
         ServiceUnavailableError: If there was an error getting rate limit information
     """
+    return await _get_rate_limits(request, force_refresh)
+
+
+@router.get("/rate-limits-status", include_in_schema=True)
+async def rate_limits_status(request: Request, force_refresh: bool = False):
+    """Get current rate limit information without counting against limits.
+    
+    This endpoint returns information about the remaining requests
+    allowed for each rate-limited endpoint based on the client's session ID.
+    It uses caching to reduce the load during busy periods.
+    
+    Unlike /rate-limits, this endpoint does not count against your rate limits.
+    
+    Args:
+        request: The FastAPI request
+        force_refresh: If True, bypass the cache and get fresh data
+    
+    Returns:
+        dict: Rate limit information by endpoint.
+        
+    Raises:
+        ServiceUnavailableError: If there was an error getting rate limit information
+    """
+    return await _get_rate_limits(request, force_refresh, check_only=True)
+
+
+async def _get_rate_limits(request: Request, force_refresh: bool = False, check_only: bool = False):
+    """
+    Shared implementation for rate limit checking endpoints.
+    
+    Args:
+        request: The FastAPI request
+        force_refresh: If True, bypass the cache and get fresh data
+        check_only: If True, don't increment counters during checks
+    
+    Returns:
+        dict: Rate limit information by endpoint.
+        
+    Raises:
+        ServiceUnavailableError: If there was an error getting rate limit information
+    """
     try:
         global _rate_limits_cache
         
-        # Use session ID if available, otherwise fall back to IP address
-        session_id = request.cookies.get("concept_session")
-        user_ip = get_remote_address(request)
+        # Get user ID from request state if available (auth middleware)
+        user_id = None
+        auth_user_id = None
+        if hasattr(request, "state") and hasattr(request.state, "user") and request.state.user:
+            auth_user_id = request.state.user.get("id")
+            user_id = auth_user_id
+            logger.debug(f"Using authenticated user ID for rate limits: {user_id}")
+        else:
+            # Check if we have an authorization header - could happen if auth middleware didn't run
+            # but user is actually authenticated
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                from app.core.supabase.client import get_supabase_auth_client
+                try:
+                    # Try to get user from token
+                    supabase_auth = get_supabase_auth_client()
+                    user = supabase_auth.get_user_from_request(request)
+                    if user and user.get("id"):
+                        auth_user_id = user.get("id")
+                        user_id = auth_user_id
+                        logger.debug(f"Using authenticated user ID from token for rate limits: {user_id}")
+                except Exception as e:
+                    logger.warning(f"Error extracting user from token: {str(e)}")
+            
+        # Fall back to session ID if available
+        session_id = None
+        if not user_id:
+            session_id = request.cookies.get("concept_session")
+            if session_id:
+                user_id = session_id
+                logger.debug(f"Using session cookie ID for rate limits: {user_id}")
+            
+        # Finally fall back to IP address
+        ip_address = None
+        if not user_id:
+            ip_address = get_remote_address(request)
+            user_id = ip_address
+            logger.debug(f"Using IP address for rate limits: {user_id}")
         
-        # Create a unique cache key based on session or IP
-        cache_key = f"session:{session_id}" if session_id else f"ip:{user_ip}"
+        # Create a unique cache key based on user ID
+        # Ensure we always use a consistent format for the user ID
+        if auth_user_id:
+            cache_key = f"user:{auth_user_id}"
+        elif session_id:
+            cache_key = f"user:{session_id}"
+        else:
+            cache_key = f"ip:{ip_address or get_remote_address(request)}"
+            
+        logger.debug(f"Rate limit cache key (before masking): {cache_key}")
         
-        # Check if we have a cached response for this session/IP
+        # Check if we have a cached response for this user/IP
         now = datetime.utcnow()
         if not force_refresh and cache_key in _rate_limits_cache and now < _rate_limits_cache[cache_key]["expires_at"]:
             logger.debug(f"Using cached rate limits for {mask_id(cache_key)}")
@@ -82,14 +169,14 @@ async def rate_limits(request: Request, force_refresh: bool = False):
         
         # Get only the requested rate limits
         limits_info = {
-            "user_identifier": mask_id(cache_key),  # Mask the session ID in the response
-            "session_id": session_id is not None,  # Include whether session was found
+            "user_identifier": mask_id(cache_key),  # Mask the user ID in the response
+            "authenticated": user_id is not None and not cache_key.startswith("ip:"),
             "redis_available": redis_available,  # Include Redis availability status
             "limits": default_limits if not redis_available else {
-                "generate_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "generate_concept"),
-                "store_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "store_concept"),
-                "refine_concept": get_limit_info(limiter, direct_redis_client, "10/hour", cache_key, "refine_concept"),
-                "svg_conversion": get_limit_info(limiter, direct_redis_client, "20/hour", cache_key, "svg_conversion"),
+                "generate_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "generate_concept", check_only),
+                "store_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "store_concept", check_only),
+                "refine_concept": get_limit_info(limiter, direct_redis_client, "10/hour", cache_key, "refine_concept", check_only),
+                "svg_conversion": get_limit_info(limiter, direct_redis_client, "20/hour", cache_key, "svg_conversion", check_only),
             },
             "default_limits": ["200/day", "50/hour", "10/minute"],
             "last_updated": now.isoformat(),  # Add timestamp to show when data was refreshed
@@ -110,7 +197,7 @@ async def rate_limits(request: Request, force_refresh: bool = False):
         raise ServiceUnavailableError(detail="Error retrieving rate limit information")
 
 
-def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_type):
+def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_type, check_only=False):
     """Get information about a specific rate limit.
     
     Args:
@@ -119,6 +206,7 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
         limit_string: The limit string (e.g., "10/month")
         user_identifier: The user identifier (IP address)
         limit_type: The type of limit being checked (e.g., "generate_concept")
+        check_only: If True, don't increment counters during checks
         
     Returns:
         dict: Rate limit information.
@@ -141,47 +229,61 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
         endpoint_paths = {
             "generate_concept": [
                 # The main concept generation endpoint
-                "/api/concept/generate",
+                "/concepts/generate",
                 # Include the generate-with-palettes endpoint 
-                "/api/concept/generate-with-palettes"
+                "/concepts/generate-with-palettes"
             ],
-            "refine_concept": ["/api/concept/refine"],
-            "store_concept": ["/api/concept/store"],
-            "get_concepts": ["/api/concept/list"],
-            "sessions": ["/api/session", "/api/session/sync"],
+            "refine_concept": ["/concepts/refine"],
+            "store_concept": ["/concepts/store"],
+            "get_concepts": ["/concepts/list"],
+            "sessions": ["/sessions/sync"],  # Only sync endpoint seems relevant here
             "svg_conversion": [
-                "/api/svg/convert-to-svg", 
-                "/api/svg/convert"  # Include both possible paths
+                "/svg/convert-to-svg", 
+                "/svg/convert"
             ]
         }
         
-        # Use our new check_rate_limit function for more accurate limit checking
+        # Use our new check_rate_limit function
         if limit_type in endpoint_paths:
-            # Just use the first endpoint path for simplicity
-            path = endpoint_paths[limit_type][0]
+            max_count = 0
+            final_limit_status = None
             
-            # Use our new check_rate_limit function
-            limit_status = check_rate_limit(
-                user_id=user_identifier,
-                endpoint=path,
-                limit=limit_string
-            )
+            # Iterate through all paths associated with this limit type
+            for path in endpoint_paths[limit_type]:
+                limit_status = check_rate_limit(
+                    user_id=user_identifier,
+                    endpoint=path,
+                    limit=limit_string,
+                    check_only=check_only
+                )
+                
+                # If successful, update max_count and store the status
+                if "error" not in limit_status:
+                    current_count = limit_status.get("count", 0)
+                    logger.debug(f"    Path '{path}' check successful. Count: {current_count}")
+                    if current_count > max_count:
+                        max_count = current_count
+                        final_limit_status = limit_status
+                        logger.debug(f"    Updated max_count to {max_count} based on path '{path}'")
+                else:
+                    logger.warning(f"Error checking rate limit for path {path}: {limit_status.get('error')}")
             
-            # If successful, use the results directly
-            if "error" not in limit_status:
-                logger.debug(f"Using new rate limit check for {mask_id(user_identifier)} on {limit_type}")
+            # If we got at least one successful check, use the status with the highest count
+            if final_limit_status is not None:
+                logger_msg = "check-only" if check_only else "regular"
+                logger.debug(f"Using {logger_msg} rate limit check result for {mask_id(user_identifier)} on {limit_type} (max count: {max_count})")
                 return {
                     "limit": limit_string,
-                    "remaining": max(0, count - limit_status.get("count", 0)),
+                    "remaining": max(0, count - max_count),
                     "reset_after": get_reset_time(period),
-                    "current_count": limit_status.get("count", 0),
-                    "period": limit_status.get("period", period),
-                    "exceeded": limit_status.get("exceeded", False)
+                    "current_count": max_count,
+                    "period": final_limit_status.get("period", period),
+                    "exceeded": final_limit_status.get("exceeded", False)
                 }
             else:
-                logger.warning(f"Error using new rate limit check: {limit_status.get('error')}")
+                logger.warning(f"All rate limit checks failed for {limit_type}, falling back to direct Redis check.")
         
-        # Fall back to previous implementation if the new method fails
+        # Fall back to previous implementation (direct Redis check) if the new method fails
         current = 0
         if direct_redis:
             try:
@@ -198,7 +300,11 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
                         keys_to_try.extend([
                             f"POST:{path}:{user_identifier}:{period}",
                             f"{path}:{user_identifier}:{period}",
-                            f"{user_identifier}:{path}:{period}"
+                            f"{user_identifier}:{path}:{period}",
+                            # Also try with /api prefix that might be used in some implementations
+                            f"POST:/api{path}:{user_identifier}:{period}",
+                            f"/api{path}:{user_identifier}:{period}",
+                            f"{user_identifier}:/api{path}:{period}"
                         ])
                 
                 # Special case for SVG conversion which uses a specific prefix to avoid affecting other rate limits
@@ -209,13 +315,25 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
                         for path in endpoint_paths[limit_type]:
                             keys_to_try.extend([
                                 f"svg:POST:{path}:{user_identifier}:{period}",
-                                f"svg:{path}:{user_identifier}:{period}"
+                                f"svg:{path}:{user_identifier}:{period}",
+                                # Try with /api prefix too
+                                f"svg:POST:/api{path}:{user_identifier}:{period}",
+                                f"svg:/api{path}:{user_identifier}:{period}"
                             ])
                 
                 # Try each key directly with the Redis client
                 for key in keys_to_try:
                     try:
+                        # Try first with the default key
                         val = direct_redis.get(key)
+                        
+                        # If not found, try with ratelimit: prefix that's used by RedisStore
+                        if val is None:
+                            prefixed_key = f"ratelimit:{key}"
+                            val = direct_redis.get(prefixed_key)
+                            if val is not None:
+                                logger.debug(f"Direct Redis - Found key with ratelimit: prefix: {mask_key(prefixed_key)} = {val}")
+                        
                         if val is not None:
                             logger.debug(f"Direct Redis - Found key: {mask_key(key)} = {val}")
                             try:
@@ -250,7 +368,7 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
                     try:
                         val = storage.get(key)
                         if val is not None:
-                            logger.debug(f"SlowAPI Storage - Found key: {mask_key(key)} = {val}")
+                            logger.debug(f"SlowAPI storage - Found key: {mask_key(key)} = {val}")
                             try:
                                 val_int = int(val)
                                 if val_int > current:
@@ -258,26 +376,31 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
                             except (ValueError, TypeError):
                                 pass
                     except Exception:
-                        # Don't log individual errors here to reduce noise
+                        # Suppress key errors
                         pass
             except Exception as e:
-                logger.warning(f"Error using SlowAPI storage: {str(e)}")
+                logger.warning(f"Error querying SlowAPI storage: {str(e)}")
         
-        # Calculate remaining
-        remaining = max(0, count - current)
-        
+        # Return the results
         return {
             "limit": limit_string,
-            "remaining": remaining,
+            "remaining": max(0, count - current),
             "reset_after": get_reset_time(period),
             "current_count": current,
-            "exceeded": current >= count
+            "period": period
         }
     except Exception as e:
-        logger.error(f"General error getting rate limit info: {str(e)}")
+        logger.error(f"Error in get_limit_info: {str(e)}")
+        # Return safe defaults
+        try:
+            count_int = int(count) if 'count' in locals() else 10
+        except (ValueError, TypeError):
+            count_int = 10
+            
         return {
-            "limit": limit_string,
-            "remaining": count,  # Default to full availability
-            "reset_after": get_reset_time(period),
-            "error": f"Could not retrieve limit info: {str(e)}"
+            "limit": limit_string if 'limit_string' in locals() else "10/month",
+            "remaining": count_int,
+            "reset_after": get_reset_time("month"),
+            "error": str(e),
+            "note": "Error retrieving limits - showing defaults"
         } 

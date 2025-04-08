@@ -27,7 +27,8 @@ __all__ = [
     "get_user_id",
     "get_endpoint_key",
     "combine_keys",
-    "check_rate_limit"
+    "check_rate_limit",
+    "normalize_endpoint"
 ]
 
 
@@ -47,7 +48,44 @@ def get_limiter() -> Limiter:
     return _limiter
 
 
-def check_rate_limit(user_id: str, endpoint: str, limit: str) -> Dict[str, Any]:
+def normalize_endpoint(endpoint: str) -> str:
+    """
+    Normalize an endpoint path for rate limiting.
+    
+    Ensures that the endpoint is consistently formatted by:
+    1. Removing the /api prefix if present
+    2. Ensuring the path starts with a slash
+    3. Replacing /concept/ with /concepts/ if found
+    
+    Args:
+        endpoint: The endpoint path to normalize
+        
+    Returns:
+        Normalized endpoint path
+    """
+    original_endpoint = endpoint  # For logging
+    
+    # Remove /api prefix if present
+    if endpoint.startswith("/api/"):
+        endpoint = endpoint[4:]  # Remove the "/api" part
+    
+    # Replace /concept/ with /concepts/
+    if "/concept/" in endpoint:
+        endpoint = endpoint.replace("/concept/", "/concepts/")
+    
+    # Ensure path starts with a slash
+    if not endpoint.startswith("/"):
+        endpoint = f"/{endpoint}"
+        
+    if endpoint != original_endpoint:
+        logger.debug(f"Normalized endpoint from '{original_endpoint}' to '{endpoint}'")
+    else:
+        logger.debug(f"Endpoint '{endpoint}' did not require normalization")
+        
+    return endpoint
+
+
+def check_rate_limit(user_id: str, endpoint: str, limit: str, check_only: bool = False) -> Dict[str, Any]:
     """
     Check if a request is rate limited.
     
@@ -55,11 +93,18 @@ def check_rate_limit(user_id: str, endpoint: str, limit: str) -> Dict[str, Any]:
         user_id: The user identifier (usually user ID or IP)
         endpoint: API endpoint being accessed
         limit: Limit string in format "number/period" (e.g., "10/minute")
+        check_only: If True, don't increment the counter (for status checks)
             
     Returns:
         Dict with rate limit information
     """
     try:
+        # Normalize the endpoint for consistent key generation
+        normalized_endpoint = normalize_endpoint(endpoint)
+        
+        # Log the user ID and endpoint for debugging
+        logger.debug(f"Checking rate limit for user '{user_id}' on endpoint '{normalized_endpoint}' (original: '{endpoint}')")
+        
         # Parse limit string
         count, period_str = limit.split("/")
         count = int(count)
@@ -95,9 +140,10 @@ def check_rate_limit(user_id: str, endpoint: str, limit: str) -> Dict[str, Any]:
         # Call the store's check_rate_limit method
         is_allowed, quota = store.check_rate_limit(
             user_id=user_id,
-            endpoint=endpoint,
+            endpoint=normalized_endpoint,
             limit=count,
-            period=period_seconds
+            period=period_seconds,
+            check_only=check_only
         )
         
         # Format response

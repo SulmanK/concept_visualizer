@@ -8,6 +8,7 @@ export enum AppEvent {
   CONCEPT_CREATED = 'concept_created',
   CONCEPT_UPDATED = 'concept_updated',
   CONCEPT_DELETED = 'concept_deleted',
+  SVG_CONVERTED = 'svg_converted',
 }
 
 class EventService {

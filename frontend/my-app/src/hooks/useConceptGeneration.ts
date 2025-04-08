@@ -9,10 +9,11 @@ import {
   PromptRequest,
   FormStatus
 } from '../types';
-import { useConceptContext } from '../contexts/ConceptContext';
-import { RateLimitError } from '../services/apiClient';
 import { useErrorHandling } from './useErrorHandling';
-import { eventService, AppEvent } from '../services/eventService';
+import { useRateLimitContext } from '../contexts/RateLimitContext';
+import { createAsyncErrorHandler } from '../utils/errorUtils';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../contexts/AuthContext';
 
 export interface ConceptGenerationState {
   status: FormStatus;
@@ -25,8 +26,16 @@ export interface ConceptGenerationState {
  */
 export function useConceptGeneration() {
   const { post, loading, error, clearError } = useApi();
-  const { refreshConcepts } = useConceptContext();
-  const { handleError: handleApiError } = useErrorHandling();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const errorHandler = useErrorHandling();
+  const { decrementLimit } = useRateLimitContext();
+  
+  // Create a standardized async error handler
+  const handleAsync = createAsyncErrorHandler(errorHandler, {
+    defaultErrorMessage: 'Failed to generate concept',
+    showToast: true
+  });
   
   const [generationState, setGenerationState] = useState<ConceptGenerationState>({
     status: 'idle',
@@ -51,13 +60,19 @@ export function useConceptGeneration() {
       return;
     }
 
-    try {
-      setGenerationState({
-        status: 'submitting',
-        result: null,
-        error: null,
-      });
+    // Set submitting state
+    setGenerationState({
+      status: 'submitting',
+      result: null,
+      error: null,
+    });
 
+    // Apply optimistic update BEFORE making the API call
+    // This immediately decrements the count in the UI
+    decrementLimit('generate_concept');
+
+    // Use our standardized error handler to wrap the API call
+    const result = await handleAsync(async () => {
       const request: PromptRequest = {
         logo_description: logoDescription,
         theme_description: themeDescription,
@@ -67,58 +82,59 @@ export function useConceptGeneration() {
       const response = await post<GenerationResponse>('/concepts/generate-with-palettes', request);
 
       if (response.error) {
-        setGenerationState({
-          status: 'error',
-          result: null,
-          error: response.error.message,
-        });
-        return;
+        throw new Error(response.error.message);
       }
 
-      if (response.data) {
-        // Make sure the variations array is included in the result
-        const result = {
-          ...response.data,
-          variations: response.data.variations || []
-        };
-        
-        console.log('Generated concept with variations:', result);
-        
-        setGenerationState({
-          status: 'success',
-          result,
-          error: null,
-        });
-        
-        // Refresh the recent concepts list after successful generation
-        await refreshConcepts();
-        
-        // Emit an event to notify other components about the concept creation
-        eventService.emit(AppEvent.CONCEPT_CREATED, result);
+      if (!response.data) {
+        throw new Error('No data returned from API');
       }
-    } catch (err) {
-      console.error('Concept generation error:', err);
+
+      // Make sure the variations array is included in the result
+      return {
+        ...response.data,
+        variations: response.data.variations || []
+      };
+    }, 'concept generation');
+
+    if (result) {
+      console.log('Generated concept with variations:', result);
       
-      // Special handling for rate limit errors
-      if (err instanceof RateLimitError) {
-        // Use the handleApiError to properly format and categorize the error
-        handleApiError(err);
-        
-        setGenerationState({
-          status: 'error',
-          result: null,
-          error: err.message,
+      setGenerationState({
+        status: 'success',
+        result,
+        error: null,
+      });
+      
+      // REPLACING EVENT EMISSION WITH DIRECT CACHE INVALIDATION
+      // Instead of using events, directly invalidate the concepts cache
+      console.log('Directly invalidating concepts query cache');
+      
+      // Invalidate the recent concepts query
+      queryClient.invalidateQueries({ 
+        queryKey: ['concepts', 'recent', user?.id] 
+      });
+      
+      // Also invalidate any specific concept query if needed
+      if (result.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['concepts', 'detail', result.id] 
         });
-        return;
       }
       
+      // Also invalidate any other related queries
+      queryClient.invalidateQueries({
+        queryKey: ['concepts'],
+        exact: false
+      });
+    } else {
+      // If result is undefined, an error occurred and was handled by handleAsync
       setGenerationState({
         status: 'error',
         result: null,
-        error: err instanceof Error ? err.message : 'Failed to generate concept',
+        error: errorHandler.error?.message || 'Failed to generate concept',
       });
     }
-  }, [post, refreshConcepts, handleApiError]);
+  }, [post, queryClient, user?.id, decrementLimit, handleAsync, errorHandler]);
 
   /**
    * Reset the generation state
@@ -130,7 +146,8 @@ export function useConceptGeneration() {
       error: null,
     });
     clearError();
-  }, [clearError]);
+    errorHandler.clearError();
+  }, [clearError, errorHandler]);
 
   return {
     generateConcept,

@@ -14,4 +14,11 @@ router = APIRouter()
 
 # Include the check and limits routers
 router.include_router(check_router)
-router.include_router(limits_router) 
+router.include_router(limits_router)
+
+# Define endpoints that should not count against rate limits
+NON_COUNTING_ENDPOINTS = [
+    "/api/health/rate-limits-status",
+    "/api/health/ping",
+    "/api/health/status"
+] 

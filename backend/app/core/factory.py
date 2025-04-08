@@ -15,6 +15,7 @@ from app.core.middleware.prioritization import PrioritizationMiddleware
 from app.core.limiter.config import setup_limiter_for_app
 from app.utils.logging.setup import setup_logging
 from app.api.middleware.auth_middleware import AuthMiddleware
+from app.api.middleware.rate_limit_headers import RateLimitHeadersMiddleware
 
 
 logger = logging.getLogger(__name__)
@@ -70,12 +71,17 @@ def create_app() -> FastAPI:
         "/api/health",        # Health root endpoint
         "/api/health/check",  # Health check endpoint
         "/api/health/rate-limits", # Rate limits endpoint
+        "/api/health/rate-limits-status", # Non-counting rate limits endpoint
         "/api/auth/signin-anonymous",  # Anonymous auth endpoint
         "/docs",              # Swagger UI
         "/redoc",             # ReDoc UI
         "/openapi.json",      # OpenAPI schema
     ]
     app.add_middleware(AuthMiddleware, public_paths=public_paths)
+    
+    # Add rate limit headers middleware
+    app.add_middleware(RateLimitHeadersMiddleware)
+    logger.info("Added rate limit headers middleware")
     
     # Add prioritization middleware - this should be the last middleware added
     app.add_middleware(

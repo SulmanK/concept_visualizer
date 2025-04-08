@@ -34,7 +34,9 @@ from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, Valid
 from app.utils.security.mask import mask_id, mask_ip
 from app.api.routes.svg.utils import create_simple_svg_from_image, increment_svg_rate_limit
 from app.core.limiter import get_redis_client
+from app.utils.api_limits import apply_multiple_rate_limits
 from app.utils.api_limits.endpoints import apply_rate_limit
+from app.utils.api_limits.decorators import store_rate_limit_info
 
 # Configure logging
 logger = logging.getLogger("svg_converter_api")
@@ -64,12 +66,43 @@ async def convert_to_svg(
     try:
         # Apply rate limiting using the centralized function
         if req and hasattr(req.app.state, 'limiter'):
+            # Use only the svg_conversion rate limit for this endpoint
+            # SVG conversion doesn't need to check/increment other rate limits
             await apply_rate_limit(
                 req=req,
                 endpoint="/svg/convert-to-svg",
                 rate_limit="20/hour",
                 period="hour"
             )
+            
+            # Now manually store the rate limit info after the counter has been incremented
+            try:
+                user_id = None
+                if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+                    user_id = req.state.user.get("id")
+                
+                if user_id:
+                    from app.core.limiter import check_rate_limit
+                    limit_status = check_rate_limit(
+                        user_id=f"user:{user_id}", 
+                        endpoint="/svg/convert-to-svg",
+                        limit="20/hour",
+                        check_only=True  # Just check current status after increment
+                    )
+                    
+                    # Store in request.state for the middleware to use
+                    req.state.limiter_info = {
+                        "limit": limit_status.get("limit", 0),
+                        "remaining": limit_status.get("remaining", 0),
+                        "reset": limit_status.get("reset_at", 0)
+                    }
+                    
+                    logger.debug(
+                        f"Stored rate limit info for /svg/convert-to-svg after increment: "
+                        f"remaining={limit_status.get('remaining', 0)}"
+                    )
+            except Exception as e:
+                logger.error(f"Error storing post-increment rate limit info: {str(e)}")
         
         # Validate the request
         # Extract the image data from base64
@@ -194,12 +227,12 @@ async def convert_to_svg(
                 # Clean up temp files
                 try:
                     os.unlink(temp_in_path)
-                except:
+                except Exception:
                     pass
                     
                 try:
                     os.unlink(temp_out_path)
-                except:
+                except Exception:
                     pass
                     
     except ValidationError:
@@ -215,4 +248,7 @@ async def convert_to_svg(
 
 
 # Alias route for backward compatibility
+# router.post("/convert", response_model=SVGConversionResponse)(convert_to_svg)
+# Add the decorator to the alias as well
+# converter_with_info = store_rate_limit_info("/svg/convert", "20/hour")(convert_to_svg)
 router.post("/convert", response_model=SVGConversionResponse)(convert_to_svg) 

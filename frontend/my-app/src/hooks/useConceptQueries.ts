@@ -8,11 +8,17 @@ import {
   getSignedImageUrl
 } from '../services/supabaseClient';
 import { getBucketName } from '../services/configService';
+import { useErrorHandling } from './useErrorHandling';
+import { createQueryErrorHandler } from '../utils/errorUtils';
 
 /**
- * Custom hook to fetch and cache recent concepts
+ * Custom hook to fetch and cache recent concepts with standardized error handling
  */
 export function useRecentConcepts(userId: string | undefined, limit: number = 10) {
+  // Set up error handling
+  const errorHandler = useErrorHandling();
+  const { onQueryError } = createQueryErrorHandler(errorHandler);
+  
   return useQuery({
     queryKey: ['concepts', 'recent', userId, limit],
     queryFn: async () => {
@@ -27,13 +33,18 @@ export function useRecentConcepts(userId: string | undefined, limit: number = 10
     },
     enabled: !!userId, // Only run the query if we have a userId
     staleTime: 1000 * 60 * 5, // 5 minutes
+    onError: onQueryError, // Use standardized error handling
   });
 }
 
 /**
- * Custom hook to fetch and cache a specific concept
+ * Custom hook to fetch and cache a specific concept with standardized error handling
  */
 export function useConceptDetail(conceptId: string | undefined, userId: string | undefined) {
+  // Set up error handling
+  const errorHandler = useErrorHandling();
+  const { onQueryError } = createQueryErrorHandler(errorHandler);
+  
   return useQuery({
     queryKey: ['concepts', 'detail', conceptId, userId],
     queryFn: async () => {
@@ -52,6 +63,7 @@ export function useConceptDetail(conceptId: string | undefined, userId: string |
       return processedConcept;
     },
     enabled: !!conceptId && !!userId, // Only run if we have both IDs
+    onError: onQueryError, // Use standardized error handling
   });
 }
 

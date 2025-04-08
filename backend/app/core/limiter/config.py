@@ -5,7 +5,7 @@ This module provides the main setup function for rate limiting with SlowAPI and 
 """
 
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -17,6 +17,30 @@ from app.utils.security.mask import mask_id
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Global configuration for non-counting endpoints
+# Will be populated when the app is initialized
+NON_COUNTING_ENDPOINTS = []
+
+def is_non_counting_endpoint(request: Request) -> bool:
+    """
+    Check if the current request is for a non-counting endpoint.
+    
+    Args:
+        request: The FastAPI request
+    
+    Returns:
+        True if the endpoint should not count against rate limits
+    """
+    path = request.url.path
+    
+    # Check if the path is in the non-counting list
+    for endpoint in NON_COUNTING_ENDPOINTS:
+        if path == endpoint or path.startswith(endpoint):
+            logger.debug(f"Request to non-counting endpoint: {path}")
+            return True
+    
+    return False
 
 def configure_limiter(debug: bool = False) -> Limiter:
     """
@@ -88,6 +112,15 @@ def setup_limiter_for_app(app: FastAPI) -> None:
     # Register rate limit exceeded handler
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     
+    # Import and register non-counting endpoints
+    global NON_COUNTING_ENDPOINTS
+    try:
+        from app.api.routes.health import NON_COUNTING_ENDPOINTS as HEALTH_ENDPOINTS
+        NON_COUNTING_ENDPOINTS.extend(HEALTH_ENDPOINTS)
+        logger.info(f"Registered {len(HEALTH_ENDPOINTS)} non-counting health endpoints")
+    except ImportError:
+        logger.warning("Could not import health endpoints for non-counting configuration")
+    
     # Patch the limiter's limit method with our safe version
     original_limit = limiter.limit
     
@@ -98,7 +131,21 @@ def setup_limiter_for_app(app: FastAPI) -> None:
         def wrapper(func):
             # Apply our safe_ratelimit decorator first, then the original limit
             safe_func = safe_ratelimit(func)
-            wrapped = limit_decorator(safe_func)
+            
+            # Create a modified wrapped function that checks for non-counting endpoints
+            async def modified_handler(*handler_args, **handler_kwargs):
+                # Get the request from the arguments
+                request = next((arg for arg in handler_args if isinstance(arg, Request)), None)
+                
+                # If this is a non-counting endpoint, skip rate limiting
+                if request and is_non_counting_endpoint(request):
+                    return await func(*handler_args, **handler_kwargs)
+                
+                # Otherwise, apply the rate limiter
+                return await safe_func(*handler_args, **handler_kwargs)
+            
+            # Apply the original decorator to our modified handler
+            wrapped = limit_decorator(modified_handler)
             
             # Make sure to preserve the original function as __wrapped__
             if not hasattr(wrapped, '__wrapped__'):

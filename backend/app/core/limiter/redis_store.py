@@ -240,7 +240,8 @@ class RedisStore:
         user_id: str, 
         endpoint: str, 
         limit: int, 
-        period: int
+        period: int,
+        check_only: bool = False
     ) -> Tuple[bool, Dict[str, Any]]:
         """
         Check if a request is rate limited.
@@ -250,6 +251,7 @@ class RedisStore:
             endpoint: API endpoint being accessed
             limit: Maximum requests allowed
             period: Time period in seconds
+            check_only: If True, don't increment the counter (for status checks)
             
         Returns:
             Tuple of (is_allowed, quota_info)
@@ -257,6 +259,9 @@ class RedisStore:
         # Create a key combining user and endpoint
         key = f"{user_id}:{endpoint}"
         redis_key = self._make_key(key)
+        
+        # Log the key being used for improved debugging
+        self.logger.debug(f"Rate limit check using key: {mask_key(key)} (prefixed as {mask_key(redis_key)})")
         
         try:
             # Get current value
@@ -269,7 +274,19 @@ class RedisStore:
                 self._log_operation("check_rate_limit", redis_key, "DENIED")
                 return (False, quota)
             
-            # Increment counter
+            if check_only:
+                # Don't increment for check-only requests
+                self._log_operation("check_rate_limit", redis_key, "CHECK_ONLY")
+                # Use the current count for quota info
+                quota = {
+                    "total": limit,
+                    "remaining": max(0, limit - count),
+                    "used": count,
+                    "reset_at": int(time.time() + period),
+                }
+                return (True, quota)
+            
+            # Increment counter for normal requests
             new_count = self.increment(key, period)
             
             # Check if increment puts us over the limit

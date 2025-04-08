@@ -16,7 +16,7 @@ from slowapi.util import get_remote_address
 
 from app.models.request import PromptRequest
 from app.models.response import GenerationResponse, PaletteVariation
-from app.utils.api_limits import apply_rate_limit
+from app.utils.api_limits import apply_rate_limit, apply_multiple_rate_limits
 from app.services.concept import get_concept_service
 from app.services.image import get_image_service
 from app.services.storage import get_concept_storage_service
@@ -28,6 +28,8 @@ from app.services.interfaces import (
 from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
 from app.core.config import settings
+from app.utils.api_limits.decorators import store_rate_limit_info
+from app.utils.api_limits.endpoints import apply_rate_limit, apply_multiple_rate_limits
 
 # Configure logging
 logger = logging.getLogger("concept_generation_api")
@@ -59,8 +61,60 @@ async def generate_concept(
         ValidationError: If the request validation fails
         HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
     """
-    # Apply rate limit - this will now raise an HTTPException if limit is exceeded
-    await apply_rate_limit(req, "/concepts/generate", "10/month")
+    # Apply both generation and storage rate limits - this will raise an HTTPException if limit is exceeded
+    await apply_multiple_rate_limits(req, [
+        {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
+        {"endpoint": "/concepts/store", "rate_limit": "10/month"}
+    ])
+    
+    # Store rate limit info after the actual rate limiting
+    try:
+        user_id = None
+        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+            user_id = req.state.user.get("id")
+        
+        if user_id:
+            from app.core.limiter import check_rate_limit
+            
+            # Get full user_id format
+            full_user_id = f"user:{user_id}"
+            
+            # Use the lower of the two limits for the headers
+            generation_status = check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/generate",
+                limit="10/month",
+                check_only=True
+            )
+            
+            storage_status = check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/store",
+                limit="10/month",
+                check_only=True
+            )
+            
+            # Use the status with fewer remaining calls
+            if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
+                limit_status = generation_status
+                endpoint = "/concepts/generate"
+            else:
+                limit_status = storage_status
+                endpoint = "/concepts/store"
+            
+            # Store in request.state for the middleware to use
+            req.state.limiter_info = {
+                "limit": limit_status.get("limit", 0),
+                "remaining": limit_status.get("remaining", 0),
+                "reset": limit_status.get("reset_at", 0)
+            }
+            
+            logger.debug(
+                f"Stored rate limit info for {endpoint} after increment: "
+                f"remaining={limit_status.get('remaining', 0)}"
+            )
+    except Exception as e:
+        logger.error(f"Error storing post-increment rate limit info: {str(e)}")
     
     try:
         # Validate inputs
@@ -176,8 +230,60 @@ async def generate_concept_with_palettes(
         ValidationError: If the request validation fails
         HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
     """
-    # Apply rate limit - this will now raise an HTTPException if limit is exceeded
-    await apply_rate_limit(req, "/concepts/generate-with-palettes", "10/month")
+    # Apply both generation and storage rate limits - this will raise an HTTPException if limit is exceeded
+    await apply_multiple_rate_limits(req, [
+        {"endpoint": "/concepts/generate-with-palettes", "rate_limit": "10/month"},
+        {"endpoint": "/concepts/store", "rate_limit": "10/month"}
+    ])
+    
+    # Store rate limit info after the actual rate limiting
+    try:
+        user_id = None
+        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+            user_id = req.state.user.get("id")
+        
+        if user_id:
+            from app.core.limiter import check_rate_limit
+            
+            # Get full user_id format
+            full_user_id = f"user:{user_id}"
+            
+            # Use the lower of the two limits for the headers
+            generation_status = check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/generate-with-palettes",
+                limit="10/month",
+                check_only=True
+            )
+            
+            storage_status = check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/store",
+                limit="10/month",
+                check_only=True
+            )
+            
+            # Use the status with fewer remaining calls
+            if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
+                limit_status = generation_status
+                endpoint = "/concepts/generate-with-palettes"
+            else:
+                limit_status = storage_status
+                endpoint = "/concepts/store"
+            
+            # Store in request.state for the middleware to use
+            req.state.limiter_info = {
+                "limit": limit_status.get("limit", 0),
+                "remaining": limit_status.get("remaining", 0),
+                "reset": limit_status.get("reset_at", 0)
+            }
+            
+            logger.debug(
+                f"Stored rate limit info for {endpoint} after increment: "
+                f"remaining={limit_status.get('remaining', 0)}"
+            )
+    except Exception as e:
+        logger.error(f"Error storing post-increment rate limit info: {str(e)}")
     
     try:
         # Validate inputs

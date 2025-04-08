@@ -84,7 +84,7 @@ class Settings(BaseSettings):
     UPSTASH_REDIS_PORT: int = 6379
     
     # Rate limiting settings
-    RATE_LIMITING_ENABLED: bool = False
+    RATE_LIMITING_ENABLED: bool = True
     
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(

@@ -2,22 +2,21 @@
  * Context for managing concept data throughout the application
  */
 
-import React, { createContext, useContext, useState, useMemo, ReactNode, useEffect } from 'react';
+import React, { useMemo, ReactNode, useCallback } from 'react';
+import { createContext, useContextSelector } from 'use-context-selector';
 import { ConceptData } from '../services/supabaseClient';
 import { useAuth } from './AuthContext';
 import { useRecentConcepts } from '../hooks/useConceptQueries';
 import { useQueryClient } from '@tanstack/react-query';
-import { eventService, AppEvent } from '../services/eventService';
 
 interface ConceptContextType {
   // Recent concepts data
   recentConcepts: ConceptData[];
   loadingConcepts: boolean;
-  errorLoadingConcepts: string | null;
+  errorLoadingConcepts: unknown;
   
   // Actions
   refreshConcepts: () => void;
-  clearError: () => void;
 }
 
 // Create context with default values
@@ -25,12 +24,53 @@ const ConceptContext = createContext<ConceptContextType>({
   recentConcepts: [],
   loadingConcepts: false,
   errorLoadingConcepts: null,
-  refreshConcepts: () => {},
-  clearError: () => {}
+  refreshConcepts: () => {}
 });
 
-// Hook for using the concept context
-export const useConceptContext = () => useContext(ConceptContext);
+// Selector hooks for specific context values
+/**
+ * Hook to access only the recent concepts data
+ */
+export const useRecentConceptsData = () => {
+  return useContextSelector(ConceptContext, state => state.recentConcepts);
+};
+
+/**
+ * Hook to access only the loading state
+ */
+export const useConceptsLoading = () => {
+  return useContextSelector(ConceptContext, state => state.loadingConcepts);
+};
+
+/**
+ * Hook to access only the error state
+ */
+export const useConceptsError = () => {
+  return useContextSelector(ConceptContext, state => state.errorLoadingConcepts);
+};
+
+/**
+ * Hook to access only the refresh function
+ */
+export const useRefreshConcepts = () => {
+  return useContextSelector(ConceptContext, state => state.refreshConcepts);
+};
+
+// Original hook for backward compatibility that now uses selectors internally
+export const useConceptContext = (): ConceptContextType => {
+  const recentConcepts = useRecentConceptsData();
+  const loadingConcepts = useConceptsLoading();
+  const errorLoadingConcepts = useConceptsError();
+  const refreshConcepts = useRefreshConcepts();
+  
+  // Memoize the result to prevent unnecessary re-renders
+  return useMemo(() => ({
+    recentConcepts,
+    loadingConcepts,
+    errorLoadingConcepts,
+    refreshConcepts
+  }), [recentConcepts, loadingConcepts, errorLoadingConcepts, refreshConcepts]);
+};
 
 interface ConceptProviderProps {
   children: ReactNode;
@@ -38,73 +78,45 @@ interface ConceptProviderProps {
 
 /**
  * Provider component for concept data
+ * Uses React Query directly for data management
  */
 export const ConceptProvider: React.FC<ConceptProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [errorLoadingConcepts, setErrorLoadingConcepts] = useState<string | null>(null);
   
-  // Use React Query to fetch concepts
+  // Use React Query to fetch concepts - direct use of React Query state
   const { 
-    data: recentConcepts = [], 
-    isLoading: loadingConcepts, 
-    error 
+    data = [] as ConceptData[], // Explicitly type the default value
+    isLoading, 
+    error,
+    refetch
   } = useRecentConcepts(user?.id, 10);
   
-  // Update error state from React Query error
-  React.useEffect(() => {
-    if (error) {
-      console.error('Error loading concepts:', error);
-      setErrorLoadingConcepts(error instanceof Error ? error.message : 'Unknown error loading concepts');
-    } else {
-      setErrorLoadingConcepts(null);
-    }
-  }, [error]);
-  
-  /**
-   * Refresh the list of concepts from the API
-   */
-  const refreshConcepts = () => {
+  // Create a memoized refresh function that uses the refetch function from React Query
+  // and also invalidates the query cache
+  const refreshConcepts = useCallback(() => {
     console.log('Manually refreshing concepts via React Query');
-    // Invalidate the query cache to trigger a refetch
+    
+    // Approach 1: Use refetch from React Query
+    refetch();
+    
+    // Approach 2: Invalidate the query cache to trigger a refetch
+    // This is sometimes more reliable for forcing a complete refresh
     queryClient.invalidateQueries({ queryKey: ['concepts', 'recent', user?.id] });
-  };
+  }, [refetch, queryClient, user?.id]);
   
-  // Listen for global concept events and refresh data
-  useEffect(() => {
-    // Listen for concept created and updated events
-    const createdUnsubscribe = eventService.subscribe(AppEvent.CONCEPT_CREATED, () => {
-      console.log('[ConceptContext] Concept created event received, refreshing data');
-      refreshConcepts();
-    });
-    
-    const updatedUnsubscribe = eventService.subscribe(AppEvent.CONCEPT_UPDATED, () => {
-      console.log('[ConceptContext] Concept updated event received, refreshing data');
-      refreshConcepts();
-    });
-    
-    // Clean up subscriptions on unmount
-    return () => {
-      createdUnsubscribe();
-      updatedUnsubscribe();
-    };
-  }, [user?.id]); // Re-subscribe when user changes
+  // Note: Event listeners have been removed from here.
+  // Instead, we now use React Query's cache invalidation directly at event sources
+  // See useConceptGeneration.ts for example where we directly invalidate the cache
+  // after a successful concept creation.
   
-  /**
-   * Clear any error messages
-   */
-  const clearError = (): void => {
-    setErrorLoadingConcepts(null);
-  };
-  
-  // Create the context value object
+  // Create the context value object with proper memoization
   const contextValue = useMemo(() => ({
-    recentConcepts,
-    loadingConcepts,
-    errorLoadingConcepts,
-    refreshConcepts,
-    clearError
-  }), [recentConcepts, loadingConcepts, errorLoadingConcepts]);
+    recentConcepts: data,
+    loadingConcepts: isLoading,
+    errorLoadingConcepts: error,
+    refreshConcepts
+  }), [data, isLoading, error, refreshConcepts]);
   
   return (
     <ConceptContext.Provider value={contextValue}>

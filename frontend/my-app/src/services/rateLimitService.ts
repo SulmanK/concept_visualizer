@@ -20,16 +20,322 @@ export interface RateLimitsResponse {
   default_limits: string[];
 }
 
+// Valid rate limit categories - used for type checking
+export type RateLimitCategory = 
+  | 'generate_concept' 
+  | 'refine_concept' 
+  | 'store_concept' 
+  | 'get_concepts' 
+  | 'sessions' 
+  | 'svg_conversion';
+
+interface RateLimitHeaderInfo {
+  limit: number;
+  remaining: number;
+  reset: number;     // Unix timestamp when this limit resets
+  endpoint: string;
+  updatedAt: number; // Time when this header info was last updated
+}
+
+interface RateLimitCache {
+  limits: RateLimitsResponse;
+  timestamp: number; // When the cache was last updated
+  expiresAt: number; // When the cache expires
+}
+
+// Global cache for rate limits from the API
+const rateLimitCache: Record<string, RateLimitCache> = {};
+
+// Cache for endpoint-specific rate limit headers
+// This is the primary cache we'll be using for more accurate limit tracking
+const rateLimitHeaderCache: Record<string, RateLimitHeaderInfo> = {};
+
+// Map to track category to endpoint relationships for reverse lookup
+const categoryToEndpointMap: Record<string, string[]> = {
+  generate_concept: ['/concepts/generate'],
+  refine_concept: ['/concepts/refine'],
+  store_concept: ['/concepts/store'],
+  get_concepts: ['/concepts/list'],
+  svg_conversion: ['/svg/convert'],
+  sessions: ['/sessions']
+};
+
+/**
+ * Map API endpoint to rate limit category
+ * @param endpoint API endpoint path
+ * @returns Rate limit category (e.g., "generate_concept")
+ */
+export const mapEndpointToCategory = (endpoint: string): RateLimitCategory | null => {
+  // Remove any query parameters
+  const path = endpoint.split('?')[0];
+  
+  // Map API paths to their corresponding rate limit categories  
+  if (path.includes('/concepts/generate')) return 'generate_concept';
+  if (path.includes('/concepts/refine')) return 'refine_concept';
+  if (path.includes('/concepts/store')) return 'store_concept';
+  if (path.includes('/concepts/list')) return 'get_concepts';
+  if (path.includes('/svg/convert')) return 'svg_conversion';
+  if (path.includes('/sessions')) return 'sessions';
+  
+  // Return null if no mapping found
+  return null;
+};
+
+/**
+ * Get the most recent header info for a specific category
+ * @param category Rate limit category
+ * @returns The most recent header info or null if none exists
+ */
+export const getMostRecentHeaderInfoForCategory = (
+  category: RateLimitCategory
+): RateLimitHeaderInfo | null => {
+  // Get all endpoints for this category
+  const endpoints = categoryToEndpointMap[category] || [];
+  if (endpoints.length === 0) return null;
+  
+  // Find the most recent header info across all endpoints for this category
+  let mostRecent: RateLimitHeaderInfo | null = null;
+  
+  for (const endpoint of endpoints) {
+    // Check each endpoint that might contain info for this category
+    for (const cachedEndpoint in rateLimitHeaderCache) {
+      if (cachedEndpoint.includes(endpoint)) {
+        const info = rateLimitHeaderCache[cachedEndpoint];
+        if (!mostRecent || info.updatedAt > mostRecent.updatedAt) {
+          mostRecent = info;
+        }
+      }
+    }
+  }
+  
+  return mostRecent;
+};
+
+/**
+ * Check if header-based cache is valid for a specific category
+ * @param category Rate limit category
+ * @returns True if valid header cache exists for this category
+ */
+export const hasValidHeaderCache = (category: RateLimitCategory): boolean => {
+  const headerInfo = getMostRecentHeaderInfoForCategory(category);
+  if (!headerInfo) return false;
+  
+  // Check if the reset time is in the future
+  const now = Math.floor(Date.now() / 1000); // Current time in seconds
+  return headerInfo.reset > now;
+};
+
+/**
+ * Update rate limit cache based on headers from API response
+ * @param response Fetch Response object
+ * @param endpoint API endpoint that was called
+ */
+export const extractRateLimitHeaders = (
+  response: Response,
+  endpoint: string
+): void => {
+  // Get header values
+  const limit = response.headers.get('X-RateLimit-Limit');
+  const remaining = response.headers.get('X-RateLimit-Remaining');
+  const reset = response.headers.get('X-RateLimit-Reset');
+  
+  if (limit && remaining && reset) {
+    console.log(`Extracted rate limit headers from ${endpoint}:`, { limit, remaining, reset });
+    
+    // Find category for this endpoint
+    const category = mapEndpointToCategory(endpoint);
+    
+    // Update cache for this specific endpoint with current timestamp
+    updateRateLimitHeaderCache(endpoint, {
+      limit: parseInt(limit, 10),
+      remaining: parseInt(remaining, 10),
+      reset: parseInt(reset, 10),
+      endpoint,
+      updatedAt: Math.floor(Date.now() / 1000) // Current time in seconds
+    });
+    
+    // Also update the main rate limit cache if we have an appropriate category
+    if (category && rateLimitCache.main?.limits) {
+      // Create a deep copy of the existing limits
+      const updatedLimits = { ...rateLimitCache.main.limits };
+      
+      // Only update the specific category
+      if (updatedLimits.limits[category]) {
+        updatedLimits.limits[category] = {
+          ...updatedLimits.limits[category],
+          limit: `${limit}/custom`,
+          remaining: parseInt(remaining, 10),
+          reset_after: parseInt(reset, 10) - Math.floor(Date.now() / 1000) // Convert to seconds from now
+        };
+        
+        // Update the main cache
+        updateRateLimitCache('main', updatedLimits);
+      }
+    }
+  }
+};
+
+/**
+ * Update the rate limit header cache for an endpoint
+ * @param endpoint API endpoint
+ * @param headerInfo Rate limit header information
+ */
+export const updateRateLimitHeaderCache = (
+  endpoint: string,
+  headerInfo: RateLimitHeaderInfo
+): void => {
+  rateLimitHeaderCache[endpoint] = headerInfo;
+};
+
+/**
+ * Update the main rate limits cache
+ * @param cacheKey Cache key (usually 'main')
+ * @param limits Rate limits response
+ */
+export const updateRateLimitCache = (
+  cacheKey: string,
+  limits: RateLimitsResponse
+): void => {
+  const now = Date.now();
+  rateLimitCache[cacheKey] = {
+    limits,
+    timestamp: now,
+    expiresAt: now + 30000 // Cache for 30 seconds
+  };
+};
+
+/**
+ * Check if cached rate limits are still valid
+ * @returns True if valid cache exists
+ */
+const hasCachedRateLimits = (): boolean => {
+  return (
+    !!rateLimitCache.main &&
+    rateLimitCache.main.expiresAt > Date.now()
+  );
+};
+
+/**
+ * Get rate limit info for a specific category using header cache if available
+ * @param category Rate limit category
+ * @returns Rate limit info or null if not available
+ */
+export const getRateLimitInfoForCategory = (
+  category: RateLimitCategory
+): RateLimitInfo | null => {
+  // Try to get info from header cache first (most accurate)
+  const headerInfo = getMostRecentHeaderInfoForCategory(category);
+  
+  if (headerInfo) {
+    const now = Math.floor(Date.now() / 1000);
+    return {
+      limit: `${headerInfo.limit}/custom`,
+      remaining: headerInfo.remaining,
+      reset_after: Math.max(0, headerInfo.reset - now) // Ensure positive or zero
+    };
+  }
+  
+  // Fall back to main API cache if available
+  if (rateLimitCache.main?.limits?.limits[category]) {
+    return rateLimitCache.main.limits.limits[category];
+  }
+  
+  return null;
+};
+
+/**
+ * Optimistically update a rate limit category before the API call completes
+ * This provides immediate UI feedback while waiting for the actual server response
+ * @param category Rate limit category to decrement
+ * @param amount Amount to decrement (default: 1)
+ * @returns Updated rate limit info (or null if category not found)
+ */
+export const decrementRateLimit = (
+  category: RateLimitCategory,
+  amount: number = 1
+): RateLimitInfo | null => {
+  // Get current info for this category
+  const currentInfo = getRateLimitInfoForCategory(category);
+  if (!currentInfo) return null;
+  
+  // Create updated info with decremented remaining count
+  const updatedInfo: RateLimitInfo = {
+    ...currentInfo,
+    remaining: Math.max(0, currentInfo.remaining - amount)
+  };
+  
+  // If we have header cache for this category, update it
+  const headerInfo = getMostRecentHeaderInfoForCategory(category);
+  if (headerInfo) {
+    headerInfo.remaining = Math.max(0, headerInfo.remaining - amount);
+    updateRateLimitHeaderCache(headerInfo.endpoint, headerInfo);
+  }
+  
+  // If we have main cache that includes this category, update it
+  if (rateLimitCache.main?.limits?.limits[category]) {
+    const updatedLimits = { ...rateLimitCache.main.limits };
+    updatedLimits.limits[category] = updatedInfo;
+    updateRateLimitCache('main', updatedLimits);
+  }
+  
+  return updatedInfo;
+};
+
 /**
  * Fetch current rate limit information for the user
+ * Uses a non-counting endpoint and implements caching
+ * @param forceRefresh Force a refresh of the cache
  * @returns Promise resolving to rate limit information
  */
-export const fetchRateLimits = async (): Promise<RateLimitsResponse> => {
+export const fetchRateLimits = async (forceRefresh: boolean = false): Promise<RateLimitsResponse> => {
   try {
-    const response = await apiClient.get<RateLimitsResponse>('/health/rate-limits');
+    // Check if we have valid cached data and aren't forcing a refresh
+    if (!forceRefresh && hasCachedRateLimits()) {
+      console.log('Using cached rate limits');
+      
+      // Before returning cached data, apply any updates from header cache
+      // to ensure we have the most accurate information
+      const updatedLimits = { ...rateLimitCache.main.limits };
+      let hasUpdates = false;
+      
+      for (const category in updatedLimits.limits) {
+        const typedCategory = category as RateLimitCategory;
+        const headerInfo = getMostRecentHeaderInfoForCategory(typedCategory);
+        
+        if (headerInfo) {
+          const now = Math.floor(Date.now() / 1000);
+          updatedLimits.limits[typedCategory] = {
+            ...updatedLimits.limits[typedCategory],
+            remaining: headerInfo.remaining,
+            reset_after: Math.max(0, headerInfo.reset - now)
+          };
+          hasUpdates = true;
+        }
+      }
+      
+      // Only update cache if we made changes
+      if (hasUpdates) {
+        updateRateLimitCache('main', updatedLimits);
+      }
+      
+      return updatedLimits;
+    }
+    
+    // Use the non-counting endpoint to avoid decrementing the rate limit
+    const response = await apiClient.get<RateLimitsResponse>('/health/rate-limits-status');
+    
+    // Cache the results
+    updateRateLimitCache('main', response.data);
+    
     return response.data;
   } catch (error) {
     console.error('Failed to fetch rate limits:', error);
+    
+    // Check if we have expired cached data as fallback
+    if (rateLimitCache.main) {
+      console.log('Using expired cache as fallback');
+      return rateLimitCache.main.limits;
+    }
     
     // Return a fallback response with default values
     return {
