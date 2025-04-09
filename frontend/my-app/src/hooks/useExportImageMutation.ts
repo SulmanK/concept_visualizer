@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { apiClient, ExportFormat, ExportSize, RateLimitError } from '../services/apiClient';
 import { useOptimisticRateLimitUpdate } from './useRateLimitsQuery';
 import { createQueryErrorHandler } from './useErrorHandling';
@@ -31,11 +31,18 @@ export interface ExportImageParams {
   bucket?: string;
 }
 
+// Define a more specific return type for the hook that includes reset
+type ExportImageMutationResult = UseMutationResult<Blob, Error, ExportImageParams> & {
+  reset: () => void; // Explicitly include the reset function type
+};
+
 /**
  * Hook for exporting images in different formats
  * Handles rate limit optimistic updates and error handling
+ * 
+ * @returns Mutation object with mutate, status, and reset functions
  */
-export function useExportImageMutation() {
+export function useExportImageMutation(): ExportImageMutationResult {
   const queryClient = useQueryClient();
   const { decrementLimit } = useOptimisticRateLimitUpdate();
   const errorHandler = createQueryErrorHandler({
@@ -43,7 +50,8 @@ export function useExportImageMutation() {
     defaultMessage: 'Failed to export image. Please try again.',
   });
 
-  return useMutation({
+  // Get the mutation result object which includes 'reset'
+  const mutationResult = useMutation<Blob, Error, ExportImageParams>({
     mutationFn: async ({ imageIdentifier, format, size, svgParams, bucket }: ExportImageParams) => {
       // Apply optimistic update based on format
       // SVG conversions are more intensive, so we use the svg_conversion rate limit
@@ -104,8 +112,16 @@ export function useExportImageMutation() {
     },
     
     onSettled: async () => {
+      console.log('[useExportImageMutation] Mutation settled, refreshing rate limits.');
       // Always ensure we have the latest rate limits data
       await queryClient.fetchQuery({ queryKey: ['rateLimits'] });
     }
   });
+
+  // Return the mutation result object along with its reset function
+  return {
+    ...mutationResult,
+    // reset is already part of mutationResult, but explicitly returning it makes it clearer
+    reset: mutationResult.reset
+  };
 } 

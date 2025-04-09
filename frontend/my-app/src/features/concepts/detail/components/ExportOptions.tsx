@@ -61,7 +61,6 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [selectedSize, setSelectedSize] = useState<ExportSize>('medium');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
   
   // References to track blob URLs for cleanup
   const revokedUrlsRef = useRef<Set<string>>(new Set());
@@ -77,7 +76,8 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const {
     mutate: previewImage,
     isPending: isPreviewExporting,
-    error: previewError
+    error: previewError,
+    reset: resetPreviewMutation
   } = useExportImageMutation();
   
   // Safe URL revocation function to prevent revoking the same URL twice
@@ -163,8 +163,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       return;
     }
     
-    // Set previewing state
-    setIsPreviewing(true);
+    // Clear any previous errors
     setErrorMessage('');
     
     try {
@@ -173,7 +172,6 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       
       if (!imagePath) {
         setErrorMessage('Could not determine storage path for image');
-        setIsPreviewing(false);
         return;
       }
       
@@ -203,24 +201,22 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           // Clean up blob URL after a delay
           setTimeout(() => {
             safeRevokeObjectURL(url);
-            setIsPreviewing(false);
-          }, 1000);
+          }, 1500); // Increased delay for more reliable cleanup
         },
         onError: (error) => {
           console.error('Preview generation failed:', error);
-          setIsPreviewing(false);
         },
         onSettled: () => {
-          // Reset the state regardless of success or failure
-          setTimeout(() => {
-            setIsPreviewing(false);
-          }, 500);
+          console.log('Preview mutation settled. Explicitly resetting preview state.');
+          // Explicitly call reset for the preview mutation
+          resetPreviewMutation();
         }
       });
     } catch (error) {
       console.error('Error creating preview:', error);
       setErrorMessage(`Failed to create preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsPreviewing(false);
+      // Ensure reset is called even if the initial try block fails
+      resetPreviewMutation();
     }
   };
   
@@ -356,9 +352,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           <button 
             className="preview-button" 
             onClick={handlePreview}
-            disabled={isPreviewExporting || isPreviewing || !imageUrl}
+            disabled={isPreviewExporting || !imageUrl}
           >
-            {isPreviewExporting || isPreviewing ? 'Previewing...' : 'Preview'}
+            {isPreviewExporting ? 'Previewing...' : 'Preview'}
           </button>
           <button 
             className="download-button"
