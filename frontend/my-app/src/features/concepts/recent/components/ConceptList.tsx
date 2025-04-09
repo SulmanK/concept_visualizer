@@ -1,18 +1,28 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useConceptContext } from '../../../../contexts/ConceptContext';
+import { useRecentConcepts } from '../../../../hooks/useConceptQueries';
+import { useAuth } from '../../../../contexts/AuthContext';
 import { ConceptCard } from './ConceptCard';
+import { ConceptData } from '../../../../services/supabaseClient';
 
 /**
  * Displays a list of recently generated concepts
  */
 export const ConceptList: React.FC = () => {
-  const { recentConcepts, loadingConcepts, errorLoadingConcepts, refreshConcepts } = useConceptContext();
+  const { user } = useAuth();
+  const { 
+    data: recentConcepts = [],
+    isLoading: loadingConcepts,
+    error,
+    refetch: refreshConcepts
+  } = useRecentConcepts(user?.id, 10);
+  
+  const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
   
   // Handle navigation to the edit/refine page
   const handleEdit = (conceptId: string, variationIndex: number) => {
-    const concept = recentConcepts?.find(c => c.id === conceptId);
+    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
     if (!concept) {
       navigate(`/refine/${conceptId}`);
       return;
@@ -41,7 +51,7 @@ export const ConceptList: React.FC = () => {
   const handleViewDetails = (conceptId: string, variationIndex: number) => {
     console.log('handleViewDetails called with:', { conceptId, variationIndex });
     
-    const concept = recentConcepts?.find(c => c.id === conceptId);
+    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
     if (!concept) {
       console.log('Concept not found, navigating to default:', `/concepts/${conceptId}`);
       navigate(`/concepts/${conceptId}`);
@@ -83,10 +93,10 @@ export const ConceptList: React.FC = () => {
   
   // Log component state on each render for debugging
   console.log('ConceptList render state:', { 
-    conceptsCount: recentConcepts?.length || 0, 
+    conceptsCount: recentConcepts.length || 0, 
     loading: loadingConcepts, 
     error: errorLoadingConcepts,
-    firstConcept: recentConcepts?.length > 0 ? {
+    firstConcept: recentConcepts.length > 0 ? {
       id: recentConcepts[0].id,
       base_image_url: recentConcepts[0].base_image_url,
       has_variations: (recentConcepts[0].color_variations?.length || 0) > 0
@@ -174,7 +184,7 @@ export const ConceptList: React.FC = () => {
       <h2 className="text-xl font-semibold text-indigo-800 mb-8">Recent Concepts</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {recentConcepts.map((concept) => {
+        {recentConcepts.map((concept: ConceptData) => {
           // Add a safety check for each concept before rendering
           if (!concept || !concept.base_image_url) {
             console.warn('Invalid concept data:', concept);

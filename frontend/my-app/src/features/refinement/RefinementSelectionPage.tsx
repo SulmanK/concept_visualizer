@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useConceptContext } from '../../contexts/ConceptContext';
+import { useRecentConcepts } from '../../hooks/useConceptQueries';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
+import { useAuth } from '../../contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Helper function to determine if a color is light
@@ -36,7 +38,17 @@ const isLightColor = (hexColor: string): boolean => {
  */
 export const RefinementSelectionPage: React.FC = () => {
   const navigate = useNavigate();
-  const { recentConcepts, loadingConcepts, errorLoadingConcepts, refreshConcepts } = useConceptContext();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Use React Query directly instead of the context
+  const { 
+    data: recentConcepts = [], 
+    isLoading: loadingConcepts, 
+    error: errorLoadingConcepts,
+    refetch: refetchConcepts
+  } = useRecentConcepts(user?.id, 10);
+  
   const [expandedConceptId, setExpandedConceptId] = useState<string | null>(null);
   const [selectedVariation, setSelectedVariation] = useState<{
     conceptId: string;
@@ -44,6 +56,13 @@ export const RefinementSelectionPage: React.FC = () => {
     imageUrl: string;
     isOriginal: boolean;
   } | null>(null);
+  
+  // Function to refresh concepts
+  const refreshConcepts = () => {
+    // Both approaches work, but the second is sometimes more reliable
+    refetchConcepts();
+    queryClient.invalidateQueries({ queryKey: ['concepts', 'recent', user?.id] });
+  };
   
   // Fetch concepts on component mount
   useEffect(() => {
@@ -132,7 +151,7 @@ export const RefinementSelectionPage: React.FC = () => {
         
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-8 text-center">
           <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-          <p className="text-indigo-600 mb-6">{errorLoadingConcepts}</p>
+          <p className="text-indigo-600 mb-6">{String(errorLoadingConcepts)}</p>
           <button 
             onClick={() => refreshConcepts()}
             className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-full"
@@ -229,7 +248,7 @@ export const RefinementSelectionPage: React.FC = () => {
                     );
                   })}
                   {hasVariations && concept.color_variations!.length > 3 && (
-                    <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-indigo-600 text-xs font-bold">
+                    <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center text-[8px] font-medium text-gray-700">
                       +{concept.color_variations!.length - 3}
                     </div>
                   )}
@@ -237,64 +256,76 @@ export const RefinementSelectionPage: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className={`h-5 w-5 text-indigo-500 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`} 
-                viewBox="0 0 20 20" 
-                fill="currentColor"
+              <button
+                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-full hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelectConcept(concept.id);
+                }}
+                data-testid={`concept-card-${concept.id}`}
               >
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+                Refine
+              </button>
             </div>
           </div>
           
-          {/* Expanded variations section */}
+          {/* Expanded section with variations */}
           {isExpanded && (
             <div className="mt-4 pt-4 border-t border-indigo-100">
-              <div className="flex flex-wrap items-center">
-                {/* Original image */}
+              <div className="font-medium text-sm text-indigo-900 mb-3">Select a variation to refine:</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {/* Original image option */}
                 <div 
-                  className={`w-32 h-32 m-2 rounded-md overflow-hidden border-2 cursor-pointer hover:shadow-md transition-all flex flex-col
-                    ${isOriginalSelected ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-indigo-100 hover:border-indigo-300'}`}
+                  className={`cursor-pointer rounded-md overflow-hidden h-28 border-2 ${isOriginalSelected ? 'border-indigo-500 shadow-md' : 'border-transparent hover:border-indigo-300'}`}
                   onClick={() => handleSelectVariation(concept.id, concept.image_url || concept.base_image_url, true)}
                 >
-                  <div className="h-24 overflow-hidden">
+                  <div className="h-full relative">
                     <img 
                       src={concept.image_url || concept.base_image_url} 
-                      alt="Original" 
-                      className="w-full h-full object-cover" 
+                      alt="Original concept" 
+                      className="w-full h-full object-cover"
                     />
-                  </div>
-                  <div className="flex-grow bg-indigo-50 flex items-center justify-center text-xs font-medium text-indigo-700 p-1">
-                    Original
+                    <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-indigo-900/70">
+                      <div className="text-white text-xs font-medium truncate">Original</div>
+                    </div>
                   </div>
                 </div>
                 
-                {/* Color variations */}
+                {/* Variation options */}
                 {hasVariations && concept.color_variations?.map((variation, idx) => {
-                  const isSelected = hasSelectedVariation && 
-                                     !selectedVariation.isOriginal && 
-                                     selectedVariation.variationId === variation.id;
+                  const isVariationSelected = hasSelectedVariation && 
+                                           !selectedVariation.isOriginal && 
+                                           selectedVariation.variationId === variation.id;
                   
                   return (
                     <div 
                       key={idx}
-                      className={`w-32 h-32 m-2 rounded-md overflow-hidden border-2 cursor-pointer hover:shadow-md transition-all flex flex-col
-                        ${isSelected ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-indigo-100 hover:border-indigo-300'}`}
-                      onClick={() => handleSelectVariation(concept.id, variation.image_url, false, variation.id)}
+                      className={`cursor-pointer rounded-md overflow-hidden h-28 border-2 ${isVariationSelected ? 'border-indigo-500 shadow-md' : 'border-transparent hover:border-indigo-300'}`}
+                      onClick={() => handleSelectVariation(
+                        concept.id, 
+                        variation.image_url, 
+                        false, 
+                        variation.id
+                      )}
                     >
-                      <div className="h-24 overflow-hidden">
+                      <div className="h-full relative">
                         <img 
                           src={variation.image_url} 
-                          alt={variation.palette_name || `Variation ${idx + 1}`} 
-                          className="w-full h-full object-cover" 
+                          alt={`Color variation ${idx + 1}`} 
+                          className="w-full h-full object-cover"
                         />
-                      </div>
-                      <div 
-                        className="flex-grow flex items-center justify-center text-xs font-medium text-white p-1"
-                        style={{ backgroundColor: variation.colors[0] || '#4F46E5' }}
-                      >
-                        <div className="truncate max-w-full px-1">{variation.palette_name || `Variation ${idx + 1}`}</div>
+                        <div 
+                          className="absolute bottom-0 left-0 right-0 px-2 py-1" 
+                          style={{ backgroundColor: variation.colors[0] || '#4F46E5' }}
+                        >
+                          <div className="truncate max-w-full px-1 text-xs font-medium"
+                            style={{ 
+                              color: isLightColor(variation.colors[0] || '#4F46E5') ? '#374151' : 'white'
+                            }}
+                          >
+                            {variation.palette_name || `Variation ${idx + 1}`}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -341,4 +372,4 @@ export const RefinementSelectionPage: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 import { 
   fetchRecentConcepts, 
   fetchConceptDetail, 
@@ -13,13 +13,17 @@ import { createQueryErrorHandler } from '../utils/errorUtils';
 
 /**
  * Custom hook to fetch and cache recent concepts with standardized error handling
+ * @returns Query result with array of concept data
  */
-export function useRecentConcepts(userId: string | undefined, limit: number = 10) {
+export function useRecentConcepts(
+  userId: string | undefined, 
+  limit: number = 10
+): UseQueryResult<ConceptData[], Error> {
   // Set up error handling
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
-  return useQuery({
+  return useQuery<ConceptData[], Error>({
     queryKey: ['concepts', 'recent', userId, limit],
     queryFn: async () => {
       if (!userId) return [];
@@ -40,12 +44,15 @@ export function useRecentConcepts(userId: string | undefined, limit: number = 10
 /**
  * Custom hook to fetch and cache a specific concept with standardized error handling
  */
-export function useConceptDetail(conceptId: string | undefined, userId: string | undefined) {
+export function useConceptDetail(
+  conceptId: string | undefined, 
+  userId: string | undefined
+): UseQueryResult<ConceptData | null, Error> {
   // Set up error handling
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
-  return useQuery({
+  return useQuery<ConceptData | null, Error>({
     queryKey: ['concepts', 'detail', conceptId, userId],
     queryFn: async () => {
       if (!conceptId || !userId) return null;

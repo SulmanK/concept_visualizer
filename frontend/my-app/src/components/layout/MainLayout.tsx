@@ -51,30 +51,28 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ className = '' }) => {
       
       {/* API Rate Limits panel - positioned in middle-right */}
       <div className="fixed right-0 top-1/2 transform -translate-y-1/2 z-50">
-        {showRateLimits ? (
-          <div className="flex">
+        <div className="flex">
+          {/* Always mount the RateLimitsPanel but conditionally hide it */}
+          <div className={`transition-all duration-300 ease-in-out transform ${showRateLimits ? '' : 'translate-x-full opacity-0 pointer-events-none'}`}>
             <RateLimitsPanel className="w-80" />
-            <button
-              onClick={toggleRateLimits}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-l-md rounded-r-none p-2 shadow-lg"
-              title="Hide API usage limits"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
-        ) : (
+          
           <button
             onClick={toggleRateLimits}
             className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-l-md rounded-r-none p-2 shadow-lg"
-            title="Show API usage limits"
+            title={showRateLimits ? "Hide API usage limits" : "Show API usage limits"}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            {showRateLimits ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            )}
           </button>
-        )}
+        </div>
       </div>
     </div>
   );

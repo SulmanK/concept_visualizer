@@ -1,9 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ConceptCard } from '../../../components/ui/ConceptCard';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { Link } from 'react-router-dom';
-import { eventService, AppEvent } from '../../../services/eventService';
-import { useConceptContext } from '../../../contexts/ConceptContext';
 
 interface ConceptData {
   id: string;
@@ -30,6 +28,10 @@ interface RecentConceptsSectionProps {
 /**
  * Recent concepts section showing previously created concepts
  * Optimized for responsive viewing on mobile and desktop
+ * 
+ * Note: This component no longer uses eventService for refreshing.
+ * Instead, it relies on React Query's automatic cache invalidation
+ * which is triggered in the mutation hooks directly.
  */
 export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   concepts,
@@ -37,23 +39,6 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   onViewDetails,
   isLoading = false
 }) => {
-  // Get the refresh function from context
-  const { refreshConcepts } = useConceptContext();
-  
-  // Listen for concept creation events and refresh the list
-  useEffect(() => {
-    // Subscribe to concept created events
-    const unsubscribe = eventService.subscribe(AppEvent.CONCEPT_CREATED, () => {
-      console.log('[RecentConceptsSection] Concept created event received, refreshing list');
-      refreshConcepts();
-    });
-    
-    // Clean up the subscription when component unmounts
-    return () => {
-      unsubscribe();
-    };
-  }, [refreshConcepts]);
-  
   // If there are no concepts and not loading, don't render the section
   if (!concepts || concepts.length === 0 && !isLoading) {
     return null;

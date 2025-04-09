@@ -1,1 +1,1 @@
-export { default as RateLimitsPanel } from './RateLimitsPanel'; 
+export { RateLimitsPanel } from './RateLimitsPanel'; 

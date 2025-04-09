@@ -1,185 +1,119 @@
 /**
- * Custom hook for making API requests to the Concept Visualizer backend.
+ * API utilities for making requests to the Concept Visualizer backend.
+ * This is a simplified version of the original useApi hook that focuses only on
+ * providing basic API request utilities without state management, which is now
+ * handled by React Query.
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { ApiError, ApiResponse } from '../types';
-import { RateLimitError } from '../services/apiClient';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../services/supabaseClient';
+import { apiClient } from '../services/apiClient';
+import { ApiError } from '../types';
 
-// Use the full backend URL instead of a relative path
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-
-interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  headers?: Record<string, string>;
-  body?: any;
-  withCredentials?: boolean;
-}
+// API base URL is now centralized in apiClient
 
 /**
- * Hook for making API requests with error handling
+ * Makes a GET request to the API
+ * @param endpoint The API endpoint to call
+ * @param headers Optional additional headers
+ * @returns Promise resolving to the API response
+ */
+export const apiGet = async <T>(
+  endpoint: string,
+  headers?: Record<string, string>
+): Promise<T> => {
+  try {
+    const response = await apiClient.get<T>(endpoint, { headers });
+    return response.data;
+  } catch (error) {
+    console.error(`API GET error (${endpoint}):`, error);
+    throw error;
+  }
+};
+
+/**
+ * Makes a POST request to the API
+ * @param endpoint The API endpoint to call
+ * @param data The data to send in the request body
+ * @param headers Optional additional headers
+ * @returns Promise resolving to the API response
+ */
+export const apiPost = async <T>(
+  endpoint: string,
+  data: any,
+  headers?: Record<string, string>
+): Promise<T> => {
+  try {
+    const response = await apiClient.post<T>(endpoint, data, { headers });
+    return response.data;
+  } catch (error) {
+    console.error(`API POST error (${endpoint}):`, error);
+    throw error;
+  }
+};
+
+/**
+ * @deprecated Use apiGet or apiPost directly, or use React Query's queryFn/mutationFn with apiClient.
+ * This hook is kept for backward compatibility only.
  */
 export function useApi() {
-  const { session, isLoading: authLoading } = useAuth();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<ApiError | undefined>(undefined);
+  console.warn(
+    'useApi is deprecated. Consider using apiGet/apiPost directly or React Query with apiClient instead.'
+  );
   
-  /**
-   * Reset the error state
-   */
-  const clearError = useCallback(() => {
-    setError(undefined);
-  }, []);
-  
-  /**
-   * Make a request to the API
-   */
-  const request = useCallback(async <T>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<ApiResponse<T>> => {
-    const { 
-      method = 'GET', 
-      headers = {}, 
-      body,
-      withCredentials = true  // Default to true for cookie support
-    } = options;
-    
-    try {
-      setLoading(true);
-      setError(undefined);
-      
-      // Ensure endpoint starts with forward slash if not already
-      const sanitizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-      const url = `${API_BASE_URL}${sanitizedEndpoint}`;
-      
-      console.log(`API Request: ${method} ${url}`);
-      
-      // Add auth token to headers if available
-      let authHeaders = {};
-      if (session?.access_token) {
-        authHeaders = {
-          'Authorization': `Bearer ${session.access_token}`
-        };
-      }
-      
-      const requestHeaders = {
-        'Content-Type': 'application/json',
-        ...authHeaders,
-        ...headers,
-      };
-      
-      const requestOptions: RequestInit = {
-        method,
-        headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
-        credentials: withCredentials ? 'include' : 'same-origin', // Include cookies for backward compatibility
-      };
-      
-      console.log('Request options:', {
-        method,
-        headers: requestHeaders,
-        withCredentials,
-      });
-      
-      const response = await fetch(url, requestOptions);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({
-          message: 'An unexpected error occurred',
-        }));
+  return {
+    request: async <T>(endpoint: string, options: any = {}) => {
+      try {
+        const { method = 'GET', headers = {}, body } = options;
         
-        // Special handling for rate limit errors (429 status code)
-        if (response.status === 429) {
-          const rateLimitError = new RateLimitError(
-            errorData.message || 'You have reached your usage limit',
-            {
-              limit: errorData.limit || 0,
-              current: errorData.current || 0,
-              period: errorData.period || 'month',
-              reset_after_seconds: errorData.reset_after_seconds || 0
-            }
-          );
-          
-          console.error('Rate limit exceeded:', rateLimitError);
-          throw rateLimitError; // Throw the specialized error to be caught below
+        if (method === 'GET') {
+          const data = await apiGet<T>(endpoint, headers);
+          return { data, loading: false };
+        } else if (method === 'POST') {
+          const data = await apiPost<T>(endpoint, body, headers);
+          return { data, loading: false };
+        } else {
+          throw new Error(`Method ${method} not implemented in simplified useApi`);
         }
-        
+      } catch (err) {
         const apiError: ApiError = {
-          status: response.status,
-          message: errorData.message || 'An unexpected error occurred',
-          details: errorData.detail,
+          status: 500,
+          message: err instanceof Error ? err.message : 'An unexpected error occurred',
         };
-        
-        console.error('API error:', apiError);
-        
-        setError(apiError);
-        setLoading(false);
         
         return { error: apiError, loading: false };
       }
-      
-      const data = await response.json();
-      
-      console.log('API Response:', data);
-      
-      setLoading(false);
-      
-      return { data, loading: false };
-    } catch (err) {
-      console.error('API request failed:', err);
-      
-      // Special handling for RateLimitError
-      if (err instanceof RateLimitError) {
-        // Let this error bubble up to the component using useErrorHandling
-        setLoading(false);
-        throw err;
+    },
+    
+    get: async <T>(endpoint: string, headers?: Record<string, string>) => {
+      try {
+        const data = await apiGet<T>(endpoint, headers);
+        return { data, loading: false };
+      } catch (err) {
+        const apiError: ApiError = {
+          status: 500,
+          message: err instanceof Error ? err.message : 'An unexpected error occurred',
+        };
+        
+        return { error: apiError, loading: false };
       }
-      
-      const apiError: ApiError = {
-        status: 500,
-        message: err instanceof Error ? err.message : 'An unexpected error occurred',
-      };
-      
-      setError(apiError);
-      setLoading(false);
-      
-      return { error: apiError, loading: false };
-    }
-  }, [session]);
-  
-  /**
-   * GET request helper
-   */
-  const get = useCallback(<T>(
-    endpoint: string, 
-    headers?: Record<string, string>,
-    withCredentials: boolean = true
-  ) => {
-    return request<T>(endpoint, { method: 'GET', headers, withCredentials });
-  }, [request]);
-  
-  /**
-   * POST request helper
-   */
-  const post = useCallback(<T>(
-    endpoint: string,
-    body: any,
-    headers?: Record<string, string>,
-    withCredentials: boolean = true
-  ) => {
-    return request<T>(endpoint, { method: 'POST', body, headers, withCredentials });
-  }, [request]);
-  
-  return {
-    request,
-    get,
-    post,
-    loading,
-    error,
-    clearError,
-    authInitialized: !authLoading,
+    },
+    
+    post: async <T>(endpoint: string, body: any, headers?: Record<string, string>) => {
+      try {
+        const data = await apiPost<T>(endpoint, body, headers);
+        return { data, loading: false };
+      } catch (err) {
+        const apiError: ApiError = {
+          status: 500,
+          message: err instanceof Error ? err.message : 'An unexpected error occurred',
+        };
+        
+        return { error: apiError, loading: false };
+      }
+    },
+    
+    loading: false,
+    error: undefined,
+    clearError: () => {},
+    authInitialized: true
   };
 } 

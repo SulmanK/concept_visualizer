@@ -1,9 +1,10 @@
 import React, { ReactNode, useMemo } from 'react';
 import { createContext, useContextSelector } from 'use-context-selector';
-import { useRateLimits as useRateLimitsHook } from '../hooks/useRateLimits';
+import { useRateLimitsQuery, useOptimisticRateLimitUpdate } from '../hooks/useRateLimitsQuery';
 import { RateLimitsResponse, RateLimitCategory } from '../services/rateLimitService';
+import { useQueryClient } from '@tanstack/react-query';
 
-// Define the shape of the context data, matching the return type of useRateLimits
+// Define the shape of the context data
 interface RateLimitContextType {
   // Rate limit data and loading state
   rateLimits: RateLimitsResponse | null;
@@ -37,17 +38,40 @@ interface RateLimitProviderProps {
 
 /**
  * Provides rate limit state to its children components.
- * Fetches and manages rate limit data using the useRateLimits hook.
+ * Fetches and manages rate limit data using React Query.
  * Includes functions for optimistic updates.
  */
 export const RateLimitProvider: React.FC<RateLimitProviderProps> = ({ children }) => {
-  // Use the enhanced hook with decrementLimit functionality
-  const rateLimitState = useRateLimitsHook();
+  const queryClient = useQueryClient();
+  
+  // Use React Query for data fetching
+  const { 
+    data, 
+    isLoading, 
+    error,
+    refetch: queryRefetch 
+  } = useRateLimitsQuery();
+  
+  // Get the optimistic update function
+  const { decrementLimit } = useOptimisticRateLimitUpdate();
+  
+  // Custom refetch function that forces a refresh
+  const refetch = async (forceRefresh: boolean = false) => {
+    if (forceRefresh) {
+      // Clear the cache first to ensure fresh data
+      queryClient.removeQueries({ queryKey: ['rateLimits'] });
+    }
+    await queryRefetch();
+  };
 
   // Memoize the context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    ...rateLimitState
-  }), [rateLimitState]);
+  const contextValue = useMemo((): RateLimitContextType => ({
+    rateLimits: data as RateLimitsResponse | null,
+    isLoading,
+    error: error ? error.message : null,
+    refetch,
+    decrementLimit
+  }), [data, isLoading, error, refetch, decrementLimit]);
 
   return (
     <RateLimitContext.Provider value={contextValue}>

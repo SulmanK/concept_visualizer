@@ -2,7 +2,6 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import PageTransition from './components/layout/PageTransition';
-import { ConceptProvider } from './contexts/ConceptContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './hooks/useToast';
 import { RateLimitProvider } from './contexts/RateLimitContext';
@@ -173,19 +172,17 @@ export default function App() {
         <ErrorBoundary errorMessage="Something went wrong in the application. Please try refreshing the page.">
           <ApiToastListener />
           <AuthProvider>
-            <ConceptProvider>
-              <RateLimitProvider>
-                <Router>
-                  {/* Offline status notification */}
-                  <OfflineStatus 
-                    position="top"
-                    showConnectionInfo={true}
-                  />
-                  
-                  <AppRoutes />
-                </Router>
-              </RateLimitProvider>
-            </ConceptProvider>
+            <RateLimitProvider>
+              <Router>
+                {/* Offline status notification */}
+                <OfflineStatus 
+                  position="top"
+                  showConnectionInfo={true}
+                />
+                
+                <AppRoutes />
+              </Router>
+            </RateLimitProvider>
           </AuthProvider>
         </ErrorBoundary>
       </ToastProvider>

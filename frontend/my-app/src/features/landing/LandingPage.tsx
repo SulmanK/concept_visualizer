@@ -1,30 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useConceptGeneration } from '../../hooks/useConceptGeneration';
-import { useConceptContext } from '../../contexts/ConceptContext';
+import { useGenerateConceptMutation } from '../../hooks/useConceptMutations';
+import { useRecentConcepts } from '../../hooks/useConceptQueries';
+import { useAuth } from '../../contexts/AuthContext';
 import { ErrorBoundary } from '../../components/ui';
 import { ConceptHeader } from './components/ConceptHeader';
 import { HowItWorks } from './components/HowItWorks';
 import { ConceptFormSection } from './components/ConceptFormSection';
 import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
-import { eventService, AppEvent } from '../../services/eventService';
+import { ConceptData } from '../../services/supabaseClient';
 
 /**
  * Main landing page content component
  */
 const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
-  const { 
-    generateConcept, 
-    resetGeneration, 
-    status, 
-    result, 
-    error 
-  } = useConceptGeneration();
+  const { user } = useAuth();
   
-  // Use the concept context to get real concepts
-  const { recentConcepts, loadingConcepts, refreshConcepts } = useConceptContext();
+  // Use React Query mutation hook for generation
+  const { 
+    mutate: generateConceptMutation,
+    data: result,
+    isPending,
+    isSuccess,
+    isError,
+    error,
+    reset: resetGeneration
+  } = useGenerateConceptMutation();
+  
+  // Use the React Query hook instead of context
+  const { 
+    data: recentConcepts = [],
+    isLoading: loadingConcepts,
+    refetch: refreshConcepts
+  } = useRecentConcepts(user?.id, 10);
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   
@@ -36,15 +46,23 @@ const LandingPageContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Listen for concept update events to refresh the list
-  useEffect(() => {
-    const unsubscribe = eventService.subscribe(AppEvent.CONCEPT_UPDATED, () => {
-      console.log('[LandingPage] Concept updated event received, refreshing concepts');
-      refreshConcepts();
-    });
-    
-    return () => unsubscribe();
-  }, [refreshConcepts]);
+  // The event listener for CONCEPT_UPDATED has been removed
+  // React Query's automatic cache invalidation is now used instead
+  // This is triggered in the mutation hooks (useGenerateConceptMutation, etc.)
+  
+  // Map mutation state to form status
+  const getFormStatus = () => {
+    if (isPending) return 'submitting';
+    if (isSuccess) return 'success';
+    if (isError) return 'error';
+    return 'idle';
+  };
+  
+  // Extract error message from the error object
+  const getErrorMessage = (): string | null => {
+    if (!error) return null;
+    return error instanceof Error ? error.message : String(error);
+  };
   
   // Steps for how it works section
   const howItWorksSteps = [
@@ -66,7 +84,10 @@ const LandingPageContent: React.FC = () => {
   ];
   
   const handleGenerateConcept = (logoDescription: string, themeDescription: string) => {
-    generateConcept(logoDescription, themeDescription);
+    generateConceptMutation({ 
+      logo_description: logoDescription, 
+      theme_description: themeDescription 
+    });
     setSelectedColor(null);
   };
   
@@ -97,7 +118,7 @@ const LandingPageContent: React.FC = () => {
     }
     
     // Find the concept
-    const concept = recentConcepts.find(c => c.id === conceptId);
+    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
     if (!concept) {
       navigate(`/refine/${conceptId}`);
       return;
@@ -133,7 +154,7 @@ const LandingPageContent: React.FC = () => {
     }
     
     // Find the concept
-    const concept = recentConcepts.find(c => c.id === conceptId);
+    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
     if (!concept) {
       navigate(`/concepts/${conceptId}`);
       return;
@@ -167,7 +188,7 @@ const LandingPageContent: React.FC = () => {
   const formatConceptsForDisplay = () => {
     if (!recentConcepts || recentConcepts.length === 0) return [];
     
-    return recentConcepts.slice(0, 3).map(concept => {
+    return recentConcepts.slice(0, 3).map((concept: ConceptData) => {
       // Get initials from the logo description
       const words = concept.logo_description.trim().split(/\s+/);
       const initials = words.length === 1 
@@ -288,13 +309,13 @@ const LandingPageContent: React.FC = () => {
           onReset={handleReset}
           selectedColor={selectedColor}
           onColorSelect={handleColorSelect}
-          status={status}
+          status={getFormStatus()}
         />
       ) : (
         <ConceptFormSection 
           onSubmit={handleGenerateConcept}
-          status={status}
-          error={error}
+          status={getFormStatus()}
+          error={getErrorMessage()}
           onReset={handleReset}
         />
       )}

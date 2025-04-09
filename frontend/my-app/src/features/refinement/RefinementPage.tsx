@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { useConceptRefinement } from '../../hooks/useConceptRefinement';
+import { useRefineConceptMutation } from '../../hooks/useConceptMutations';
 import { RefinementHeader } from './components/RefinementHeader';
 import { RefinementForm } from './components/RefinementForm';
 import { ComparisonView } from './components/ComparisonView';
@@ -97,16 +97,32 @@ export const RefinementPage: React.FC = () => {
     loadConcept();
   }, [conceptId, colorId, authLoading, user]);
   
-  const { 
-    refineConcept, 
-    resetRefinement, 
-    status, 
-    result, 
+  // Use React Query mutation hook for refinement
+  const {
+    mutate: refineConceptMutation,
+    data: result,
+    isPending,
+    isSuccess,
+    isError,
     error,
-    isLoading
-  } = useConceptRefinement();
+    reset: resetRefinement
+  } = useRefineConceptMutation();
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  
+  // Map mutation state to form status
+  const getFormStatus = () => {
+    if (isPending) return 'submitting';
+    if (isSuccess) return 'success';
+    if (isError) return 'error';
+    return 'idle';
+  };
+  
+  // Extract error message from the error object
+  const getErrorMessage = (): string | null => {
+    if (!error) return null;
+    return error instanceof Error ? error.message : String(error);
+  };
   
   const handleRefineConcept = (
     refinementPrompt: string,
@@ -118,6 +134,19 @@ export const RefinementPage: React.FC = () => {
     console.log('Refinement functionality is currently disabled (under construction)');
     // Show an alert to inform the user
     alert('The refinement feature is currently under development. Please check back later!');
+    
+    // Commented out actual refinement code so it doesn't execute yet
+    /*
+    if (originalConcept?.imageUrl) {
+      refineConceptMutation({
+        original_image_url: originalConcept.imageUrl,
+        refinement_prompt: refinementPrompt,
+        logo_description: logoDescription,
+        theme_description: themeDescription,
+        preserve_aspects: preserveAspects
+      });
+    }
+    */
   };
   
   const handleReset = () => {
@@ -192,8 +221,8 @@ export const RefinementPage: React.FC = () => {
           <RefinementForm
             originalImageUrl={originalConcept.imageUrl}
             onSubmit={handleRefineConcept}
-            status={status}
-            error={error}
+            status={getFormStatus()}
+            error={getErrorMessage()}
             onCancel={handleCancel}
             initialLogoDescription={originalConcept.logoDescription}
             initialThemeDescription={originalConcept.themeDescription}
@@ -212,7 +241,7 @@ export const RefinementPage: React.FC = () => {
         </div>
       )}
       
-      {status === 'success' && result && (
+      {result && (
         <div className="mt-8 pt-8 border-t border-dark-200">
           <RefinementActions 
             onReset={handleReset} 
