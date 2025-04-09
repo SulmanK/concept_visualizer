@@ -55,6 +55,52 @@
   - Eliminated unnecessary event-based refreshing
   - More direct and traceable data flow using React Query's cache invalidation
 
+## Client-Side State & Data Synchronization Enhancement (@design/fixing_SRA.md)
+
+### Step 1: React Query Configuration
+- [x] Adjust React Query defaults in `src/main.tsx`
+  - Set `refetchOnWindowFocus: true` (or use default `true`)
+  - Reduced staleTime from 5 minutes to 10 seconds for faster data refresh
+  - Test navigation scenarios to verify improvements
+
+### Step 2: Diagnose PageTransition Component
+- [x] Temporarily bypass `PageTransition` component in `src/App.tsx` for testing
+  - Commented out the PageTransition wrapper to test without transitions
+  - Kept Suspense for lazy-loaded components
+
+### Step 3: Authentication & Loading State Handling
+- [x] Add detailed logging to authentication processes
+  - [x] Log auth state changes in `apiClient.ts` -> `getAuthHeaders`
+  - [x] Log session checks and refresh attempts in `AuthContext.tsx`
+- [x] Review components using data dependent on `userId`
+  - [x] Ensure they handle loading states from both `useAuth()` and the query
+
+### Step 4: Data Refetching on Navigation
+- [x] Identify key pages that must show latest data upon navigation
+  - [x] Add explicit `refetch` calls in `useEffect` hooks on critical pages
+  - [x] Created custom `useFreshConceptDetail` and `useFreshRecentConcepts` hooks that force staleTime:0
+  - [x] Added React Query Devtools for better visibility of cache state
+  - Critical pages identified: ConceptDetailPage, ConceptList (Recent Concepts)
+
+### Step 5: Verify Query Invalidation
+- [x] Review mutation hooks in `useConceptMutations.ts`
+  - [x] Add consistent userId to query keys for proper cache identity
+  - [x] Add detailed logging of invalidation process
+  - [x] Test actions and navigation to verify data updates correctly
+
+### Step 6: Standardize Error Handling
+- [x] Audit all `try...catch` blocks in data fetching code
+  - [x] Enhance errorUtils.ts with better logging for debugging
+  - [x] Add context information to error logging
+  - [x] Add specific detection for auth-related errors
+
+### Step 7: Enhanced Debugging (Additional)
+- [x] Add React Query DevTools for better cache debugging
+- [x] Enhanced logging in data fetching hooks
+  - Added detailed timestamp and query key information
+  - Added cache hit/miss logging
+  - Added timing information to track performance
+
 # Frontend State Management Refactor - TODO
 
 ## Phase 1: Core React Query Integration (1-2 Sprints)

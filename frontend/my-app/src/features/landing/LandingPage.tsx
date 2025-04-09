@@ -10,6 +10,7 @@ import { ConceptFormSection } from './components/ConceptFormSection';
 import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
 import { ConceptData } from '../../services/supabaseClient';
+import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Main landing page content component
@@ -37,6 +38,8 @@ const LandingPageContent: React.FC = () => {
   } = useRecentConcepts(user?.id, 10);
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  
+  const queryClient = useQueryClient();
   
   // Fetch concepts on component mount
   useEffect(() => {
@@ -83,18 +86,46 @@ const LandingPageContent: React.FC = () => {
     },
   ];
   
-  const handleGenerateConcept = (logoDescription: string, themeDescription: string) => {
+  const handleReset = useCallback(() => {
+    console.log('[LandingPage] Resetting concept generation state', {
+      timestamp: new Date().toISOString()
+    });
+    
+    // First reset the query client state for the mutation
+    queryClient.removeQueries({ queryKey: ['conceptGeneration'] });
+    
+    // Then reset the local React Query mutation state
+    resetGeneration();
+    
+    // Reset UI state
+    setSelectedColor(null);
+  }, [resetGeneration, queryClient]);
+  
+  // Make sure generation can only be triggered when not already pending
+  const handleGenerateConcept = useCallback((logoDescription: string, themeDescription: string) => {
+    // Safety check to prevent multiple submissions
+    if (isPending) {
+      console.warn('[LandingPage] Generation already in progress, ignoring duplicate submission');
+      return;
+    }
+    
+    console.log('[LandingPage] Starting concept generation', {
+      timestamp: new Date().toISOString(),
+      logoDescriptionLength: logoDescription.length,
+      themeDescriptionLength: themeDescription.length
+    });
+    
+    // Clear any previous state first
+    resetGeneration();
+    
+    // Make the mutation call
     generateConceptMutation({ 
       logo_description: logoDescription, 
       theme_description: themeDescription 
     });
+    
     setSelectedColor(null);
-  };
-  
-  const handleReset = () => {
-    resetGeneration();
-    setSelectedColor(null);
-  };
+  }, [isPending, resetGeneration, generateConceptMutation]);
   
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);

@@ -127,6 +127,8 @@ async function post<T>(endpoint: string, body: any, options: RequestOptions = {}
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
   try {
+    console.log('[AUTH] Getting auth headers for request');
+    
     // First check for an existing session
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -136,37 +138,44 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
       
       // If token expires in less than 5 minutes, refresh it
       if (session.expires_at && session.expires_at - now < 300) {
-        console.log('Token is about to expire, refreshing before request');
+        console.log('[AUTH] Token is about to expire in', session.expires_at - now, 'seconds. Refreshing before request');
         // Refresh the session
         const { data: refreshData } = await supabase.auth.refreshSession();
         if (refreshData.session?.access_token) {
-          console.log('Successfully refreshed token before request');
+          const newExpiresAt = refreshData.session.expires_at;
+          const validFor = newExpiresAt ? newExpiresAt - now : 'unknown';
+          console.log('[AUTH] Successfully refreshed token before request. Valid for', validFor, 'seconds');
           return {
             'Authorization': `Bearer ${refreshData.session.access_token}`
           };
+        } else {
+          console.error('[AUTH] Failed to refresh token - no new token received');
         }
       } else {
-        console.log('Using existing token for request');
+        const validFor = session.expires_at ? session.expires_at - now : 'unknown';
+        console.log('[AUTH] Using existing token for request. Valid for', validFor, 'seconds');
         return {
           'Authorization': `Bearer ${session.access_token}`
         };
       }
     }
     
-    console.log('No valid session found, attempting to sign in anonymously');
+    console.log('[AUTH] No valid session found, attempting to sign in anonymously');
     // Try to get a new anonymous session
     const newSession = await initializeAnonymousAuth();
     if (newSession?.access_token) {
-      console.log('Generated new auth token from anonymous sign-in');
+      const now = Math.floor(Date.now() / 1000);
+      const validFor = newSession.expires_at ? newSession.expires_at - now : 'unknown';
+      console.log('[AUTH] Generated new auth token from anonymous sign-in. Valid for', validFor, 'seconds');
       return {
         'Authorization': `Bearer ${newSession.access_token}`
       };
     }
     
-    console.error('Failed to get authentication token');
+    console.error('[AUTH] Failed to get authentication token');
     return {};
   } catch (error) {
-    console.error('Error getting auth token:', error);
+    console.error('[AUTH] Error getting auth token:', error);
     return {};
   }
 }

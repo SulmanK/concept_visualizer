@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, useEffect } from 'react';
+import React, { useState, FormEvent, useEffect, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { TextArea } from '../ui/TextArea';
@@ -47,11 +47,27 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     theme?: string;
   }>({});
   
+  // Keep track of the last submission to prevent duplicate submissions
+  const lastSubmissionRef = useRef<{ logo: string; theme: string } | null>(null);
+  // Track status changes to detect completion
+  const statusRef = useRef(status);
+  
   const toast = useToast();
   const { setError, clearError, error: formError } = useErrorHandling();
   
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
+  
+  // Update the status ref when status changes
+  useEffect(() => {
+    statusRef.current = status;
+    
+    // If we were submitting and now we're not, we can clear the last submission
+    if (statusRef.current !== 'submitting' && lastSubmissionRef.current) {
+      console.log('Clearing last submission reference');
+      lastSubmissionRef.current = null;
+    }
+  }, [status]);
   
   // Handle external error props
   useEffect(() => {
@@ -97,7 +113,28 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     
+    // Prevent submitting the same values twice
+    if (isSubmitting) {
+      console.warn('Form is already submitting, ignoring duplicate submission');
+      return;
+    }
+    
+    // Check if this is a duplicate submission
+    if (lastSubmissionRef.current && 
+        lastSubmissionRef.current.logo === logoDescription && 
+        lastSubmissionRef.current.theme === themeDescription) {
+      console.warn('Duplicate submission detected, ignoring');
+      toast.showWarning('This exact concept is already being generated');
+      return;
+    }
+    
     if (validateForm()) {
+      // Store this submission to prevent duplicates
+      lastSubmissionRef.current = {
+        logo: logoDescription,
+        theme: themeDescription
+      };
+      
       toast.showInfo('Generating your concept...');
       onSubmit(logoDescription, themeDescription);
     }
@@ -108,6 +145,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     setThemeDescription('');
     setValidationErrors({});
     clearError();
+    lastSubmissionRef.current = null;
     if (onReset) onReset();
   };
   

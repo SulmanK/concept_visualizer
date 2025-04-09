@@ -23,20 +23,42 @@ export function useRecentConcepts(
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
+  const queryClient = useQueryClient();
+  const queryKey = ['concepts', 'recent', userId, limit];
+  
+  // Log existing cache data for debugging
+  const existingData = queryClient.getQueryData(queryKey);
+  console.log(`[useRecentConcepts] Query key: ${JSON.stringify(queryKey)}`);
+  console.log(`[useRecentConcepts] Cache exists: ${!!existingData}`, { 
+    timestamp: new Date().toISOString(),
+    dataCount: existingData ? (existingData as ConceptData[]).length : 0 
+  });
+  
   return useQuery<ConceptData[], Error>({
-    queryKey: ['concepts', 'recent', userId, limit],
+    queryKey,
     queryFn: async () => {
       if (!userId) return [];
       
-      console.log(`[useRecentConcepts] Fetching concepts for user: ${userId}`);
+      const fetchStartTime = new Date().toISOString();
+      console.log(`[useRecentConcepts] Fetching concepts for user: ${userId}`, {
+        timestamp: fetchStartTime,
+        queryKey: JSON.stringify(queryKey)
+      });
+      
       const concepts = await fetchRecentConcepts(userId, limit);
-      console.log(`[useRecentConcepts] Fetched ${concepts.length} concepts`);
+      
+      const fetchEndTime = new Date().toISOString();
+      console.log(`[useRecentConcepts] Fetched ${concepts.length} concepts`, {
+        timestamp: fetchEndTime,
+        conceptIds: concepts.map(c => c.id).join(', '),
+        fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
+      });
       
       // Optimize by batch processing instead of one by one
       return batchProcessConceptsUrls(concepts);
     },
     enabled: !!userId, // Only run the query if we have a userId
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    // Removed overriding staleTime to use the global configuration
     onError: onQueryError, // Use standardized error handling
   });
 }
@@ -52,24 +74,53 @@ export function useConceptDetail(
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
+  const queryClient = useQueryClient();
+  const queryKey = ['concepts', 'detail', conceptId, userId];
+  
+  // Log existing cache data for debugging
+  const existingData = queryClient.getQueryData(queryKey);
+  console.log(`[useConceptDetail] Query key: ${JSON.stringify(queryKey)}`);
+  console.log(`[useConceptDetail] Cache exists: ${!!existingData}`, {
+    timestamp: new Date().toISOString(),
+    conceptId: existingData ? (existingData as ConceptData).id : null,
+    lastUpdated: existingData ? (existingData as ConceptData).updated_at : null
+  });
+  
   return useQuery<ConceptData | null, Error>({
-    queryKey: ['concepts', 'detail', conceptId, userId],
+    queryKey,
     queryFn: async () => {
       if (!conceptId || !userId) return null;
       
-      console.log(`[useConceptDetail] Fetching concept: ${conceptId}`);
+      const fetchStartTime = new Date().toISOString();
+      console.log(`[useConceptDetail] Fetching concept: ${conceptId}`, {
+        timestamp: fetchStartTime,
+        queryKey: JSON.stringify(queryKey)
+      });
+      
       const concept = await fetchConceptDetail(conceptId, userId);
       
+      const fetchEndTime = new Date().toISOString();
       if (!concept) {
-        console.log(`[useConceptDetail] Concept not found: ${conceptId}`);
+        console.log(`[useConceptDetail] Concept not found: ${conceptId}`, {
+          timestamp: fetchEndTime
+        });
         return null;
       }
+      
+      console.log(`[useConceptDetail] Fetched concept:`, {
+        timestamp: fetchEndTime,
+        conceptId: concept.id,
+        lastUpdated: concept.updated_at,
+        variationsCount: concept.color_variations?.length || 0,
+        fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
+      });
       
       // Process URLs in batch
       const [processedConcept] = await batchProcessConceptsUrls([concept]);
       return processedConcept;
     },
     enabled: !!conceptId && !!userId, // Only run if we have both IDs
+    // Removed overriding staleTime to use the global configuration
     onError: onQueryError, // Use standardized error handling
   });
 }

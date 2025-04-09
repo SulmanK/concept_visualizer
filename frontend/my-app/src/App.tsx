@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import MainLayout from './components/layout/MainLayout';
 import PageTransition from './components/layout/PageTransition';
 import { AuthProvider } from './contexts/AuthContext';
@@ -80,7 +81,8 @@ const AppRoutes = () => {
   };
   
   return (
-    <PageTransition transitionType={getTransitionType(location.pathname)}>
+    // Temporarily bypassing PageTransition to diagnose state sync issues
+    // <PageTransition transitionType={getTransitionType(location.pathname)}>
       <Suspense fallback={<LoadingFallback />}>
         <Routes location={location}>
           {/* Main application routes */}
@@ -108,7 +110,7 @@ const AppRoutes = () => {
           </Route>
         </Routes>
       </Suspense>
-    </PageTransition>
+    // </PageTransition>
   );
 };
 
@@ -208,6 +210,9 @@ export default function App() {
           API: {debugInfo.apiBaseUrl ? '✅' : '❌'}
         </div>
       )}
+      
+      {/* Add React Query DevTools for better debugging */}
+      <ReactQueryDevtools initialIsOpen={false} position="left" />
     </div>
   );
 } 

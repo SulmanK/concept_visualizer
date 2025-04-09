@@ -1,9 +1,38 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRecentConcepts } from '../../../../hooks/useConceptQueries';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import { ConceptCard } from './ConceptCard';
 import { ConceptData } from '../../../../services/supabaseClient';
+
+/**
+ * Custom hook that wraps useRecentConcepts with forced fresh data strategy
+ */
+function useFreshRecentConcepts(userId: string | undefined, limit: number = 10) {
+  const queryClient = useQueryClient();
+  
+  // Get data using the standard hook
+  const result = useRecentConcepts(userId, limit);
+  
+  // Force refetch on mount
+  useEffect(() => {
+    if (userId) {
+      console.log('[useFreshRecentConcepts] Forcing refetch on mount for userId:', userId);
+      
+      // Ensure we're getting fresh data by forcibly marking it as stale
+      queryClient.invalidateQueries({ 
+        queryKey: ['concepts', 'recent', userId, limit],
+        exact: true 
+      });
+      
+      // Then immediately refetch
+      result.refetch();
+    }
+  }, [userId, limit, queryClient, result.refetch]);
+  
+  return result;
+}
 
 /**
  * Displays a list of recently generated concepts
@@ -15,10 +44,19 @@ export const ConceptList: React.FC = () => {
     isLoading: loadingConcepts,
     error,
     refetch: refreshConcepts
-  } = useRecentConcepts(user?.id, 10);
+  } = useFreshRecentConcepts(user?.id, 10);
   
   const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
+  
+  // Explicitly refetch data when the component mounts or when user changes
+  // This ensures we have fresh data during navigation
+  useEffect(() => {
+    console.log('[ConceptList] Mounted or user changed. Explicitly refetching recent concepts for user:', user?.id);
+    if (user?.id) {
+      refreshConcepts();
+    }
+  }, [user?.id, refreshConcepts]);
   
   // Handle navigation to the edit/refine page
   const handleEdit = (conceptId: string, variationIndex: number) => {

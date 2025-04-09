@@ -2,7 +2,7 @@
  * Component for displaying detailed concept information
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
 import { ErrorBoundary, OptimizedImage } from '../../../components/ui';
@@ -10,7 +10,36 @@ import { ColorVariationData } from '../../../services/supabaseClient';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ExportOptions } from './components/ExportOptions';
 import { useConceptDetail } from '../../../hooks/useConceptQueries';
+import { useQueryClient } from '@tanstack/react-query';
 import { eventService, AppEvent } from '../../../services/eventService';
+
+/**
+ * Custom hook that wraps useConceptDetail with forced fresh data strategy
+ */
+function useFreshConceptDetail(conceptId: string | undefined, userId: string | undefined) {
+  const queryClient = useQueryClient();
+  
+  // Force staleTime to 0 for this specific query to ensure fresh data
+  const result = useConceptDetail(conceptId, userId);
+  
+  // Force refetch on mount
+  useEffect(() => {
+    if (conceptId && userId) {
+      console.log('[useFreshConceptDetail] Forcing refetch on mount for conceptId:', conceptId);
+      
+      // Ensure we're getting fresh data by forcibly marking it as stale
+      queryClient.invalidateQueries({ 
+        queryKey: ['concepts', 'detail', conceptId, userId],
+        exact: true 
+      });
+      
+      // Then immediately refetch
+      result.refetch();
+    }
+  }, [conceptId, userId, queryClient, result.refetch]);
+  
+  return result;
+}
 
 /**
  * Component to display concept details
@@ -25,15 +54,25 @@ const ConceptDetailContent: React.FC = () => {
   const showExport = searchParams.get('showExport') === 'true';
   const { user } = useAuth();
   
-  // Use React Query to fetch the concept detail
+  // Use our custom hook to ensure fresh data
   const { 
     data: concept, 
     isLoading: loading, 
-    error: queryError 
-  } = useConceptDetail(conceptId, user?.id);
+    error: queryError,
+    refetch 
+  } = useFreshConceptDetail(conceptId, user?.id);
   
   const [selectedVariation, setSelectedVariation] = useState<ColorVariationData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Explicitly refetch data when the component mounts or when conceptId changes
+  // This ensures we have fresh data during navigation
+  useEffect(() => {
+    console.log('[ConceptDetailPage] Mounted or conceptId changed. Explicitly refetching data for conceptId:', conceptId);
+    if (conceptId && user?.id) {
+      refetch();
+    }
+  }, [conceptId, user?.id, refetch]);
   
   // Update error state based on query error
   useEffect(() => {
