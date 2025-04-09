@@ -7,6 +7,7 @@ the generic API errors and represent application domain failures.
 """
 
 from typing import Optional, Dict, Any, List
+import json
 
 
 class ApplicationError(Exception):
@@ -23,6 +24,24 @@ class ApplicationError(Exception):
         self.message = message
         self.details = details or {}
         super().__init__(message)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the exception to a dictionary for API responses.
+        
+        Returns:
+            Dictionary with error message and details
+        """
+        return {
+            "message": self.message,
+            "details": self.details
+        }
+    
+    def __str__(self) -> str:
+        """Return a string representation of the error."""
+        if self.details:
+            return f"{self.message} - {json.dumps(self.details)}"
+        return self.message
 
 
 # Authentication Exceptions
@@ -380,7 +399,7 @@ class ConceptRefinementError(ConceptError):
 
 # Image Processing Exceptions
 class ImageProcessingError(ApplicationError):
-    """Exception raised when image processing fails."""
+    """Exception raised for image processing errors."""
     
     def __init__(
         self, 
@@ -393,7 +412,7 @@ class ImageProcessingError(ApplicationError):
         
         Args:
             message: Human-readable error message
-            operation: The image processing operation that failed
+            operation: The processing operation that failed
             details: Additional error details
         """
         self.operation = operation
@@ -405,16 +424,28 @@ class ImageProcessingError(ApplicationError):
         super().__init__(message, error_details)
 
 
-class SVGConversionError(ImageProcessingError):
-    """Exception raised when SVG conversion fails."""
+class ExportError(ImageProcessingError):
+    """Exception raised when image export or conversion fails."""
     
     def __init__(
         self, 
-        message: str = "SVG conversion failed", 
+        message: str = "Image export failed", 
+        format: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
     ):
-        """Initialize with SVG conversion error details."""
-        super().__init__(message, operation="svg_conversion", details=details)
+        """
+        Initialize with export error details.
+        
+        Args:
+            message: Human-readable error message
+            format: The target format that failed (e.g., "png", "svg", "jpg")
+            details: Additional error details
+        """
+        error_details = details or {}
+        if format:
+            error_details["format"] = format
+            
+        super().__init__(message, operation="image_export", details=error_details)
 
 
 class ColorPaletteApplicationError(ImageProcessingError):

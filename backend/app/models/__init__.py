@@ -20,8 +20,8 @@ from .concept import (
     PaletteVariation,
 )
 
-# SVG models
-from .svg import SVGConversionRequest, SVGConversionResponse
+# Export models
+from .export import ExportRequest
 
 __all__ = [
     # Common models
@@ -39,7 +39,6 @@ __all__ = [
     "GenerationResponse",
     "PaletteVariation",
     
-    # SVG models
-    "SVGConversionRequest",
-    "SVGConversionResponse",
+    # Export models
+    "ExportRequest",
 ] 

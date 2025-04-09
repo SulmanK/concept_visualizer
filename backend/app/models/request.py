@@ -1,12 +1,11 @@
 """
-Request models for the Concept Visualizer API.
+Request model definitions.
 
-This module defines Pydantic models for API request validation.
+This module contains all the request models for the Concept Visualizer API.
 """
 
-from typing import List, Optional, Dict, Any
-
-from pydantic import BaseModel, Field, HttpUrl, validator
+from typing import List, Optional
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class PromptRequest(BaseModel):
@@ -22,7 +21,7 @@ class PromptRequest(BaseModel):
         ...,
         min_length=5,
         max_length=500,
-        description="Description of the theme/color scheme to generate"
+        description="Description of the theme/color scheme to use"
     )
 
 
@@ -54,18 +53,4 @@ class RefinementRequest(BaseModel):
     preserve_aspects: List[str] = Field(
         default=[],
         description="Aspects of the original design to preserve"
-    )
-
-
-class SVGConversionRequest(BaseModel):
-    """Request model for SVG conversion"""
-    image_data: str = Field(..., description="Base64 encoded image data with or without data URL prefix")
-    max_size: Optional[int] = Field(1024, description="Maximum dimension for the output SVG")
-    color_mode: str = Field("color", description="Color mode for conversion: binary, grayscale, or color")
-    hierarchical: bool = Field(True, description="Whether to use hierarchical organization in SVG")
-    filter_speckle_size: int = Field(4, description="Size of speckles to filter out")
-    corner_threshold: float = Field(60.0, description="Corner threshold in degrees")
-    length_threshold: float = Field(4.0, description="Length threshold for curves")
-    splice_threshold: float = Field(45.0, description="Splice threshold in degrees")
-    path_precision: int = Field(8, description="Number of decimal places in path data")
-    color_quantization_steps: int = Field(16, description="Number of colors in the output SVG") 
+    ) 

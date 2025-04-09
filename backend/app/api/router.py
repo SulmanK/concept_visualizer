@@ -9,8 +9,8 @@ from fastapi import APIRouter, FastAPI
 from app.api.routes.concept import router as concept_router
 from app.api.routes.concept_storage import router as concept_storage_router
 from app.api.routes.health import router as health_router
-from app.api.routes.svg import router as svg_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.export import router as export_router
 from app.api.errors import configure_error_handlers
 
 
@@ -34,7 +34,7 @@ def create_api_router() -> APIRouter:
         concept_storage_router, prefix="/storage", tags=["storage"]
     )
     api_router.include_router(
-        svg_router, prefix="/svg", tags=["svg"]
+        export_router, prefix="/export", tags=["export"]
     )
     
     return api_router

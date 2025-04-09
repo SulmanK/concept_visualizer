@@ -39,6 +39,14 @@ interface RequestOptions {
    * If not provided, a default message will be generated
    */
   rateLimitToastMessage?: string;
+  /**
+   * Response type to expect from the request
+   */
+  responseType?: 'json' | 'blob' | 'text';
+  /**
+   * Request signal for cancellation
+   */
+  signal?: AbortSignal;
 }
 
 // Custom error class for rate limit errors
@@ -94,6 +102,7 @@ export class RateLimitError extends Error {
       case 'store_concept': return 'Concept storage';
       case 'get_concepts': return 'Concept retrieval';
       case 'svg_conversion': return 'SVG conversion';
+      case 'image_export': return 'Image export';
       case 'sessions': return 'Session';
       default: return 'Usage';
     }
@@ -195,7 +204,9 @@ async function request<T>(
     withCredentials = true,
     retryAuth = true,
     showToastOnRateLimit = true,
-    rateLimitToastMessage 
+    rateLimitToastMessage,
+    responseType,
+    signal
   }: RequestOptions & { method: string }
 ): Promise<{ data: T }> {
   try {
@@ -217,6 +228,7 @@ async function request<T>(
       headers: requestHeaders,
       body: body ? JSON.stringify(body) : undefined,
       credentials: withCredentials ? 'include' : 'same-origin', // Include cookies for backward compatibility
+      signal,
     };
     
     console.log(`Making ${method} request to ${url}`);
@@ -237,29 +249,48 @@ async function request<T>(
         // Refresh the token using the proper refresh mechanism
         const { data } = await supabase.auth.refreshSession();
         
-        if (!data.session) {
-          // If refresh failed, try initializing a new session
-          await initializeAnonymousAuth();
+        if (data.session) {
+          console.log('Successfully refreshed session, retrying request');
+          
+          // Retry the request with the new token, but don't allow another retry
+          // to avoid potential infinite loops
+          return request<T>(endpoint, {
+            method,
+            headers,
+            body,
+            withCredentials,
+            retryAuth: false,
+            showToastOnRateLimit,
+            rateLimitToastMessage,
+            responseType,
+            signal
+          });
         }
-        
-        // Retry the request once with fresh token, but prevent infinite retries
-        return request<T>(endpoint, { 
-          method, 
-          headers, 
-          body, 
-          withCredentials,
-          retryAuth: false // Prevent infinite retry loop
-        });
       }
       
-      // Handle different error types based on status code
+      // Handle rate limit errors (429)
       if (response.status === 429) {
-        // Extract retry-after header if present
-        const retryAfter = response.headers.get('Retry-After') || response.headers.get('X-RateLimit-Reset');
+        // Try to extract rate limit information from headers
+        const limit = parseInt(response.headers.get('X-RateLimit-Limit') || '0', 10);
+        const remaining = parseInt(response.headers.get('X-RateLimit-Remaining') || '0', 10);
+        const current = limit - remaining;
+        
+        // Try to get reset time from headers
+        const resetHeader = response.headers.get('X-RateLimit-Reset');
+        const retryAfter = response.headers.get('Retry-After');
         let resetAfterSeconds = 0;
         
-        if (retryAfter) {
-          // If it's a number in seconds
+        // Parse X-RateLimit-Reset header if available
+        if (resetHeader) {
+          // If it's a timestamp
+          if (!isNaN(Number(resetHeader))) {
+            resetAfterSeconds = Math.max(0, Math.ceil((Number(resetHeader) * 1000 - Date.now()) / 1000));
+          }
+        }
+        
+        // Parse Retry-After header as fallback
+        if (resetAfterSeconds === 0 && retryAfter) {
+          // Try to parse retry-after (could be a number in seconds or a date)
           if (!isNaN(Number(retryAfter))) {
             resetAfterSeconds = Number(retryAfter);
           } 
@@ -270,10 +301,15 @@ async function request<T>(
         }
         
         // Get error data from response
-        const errorData = await response.json().catch(() => ({
-          message: 'Rate limit exceeded',
-          reset_after_seconds: resetAfterSeconds
-        }));
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = {
+            message: 'Rate limit exceeded',
+            reset_after_seconds: resetAfterSeconds
+          };
+        }
         
         // If reset seconds wasn't in the header, try to get it from the response body
         if (resetAfterSeconds === 0 && errorData.reset_after_seconds) {
@@ -319,15 +355,35 @@ async function request<T>(
         throw rateLimitError;
       }
       
-      const errorData = await response.json().catch(() => ({
-        message: `Request failed with status ${response.status}`,
-      }));
-      
-      throw new Error(errorData.message || `Request failed with status ${response.status}`);
+      // Handle error responses based on content type
+      try {
+        if (response.headers.get('content-type')?.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Request failed with status ${response.status}`);
+        } else {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+      } catch (error) {
+        if (error instanceof SyntaxError) {
+          // JSON parsing error - probably not JSON
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+        throw error;
+      }
     }
     
-    const data = await response.json() as T;
-    return { data };
+    // Handle the response based on the expected type
+    if (responseType === 'blob') {
+      const blob = await response.blob();
+      return { data: blob as unknown as T };
+    } else if (responseType === 'text') {
+      const text = await response.text();
+      return { data: text as unknown as T };
+    } else {
+      // Default to JSON
+      const data = await response.json() as T;
+      return { data };
+    }
   } catch (err) {
     // Re-throw RateLimitError directly
     if (err instanceof RateLimitError) {
@@ -339,8 +395,58 @@ async function request<T>(
   }
 }
 
+// Export types for use in the export image function
+export type ExportFormat = 'png' | 'jpg' | 'svg';
+export type ExportSize = 'small' | 'medium' | 'large' | 'original';
+
+/**
+ * Export an image with the specified format and size
+ * @param imageIdentifier Storage path identifier for the image
+ * @param format Target format (png, jpg, svg)
+ * @param size Target size (small, medium, large, original)
+ * @param svgParams Optional SVG conversion parameters (only used when format is 'svg')
+ * @param bucket Optional storage bucket name ('concept-images' or 'palette-images')
+ * @returns Blob containing the exported image data
+ */
+async function exportImage(
+  imageIdentifier: string, 
+  format: ExportFormat, 
+  size: ExportSize,
+  svgParams?: Record<string, any>,
+  bucket?: string
+): Promise<Blob> {
+  // Create the request body
+  const body = {
+    image_identifier: imageIdentifier,
+    target_format: format,
+    target_size: size,
+    svg_params: svgParams,
+    storage_bucket: bucket || 'concept-images' // Default to concept-images if not specified
+  };
+  
+  // Set up the AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
+  
+  try {
+    // Make the API call with blob response type
+    const response = await request<Blob>('export/process', {
+      method: 'POST',
+      body,
+      responseType: 'blob',
+      signal: controller.signal
+    });
+    
+    return response.data;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// Export the API client interfaces
 export const apiClient = {
   get,
   post,
+  exportImage,
   request
 }; 

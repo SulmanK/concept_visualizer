@@ -1,14 +1,11 @@
 """
-Response models for the API.
+Response model definitions.
 
-This module defines the response models used across the API endpoints.
+This module contains all the response models for the Concept Visualizer API.
 """
 
-from typing import List, Optional, Dict, Any
-
-from pydantic import BaseModel, Field, AnyUrl, field_validator
-import re
-
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
 
 class ColorPalette(BaseModel):
     """Color palette model containing hex color codes."""
@@ -20,7 +17,7 @@ class ColorPalette(BaseModel):
     text: str = Field(..., description="Text color")
     additional_colors: List[str] = Field(
         default=[],
-        description="Additional color options"
+        description="Additional colors in the palette"
     )
 
 
@@ -32,12 +29,14 @@ class PaletteVariation(BaseModel):
     description: Optional[str] = Field(None, description="Description of the palette")
     image_url: str = Field(..., description="URL of the image with this palette")
     
+    # Ensure image_url is an absolute URL
     @field_validator('image_url')
     @classmethod
     def ensure_absolute_url(cls, v):
-        """Ensure the URL is absolute by adding Supabase URL if needed."""
+        if not v:
+            return v
         from app.core.config import settings
-        if v and v.startswith('/object/sign/'):
+        if v.startswith('/object/sign/'):
             return f"{settings.SUPABASE_URL}{v}"
         return v
 
@@ -73,20 +72,13 @@ class GenerationResponse(BaseModel):
         description="Prompt used for refinement"
     )
     
+    # Ensure URLs are absolute
     @field_validator('image_url', 'original_image_url')
     @classmethod
     def ensure_absolute_url(cls, v):
-        """Ensure the URL is absolute by adding Supabase URL if needed."""
         if not v:
             return v
         from app.core.config import settings
         if v.startswith('/object/sign/'):
             return f"{settings.SUPABASE_URL}{v}"
-        return v
-
-
-class SVGConversionResponse(BaseModel):
-    """Response model for SVG conversion"""
-    svg_data: str = Field(..., description="SVG data as a string")
-    success: bool = Field(..., description="Whether the conversion was successful")
-    message: str = Field(..., description="Message about the conversion process") 
+        return v 

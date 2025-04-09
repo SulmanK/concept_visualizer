@@ -63,6 +63,74 @@ export interface UseErrorHandlingResult {
 }
 
 /**
+ * Creates a function to handle errors in React Query mutations
+ * 
+ * @param options Configuration options
+ * @returns A function to handle errors from React Query
+ */
+export const createQueryErrorHandler = (options: {
+  title?: string;
+  defaultMessage?: string;
+} = {}) => {
+  const { 
+    title = 'Error',
+    defaultMessage = 'An unexpected error occurred'
+  } = options;
+  
+  // Return the error handler function that uses the toast utility directly
+  return (error: unknown) => {
+    // Handle our custom RateLimitError
+    if (error instanceof RateLimitError) {
+      // Use document event to show toast
+      document.dispatchEvent(
+        new CustomEvent('show-api-toast', {
+          detail: {
+            type: 'warning',
+            message: `${title}: ${error.getUserFriendlyMessage()}`
+          }
+        })
+      );
+      return;
+    }
+    
+    // Extract a meaningful error message
+    let message = defaultMessage;
+    
+    if (typeof error === 'string') {
+      message = error;
+    } else if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      const err = error as any;
+      
+      // Try to extract message from common error formats
+      if (err.message) {
+        message = err.message;
+      } else if (err.error?.message) {
+        message = err.error.message;
+      } else if (err.data?.message) {
+        message = err.data.message;
+      } else if (err.response?.data?.message) {
+        message = err.response.data.message;
+      }
+    }
+    
+    // Show the error message using document event
+    document.dispatchEvent(
+      new CustomEvent('show-api-toast', {
+        detail: {
+          type: 'error',
+          message: `${title}: ${message}`
+        }
+      })
+    );
+    
+    // Log the error for debugging
+    console.error(`${title} Error:`, error);
+  };
+};
+
+/**
  * Custom hook for centralized error handling with categorization
  */
 export const useErrorHandling = (options?: {

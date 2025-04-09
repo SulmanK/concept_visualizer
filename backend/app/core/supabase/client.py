@@ -57,6 +57,39 @@ class SupabaseClient:
                 details={"url": self.url, "session_id": mask_id(self.session_id) if self.session_id else None}
             )
     
+    def get_service_role_client(self):
+        """Create a Supabase client with service role permissions.
+        
+        This client has elevated permissions and can access all resources.
+        Use with caution and only for operations that require admin access.
+        
+        Returns:
+            A Supabase client initialized with the service role key
+        
+        Raises:
+            DatabaseError: If client initialization fails
+        """
+        try:
+            # Check if we have the service role key
+            service_role_key = settings.SUPABASE_SERVICE_ROLE
+            if not service_role_key:
+                self.logger.error("Service role key not found in settings")
+                raise DatabaseError(
+                    message="Service role key not configured",
+                    details={"missing_key": "SUPABASE_SERVICE_ROLE"}
+                )
+            
+            self.logger.debug("Creating Supabase client with service role permissions")
+            # Create and return a new client with the service role key
+            return create_client(self.url, service_role_key)
+        except Exception as e:
+            error_message = f"Failed to initialize service role client: {str(e)}"
+            self.logger.error(error_message)
+            raise DatabaseError(
+                message=error_message,
+                details={"url": self.url}
+            )
+    
     def _mask_path(self, path: str) -> str:
         """Mask a storage path to protect session ID privacy.
         

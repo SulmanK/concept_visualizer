@@ -1,159 +1,63 @@
 # Concept Visualizer - Project TODO
 
-## Production-Ready Rate Limit Enhancements (@design/rate_limit_production_enhancements.md)
+## Export Options Refactoring
 
-- [x] Refactor `rateLimitService.ts`: Implement central caching based on headers and reset timestamps. Expose functions to get cached data.
-- [x] Refactor `useRateLimits.ts`: Remove internal cache, consume data from `rateLimitService`, trigger status endpoint calls only when necessary.
-- [x] Update `RateLimitContext.tsx`: Add `decrementLimit` function and integrate it with the service cache for optimistic updates.
-- [x] Update `apiClient.ts` / Fetch Interceptor: Implement 429 error handling, specific error reporting (using toasts), and header extraction on 429s.
-- [x] Update UI Components:
-    - [x] Call `decrementLimit` before relevant actions (e.g., Generate, SVG Export).
-    - [x] Add proactive warnings (e.g., low remaining count) in `RateLimitsPanel`.
-    - [ ] ~~Add visual indicators (e.g., bars/gauges) to `RateLimitsPanel`.~~ (Skipped)
-    - [x] Ensure UI handles specific rate limit error toasts gracefully.
-    - [x] Add cooldown to `RateLimitsPanel` refresh button.
+### Phase 1: Backend Implementation (New Endpoint & Logic)
 
-## Frontend State Management Refactor (@design/frontend_state_management_refactor.md)
+- [x] Define new API endpoint
+  - [x] Create `backend/app/api/routes/export/export_routes.py` and `backend/app/api/routes/export/__init__.py`
+  - [x] Define `POST /api/export/process` route
+  - [x] Create Pydantic request model in `backend/app/models/export/request.py`
+  - [x] Implement response handling (Direct File Response)
+  - [x] Add authentication protection
 
-### Phase 1: Context Optimization
-- [x] Implement selectors or optimize `useRateLimitContext` hook.
-  - Implemented `use-context-selector` library
-  - Created individual selector hooks for specific context values
-  - Maintained backward compatibility with the original hook
-- [x] Implement selectors or optimize `useConceptContext` hook.
-  - Added selector hooks for fine-grained context consumption
-  - Minimized re-renders for components that only need specific parts of the context
-- [x] Review and ensure memoization in `RateLimitProvider` and `ConceptProvider`.
-  - Added proper `useMemo` for context values
-  - Memoized callback functions to prevent unnecessary re-renders
-- [x] Profile and verify performance improvements using React DevTools.
+- [x] Implement backend service logic
+  - [x] Create or modify service in `backend/app/services/export/service.py`
+  - [x] Implement secure image fetching based on image identifier
+  - [x] Implement processing logic for different formats (PNG/JPG/SVG)
+  - [x] Move and refactor vtracer logic from old SVG endpoint
+  - [x] Implement direct file response handling
 
-### Phase 2: React Query Simplification
-- [x] Refactor `ConceptContext` to rely directly on React Query state (remove redundant loading/error state).
-  - Eliminated duplicate state management
-  - Directly exposed React Query state through context
-- [x] Expose `refetch` and other necessary functions directly from React Query via context.
-  - Added direct access to the `refetch` function from React Query
-  - Combined with cache invalidation for more reliable refreshing
+- [x] Register new route in `backend/app/api/router.py`
 
-### Phase 3: Error Handling Standardization
-- [x] Audit async operations (`apiClient`, `useConceptQueries`, `AuthContext`) for error handling consistency.
-  - Created utility functions in `errorUtils.ts` for standardized error handling
-- [x] Integrate `useErrorHandling` hook consistently across audited operations.
-  - Added `createAsyncErrorHandler` and `createQueryErrorHandler` utilities
-  - Implemented in `useConceptQueries` and `useConceptGeneration`
-- [x] Ensure `ErrorMessage`/`RateLimitErrorMessage` components are used universally for displaying errors.
-  - Standardized error display through the error handling utilities
+- [x] Add rate limiting to export endpoint
 
-### Phase 4: Event Service Refinement
-- [x] Review current uses of `eventService` for state synchronization.
-  - Identified redundant event subscriptions in `ConceptContext`
-- [x] Replace event-driven refreshing with `queryClient.invalidateQueries` where suitable.
-  - Removed event listeners from `ConceptContext` 
-  - Implemented direct cache invalidation in data mutation operations
-- [x] Retain `eventService` only for necessary decoupling scenarios.
-  - Eliminated unnecessary event-based refreshing
-  - More direct and traceable data flow using React Query's cache invalidation
+### Phase 2: Frontend Refactoring (Adopt New Endpoint)
 
-## Client-Side State & Data Synchronization Enhancement (@design/fixing_SRA.md)
+- [x] Update API client
+  - [x] Add `exportImage` function to `frontend/my-app/src/services/apiClient.ts`
+  - [x] Handle appropriate response types (Blob)
 
-### Step 1: React Query Configuration
-- [x] Adjust React Query defaults in `src/main.tsx`
-  - Set `refetchOnWindowFocus: true` (or use default `true`)
-  - Reduced staleTime from 5 minutes to 10 seconds for faster data refresh
-  - Test navigation scenarios to verify improvements
+- [x] Create new React Query mutation hook
+  - [x] Create `frontend/my-app/src/hooks/useExportImageMutation.ts`
+  - [x] Implement download functionality in `onSuccess` handler
+  - [x] Add error handling with `createQueryErrorHandler`
 
-### Step 2: Diagnose PageTransition Component
-- [x] Temporarily bypass `PageTransition` component in `src/App.tsx` for testing
-  - Commented out the PageTransition wrapper to test without transitions
-  - Kept Suspense for lazy-loaded components
+- [x] Refactor `ExportOptions.tsx` component
+  - [x] Remove old client-side Canvas processing logic
+  - [x] Remove usage of old `useSvgConversionMutation` hook
+  - [x] Integrate new `useExportImageMutation` hook
+  - [x] Update download and preview buttons to use new mutation
+  - [x] Update error handling
 
-### Step 3: Authentication & Loading State Handling
-- [x] Add detailed logging to authentication processes
-  - [x] Log auth state changes in `apiClient.ts` -> `getAuthHeaders`
-  - [x] Log session checks and refresh attempts in `AuthContext.tsx`
-- [x] Review components using data dependent on `userId`
-  - [x] Ensure they handle loading states from both `useAuth()` and the query
+- [x] Clean up old SVG hook
+  - [x] Remove `frontend/my-app/src/hooks/useSvgConversionMutation.ts`
+  - [x] Remove related imports
 
-### Step 4: Data Refetching on Navigation
-- [x] Identify key pages that must show latest data upon navigation
-  - [x] Add explicit `refetch` calls in `useEffect` hooks on critical pages
-  - [x] Created custom `useFreshConceptDetail` and `useFreshRecentConcepts` hooks that force staleTime:0
-  - [x] Added React Query Devtools for better visibility of cache state
-  - Critical pages identified: ConceptDetailPage, ConceptList (Recent Concepts)
+### Phase 3: Backend Cleanup
 
-### Step 5: Verify Query Invalidation
-- [x] Review mutation hooks in `useConceptMutations.ts`
-  - [x] Add consistent userId to query keys for proper cache identity
-  - [x] Add detailed logging of invalidation process
-  - [x] Test actions and navigation to verify data updates correctly
+- [x] Remove old SVG endpoint
+  - [x] Delete `backend/app/api/routes/svg/converter.py`
+  - [x] Update `backend/app/api/routes/svg/__init__.py` or remove directory
+  - [x] Update `backend/app/api/router.py` to remove old SVG router
 
-### Step 6: Standardize Error Handling
-- [x] Audit all `try...catch` blocks in data fetching code
-  - [x] Enhance errorUtils.ts with better logging for debugging
-  - [x] Add context information to error logging
-  - [x] Add specific detection for auth-related errors
+- [x] Remove old SVG models
+  - [x] Delete `backend/app/models/svg/conversion.py` if unused
+  - [x] Update related import files
 
-### Step 7: Enhanced Debugging (Additional)
-- [x] Add React Query DevTools for better cache debugging
-- [x] Enhanced logging in data fetching hooks
-  - Added detailed timestamp and query key information
-  - Added cache hit/miss logging
-  - Added timing information to track performance
+- [x] Final code review and testing
+  - [x] Search codebase for remaining dependencies on old SVG endpoint/models
+  - [x] Update SVG exceptions to more generic Export exceptions
+  - [x] Test all export formats and sizes
+  - [x] Verify rate limiting functionality
 
-# Frontend State Management Refactor - TODO
-
-## Phase 1: Core React Query Integration (1-2 Sprints)
-
--   [x] Refactor `useRateLimits` to `useRateLimitsQuery` using `useQuery`.
--   [x] Integrate `useRateLimitsQuery` into `RateLimitProvider`.
--   [x] Refactor `useConceptGeneration` to `useGenerateConceptMutation` using `useMutation`.
--   [x] Refactor `useConceptRefinement` to `useRefineConceptMutation` using `useMutation`.
--   [x] Update components (`LandingPage`, `RefinementPage`, etc.) to use refactored React Query hooks.
--   [x] Implement query invalidation in mutation `onSuccess` callbacks.
--   [x] Establish standard React Query query keys (e.g., `['concepts', 'recent', userId]`).
-
-## Phase 2: Context & Optimistic Update Refinement (1 Sprint)
-
--   [x] Refactor `RateLimitContext` to provide `decrementLimit` function that uses `queryClient.setQueryData`.
--   [x] Implement optimistic updates for rate limits in UI components.
--   [x] Simplify or remove `ConceptContext`, relying more on direct query hook usage.
--   [x] Update components currently using `ConceptContext` to use direct query hooks/selectors.
--   [x] Replace `eventService` refresh triggers with `queryClient.invalidateQueries`.
-
-## Phase 3: API Hook & Error Handling Cleanup (1 Sprint)
-
--   [x] Update `RateLimitsPanel` component to use React Query directly instead of context.
--   [x] Update `ConceptList` component to use React Query directly instead of context.
--   [x] Update `LandingPage` component to use React Query directly instead of context.
--   [x] Fix TypeScript errors in hook return types with proper typing for React Query.
--   [x] Fix TypeScript errors in remaining components refactored to use React Query directly.
--   [x] Add `useSvgConversionMutation` hook for SVG conversion operations.
--   [x] Update `ExportOptions` component to use React Query mutation for SVG conversion.
--   [x] Remove `ConceptProvider` from `App.tsx` after all components are migrated to React Query.
--   [x] Simplify or remove the generic `useApi` hook, relying on `apiClient` within query/mutation functions.
--   [x] Ensure consistent error handling using `createQueryErrorHandler` in all `useQuery`/`useMutation` instances.
--   [x] Audit `ErrorMessage`/`RateLimitErrorMessage` components for proper handling of categorized errors.
--   [x] Remove manual loading/error state management from components where React Query now handles it.
--   [x] Update tests that mock `useConceptContext` to mock the React Query hooks instead.
--   [x] Update documentation in `frontend_state_refactor_progress.md` to reflect all changes.
-
-## Components Still Using ConceptContext
-
-- [x] **RefinementPage**: Confirmed not using `ConceptContext`, already using direct hooks.
-- [x] **RefinementSelectionPage**: Confirmed not using `ConceptContext`, already migrated.
-- [x] **RateLimitsPanel**: Confirmed using React Query directly via `useRateLimitsQuery`.
-- [x] **RecentConceptsPage**: Using `useRecentConcepts` directly instead of context.
-- [x] **ConceptDetailPage**: Using `useConceptDetail` directly instead of context.
-- [x] **Fix TypeScript errors**: 
-    - [x] `LandingPage.tsx`: Fixed typing issues with `recentConcepts`.
-    - [x] `ConceptList.tsx`: Fixed typing issues with `recentConcepts`.
-
-## Final Steps for ConceptContext Removal
-
--   [x] Identify any remaining components using `ConceptContext` and update them to use React Query directly.
--   [x] Remove `ConceptContext` and `ConceptProvider` entirely from the codebase.
--   [x] Verify application functions correctly with React Query replacing all context-based state management.
-
-
----
