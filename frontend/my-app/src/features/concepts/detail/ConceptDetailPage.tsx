@@ -400,13 +400,10 @@ const ConceptDetailContent: React.FC = () => {
                     <div className="p-5 border-t border-indigo-100">
                       <ExportOptions
                         imageUrl={selectedVariation.image_url}
+                        storagePath={selectedVariation.storage_path || undefined}
                         conceptTitle={concept.logo_description || 'Concept'}
                         variationName={selectedVariation.palette_name}
-                        onDownload={(format, size) => {
-                          // Just log the export details, actual download handled by ExportOptions
-                          console.log(`Exporting ${selectedVariation.palette_name} variation in ${format} format at ${size} size`);
-                          // No need to manually download here anymore
-                        }}
+                        isPaletteVariation={true}
                       />
                     </div>
                   </details>
@@ -447,13 +444,9 @@ const ConceptDetailContent: React.FC = () => {
                     <div className="p-5 border-t border-indigo-100">
                       <ExportOptions
                         imageUrl={concept.image_url || concept.base_image_url}
+                        storagePath={concept.storage_path || undefined}
                         conceptTitle={concept.logo_description || 'Concept'}
                         variationName="Original"
-                        onDownload={(format, size) => {
-                          // Just log the export details, actual download handled by ExportOptions
-                          console.log(`Exporting original concept in ${format} format at ${size} size`);
-                          // No need to manually download here anymore
-                        }}
                       />
                     </div>
                   </details>

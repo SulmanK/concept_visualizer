@@ -482,6 +482,7 @@ export interface ConceptData {
   base_image_url?: string;
   created_at: string;
   color_variations?: ColorVariationData[];
+  storage_path?: string;
 }
 
 export interface ColorVariationData {
@@ -493,6 +494,7 @@ export interface ColorVariationData {
   image_path: string;
   image_url: string;
   created_at: string;
+  storage_path?: string;
 }
 
 /**

@@ -406,6 +406,7 @@ export type ExportSize = 'small' | 'medium' | 'large' | 'original';
  * @param size Target size (small, medium, large, original)
  * @param svgParams Optional SVG conversion parameters (only used when format is 'svg')
  * @param bucket Optional storage bucket name ('concept-images' or 'palette-images')
+ * @param _timestamp Optional timestamp for cache-busting (not used in the request)
  * @returns Blob containing the exported image data
  */
 async function exportImage(
@@ -413,9 +414,10 @@ async function exportImage(
   format: ExportFormat, 
   size: ExportSize,
   svgParams?: Record<string, any>,
-  bucket?: string
+  bucket?: string,
+  _timestamp?: number  // Add timestamp parameter but don't use it in the request
 ): Promise<Blob> {
-  // Create the request body
+  // Create the request body (omitting the timestamp which is just for cache-busting)
   const body = {
     image_identifier: imageIdentifier,
     target_format: format,
@@ -423,6 +425,8 @@ async function exportImage(
     svg_params: svgParams,
     storage_bucket: bucket || 'concept-images' // Default to concept-images if not specified
   };
+  
+  console.log(`Making export request for ${imageIdentifier} in format ${format} at ${_timestamp || Date.now()}`);
   
   // Set up the AbortController for timeout
   const controller = new AbortController();

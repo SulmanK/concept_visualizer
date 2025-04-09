@@ -29,6 +29,13 @@ export interface ExportImageParams {
    * (either 'concept-images' or 'palette-images')
    */
   bucket?: string;
+  
+  /**
+   * Optional timestamp for cache busting.
+   * This is not sent to the server, just used to force React Query to treat 
+   * identical requests as different mutations.
+   */
+  _timestamp?: number;
 }
 
 // Define a more specific return type for the hook that includes reset
@@ -39,6 +46,7 @@ type ExportImageMutationResult = UseMutationResult<Blob, Error, ExportImageParam
 /**
  * Hook for exporting images in different formats
  * Handles rate limit optimistic updates and error handling
+ * The hook returns the Blob directly without triggering downloads automatically
  * 
  * @returns Mutation object with mutate, status, and reset functions
  */
@@ -52,7 +60,7 @@ export function useExportImageMutation(): ExportImageMutationResult {
 
   // Get the mutation result object which includes 'reset'
   const mutationResult = useMutation<Blob, Error, ExportImageParams>({
-    mutationFn: async ({ imageIdentifier, format, size, svgParams, bucket }: ExportImageParams) => {
+    mutationFn: async ({ imageIdentifier, format, size, svgParams, bucket, _timestamp }: ExportImageParams) => {
       // Apply optimistic update based on format
       // SVG conversions are more intensive, so we use the svg_conversion rate limit
       if (format === 'svg') {
@@ -69,7 +77,8 @@ export function useExportImageMutation(): ExportImageMutationResult {
           format,
           size,
           svgParams,
-          bucket
+          bucket,
+          _timestamp
         );
         
         return blob;
@@ -80,29 +89,9 @@ export function useExportImageMutation(): ExportImageMutationResult {
       }
     },
     
-    onSuccess: async (blob, { format }) => {
-      // Create an object URL from the blob
-      const objectUrl = URL.createObjectURL(blob);
-      
-      // Trigger the download
-      const downloadLink = document.createElement('a');
-      downloadLink.href = objectUrl;
-      downloadLink.download = `exported_image.${format}`; // The component will override this
-      
-      // Use setTimeout to ensure the browser has time to process
-      setTimeout(() => {
-        // Append to body, click, and remove
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        
-        // Clean up
-        setTimeout(() => {
-          document.body.removeChild(downloadLink);
-          URL.revokeObjectURL(objectUrl);
-        }, 300);
-      }, 100);
-      
-      // Refresh rate limits to get the accurate count
+    onSuccess: async () => {
+      // Simply refresh rate limits to get the accurate count
+      // No automatic download handling - leave that to the component
       await queryClient.fetchQuery({ queryKey: ['rateLimits'] });
     },
     
@@ -124,4 +113,31 @@ export function useExportImageMutation(): ExportImageMutationResult {
     // reset is already part of mutationResult, but explicitly returning it makes it clearer
     reset: mutationResult.reset
   };
+}
+
+/**
+ * Helper function to trigger a file download from a blob
+ * 
+ * @param blob - The blob to download
+ * @param filename - The filename to use for the download
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+  // Create an object URL from the blob
+  const objectUrl = URL.createObjectURL(blob);
+  
+  // Create and trigger a download link
+  const downloadLink = document.createElement('a');
+  downloadLink.href = objectUrl;
+  downloadLink.download = filename;
+  downloadLink.style.display = 'none';
+  
+  // Append to body, click, and remove
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  
+  // Clean up
+  setTimeout(() => {
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(objectUrl);
+  }, 300);
 } 
