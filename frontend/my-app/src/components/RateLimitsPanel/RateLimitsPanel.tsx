@@ -214,7 +214,7 @@ export const RateLimitsPanel: React.FC<RateLimitsPanelProps> = ({
           {renderRateLimitItem('Concept Refinement', 'refine_concept')}
           {renderRateLimitItem('Store Concepts', 'store_concept')}
           {renderRateLimitItem('List Concepts', 'get_concepts')}
-          {renderRateLimitItem('SVG Conversion', 'svg_conversion')}
+          {renderRateLimitItem('Image Export', 'export_action')}
           {renderRateLimitItem('Active Sessions', 'sessions')}
         </>
       )}

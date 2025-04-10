@@ -41,23 +41,14 @@ async def process_export(
         A streaming response with the exported file
     """
     try:
-        # Apply rate limiting
+        # Apply unified rate limiting for all export formats
         if hasattr(req.app.state, 'limiter'):
-            # Use a custom rate limit based on format - SVG is more resource-intensive
-            if request_data.target_format == "svg":
-                await apply_rate_limit(
-                    req=req,
-                    endpoint="/export/process/svg",
-                    rate_limit="20/hour",
-                    period="hour"
-                )
-            else:
-                await apply_rate_limit(
-                    req=req,
-                    endpoint="/export/process/image",
-                    rate_limit="50/hour",
-                    period="hour"
-                )
+            await apply_rate_limit(
+                req=req,
+                endpoint="/export/process",
+                rate_limit="50/hour",
+                period="hour"
+            )
         
         # Get user ID from authenticated user
         user_id = current_user.get("id")

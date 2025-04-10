@@ -241,13 +241,35 @@ def create_color_mask(image: np.ndarray, target_color: Tuple[int, int, int], thr
     return mask
 
 
+def hex_to_lab(hex_color: str) -> Tuple[float, float, float]:
+    """
+    Convert hex color code to LAB tuple.
+    
+    Args:
+        hex_color: Hexadecimal color code (e.g., '#FF5733')
+        
+    Returns:
+        LAB tuple (L*, a*, b*)
+    """
+    # Convert hex to BGR first
+    bgr = hex_to_bgr(hex_color)
+    
+    # Convert BGR to LAB
+    # Need to reshape for OpenCV color conversion
+    bgr_array = np.array([[bgr]], dtype=np.uint8)
+    lab_array = cv2.cvtColor(bgr_array, cv2.COLOR_BGR2LAB)
+    
+    # Return as tuple
+    return tuple(map(float, lab_array[0][0]))
+
+
 def apply_palette_with_masking_optimized(
     image_url_or_data: Union[str, BytesIO, bytes], 
     palette_colors: List[str], 
     blend_strength: float = 0.75
 ) -> bytes:
     """
-    Apply a color palette to an image using simplified masking and recoloring.
+    Apply a color palette to an image using LAB color space for better color mapping.
     
     Args:
         image_url_or_data: URL of the image, BytesIO object, or raw bytes
@@ -268,14 +290,6 @@ def apply_palette_with_masking_optimized(
         if image_url_or_data is None:
             logger.error("Image data is None, cannot process")
             raise ValueError("Image data cannot be None")
-            
-        # For binary data, log the size
-        if isinstance(image_url_or_data, bytes):
-            logger.info(f"Processing binary image data: {len(image_url_or_data)} bytes")
-        elif isinstance(image_url_or_data, BytesIO):
-            logger.info(f"Processing BytesIO image data: {image_url_or_data.getbuffer().nbytes} bytes")
-        elif isinstance(image_url_or_data, str):
-            logger.info(f"Processing image from URL or path: {image_url_or_data[:100]}...")
         
         # Download/read image
         logger.info("Converting image to OpenCV format...")
@@ -288,79 +302,103 @@ def apply_palette_with_masking_optimized(
             
         logger.info(f"Image loaded successfully, shape: {image.shape}, dtype: {image.dtype}")
         
-        # Find dominant colors in original image
-        max_colors = min(5, len(palette_colors))
-        logger.info(f"Finding {max_colors} dominant colors...")
-        dominant_colors = find_dominant_colors(image, max_colors)
-        logger.info(f"Found dominant colors: {dominant_colors}")
+        # Clone image for later blending if needed
+        original_image = image.copy()
         
-        # Convert palette hex colors to BGR
-        palette_bgr = [hex_to_bgr(color) for color in palette_colors[:max_colors]]
-        logger.info(f"Converted palette to BGR: {palette_bgr}")
+        # Get number of palette colors
+        num_colors = min(5, len(palette_colors))
+        palette_colors = palette_colors[:num_colors]
+        logger.info(f"Using {num_colors} palette colors")
         
-        # Create a copy of the original image for recoloring
-        result = image.copy()
+        # 1. Use K-means clustering for better initial segmentation
+        # This helps determine regions more semantically than just lightness
+        pixels = image.reshape(-1, 3).astype(np.float32)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
+        _, labels, centers = cv2.kmeans(pixels, num_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
         
-        # For each dominant color, create a mask and replace with palette color
-        for i, (dom_color, _) in enumerate(dominant_colors):
-            if i >= len(palette_bgr):
-                break
-                
-            logger.info(f"Processing dominant color {i+1}/{len(dominant_colors)}: {dom_color}")
+        # 2. Convert palette colors to BGR
+        palette_bgr = [hex_to_bgr(color) for color in palette_colors]
+        
+        # 3. Sort both centers and palette colors by brightness (sum of BGR)
+        centers_with_idx = [(sum(center), i, center) for i, center in enumerate(centers)]
+        centers_with_idx.sort(key=lambda x: x[0])
+        
+        palette_with_idx = [(sum(color), i, color) for i, color in enumerate(palette_bgr)]
+        palette_with_idx.sort(key=lambda x: x[0])
+        
+        # 4. Create mapping from center index to palette color
+        center_to_palette = {}
+        for i in range(num_colors):
+            center_idx = centers_with_idx[i][1]
+            palette_idx = palette_with_idx[i][1]
+            center_to_palette[center_idx] = palette_bgr[palette_idx]
+        
+        # 5. Create a new image
+        result = np.zeros_like(image)
+        
+        # 6. Map each pixel to its new color based on the cluster it belongs to
+        labels = labels.reshape(-1)
+        for i in range(num_colors):
+            # Create mask for this cluster
+            mask = (labels == i)
+            # Get the original cluster center
+            center_color = centers[i]
+            # Get the target palette color
+            target_color = center_to_palette[i]
             
-            # Create mask for this dominant color
-            mask = create_color_mask(image, dom_color)
+            # Convert to LAB for better color transfer
+            original_bgr = np.uint8([[center_color]])
+            target_bgr = np.uint8([[target_color]])
             
-            # Get the palette color to use
-            target_color = palette_bgr[i]
-            logger.info(f"Target color: {target_color}")
+            original_lab = cv2.cvtColor(original_bgr, cv2.COLOR_BGR2LAB)[0][0]
+            target_lab = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2LAB)[0][0]
             
-            # Create HSV versions for color shifting
-            hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
-            dom_hsv = cv2.cvtColor(np.uint8([[dom_color]]), cv2.COLOR_BGR2HSV)[0][0]
-            target_hsv = cv2.cvtColor(np.uint8([[target_color]]), cv2.COLOR_BGR2HSV)[0][0]
+            # Get the pixels for this cluster
+            cluster_pixels = image.reshape(-1, 3)[mask]
             
-            # Calculate color shift
-            h_shift = int(target_hsv[0]) - int(dom_hsv[0])
-            s_scale = float(target_hsv[1]) / max(1.0, float(dom_hsv[1]))  # Scale saturation
-            v_scale = float(target_hsv[2]) / max(1.0, float(dom_hsv[2]))  # Value ratio for preserving lighting
+            # Convert cluster pixels to LAB
+            cluster_lab = cv2.cvtColor(cluster_pixels.reshape(-1, 1, 3), cv2.COLOR_BGR2LAB).reshape(-1, 3)
             
-            logger.info(f"HSV shift values - H: {h_shift}, S: {s_scale:.2f}, V: {v_scale:.2f}")
+            # Calculate LAB difference between original center and target color
+            l_diff = float(target_lab[0]) - float(original_lab[0])
+            a_diff = float(target_lab[1]) - float(original_lab[1])
+            b_diff = float(target_lab[2]) - float(original_lab[2])
             
-            # Apply the shift to the entire image
-            shifted_hsv = hsv_image.copy()
-            
-            # Use mask to blend the recolored regions
-            mask_3d = cv2.merge([mask, mask, mask]).astype(np.float32) / 255.0 * blend_strength
-            
-            # Create a recolored version with shifted HSV values
-            # This vectorized approach is much faster than pixel-by-pixel operations
-            shifted_hsv[..., 0] = (hsv_image[..., 0] + h_shift) % 180
-            shifted_hsv[..., 1] = np.clip(hsv_image[..., 1] * s_scale, 0, 255)
-            shifted_hsv[..., 2] = np.clip(hsv_image[..., 2] * v_scale, 0, 255)
+            # Apply the difference to all pixels in this cluster
+            # But preserve relative variations in lightness for better texture
+            cluster_lab[:, 0] = np.clip(cluster_lab[:, 0] + l_diff * 0.7, 0, 255)  # Partial L adjustment
+            cluster_lab[:, 1] = np.clip(cluster_lab[:, 1] + a_diff, 0, 255)        # Full a adjustment
+            cluster_lab[:, 2] = np.clip(cluster_lab[:, 2] + b_diff, 0, 255)        # Full b adjustment
             
             # Convert back to BGR
-            shifted_bgr = cv2.cvtColor(shifted_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+            cluster_bgr = cv2.cvtColor(cluster_lab.reshape(-1, 1, 3), cv2.COLOR_LAB2BGR).reshape(-1, 3)
             
-            # Blend with original using the mask
-            for c in range(3):  # For each BGR channel
-                # Use safe blend method to avoid overflow
-                blended = (1 - mask_3d[..., c]) * result[..., c] + mask_3d[..., c] * shifted_bgr[..., c]
-                # Clamp values to valid range
-                result[..., c] = np.clip(blended, 0, 255).astype(np.uint8)
+            # Update the result image for this cluster
+            result.reshape(-1, 3)[mask] = cluster_bgr
         
-        # Make sure we have a valid image type before encoding
-        result = result.astype(np.uint8)
-        logger.info(f"Processing complete, encoding result as PNG...")
+        # 7. Optional: Blend with original for texture preservation
+        # Higher blend strength = more of the new colors
+        final_result = cv2.addWeighted(
+            result, blend_strength,
+            original_image, 1.0 - blend_strength,
+            0
+        )
         
-        # Convert the result to bytes
-        _, buffer = cv2.imencode('.png', result)
+        # 8. Apply a slight saturation boost to make the colors more vibrant
+        hsv_result = cv2.cvtColor(final_result, cv2.COLOR_BGR2HSV).astype(np.float32)
+        # Increase saturation by 20%
+        hsv_result[:, :, 1] = np.clip(hsv_result[:, :, 1] * 1.2, 0, 255)
+        final_result = cv2.cvtColor(hsv_result.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        
+        # 9. Encode the result to PNG format
+        _, buffer = cv2.imencode('.png', final_result)
         result_bytes = buffer.tobytes()
+        
         logger.info(f"Successfully encoded result, size: {len(result_bytes)} bytes")
         return result_bytes
         
     except Exception as e:
-        logger.error(f"Error applying palette with masking: {str(e)}")
+        logger.error(f"Error applying palette with LAB mapping: {str(e)}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
         raise 

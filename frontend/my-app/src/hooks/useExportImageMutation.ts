@@ -61,14 +61,8 @@ export function useExportImageMutation(): ExportImageMutationResult {
   // Get the mutation result object which includes 'reset'
   const mutationResult = useMutation<Blob, Error, ExportImageParams>({
     mutationFn: async ({ imageIdentifier, format, size, svgParams, bucket, _timestamp }: ExportImageParams) => {
-      // Apply optimistic update based on format
-      // SVG conversions are more intensive, so we use the svg_conversion rate limit
-      if (format === 'svg') {
-        decrementLimit('svg_conversion');
-      } else {
-        // For PNG/JPG, use a new rate limit category
-        decrementLimit('image_export');
-      }
+      // Apply optimistic update for the unified export_action rate limit
+      decrementLimit('export_action');
       
       try {
         // Call the API to process the export

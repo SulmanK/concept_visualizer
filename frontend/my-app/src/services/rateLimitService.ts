@@ -15,7 +15,7 @@ export interface RateLimitsResponse {
     store_concept: RateLimitInfo;
     get_concepts: RateLimitInfo;
     sessions: RateLimitInfo;
-    svg_conversion: RateLimitInfo;
+    export_action: RateLimitInfo;
   };
   default_limits: string[];
 }
@@ -27,7 +27,7 @@ export type RateLimitCategory =
   | 'store_concept' 
   | 'get_concepts' 
   | 'sessions' 
-  | 'svg_conversion';
+  | 'export_action';
 
 interface RateLimitHeaderInfo {
   limit: number;
@@ -56,7 +56,7 @@ const categoryToEndpointMap: Record<string, string[]> = {
   refine_concept: ['/concepts/refine'],
   store_concept: ['/concepts/store'],
   get_concepts: ['/concepts/list'],
-  svg_conversion: ['/svg/convert'],
+  export_action: ['/export/process'],
   sessions: ['/sessions']
 };
 
@@ -74,7 +74,7 @@ export const mapEndpointToCategory = (endpoint: string): RateLimitCategory | nul
   if (path.includes('/concepts/refine')) return 'refine_concept';
   if (path.includes('/concepts/store')) return 'store_concept';
   if (path.includes('/concepts/list')) return 'get_concepts';
-  if (path.includes('/svg/convert')) return 'svg_conversion';
+  if (path.includes('/export/process')) return 'export_action';
   if (path.includes('/sessions')) return 'sessions';
   
   // Return null if no mapping found
@@ -187,7 +187,7 @@ export const extractRateLimitHeaders = (
     }
   } else {
     // Log if we expected but didn't get rate limit headers
-    if (endpoint.includes('/svg/convert')) {
+    if (endpoint.includes('/export/process')) {
       console.warn(`Expected rate limit headers from ${endpoint} but didn't receive them:`, { 
         hasLimit: !!limit,
         hasRemaining: !!remaining,
@@ -385,7 +385,7 @@ export const fetchRateLimits = async (forceRefresh: boolean = false): Promise<Ra
           reset_after: 0,
           error: 'Failed to fetch rate limits'
         },
-        svg_conversion: {
+        export_action: {
           limit: '20/hour',
           remaining: 20,
           reset_after: 0,

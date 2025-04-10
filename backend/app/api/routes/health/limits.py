@@ -164,7 +164,7 @@ async def _get_rate_limits(request: Request, force_refresh: bool = False, check_
             "generate_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
             "store_concept": {"limit": "10/month", "remaining": 10, "reset_after": get_reset_time("month")},
             "refine_concept": {"limit": "10/hour", "remaining": 10, "reset_after": get_reset_time("hour")},
-            "svg_conversion": {"limit": "20/hour", "remaining": 20, "reset_after": get_reset_time("hour")}
+            "export_action": {"limit": "50/hour", "remaining": 50, "reset_after": get_reset_time("hour")}
         }
         
         # Get only the requested rate limits
@@ -176,7 +176,7 @@ async def _get_rate_limits(request: Request, force_refresh: bool = False, check_
                 "generate_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "generate_concept", check_only),
                 "store_concept": get_limit_info(limiter, direct_redis_client, "10/month", cache_key, "store_concept", check_only),
                 "refine_concept": get_limit_info(limiter, direct_redis_client, "10/hour", cache_key, "refine_concept", check_only),
-                "svg_conversion": get_limit_info(limiter, direct_redis_client, "20/hour", cache_key, "svg_conversion", check_only),
+                "export_action": get_limit_info(limiter, direct_redis_client, "50/hour", cache_key, "export_action", check_only),
             },
             "default_limits": ["200/day", "50/hour", "10/minute"],
             "last_updated": now.isoformat(),  # Add timestamp to show when data was refreshed
@@ -237,9 +237,8 @@ def get_limit_info(limiter, direct_redis, limit_string, user_identifier, limit_t
             "store_concept": ["/concepts/store"],
             "get_concepts": ["/concepts/list"],
             "sessions": ["/sessions/sync"],  # Only sync endpoint seems relevant here
-            "svg_conversion": [
-                "/svg/convert-to-svg", 
-                "/svg/convert"
+            "export_action": [
+                "/export/process"
             ]
         }
         
