@@ -46,136 +46,76 @@ async def refine_concept(
     commons: CommonDependencies = Depends(),
 ):
     """
-    Refine an existing concept based on user feedback.
+    Refine an existing concept (background task).
     
-    This endpoint starts the refinement process in the background and immediately
-    returns a task ID. The client can check the status of the task using the task ID.
+    This endpoint creates a background task to refine an existing concept.
+    It returns a task ID that can be used to check the status of the task.
     
     Args:
-        request: The refinement request containing feedback and concept ID
-        background_tasks: FastAPI background tasks to run after response
+        request: Refinement request containing original image URL and refinement prompt
+        background_tasks: FastAPI background tasks
         response: FastAPI response object
-        req: The FastAPI request object for rate limiting
-        commons: Common dependencies including all services
-    
+        req: FastAPI request object
+        commons: Common dependencies
+        
     Returns:
-        TaskResponse: The task ID to check the status of the refinement
-    
+        TaskResponse: Task details for the created background task
+        
     Raises:
-        ServiceUnavailableError: If there was an error refining the concept
-        ValidationError: If the request validation fails
-        HTTPException: If user is not authenticated (401)
+        ValidationError: If the request is invalid
+        ResourceNotFoundError: If the original image does not exist
+        ServiceUnavailableError: If task creation fails
     """
-    # Check rate limit without incrementing
     try:
-        user_id = None
-        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
-            user_id = req.state.user.get("id")
-        
-        if user_id:
-            from app.core.limiter import check_rate_limit
-            
-            # Get full user_id format
-            full_user_id = f"user:{user_id}"
-            
-            # Only check the limit without incrementing
-            rate_status = check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/refine",
-                limit="10/hour",
-                check_only=True
-            )
-            
-            # Check if over the limit
-            if rate_status.get("remaining", 0) <= 0:
-                logger.info(f"Rate limit exceeded for /concepts/refine: {rate_status}")
-                raise HTTPException(
-                    status_code=429,
-                    detail=f"Rate limit exceeded. Maximum {rate_status.get('limit')} requests per hour"
-                )
-            
-            # Store in request.state for the middleware to use
-            req.state.limiter_info = {
-                "limit": rate_status.get("limit", 0),
-                "remaining": rate_status.get("remaining", 0),
-                "reset": rate_status.get("reset_at", 0)
-            }
-            
-            logger.debug(
-                f"Stored rate limit info for /concepts/refine: "
-                f"remaining={rate_status.get('remaining', 0)}"
-            )
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Error checking rate limit: {str(e)}")
-    
-    try:
-        # Validate inputs
-        if not request.refinement_prompt:
-            raise ValidationError(
-                detail="Refinement prompt is required",
-                field_errors={
-                    "refinement_prompt": ["Field is required"]
-                }
-            )
-        
-        if not request.original_image_url:
-            raise ValidationError(
-                detail="Original image URL is required",
-                field_errors={
-                    "original_image_url": ["Field is required"]
-                }
-            )
-        
-        # Get user ID from commons (which gets it from auth middleware)
+        # Get dependencies from commons
         user_id = commons.user_id
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Authentication required")
-            
-        # Check if user already has pending or processing tasks
-        user_tasks = await commons.task_service.get_tasks_by_user(
-            user_id=user_id,
-            status="pending",
-            limit=1
-        )
         
-        if user_tasks and len(user_tasks) > 0:
-            logger.info(f"User {mask_id(user_id)} already has a pending task: {mask_id(user_tasks[0]['id'])}")
-            return TaskResponse(
-                task_id=user_tasks[0]["id"],
-                status=user_tasks[0]["status"],
-                message="You already have a task in progress. Please wait for it to complete.",
-                type=user_tasks[0].get("type"),
-                created_at=user_tasks[0].get("created_at"),
-                metadata=user_tasks[0].get("metadata", {})
-            )
-            
-        user_tasks = await commons.task_service.get_tasks_by_user(
-            user_id=user_id,
-            status="processing",
-            limit=1
-        )
+        # Check rate limits for concept refinement
+        await apply_rate_limit(user_id, "/concepts/refine", "10/month",
+                        headers=response.headers, status_only=False, req=req)
         
-        if user_tasks and len(user_tasks) > 0:
-            logger.info(f"User {mask_id(user_id)} already has a processing task: {mask_id(user_tasks[0]['id'])}")
-            return TaskResponse(
-                task_id=user_tasks[0]["id"],
-                status=user_tasks[0]["status"],
-                message="You already have a task in progress. Please wait for it to complete.",
-                type=user_tasks[0].get("type"),
-                created_at=user_tasks[0].get("created_at"),
-                metadata=user_tasks[0].get("metadata", {})
-            )
-        
-        # Create a task record
+        # Create metadata for the task
         task_metadata = {
-            "refinement_prompt": request.refinement_prompt,
             "original_image_url": request.original_image_url,
-            "logo_description": request.logo_description,
-            "theme_description": request.theme_description
+            "refinement_prompt": request.refinement_prompt,
+            "logo_description": request.logo_description or "",
+            "theme_description": request.theme_description or ""
         }
+        
+        # Check for existing active tasks for this user
+        try:
+            # Look for any pending or processing tasks of type concept_refinement
+            active_tasks = await commons.task_service.get_tasks_by_user(
+                user_id=user_id,
+                status="pending"
+            )
+            active_tasks.extend(await commons.task_service.get_tasks_by_user(
+                user_id=user_id,
+                status="processing"
+            ))
+            
+            # Filter for concept_refinement tasks
+            active_refinement_tasks = [task for task in active_tasks if task.get("type") == "concept_refinement"]
+            
+            if active_refinement_tasks:
+                # Return the existing task instead of creating a new one
+                existing_task = active_refinement_tasks[0]
+                logger.info(f"Found existing active task {mask_id(existing_task['id'])} for user {mask_id(user_id)}")
+                
+                # Return HTTP 409 Conflict with details of the existing task
+                response.status_code = status.HTTP_409_CONFLICT
+                return TaskResponse(
+                    task_id=existing_task["id"],
+                    status=existing_task["status"],
+                    message="A concept refinement task is already in progress",
+                    type="concept_refinement",
+                    created_at=existing_task.get("created_at"),
+                    updated_at=existing_task.get("updated_at"),
+                    metadata=existing_task.get("metadata", task_metadata)
+                )
+        except Exception as e:
+            # Log the error but continue with creating a new task
+            logger.warning(f"Error checking for existing tasks: {str(e)}")
         
         try:
             task = await commons.task_service.create_task(
@@ -193,8 +133,8 @@ async def refine_concept(
                 task_id=task_id,
                 refinement_prompt=request.refinement_prompt,
                 original_image_url=request.original_image_url,
-                logo_description=request.logo_description or "the existing logo",
-                theme_description=request.theme_description or "the existing theme",
+                logo_description=request.logo_description or "",
+                theme_description=request.theme_description or "",
                 user_id=user_id,
                 image_service=commons.image_service,
                 concept_service=commons.concept_service,
@@ -214,18 +154,18 @@ async def refine_concept(
                 created_at=task.get("created_at"),
                 metadata=task_metadata
             )
-        
+            
         except TaskError as e:
             logger.error(f"Error creating task: {str(e)}")
             raise ServiceUnavailableError(detail=f"Error creating task: {str(e)}")
             
-    except (ValidationError, ServiceUnavailableError):
+    except (ValidationError, ResourceNotFoundError, ServiceUnavailableError):
         # Re-raise our custom errors directly
         raise
     except Exception as e:
-        logger.error(f"Error starting concept refinement: {str(e)}")
+        logger.error(f"Error refining concept: {str(e)}")
         logger.debug(f"Exception traceback: {traceback.format_exc()}")
-        raise ServiceUnavailableError(detail=f"Error starting concept refinement: {str(e)}")
+        raise ServiceUnavailableError(detail=f"Error refining concept: {str(e)}")
 
 
 async def refine_concept_background_task(
@@ -256,7 +196,7 @@ async def refine_concept_background_task(
         task_service: Service for updating task status
     """
     try:
-        # Update task status to processing
+        # Update task status to processing and update the timestamp
         await task_service.update_task_status(
             task_id=task_id,
             status="processing"
@@ -265,58 +205,100 @@ async def refine_concept_background_task(
         logger.info(f"Starting background refinement task {mask_id(task_id)} for user {mask_id(user_id)}")
         
         # Refine and store the image
-        refined_image_path, refined_image_url = await image_service.refine_and_store_image(
-            prompt=(
-                f"Refine this logo design: {logo_description}. Theme/style: {theme_description}. "
-                f"Refinement instructions: {refinement_prompt}."
-            ),
-            original_image_url=original_image_url,
-            user_id=user_id,
-            strength=0.7  # Control how much to preserve original image
-        )
-        
-        if not refined_image_path or not refined_image_url:
-            logger.error(f"Task {mask_id(task_id)}: Failed to refine or store image")
+        try:
+            refined_image_path, refined_image_url = await image_service.refine_and_store_image(
+                prompt=(
+                    f"Refine this logo design: {logo_description}. Theme/style: {theme_description}. "
+                    f"Refinement instructions: {refinement_prompt}."
+                ),
+                original_image_url=original_image_url,
+                user_id=user_id,
+                strength=0.7  # Control how much to preserve original image
+            )
+            
+            if not refined_image_path or not refined_image_url:
+                logger.error(f"Task {mask_id(task_id)}: Failed to refine or store image")
+                await task_service.update_task_status(
+                    task_id=task_id,
+                    status="failed",
+                    error_message="Failed to refine or store image: No image data returned from service"
+                )
+                return
+        except Exception as e:
+            error_message = f"Failed to refine or store image: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message="Failed to refine or store image"
+                error_message=error_message
             )
             return
-        
+            
         # Generate color palettes
-        raw_palettes = await concept_service.generate_color_palettes(
-            theme_description=f"{theme_description} {refinement_prompt}",
-            logo_description=logo_description
-        )
+        try:
+            raw_palettes = await concept_service.generate_color_palettes(
+                theme_description=f"{theme_description} {refinement_prompt}",
+                logo_description=logo_description
+            )
+        except Exception as e:
+            error_message = f"Failed to generate color palettes: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
+            await task_service.update_task_status(
+                task_id=task_id,
+                status="failed",
+                error_message=error_message
+            )
+            return
         
         # Apply color palettes to create variations and store in Supabase Storage
-        palette_variations = await image_service.create_palette_variations(
-            refined_image_path,
-            raw_palettes,
-            user_id
-        )
-        
-        # Store concept in Supabase database
-        stored_concept = await storage_service.store_concept({
-            "user_id": user_id,
-            "logo_description": f"{logo_description} - {refinement_prompt}",
-            "theme_description": theme_description,
-            "image_path": refined_image_path,
-            "image_url": refined_image_url,
-            "color_palettes": palette_variations,
-            "is_anonymous": True
-        })
-        
-        if not stored_concept:
-            logger.error(f"Task {mask_id(task_id)}: Failed to store refined concept")
+        try:
+            palette_variations = await image_service.create_palette_variations(
+                refined_image_path,
+                raw_palettes,
+                user_id
+            )
+        except Exception as e:
+            error_message = f"Failed to create color variations: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message="Failed to store refined concept"
+                error_message=error_message
             )
             return
-        
+            
+        # Store concept in Supabase database
+        try:
+            stored_concept = await storage_service.store_concept({
+                "user_id": user_id,
+                "logo_description": f"{logo_description} (Refined: {refinement_prompt})",
+                "theme_description": theme_description,
+                "image_path": refined_image_path,
+                "image_url": refined_image_url,
+                "color_palettes": palette_variations,
+                "is_anonymous": True,
+                "original_image_url": original_image_url,
+                "refinement_prompt": refinement_prompt
+            })
+            
+            if not stored_concept:
+                logger.error(f"Task {mask_id(task_id)}: Failed to store refined concept")
+                await task_service.update_task_status(
+                    task_id=task_id,
+                    status="failed",
+                    error_message="Failed to store refined concept: No concept ID returned from storage service"
+                )
+                return
+        except Exception as e:
+            error_message = f"Failed to store refined concept in database: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
+            await task_service.update_task_status(
+                task_id=task_id,
+                status="failed",
+                error_message=error_message
+            )
+            return
+            
         # Update task status to completed with result ID
         concept_id = stored_concept
         if isinstance(stored_concept, dict):
@@ -332,8 +314,8 @@ async def refine_concept_background_task(
         try:
             from app.core.limiter import apply_rate_limit
             
-            # Increment rate limit
-            await apply_rate_limit(user_id, "/concepts/refine", "10/hour")
+            # Increment rate limit for refinement endpoint
+            await apply_rate_limit(user_id, "/concepts/refine", "10/month")
             
             logger.info(f"Task {mask_id(task_id)}: Incremented rate limit after successful task completion")
         except Exception as rate_limit_error:
@@ -343,7 +325,8 @@ async def refine_concept_background_task(
         logger.info(f"Task {mask_id(task_id)}: Successfully completed concept refinement")
         
     except Exception as e:
-        logger.error(f"Task {mask_id(task_id)}: Error in background task: {str(e)}")
+        error_message = f"Unexpected error in concept refinement background task: {str(e)}"
+        logger.error(f"Task {mask_id(task_id)}: {error_message}")
         logger.debug(f"Task {mask_id(task_id)}: Exception traceback: {traceback.format_exc()}")
         
         # Update task status to failed
@@ -351,7 +334,7 @@ async def refine_concept_background_task(
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message=str(e)
+                error_message=error_message
             )
         except Exception as update_error:
             logger.error(f"Failed to update task status: {str(update_error)}") 

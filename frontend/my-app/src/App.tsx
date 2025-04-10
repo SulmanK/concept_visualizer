@@ -8,6 +8,8 @@ import { ToastProvider } from './hooks/useToast';
 import { RateLimitProvider } from './contexts/RateLimitContext';
 import { ErrorBoundary, OfflineStatus } from './components/ui';
 import ApiToastListener from './components/ui/ApiToastListener';
+import { TaskProvider } from './contexts/TaskContext';
+import TaskStatusBar from './components/TaskStatusBar';
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() => import('./features/landing').then(module => ({ default: module.LandingPage })));
@@ -182,7 +184,11 @@ export default function App() {
                   showConnectionInfo={true}
                 />
                 
-                <AppRoutes />
+                {/* TaskProvider needs to be inside Router but wrap both AppRoutes and TaskStatusBar */}
+                <TaskProvider>
+                  <AppRoutes />
+                  <TaskStatusBar />
+                </TaskProvider>
               </Router>
             </RateLimitProvider>
           </AuthProvider>
@@ -190,29 +196,25 @@ export default function App() {
       </ToastProvider>
       
       {/* Debugging overlay - only shown in development */}
-      {process.env.NODE_ENV === 'development' && debugInfo && (
-        <div 
-          style={{
-            position: 'fixed',
-            bottom: '10px',
-            right: '10px',
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '5px 10px',
-            borderRadius: '5px',
-            fontSize: '12px',
-            zIndex: 9999,
-            cursor: 'pointer'
-          }}
-          onClick={() => console.log('Debug info:', debugInfo)}
-        >
-          ENV: {debugInfo.environment} | 
-          API: {debugInfo.apiBaseUrl ? '✅' : '❌'}
+      {debugInfo && process.env.NODE_ENV === 'development' && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          right: 0,
+          background: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          padding: '10px',
+          fontSize: '12px',
+          zIndex: 9999,
+          maxWidth: '300px',
+        }}>
+          <strong>Debug Info:</strong>
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
       )}
       
-      {/* Add React Query DevTools for better debugging */}
-      <ReactQueryDevtools initialIsOpen={false} position="left" />
+      {/* React Query Devtools - only in development */}
+      {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
     </div>
   );
 } 

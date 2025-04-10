@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ColorPalette } from '../../../../components/ui/ColorPalette';
 import { ConceptData } from '../../../../services/supabaseClient';
@@ -71,6 +71,32 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(-1); // -1 means original image
+  
+  // Debug logging for concept variations
+  useEffect(() => {
+    if (concept.color_variations && concept.color_variations.length > 0) {
+      console.log('ConceptCard - Available variations:', 
+        concept.color_variations.map((v, i) => ({
+          index: i,
+          id: v.id,
+          name: v.palette_name,
+          firstColor: v.colors[0],
+          hasImage: !!v.image_url
+        }))
+      );
+    }
+    
+    // Add debug logging for the images array too
+    const baseImageUrl = concept.image_url || concept.base_image_url;
+    console.log('ConceptCard - Base image URL:', baseImageUrl);
+    
+    // Log all variation image URLs
+    if (concept.color_variations) {
+      console.log('ConceptCard - Variation image URLs:', 
+        concept.color_variations.map(v => v.image_url).filter(Boolean)
+      );
+    }
+  }, [concept.color_variations, concept.image_url, concept.base_image_url]);
   
   // Get current color variation or null if original is selected
   const currentVariation = selectedVariationIndex >= 0 && concept.color_variations && concept.color_variations.length > 0 
@@ -166,7 +192,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   };
   
   // Get the current image URL based on selection
-  const currentImageUrl = currentVariation?.image_url || concept.image_url || concept.base_image_url;
+  // If we're showing the original (-1), use the concept's original image URL
+  // Otherwise get the image URL from the selected variation
+  let currentImageUrl = concept.image_url || concept.base_image_url;
+  
+  if (selectedVariationIndex >= 0 && 
+      concept.color_variations && 
+      selectedVariationIndex < concept.color_variations.length) {
+    // Get the variation at the exact index (no need to adjust for extra original images)
+    const variation = concept.color_variations[selectedVariationIndex];
+    if (variation && variation.image_url) {
+      currentImageUrl = variation.image_url;
+      console.log(`ConceptCard: Using variation ${selectedVariationIndex} image:`, currentImageUrl);
+    } else {
+      console.log(`ConceptCard: Variation ${selectedVariationIndex} has no image, using original:`, currentImageUrl);
+    }
+  } else {
+    console.log(`ConceptCard: Using original image (index ${selectedVariationIndex}):`, currentImageUrl);
+  }
   
   // Use a consistent neutral background color
   const neutralBackgroundColor = '#f0f0f5';

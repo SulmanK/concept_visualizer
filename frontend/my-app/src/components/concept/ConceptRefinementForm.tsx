@@ -5,6 +5,7 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { FormStatus } from '../../types';
 import { Spinner } from '../ui';
+import { useTaskContext } from '../../contexts/TaskContext';
 
 export interface ConceptRefinementFormProps {
   /**
@@ -100,6 +101,9 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   const [preserveAspects, setPreserveAspects] = useState<string[]>(defaultPreserveAspects);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
   
+  // Get global task status
+  const { hasActiveTask, isTaskPending, isTaskProcessing } = useTaskContext();
+  
   // Update preserve aspects when defaultPreserveAspects changes
   useEffect(() => {
     setPreserveAspects(defaultPreserveAspects);
@@ -116,7 +120,10 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
-  const formIsDisabled = isSubmitting || isSuccess || isProcessing;
+  const showProcessing = isProcessing || isTaskPending || isTaskProcessing;
+  
+  // Check if any task is in progress
+  const isTaskInProgress = hasActiveTask || isSubmitting || isSuccess || isProcessing;
   
   const validateForm = (): boolean => {
     if (!refinementPrompt.trim()) {
@@ -164,7 +171,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
         </h2>
       }
     >
-      {isProcessing ? (
+      {showProcessing ? (
         <div className="py-8 flex flex-col items-center text-center">
           <Spinner size="lg" className="mb-4" />
           <p className="text-indigo-700 font-medium">{processingMessage}</p>
@@ -211,7 +218,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
               onChange={(e) => setRefinementPrompt(e.target.value)}
               error={validationError}
               fullWidth
-              disabled={formIsDisabled}
+              disabled={isTaskInProgress}
               helperText={isColorVariation 
                 ? "Describe what you want to change while keeping the color scheme" 
                 : "Be specific about what you want to change"
@@ -228,7 +235,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
               value={logoDescription}
               onChange={(e) => setLogoDescription(e.target.value)}
               fullWidth
-              disabled={formIsDisabled}
+              disabled={isTaskInProgress}
               helperText="Leave empty to keep original description"
               rows={2}
             />
@@ -242,7 +249,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
               value={themeDescription}
               onChange={(e) => setThemeDescription(e.target.value)}
               fullWidth
-              disabled={formIsDisabled}
+              disabled={isTaskInProgress}
               helperText="Leave empty to keep original description"
               rows={2}
             />
@@ -250,52 +257,64 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           
           {/* Preserve aspects checkboxes */}
           <div>
-            <p className="block text-sm font-medium text-indigo-700 mb-2">Preserve Aspects (Optional)</p>
+            <p className="text-sm font-medium text-gray-700 mb-2">Preserve from Original</p>
             <div className="flex flex-wrap gap-3">
-              {aspectOptions.map(aspect => (
+              {aspectOptions.map((option) => (
                 <label 
-                  key={aspect.id}
-                  className="flex items-center space-x-2 cursor-pointer"
+                  key={option.id}
+                  className={`
+                    inline-flex items-center px-3 py-1.5 rounded-full text-sm
+                    ${preserveAspects.includes(option.id)
+                      ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                      : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }
+                    border cursor-pointer transition-colors
+                    ${isTaskInProgress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50'}
+                  `}
                 >
                   <input
                     type="checkbox"
-                    checked={preserveAspects.includes(aspect.id)}
-                    onChange={() => toggleAspect(aspect.id)}
-                    disabled={formIsDisabled || (isColorVariation && aspect.id === 'color_scheme')}
-                    className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                    className="sr-only"
+                    checked={preserveAspects.includes(option.id)}
+                    onChange={() => !isTaskInProgress && toggleAspect(option.id)}
+                    disabled={isTaskInProgress}
                   />
-                  <span className="text-sm text-indigo-700">{aspect.label}</span>
+                  {option.label}
                 </label>
               ))}
             </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Select elements you want to keep from the original concept
+            </p>
           </div>
           
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-end space-x-4 pt-4">
+          {/* Form buttons */}
+          <div className="flex justify-between pt-2">
             {onCancel && (
               <Button 
-                variant="ghost" 
+                type="button" 
+                variant="secondary" 
                 onClick={onCancel}
-                disabled={formIsDisabled}
+                disabled={isTaskInProgress}
               >
                 Cancel
               </Button>
             )}
+            
             <Button 
               type="submit" 
               variant="primary"
-              disabled={formIsDisabled}
+              disabled={isTaskInProgress}
             >
-              {isSubmitting ? 'Submitting...' : 'Refine Concept'}
+              {isSubmitting ? 'Processing...' : 
+               hasActiveTask ? 'Task already in progress...' : 
+               'Refine Concept'}
             </Button>
           </div>
         </form>
       )}
     </Card>
   );
-}; 
+};
+
+export default ConceptRefinementForm; 

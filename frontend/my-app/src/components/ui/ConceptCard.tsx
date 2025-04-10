@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from './Card';
 import { getSignedImageUrl } from '../../services/supabaseClient';
 
@@ -159,6 +159,37 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
 }) => {
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
+
+  // Add debug useEffect to track variation changes
+  useEffect(() => {
+    console.log(`ConceptCard ${title} - Selected variation changed to: ${selectedVariationIndex}`);
+    console.log(`ConceptCard ${title} - Available images:`, images);
+    
+    // If we have images, log which one would be selected
+    if (images && images.length > 0) {
+      // Calculate the actual image index based on selection and includeOriginal flag
+      let actualImageIndex;
+      
+      if (includeOriginal) {
+        if (selectedVariationIndex === 0) {
+          actualImageIndex = 0; // Original image
+        } else {
+          // For non-original selections, adjust the index to get the correct image
+          // If includeOriginal is true, colorVariation index 0 maps to image index 1, 
+          // colorVariation index 1 maps to image index 2, etc.
+          actualImageIndex = selectedVariationIndex;
+        }
+      } else {
+        // If we don't include original, the mapping is direct
+        actualImageIndex = selectedVariationIndex;
+      }
+      
+      if (actualImageIndex >= 0 && actualImageIndex < images.length) {
+        console.log(`ConceptCard ${title} - Selected image at index ${actualImageIndex}:`, 
+                   images[actualImageIndex].substring(0, 30) + '...');
+      }
+    }
+  }, [selectedVariationIndex, images, title, includeOriginal]);
   
   // Log props for debugging
   console.log(`ConceptCard ${title} - Props:`, {
@@ -170,12 +201,20 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   
   // Ensure we have at least one variation
   const hasVariations = colorVariations && colorVariations.length > 0;
-  // Adjust the index if we have an original image (index 0)
-  const adjustedIndex = includeOriginal && selectedVariationIndex > 0 
-    ? selectedVariationIndex - 1 
-    : selectedVariationIndex;
-  const colors = hasVariations && adjustedIndex >= 0 && adjustedIndex < colorVariations.length
-    ? colorVariations[adjustedIndex]
+  
+  // Get the color array for the currently selected variation
+  // Adjust index if we're including original (where index 0 is original, 1+ are variations)
+  let colorIndex;
+  if (includeOriginal && selectedVariationIndex > 0) {
+    colorIndex = selectedVariationIndex - 1; // Adjust index for colorVariations array
+  } else if (!includeOriginal) {
+    colorIndex = selectedVariationIndex; // Direct mapping
+  } else {
+    colorIndex = 0; // Default to first variation if original is selected
+  }
+  
+  const colors = hasVariations && colorIndex >= 0 && colorIndex < colorVariations.length
+    ? colorVariations[colorIndex]
     : [];
   
   // Get the main color from the current variation
@@ -198,6 +237,13 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     // Debug what images are available
     console.log(`ConceptCard: ${title} - Selected variation: ${selectedVariationIndex}`);
     console.log(`ConceptCard: ${title} - Has images array: ${images ? 'yes' : 'no'}, length: ${images?.length || 0}`);
+    console.log(`ConceptCard: ${title} - includeOriginal: ${includeOriginal}`);
+    
+    // Log each image URL for debugging
+    if (images && images.length > 0) {
+      console.log(`ConceptCard: ${title} - Available images:`, 
+        images.map((url, i) => `[${i}]: ${typeof url === 'string' ? url.substring(0, 30) + '...' : 'not a string'}`));
+    }
     
     // If no images are available, return undefined
     if (!images || images.length === 0) {
@@ -205,20 +251,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       return undefined;
     }
     
-    // Check if the selected index is valid
-    if (selectedVariationIndex < 0 || selectedVariationIndex >= images.length) {
-      console.log(`ConceptCard: ${title} - Invalid index ${selectedVariationIndex}, using first image`);
+    // FIX: Calculate the actual image index based on selected variation index
+    // Simplified mapping to ensure consistent behavior
+    let imageIndex = selectedVariationIndex;
+    
+    // Safety check to make sure index is valid
+    if (imageIndex < 0 || imageIndex >= images.length) {
+      console.log(`ConceptCard: ${title} - Invalid index ${imageIndex}, using first image`);
       return processImageUrl(images[0]);
     }
     
     // Get and process the URL for the selected variation
-    const rawUrl = images[selectedVariationIndex];
+    const rawUrl = images[imageIndex];
     
     // Check if rawUrl is a string before calling substring
     if (typeof rawUrl === 'string') {
-      console.log(`ConceptCard: ${title} - Raw URL for index ${selectedVariationIndex}: ${rawUrl.substring(0, 30)}${rawUrl.length > 30 ? '...' : ''}`);
+      console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex}: ${rawUrl.substring(0, 30)}${rawUrl.length > 30 ? '...' : ''}`);
     } else {
-      console.log(`ConceptCard: ${title} - Raw URL for index ${selectedVariationIndex} is not a string:`, rawUrl);
+      console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex} is not a string:`, rawUrl);
     }
     
     return processImageUrl(rawUrl);

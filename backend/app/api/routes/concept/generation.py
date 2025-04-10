@@ -217,152 +217,77 @@ async def generate_concept_with_palettes(
     commons: CommonDependencies = Depends(),
 ):
     """
-    Generate a new visual concept with multiple color palette variations,
-    using a single base image and OpenCV color transformation.
+    Generate concept with color palettes (background task).
     
-    This endpoint starts the generation process in the background and immediately 
-    returns a task ID. The client can check the status of the task using the task ID.
+    This endpoint creates a background task to generate a concept with color palettes.
+    It returns a task ID that can be used to check the status of the task.
     
     Args:
-        request: The prompt request containing logo and theme descriptions
-        background_tasks: FastAPI background tasks to run after response
+        request: Prompt request containing logo and theme descriptions
+        background_tasks: FastAPI background tasks
         response: FastAPI response object
-        req: The FastAPI request object for rate limiting
-        num_palettes: Number of distinct palette variations to generate (default: 7)
-        commons: Common dependencies including all services
-    
+        req: FastAPI request object
+        num_palettes: Number of color palettes to generate
+        commons: Common dependencies
+        
     Returns:
-        TaskResponse: The task ID to check the status of the generation
-    
+        TaskResponse: Task details for the created background task
+        
     Raises:
-        ServiceUnavailableError: If there was an error during generation
-        ValidationError: If the request validation fails
-        HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
+        ValidationError: If the request is invalid
+        ServiceUnavailableError: If task creation fails
     """
-    # Check rate limits without incrementing the counter (check_only=True)
-    # The actual increment will happen when the task completes successfully
     try:
-        user_id = None
-        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
-            user_id = req.state.user.get("id")
-        
-        if user_id:
-            from app.core.limiter import check_rate_limit
-            
-            # Get full user_id format
-            full_user_id = f"user:{user_id}"
-            
-            # Only check the limits without incrementing counters
-            generation_status = check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/generate-with-palettes",
-                limit="10/month",
-                check_only=True
-            )
-            
-            storage_status = check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/store",
-                limit="10/month",
-                check_only=True
-            )
-            
-            # Use the status with fewer remaining calls to determine if we're over the limit
-            if generation_status.get("remaining", 0) <= 0 or storage_status.get("remaining", 0) <= 0:
-                # We're over the limit for one of the endpoints, raise 429
-                rate_limit_info = storage_status if storage_status.get("remaining", 0) <= generation_status.get("remaining", 0) else generation_status
-                
-                # Determine which endpoint exceeded the limit
-                exceeded_endpoint = "/concepts/store" if storage_status.get("remaining", 0) <= generation_status.get("remaining", 0) else "/concepts/generate-with-palettes"
-                
-                logger.info(f"Rate limit exceeded for {exceeded_endpoint}: {rate_limit_info}")
-                raise HTTPException(
-                    status_code=429,
-                    detail=f"Rate limit exceeded. Maximum {rate_limit_info.get('limit')} requests per month"
-                )
-            
-            # Use the lower of the two limits for the headers
-            if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
-                limit_status = generation_status
-                endpoint = "/concepts/generate-with-palettes"
-            else:
-                limit_status = storage_status
-                endpoint = "/concepts/store"
-            
-            # Store in request.state for the middleware to use
-            req.state.limiter_info = {
-                "limit": limit_status.get("limit", 0),
-                "remaining": limit_status.get("remaining", 0),
-                "reset": limit_status.get("reset_at", 0)
-            }
-            
-            logger.debug(
-                f"Stored rate limit info for {endpoint}: "
-                f"remaining={limit_status.get('remaining', 0)}"
-            )
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
-    except Exception as e:
-        logger.error(f"Error checking rate limit: {str(e)}")
-    
-    try:
-        # Validate inputs
-        if not request.logo_description or not request.theme_description:
-            raise ValidationError(
-                detail="Logo and theme descriptions are required",
-                field_errors={
-                    "logo_description": ["Field is required"] if not request.logo_description else [],
-                    "theme_description": ["Field is required"] if not request.theme_description else []
-                }
-            )
-        
-        # Get user ID from commons (which gets it from auth middleware)
+        # Get dependencies from commons
         user_id = commons.user_id
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Authentication required")
-            
-        # Check if user already has pending or processing tasks
-        user_tasks = await commons.task_service.get_tasks_by_user(
-            user_id=user_id,
-            status="pending",
-            limit=1
-        )
         
-        if user_tasks and len(user_tasks) > 0:
-            logger.info(f"User {mask_id(user_id)} already has a pending task: {mask_id(user_tasks[0]['id'])}")
-            return TaskResponse(
-                task_id=user_tasks[0]["id"],
-                status=user_tasks[0]["status"],
-                message="You already have a task in progress. Please wait for it to complete.",
-                type=user_tasks[0].get("type"),
-                created_at=user_tasks[0].get("created_at"),
-                metadata=user_tasks[0].get("metadata", {})
-            )
-            
-        user_tasks = await commons.task_service.get_tasks_by_user(
-            user_id=user_id,
-            status="processing",
-            limit=1
-        )
+        # Check rate limits for concept generation
+        await apply_rate_limit(req, "/concepts/generate-with-palettes", "10/month")
         
-        if user_tasks and len(user_tasks) > 0:
-            logger.info(f"User {mask_id(user_id)} already has a processing task: {mask_id(user_tasks[0]['id'])}")
-            return TaskResponse(
-                task_id=user_tasks[0]["id"],
-                status=user_tasks[0]["status"],
-                message="You already have a task in progress. Please wait for it to complete.",
-                type=user_tasks[0].get("type"),
-                created_at=user_tasks[0].get("created_at"),
-                metadata=user_tasks[0].get("metadata", {})
-            )
+        # Check rate limits for concept storage
+        await apply_rate_limit(req, "/concepts/store", "10/month")
         
-        # Create a task record
+        # Create metadata for the task
         task_metadata = {
             "logo_description": request.logo_description,
             "theme_description": request.theme_description,
             "num_palettes": num_palettes
         }
+        
+        # Check for existing active tasks for this user
+        try:
+            # Look for any pending or processing tasks of type concept_generation
+            active_tasks = await commons.task_service.get_tasks_by_user(
+                user_id=user_id,
+                status="pending"
+            )
+            active_tasks.extend(await commons.task_service.get_tasks_by_user(
+                user_id=user_id,
+                status="processing"
+            ))
+            
+            # Filter for concept_generation tasks
+            active_generation_tasks = [task for task in active_tasks if task.get("type") == "concept_generation"]
+            
+            if active_generation_tasks:
+                # Return the existing task instead of creating a new one
+                existing_task = active_generation_tasks[0]
+                logger.info(f"Found existing active task {mask_id(existing_task['id'])} for user {mask_id(user_id)}")
+                
+                # Return HTTP 409 Conflict with details of the existing task
+                response.status_code = status.HTTP_409_CONFLICT
+                return TaskResponse(
+                    task_id=existing_task["id"],
+                    status=existing_task["status"],
+                    message="A concept generation task is already in progress",
+                    type="concept_generation",
+                    created_at=existing_task.get("created_at"),
+                    updated_at=existing_task.get("updated_at"),
+                    metadata=existing_task.get("metadata", task_metadata)
+                )
+        except Exception as e:
+            # Log the error but continue with creating a new task
+            logger.warning(f"Error checking for existing tasks: {str(e)}")
         
         try:
             task = await commons.task_service.create_task(
@@ -409,9 +334,9 @@ async def generate_concept_with_palettes(
         # Re-raise our custom errors directly
         raise
     except Exception as e:
-        logger.error(f"Error starting concept generation: {str(e)}")
+        logger.error(f"Error generating concept: {str(e)}")
         logger.debug(f"Exception traceback: {traceback.format_exc()}")
-        raise ServiceUnavailableError(detail=f"Error starting concept generation: {str(e)}")
+        raise ServiceUnavailableError(detail=f"Error generating concept: {str(e)}")
 
 
 async def generate_concept_background_task(
@@ -440,7 +365,7 @@ async def generate_concept_background_task(
         task_service: Service for updating task status
     """
     try:
-        # Update task status to processing
+        # Update task status to processing and update the timestamp
         await task_service.update_task_status(
             task_id=task_id,
             status="processing"
@@ -449,51 +374,91 @@ async def generate_concept_background_task(
         logger.info(f"Starting background generation task {mask_id(task_id)} for user {mask_id(user_id)}")
         
         # Generate base image and store it in Supabase Storage
-        image_path, image_url = await image_service.generate_and_store_image(
-            logo_description,
-            user_id
-        )
-        
-        if not image_path or not image_url:
-            logger.error(f"Task {mask_id(task_id)}: Failed to generate or store image")
+        try:
+            image_path, image_url = await image_service.generate_and_store_image(
+                logo_description,
+                user_id
+            )
+            
+            if not image_path or not image_url:
+                logger.error(f"Task {mask_id(task_id)}: Failed to generate or store image")
+                await task_service.update_task_status(
+                    task_id=task_id,
+                    status="failed",
+                    error_message="Failed to generate or store base image: No image data returned from service"
+                )
+                return
+        except Exception as e:
+            error_message = f"Failed to generate or store base image: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message="Failed to generate or store image"
+                error_message=error_message
             )
             return
         
         # Generate color palettes
-        raw_palettes = await concept_service.generate_color_palettes(
-            theme_description=theme_description,
-            logo_description=logo_description,
-            num_palettes=num_palettes
-        )
-        
-        # Apply color palettes to create variations and store in Supabase Storage
-        palette_variations = await image_service.create_palette_variations(
-            image_path,
-            raw_palettes,
-            user_id
-        )
-        
-        # Store concept in Supabase database
-        stored_concept = await storage_service.store_concept({
-            "user_id": user_id,
-            "logo_description": logo_description,
-            "theme_description": theme_description,
-            "image_path": image_path,
-            "image_url": image_url,
-            "color_palettes": palette_variations,
-            "is_anonymous": True
-        })
-        
-        if not stored_concept:
-            logger.error(f"Task {mask_id(task_id)}: Failed to store concept")
+        try:
+            raw_palettes = await concept_service.generate_color_palettes(
+                theme_description=theme_description,
+                logo_description=logo_description,
+                num_palettes=num_palettes
+            )
+        except Exception as e:
+            error_message = f"Failed to generate color palettes: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message="Failed to store concept"
+                error_message=error_message
+            )
+            return
+        
+        # Apply color palettes to create variations and store in Supabase Storage
+        try:
+            palette_variations = await image_service.create_palette_variations(
+                image_path,
+                raw_palettes,
+                user_id
+            )
+        except Exception as e:
+            error_message = f"Failed to create color variations: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
+            await task_service.update_task_status(
+                task_id=task_id,
+                status="failed",
+                error_message=error_message
+            )
+            return
+        
+        # Store concept in Supabase database
+        try:
+            stored_concept = await storage_service.store_concept({
+                "user_id": user_id,
+                "logo_description": logo_description,
+                "theme_description": theme_description,
+                "image_path": image_path,
+                "image_url": image_url,
+                "color_palettes": palette_variations,
+                "is_anonymous": True
+            })
+            
+            if not stored_concept:
+                logger.error(f"Task {mask_id(task_id)}: Failed to store concept")
+                await task_service.update_task_status(
+                    task_id=task_id,
+                    status="failed",
+                    error_message="Failed to store concept: No concept ID returned from storage service"
+                )
+                return
+        except Exception as e:
+            error_message = f"Failed to store concept in database: {str(e)}"
+            logger.error(f"Task {mask_id(task_id)}: {error_message}")
+            await task_service.update_task_status(
+                task_id=task_id,
+                status="failed",
+                error_message=error_message
             )
             return
         
@@ -510,11 +475,26 @@ async def generate_concept_background_task(
         
         # Now that the task has successfully completed, increment the rate limits
         try:
-            from app.core.limiter import apply_rate_limit
+            # Use check_rate_limit directly, which doesn't require a full request object
+            from app.core.limiter import check_rate_limit
             
-            # Increment rate limits for both endpoints
-            await apply_rate_limit(user_id, "/concepts/generate-with-palettes", "10/month")
-            await apply_rate_limit(user_id, "/concepts/store", "10/month")
+            # Format user_id for the rate limit checks
+            full_user_id = f"user:{user_id}"
+            
+            # Increment rate limits for both endpoints (use check_only=False to actually increment)
+            check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/generate-with-palettes",
+                limit="10/month",
+                check_only=False
+            )
+            
+            check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/store",
+                limit="10/month",
+                check_only=False
+            )
             
             logger.info(f"Task {mask_id(task_id)}: Incremented rate limits after successful task completion")
         except Exception as rate_limit_error:
@@ -524,7 +504,8 @@ async def generate_concept_background_task(
         logger.info(f"Task {mask_id(task_id)}: Successfully completed concept generation")
         
     except Exception as e:
-        logger.error(f"Task {mask_id(task_id)}: Error in background task: {str(e)}")
+        error_message = f"Unexpected error in concept generation background task: {str(e)}"
+        logger.error(f"Task {mask_id(task_id)}: {error_message}")
         logger.debug(f"Task {mask_id(task_id)}: Exception traceback: {traceback.format_exc()}")
         
         # Update task status to failed
@@ -532,7 +513,7 @@ async def generate_concept_background_task(
             await task_service.update_task_status(
                 task_id=task_id,
                 status="failed",
-                error_message=str(e)
+                error_message=error_message
             )
         except Exception as update_error:
             logger.error(f"Failed to update task status: {str(update_error)}")
