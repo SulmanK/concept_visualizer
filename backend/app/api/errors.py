@@ -399,8 +399,7 @@ async def application_error_handler(request: Request, exc: ApplicationError) -> 
     )
 
 
-@app.exception_handler(TaskNotFoundError)
-async def task_not_found_handler(request: Request, exc: TaskNotFoundError):
+async def task_not_found_handler(request: Request, exc: TaskNotFoundError) -> JSONResponse:
     """
     Handle TaskNotFoundError by returning 404 Not Found.
     
@@ -438,4 +437,7 @@ def configure_error_handlers(app):
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     
     # Register handler for request validation errors
-    app.add_exception_handler(RequestValidationError, validation_exception_handler) 
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    
+    # Register handler for TaskNotFoundError
+    app.add_exception_handler(TaskNotFoundError, task_not_found_handler) 

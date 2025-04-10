@@ -332,7 +332,7 @@ async def generate_concept_with_palettes(
                 generate_concept_background_task,
                 task_id=task_id,
                 logo_description=request.logo_description,
-                theme_description=request.theme_description,
+            theme_description=request.theme_description,
                 user_id=user_id,
                 num_palettes=num_palettes,
                 image_service=commons.image_service,
