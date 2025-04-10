@@ -322,10 +322,10 @@ export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette
  * @param bucketType Type of bucket ('concept' or 'palette')
  * @returns URL for the image with access token
  */
-export const getSignedImageUrl = (path: string, bucketType: 'concept' | 'palette'): string => {
-  // If path is empty or null, use a fallback image
-  if (!path) {
-    console.warn(`No path provided to getSignedImageUrl, using fallback`);
+export const getSignedImageUrl = (path: string | null | undefined, bucketType: 'concept' | 'palette'): string => {
+  // If path is empty, null, or not a string, use a fallback image
+  if (!path || typeof path !== 'string') {
+    console.warn(`Invalid path provided to getSignedImageUrl (${typeof path}), using fallback`);
     return '/vite.svg'; // Use the Vite logo as a fallback
   }
   

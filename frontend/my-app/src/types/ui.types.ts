@@ -20,4 +20,23 @@ export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel';
 /**
  * Type for form submission status
  */
-export type FormStatus = 'idle' | 'submitting' | 'success' | 'error'; 
+export type FormStatus = 'idle' | 'submitting' | 'success' | 'error';
+
+/**
+ * Concept data type
+ */
+export interface ConceptData {
+  id: string;
+  title: string;
+  description: string;
+  initials: string;
+  colorVariations: string[][];
+  images: {
+    url: string;
+    colors: string[];
+  }[];
+  onEdit: (conceptId: string, variationIndex?: number) => void;
+  onViewDetails: (conceptId: string, variationIndex?: number) => void;
+  onColorSelect: (color: string) => void;
+  selectedColor: string | null;
+} 

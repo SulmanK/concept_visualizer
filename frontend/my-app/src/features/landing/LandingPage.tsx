@@ -11,6 +11,7 @@ import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
 import { ConceptData } from '../../services/supabaseClient';
 import { useQueryClient } from '@tanstack/react-query';
+import { TaskResponse } from '../../types';
 
 /**
  * Main landing page content component
@@ -22,9 +23,9 @@ const LandingPageContent: React.FC = () => {
   // Use React Query mutation hook for generation
   const { 
     mutate: generateConceptMutation,
-    data: result,
-    isPending,
-    isSuccess,
+    data: taskData,
+    isPending: isSubmitting,
+    isSuccess: isTaskStarted,
     isError,
     error,
     reset: resetGeneration
@@ -49,20 +50,31 @@ const LandingPageContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // The event listener for CONCEPT_UPDATED has been removed
-  // React Query's automatic cache invalidation is now used instead
-  // This is triggered in the mutation hooks (useGenerateConceptMutation, etc.)
-  
-  // Map mutation state to form status
+  // Map task and mutation state to form status
   const getFormStatus = () => {
-    if (isPending) return 'submitting';
-    if (isSuccess) return 'success';
+    if (isSubmitting) return 'submitting';
+    if (taskData) {
+      switch (taskData.status) {
+        case 'pending':
+        case 'processing':
+          return 'processing';
+        case 'completed':
+          return 'success';
+        case 'failed':
+          return 'error';
+        default:
+          return 'idle';
+      }
+    }
     if (isError) return 'error';
     return 'idle';
   };
   
-  // Extract error message from the error object
+  // Extract error message from the error object or task
   const getErrorMessage = (): string | null => {
+    if (taskData?.status === 'failed') {
+      return taskData.error_message || 'Task failed';
+    }
     if (!error) return null;
     return error instanceof Error ? error.message : String(error);
   };
@@ -104,7 +116,7 @@ const LandingPageContent: React.FC = () => {
   // Make sure generation can only be triggered when not already pending
   const handleGenerateConcept = useCallback((logoDescription: string, themeDescription: string) => {
     // Safety check to prevent multiple submissions
-    if (isPending) {
+    if (isSubmitting || (taskData?.status === 'pending' || taskData?.status === 'processing')) {
       console.warn('[LandingPage] Generation already in progress, ignoring duplicate submission');
       return;
     }
@@ -125,7 +137,7 @@ const LandingPageContent: React.FC = () => {
     });
     
     setSelectedColor(null);
-  }, [isPending, resetGeneration, generateConceptMutation]);
+  }, [isSubmitting, taskData, resetGeneration, generateConceptMutation]);
   
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
@@ -249,146 +261,78 @@ const LandingPageContent: React.FC = () => {
           image_url: variation.image_url,
           image_path: variation.image_path
         });
+        
+        // Return the URL string directly, not an object
         return variation.image_url;
       }) || [];
       
-      // Include original image for proper selection and display
-      // Update to use the new field name with fallback to the old field name
-      const originalImage = concept.image_url || concept.base_image_url || '';
+      // Add the original image as the first item if it exists
+      if (concept.image_url) {
+        images.unshift(concept.image_url);
+      }
       
       return {
         id: concept.id,
-        title: concept.logo_description.length > 20 
-          ? `${concept.logo_description.substring(0, 20)}...` 
-          : concept.logo_description,
-        description: concept.theme_description.length > 40
-          ? `${concept.theme_description.substring(0, 40)}...`
-          : concept.theme_description,
-        colorVariations,
-        gradient: { from: 'blue-400', to: 'indigo-500' },
+        title: concept.logo_description,
+        description: concept.theme_description,
         initials,
-        images,
-        originalImage // Pass the original image separately
+        colorVariations,
+        images, // Now this is an array of strings as expected by ConceptCard
+        originalImage: concept.image_url, // Pass the original image separately
+        image_url: concept.image_url, // For sample concepts
+        gradient: { from: 'blue-400', to: 'indigo-500' }, // Add default gradient
+        onEdit: handleEdit,
+        onViewDetails: handleViewDetails,
+        onColorSelect: handleColorSelect,
+        selectedColor
       };
     });
   };
   
-  // Format the concepts for display
-  const formattedConcepts = formatConceptsForDisplay();
-  
-  // Sample concepts to use when no real concepts are available
-  const sampleConcepts = [
-    {
-      id: 'sample-tc',
-      title: 'Tech Company',
-      description: 'Modern minimalist tech logo with abstract elements',
-      colorVariations: [
-        ['#4F46E5', '#60A5FA', '#1E293B'], 
-        ['#1E40AF', '#93C5FD', '#0F172A']
-      ],
-      gradient: { from: 'blue-400', to: 'indigo-500' },
-      initials: 'TC',
-      // Don't use the images array for samples
-      images: [],
-      // Use simple path directly without going through Supabase storage
-      image_url: '/samples/sample-1.png'
-    },
-    {
-      id: 'sample-fs',
-      title: 'Fashion Studio',
-      description: 'Elegant fashion brand with clean typography',
-      colorVariations: [
-        ['#7E22CE', '#818CF8', '#F9A8D4'],
-        ['#6D28D9', '#A78BFA', '#F472B6']
-      ],
-      gradient: { from: 'indigo-400', to: 'purple-500' },
-      initials: 'FS',
-      // Don't use the images array for samples
-      images: [],
-      // Use simple path directly without going through Supabase storage
-      image_url: '/samples/sample-2.png'
-    },
-    {
-      id: 'sample-ep',
-      title: 'Eco Product',
-      description: 'Sustainable brand with natural elements',
-      colorVariations: [
-        ['#059669', '#60A5FA', '#10B981'],
-        ['#047857', '#3B82F6', '#059669']
-      ],
-      gradient: { from: 'blue-400', to: 'teal-500' },
-      initials: 'EP',
-      // Don't use the images array for samples
-      images: [],
-      // Use simple path directly without going through Supabase storage  
-      image_url: '/samples/sample-3.png'
-    },
-  ];
-  
   return (
-    <div className="space-y-12">
-      <ConceptHeader />
+    <div className="min-h-screen bg-gray-50">
+      <ConceptHeader onGetStarted={handleGetStarted} />
       
-      <HowItWorks 
-        steps={howItWorksSteps} 
-        onGetStarted={handleGetStarted} 
-      />
-      
-      {result ? (
-        <ResultsSection 
-          result={result}
-          onReset={handleReset}
-          selectedColor={selectedColor}
-          onColorSelect={handleColorSelect}
-          status={getFormStatus()}
-        />
-      ) : (
-        <ConceptFormSection 
+      <main className="container mx-auto px-4 py-8 space-y-12">
+        <HowItWorks steps={howItWorksSteps} onGetStarted={handleGetStarted} />
+        
+        <ConceptFormSection
+          id="create-form"
           onSubmit={handleGenerateConcept}
-          status={getFormStatus()}
-          error={getErrorMessage()}
           onReset={handleReset}
+          status={getFormStatus()}
+          errorMessage={getErrorMessage()}
+          isProcessing={taskData?.status === 'processing'}
+          processingMessage={taskData?.status === 'processing' ? 'Generating your concept...' : undefined}
         />
-      )}
-      
-      {/* Show real concepts if available, otherwise show sample concepts */}
-      {loadingConcepts ? (
-        <RecentConceptsSection 
-          concepts={[]}
+        
+        {taskData?.status === 'completed' && taskData.result_id && (
+          <ResultsSection
+            conceptId={taskData.result_id}
+            onEdit={handleEdit}
+            onViewDetails={handleViewDetails}
+            onColorSelect={handleColorSelect}
+            selectedColor={selectedColor}
+          />
+        )}
+        
+        <RecentConceptsSection
+          concepts={formatConceptsForDisplay()}
+          isLoading={loadingConcepts}
           onEdit={handleEdit}
           onViewDetails={handleViewDetails}
-          isLoading={true}
         />
-      ) : (
-        formattedConcepts.length > 0 ? (
-          <RecentConceptsSection 
-            concepts={formattedConcepts}
-            onEdit={handleEdit}
-            onViewDetails={handleViewDetails}
-            isLoading={false}
-          />
-        ) : (
-          <RecentConceptsSection 
-            concepts={sampleConcepts}
-            onEdit={handleEdit}
-            onViewDetails={handleViewDetails}
-            isLoading={false}
-          />
-        )
-      )}
+      </main>
     </div>
   );
 };
 
 /**
- * Main landing page component with error boundary
+ * Landing page component wrapped in error boundary
  */
 export const LandingPage: React.FC = () => {
   return (
-    <ErrorBoundary 
-      errorMessage="We're having trouble loading the application. Please refresh the page to try again."
-      canRetry={true}
-    >
+    <ErrorBoundary>
       <LandingPageContent />
     </ErrorBoundary>
   );

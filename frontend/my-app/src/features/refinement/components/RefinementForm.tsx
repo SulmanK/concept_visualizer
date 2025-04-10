@@ -1,5 +1,6 @@
 import React from 'react';
 import { ConceptRefinementForm } from '../../../components/concept/ConceptRefinementForm';
+import { FormStatus } from '../../../types';
 
 interface RefinementFormProps {
   originalImageUrl: string;
@@ -9,7 +10,7 @@ interface RefinementFormProps {
     themeDescription: string,
     preserveAspects: string[]
   ) => void;
-  status: 'idle' | 'loading' | 'success' | 'error';
+  status: FormStatus;
   error?: string;
   onCancel: () => void;
   initialLogoDescription?: string;
@@ -20,6 +21,8 @@ interface RefinementFormProps {
     colors?: string[];
     description?: string;
   };
+  isProcessing?: boolean;
+  processingMessage?: string;
 }
 
 /**
@@ -34,6 +37,8 @@ export const RefinementForm: React.FC<RefinementFormProps> = ({
   initialLogoDescription,
   initialThemeDescription,
   colorVariation,
+  isProcessing,
+  processingMessage
 }) => {
   // Get placeholder text based on whether we're refining a color variation
   const getRefinementPlaceholder = () => {
@@ -67,6 +72,8 @@ export const RefinementForm: React.FC<RefinementFormProps> = ({
         colors: colorVariation.colors,
         name: colorVariation.palette_name || 'Color Variation'
       } : undefined}
+      isProcessing={isProcessing}
+      processingMessage={processingMessage}
     />
   );
 }; 

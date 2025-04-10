@@ -3,8 +3,8 @@ Interface for task management services.
 """
 
 import abc
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
+
 
 class TaskServiceInterface(abc.ABC):
     """Interface for services that handle task management."""
@@ -93,6 +93,23 @@ class TaskServiceInterface(abc.ABC):
             
         Returns:
             List of task data
+            
+        Raises:
+            TaskError: If retrieval fails
+        """
+        pass
+    
+    @abc.abstractmethod
+    async def get_task_by_result_id(self, result_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a task by result ID.
+        
+        Args:
+            result_id: ID of the result entity (e.g. concept_id)
+            user_id: ID of the user who owns the task
+            
+        Returns:
+            Task data if found, None otherwise
             
         Raises:
             TaskError: If retrieval fails

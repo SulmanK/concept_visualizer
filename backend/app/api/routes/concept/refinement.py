@@ -66,8 +66,50 @@ async def refine_concept(
         ValidationError: If the request validation fails
         HTTPException: If user is not authenticated (401)
     """
-    # Apply rate limit
-    await apply_rate_limit(req, "/concepts/refine", "10/hour", "hour")
+    # Check rate limit without incrementing
+    try:
+        user_id = None
+        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+            user_id = req.state.user.get("id")
+        
+        if user_id:
+            from app.core.limiter import check_rate_limit
+            
+            # Get full user_id format
+            full_user_id = f"user:{user_id}"
+            
+            # Only check the limit without incrementing
+            rate_status = check_rate_limit(
+                user_id=full_user_id, 
+                endpoint="/concepts/refine",
+                limit="10/hour",
+                check_only=True
+            )
+            
+            # Check if over the limit
+            if rate_status.get("remaining", 0) <= 0:
+                logger.info(f"Rate limit exceeded for /concepts/refine: {rate_status}")
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Rate limit exceeded. Maximum {rate_status.get('limit')} requests per hour"
+                )
+            
+            # Store in request.state for the middleware to use
+            req.state.limiter_info = {
+                "limit": rate_status.get("limit", 0),
+                "remaining": rate_status.get("remaining", 0),
+                "reset": rate_status.get("reset_at", 0)
+            }
+            
+            logger.debug(
+                f"Stored rate limit info for /concepts/refine: "
+                f"remaining={rate_status.get('remaining', 0)}"
+            )
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error checking rate limit: {str(e)}")
     
     try:
         # Validate inputs
@@ -91,6 +133,41 @@ async def refine_concept(
         user_id = commons.user_id
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication required")
+            
+        # Check if user already has pending or processing tasks
+        user_tasks = await commons.task_service.get_tasks_by_user(
+            user_id=user_id,
+            status="pending",
+            limit=1
+        )
+        
+        if user_tasks and len(user_tasks) > 0:
+            logger.info(f"User {mask_id(user_id)} already has a pending task: {mask_id(user_tasks[0]['id'])}")
+            return TaskResponse(
+                task_id=user_tasks[0]["id"],
+                status=user_tasks[0]["status"],
+                message="You already have a task in progress. Please wait for it to complete.",
+                type=user_tasks[0].get("type"),
+                created_at=user_tasks[0].get("created_at"),
+                metadata=user_tasks[0].get("metadata", {})
+            )
+            
+        user_tasks = await commons.task_service.get_tasks_by_user(
+            user_id=user_id,
+            status="processing",
+            limit=1
+        )
+        
+        if user_tasks and len(user_tasks) > 0:
+            logger.info(f"User {mask_id(user_id)} already has a processing task: {mask_id(user_tasks[0]['id'])}")
+            return TaskResponse(
+                task_id=user_tasks[0]["id"],
+                status=user_tasks[0]["status"],
+                message="You already have a task in progress. Please wait for it to complete.",
+                type=user_tasks[0].get("type"),
+                created_at=user_tasks[0].get("created_at"),
+                metadata=user_tasks[0].get("metadata", {})
+            )
         
         # Create a task record
         task_metadata = {
@@ -250,6 +327,18 @@ async def refine_concept_background_task(
             status="completed",
             result_id=concept_id
         )
+        
+        # Now that the task has successfully completed, increment the rate limit
+        try:
+            from app.core.limiter import apply_rate_limit
+            
+            # Increment rate limit
+            await apply_rate_limit(user_id, "/concepts/refine", "10/hour")
+            
+            logger.info(f"Task {mask_id(task_id)}: Incremented rate limit after successful task completion")
+        except Exception as rate_limit_error:
+            logger.error(f"Task {mask_id(task_id)}: Failed to increment rate limit: {str(rate_limit_error)}")
+            # Don't raise here, as the task already completed successfully
         
         logger.info(f"Task {mask_id(task_id)}: Successfully completed concept refinement")
         

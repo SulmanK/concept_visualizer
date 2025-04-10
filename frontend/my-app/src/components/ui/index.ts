@@ -11,6 +11,7 @@ export { default as FeatureSteps } from './FeatureSteps';
 
 // Loading States and Error Display Components
 export { default as LoadingIndicator } from './LoadingIndicator';
+export { default as Spinner } from './Spinner';
 export { default as ErrorMessage, RateLimitErrorMessage } from './ErrorMessage';
 export { default as Toast } from './Toast';
 export { default as ToastContainer } from './ToastContainer';

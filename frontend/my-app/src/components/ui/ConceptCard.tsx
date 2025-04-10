@@ -31,9 +31,9 @@ const isLightColor = (hexColor: string): boolean => {
 }
 
 // Helper function to process image URLs and handle signed URLs
-const processImageUrl = (imageUrl: string | undefined): string => {
-  if (!imageUrl) {
-    console.log('ConceptCard: Image URL is empty or undefined');
+const processImageUrl = (imageUrl: string | undefined | null): string => {
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    console.log('ConceptCard: Image URL is empty, undefined, or not a string', imageUrl);
     return '';
   }
   
@@ -213,7 +213,14 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     
     // Get and process the URL for the selected variation
     const rawUrl = images[selectedVariationIndex];
-    console.log(`ConceptCard: ${title} - Raw URL for index ${selectedVariationIndex}: ${rawUrl?.substring(0, 30)}${rawUrl?.length > 30 ? '...' : ''}`);
+    
+    // Check if rawUrl is a string before calling substring
+    if (typeof rawUrl === 'string') {
+      console.log(`ConceptCard: ${title} - Raw URL for index ${selectedVariationIndex}: ${rawUrl.substring(0, 30)}${rawUrl.length > 30 ? '...' : ''}`);
+    } else {
+      console.log(`ConceptCard: ${title} - Raw URL for index ${selectedVariationIndex} is not a string:`, rawUrl);
+    }
+    
     return processImageUrl(rawUrl);
   })();
   

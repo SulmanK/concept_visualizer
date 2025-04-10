@@ -21,6 +21,24 @@ export interface ApiResponse<T> {
 }
 
 /**
+ * Task status type
+ */
+export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+/**
+ * Task response model
+ */
+export interface TaskResponse {
+  id: string;
+  status: TaskStatus;
+  type: 'generate_concept' | 'refine_concept';
+  result_id?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Request model for concept generation
  */
 export interface PromptRequest {

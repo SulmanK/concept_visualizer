@@ -1,16 +1,17 @@
 import React from 'react';
 import { ConceptResult } from '../../../components/concept/ConceptResult';
-import { GenerationResponse, FormStatus } from '../../../types';
+import { useConceptDetail } from '../../../hooks/useConceptQueries';
 import { Button } from '../../../components/ui/Button';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface ResultsSectionProps {
-  result: GenerationResponse | null;
-  onReset: () => void;
-  selectedColor: string | null;
+  conceptId: string;
+  onEdit: (conceptId: string, variationIndex?: number) => void;
+  onViewDetails: (conceptId: string, variationIndex?: number) => void;
   onColorSelect: (color: string) => void;
-  status?: FormStatus;
+  selectedColor: string | null;
 }
 
 /**
@@ -18,17 +19,20 @@ interface ResultsSectionProps {
  * Optimized for both mobile and desktop viewing
  */
 export const ResultsSection: React.FC<ResultsSectionProps> = ({
-  result,
-  onReset,
-  selectedColor,
+  conceptId,
+  onEdit,
+  onViewDetails,
   onColorSelect,
-  status = 'idle'
+  selectedColor
 }) => {
   const navigate = useNavigate();
-  const isLoading = status === 'submitting';
+  const { user } = useAuth();
   
-  // If no result and not loading, render nothing
-  if (!result && !isLoading) return null;
+  // Fetch the concept details
+  const { data: concept, isLoading } = useConceptDetail(conceptId, user?.id);
+
+  // If no concept and not loading, render nothing
+  if (!concept && !isLoading) return null;
 
   // Handler to navigate to the concept details page
   const handleExport = (conceptId: string) => {
@@ -40,17 +44,8 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
       <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 p-4 sm:p-6 md:p-8 mb-4 sm:mb-8">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6">
           <h2 className="text-lg sm:text-xl font-semibold text-indigo-900 mb-3 sm:mb-0">
-            {isLoading ? 'Generating Concept...' : 'Generated Concept'}
+            {isLoading ? 'Loading Concept...' : 'Generated Concept'}
           </h2>
-          <Button 
-            variant="outline" 
-            onClick={onReset} 
-            size="sm"
-            disabled={isLoading}
-            className="self-start sm:self-auto"
-          >
-            Start Over
-          </Button>
         </div>
         
         {isLoading ? (
@@ -91,11 +86,14 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
               </div>
             </div>
           </div>
-        ) : result ? (
+        ) : concept ? (
           <ConceptResult
-            concept={result}
+            concept={concept}
             onColorSelect={onColorSelect}
-            variations={result.variations || []}
+            selectedColor={selectedColor}
+            variations={concept.variations || []}
+            onEdit={() => onEdit(concept.id)}
+            onViewDetails={() => onViewDetails(concept.id)}
             onExport={handleExport}
           />
         ) : null}

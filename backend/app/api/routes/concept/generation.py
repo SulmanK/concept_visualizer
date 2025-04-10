@@ -239,13 +239,8 @@ async def generate_concept_with_palettes(
         ValidationError: If the request validation fails
         HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
     """
-    # Apply both generation and storage rate limits - this will raise an HTTPException if limit is exceeded
-    await apply_multiple_rate_limits(req, [
-        {"endpoint": "/concepts/generate-with-palettes", "rate_limit": "10/month"},
-        {"endpoint": "/concepts/store", "rate_limit": "10/month"}
-    ])
-    
-    # Store rate limit info after the actual rate limiting
+    # Check rate limits without incrementing the counter (check_only=True)
+    # The actual increment will happen when the task completes successfully
     try:
         user_id = None
         if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
@@ -257,7 +252,7 @@ async def generate_concept_with_palettes(
             # Get full user_id format
             full_user_id = f"user:{user_id}"
             
-            # Use the lower of the two limits for the headers
+            # Only check the limits without incrementing counters
             generation_status = check_rate_limit(
                 user_id=full_user_id, 
                 endpoint="/concepts/generate-with-palettes",
@@ -272,7 +267,21 @@ async def generate_concept_with_palettes(
                 check_only=True
             )
             
-            # Use the status with fewer remaining calls
+            # Use the status with fewer remaining calls to determine if we're over the limit
+            if generation_status.get("remaining", 0) <= 0 or storage_status.get("remaining", 0) <= 0:
+                # We're over the limit for one of the endpoints, raise 429
+                rate_limit_info = storage_status if storage_status.get("remaining", 0) <= generation_status.get("remaining", 0) else generation_status
+                
+                # Determine which endpoint exceeded the limit
+                exceeded_endpoint = "/concepts/store" if storage_status.get("remaining", 0) <= generation_status.get("remaining", 0) else "/concepts/generate-with-palettes"
+                
+                logger.info(f"Rate limit exceeded for {exceeded_endpoint}: {rate_limit_info}")
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Rate limit exceeded. Maximum {rate_limit_info.get('limit')} requests per month"
+                )
+            
+            # Use the lower of the two limits for the headers
             if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
                 limit_status = generation_status
                 endpoint = "/concepts/generate-with-palettes"
@@ -288,11 +297,14 @@ async def generate_concept_with_palettes(
             }
             
             logger.debug(
-                f"Stored rate limit info for {endpoint} after increment: "
+                f"Stored rate limit info for {endpoint}: "
                 f"remaining={limit_status.get('remaining', 0)}"
             )
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-        logger.error(f"Error storing post-increment rate limit info: {str(e)}")
+        logger.error(f"Error checking rate limit: {str(e)}")
     
     try:
         # Validate inputs
@@ -309,6 +321,41 @@ async def generate_concept_with_palettes(
         user_id = commons.user_id
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication required")
+            
+        # Check if user already has pending or processing tasks
+        user_tasks = await commons.task_service.get_tasks_by_user(
+            user_id=user_id,
+            status="pending",
+            limit=1
+        )
+        
+        if user_tasks and len(user_tasks) > 0:
+            logger.info(f"User {mask_id(user_id)} already has a pending task: {mask_id(user_tasks[0]['id'])}")
+            return TaskResponse(
+                task_id=user_tasks[0]["id"],
+                status=user_tasks[0]["status"],
+                message="You already have a task in progress. Please wait for it to complete.",
+                type=user_tasks[0].get("type"),
+                created_at=user_tasks[0].get("created_at"),
+                metadata=user_tasks[0].get("metadata", {})
+            )
+            
+        user_tasks = await commons.task_service.get_tasks_by_user(
+            user_id=user_id,
+            status="processing",
+            limit=1
+        )
+        
+        if user_tasks and len(user_tasks) > 0:
+            logger.info(f"User {mask_id(user_id)} already has a processing task: {mask_id(user_tasks[0]['id'])}")
+            return TaskResponse(
+                task_id=user_tasks[0]["id"],
+                status=user_tasks[0]["status"],
+                message="You already have a task in progress. Please wait for it to complete.",
+                type=user_tasks[0].get("type"),
+                created_at=user_tasks[0].get("created_at"),
+                metadata=user_tasks[0].get("metadata", {})
+            )
         
         # Create a task record
         task_metadata = {
@@ -332,7 +379,7 @@ async def generate_concept_with_palettes(
                 generate_concept_background_task,
                 task_id=task_id,
                 logo_description=request.logo_description,
-            theme_description=request.theme_description,
+                theme_description=request.theme_description,
                 user_id=user_id,
                 num_palettes=num_palettes,
                 image_service=commons.image_service,
@@ -420,7 +467,7 @@ async def generate_concept_background_task(
         raw_palettes = await concept_service.generate_color_palettes(
             theme_description=theme_description,
             logo_description=logo_description,
-            count=num_palettes
+            num_palettes=num_palettes
         )
         
         # Apply color palettes to create variations and store in Supabase Storage
@@ -460,6 +507,19 @@ async def generate_concept_background_task(
             status="completed",
             result_id=concept_id
         )
+        
+        # Now that the task has successfully completed, increment the rate limits
+        try:
+            from app.core.limiter import apply_rate_limit
+            
+            # Increment rate limits for both endpoints
+            await apply_rate_limit(user_id, "/concepts/generate-with-palettes", "10/month")
+            await apply_rate_limit(user_id, "/concepts/store", "10/month")
+            
+            logger.info(f"Task {mask_id(task_id)}: Incremented rate limits after successful task completion")
+        except Exception as rate_limit_error:
+            logger.error(f"Task {mask_id(task_id)}: Failed to increment rate limits: {str(rate_limit_error)}")
+            # Don't raise here, as the task already completed successfully
         
         logger.info(f"Task {mask_id(task_id)}: Successfully completed concept generation")
         

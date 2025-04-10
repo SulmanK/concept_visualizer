@@ -7,13 +7,14 @@ This module provides services for managing background tasks.
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from app.core.supabase.client import SupabaseClient
 from app.services.interfaces.task_service import TaskServiceInterface
 from app.utils.security.mask import mask_id
 
 # Custom exceptions
+
 class TaskError(Exception):
     """Base exception for task-related errors."""
     
@@ -84,8 +85,14 @@ class TaskService(TaskServiceInterface):
                 "metadata": metadata or {}
             }
             
-            # Insert into database
-            result = self.client.client.table("tasks").insert(task_data).execute()
+            # Insert using service role to bypass RLS policies
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table("tasks").insert(task_data).execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                # Fallback to regular client if service role client not available
+                result = self.client.client.table("tasks").insert(task_data).execute()
             
             # Check if insertion was successful
             if not result.data or len(result.data) == 0:
@@ -143,11 +150,19 @@ class TaskService(TaskServiceInterface):
             if error_message:
                 update_data["error_message"] = error_message
             
-            # Update in database
-            result = self.client.client.table("tasks") \
-                .update(update_data) \
-                .eq("id", task_id) \
-                .execute()
+            # Update in database - use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table("tasks") \
+                    .update(update_data) \
+                    .eq("id", task_id) \
+                    .execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                result = self.client.client.table("tasks") \
+                    .update(update_data) \
+                    .eq("id", task_id) \
+                    .execute()
             
             # Check if update was successful
             if not result.data or len(result.data) == 0:
@@ -186,12 +201,21 @@ class TaskService(TaskServiceInterface):
             masked_user_id = mask_id(user_id)
             self.logger.info(f"Getting task {masked_task_id} for user {masked_user_id}")
             
-            # Query database
-            result = self.client.client.table("tasks") \
-                .select("*") \
-                .eq("id", task_id) \
-                .eq("user_id", user_id) \
-                .execute()
+            # Query database using service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table("tasks") \
+                    .select("*") \
+                    .eq("id", task_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                result = self.client.client.table("tasks") \
+                    .select("*") \
+                    .eq("id", task_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
             
             # Check if task exists
             if not result.data or len(result.data) == 0:
@@ -235,12 +259,21 @@ class TaskService(TaskServiceInterface):
             status_filter = f" with status '{status}'" if status else ""
             self.logger.info(f"Getting tasks for user {masked_user_id}{status_filter}")
             
-            # Start query
-            query = self.client.client.table("tasks") \
-                .select("*") \
-                .eq("user_id", user_id) \
-                .order("created_at", desc=True) \
-                .limit(limit)
+            # Start query - use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                query = service_client.table("tasks") \
+                    .select("*") \
+                    .eq("user_id", user_id) \
+                    .order("created_at", desc=True) \
+                    .limit(limit)
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                query = self.client.client.table("tasks") \
+                    .select("*") \
+                    .eq("user_id", user_id) \
+                    .order("created_at", desc=True) \
+                    .limit(limit)
             
             # Add status filter if provided
             if status:
@@ -283,23 +316,28 @@ class TaskService(TaskServiceInterface):
             masked_user_id = mask_id(user_id)
             self.logger.info(f"Deleting task {masked_task_id} for user {masked_user_id}")
             
-            # First check if task exists and belongs to user
-            result = self.client.client.table("tasks") \
-                .select("id") \
-                .eq("id", task_id) \
-                .eq("user_id", user_id) \
-                .execute()
+            # First check if the task exists for this user
+            try:
+                await self.get_task(task_id, user_id)
+            except TaskNotFoundError:
+                # Re-raise the TaskNotFoundError
+                raise
             
-            # Check if task exists
-            if not result.data or len(result.data) == 0:
-                raise TaskNotFoundError(task_id)
-            
-            # Delete from database
-            result = self.client.client.table("tasks") \
-                .delete() \
-                .eq("id", task_id) \
-                .eq("user_id", user_id) \
-                .execute()
+            # Delete from database - use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table("tasks") \
+                    .delete() \
+                    .eq("id", task_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                result = self.client.client.table("tasks") \
+                    .delete() \
+                    .eq("id", task_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
             
             # Check if deletion was successful
             if not result.data or len(result.data) == 0:
@@ -313,12 +351,12 @@ class TaskService(TaskServiceInterface):
             # Re-raise TaskNotFoundError
             raise
         except Exception as e:
-            self.logger.error(f"Error deleting task {mask_id(task_id)}: {str(e)}")
+            self.logger.error(f"Error deleting task {masked_task_id}: {str(e)}")
             raise TaskError(f"Failed to delete task: {str(e)}")
             
     async def get_task_by_result_id(self, result_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         """
-        Get a task by its result ID.
+        Get a task by result ID.
         
         Args:
             result_id: ID of the result entity (e.g. concept_id)
@@ -336,12 +374,21 @@ class TaskService(TaskServiceInterface):
             masked_user_id = mask_id(user_id)
             self.logger.info(f"Getting task for result {masked_result_id} and user {masked_user_id}")
             
-            # Query database
-            result = self.client.client.table("tasks") \
-                .select("*") \
-                .eq("result_id", result_id) \
-                .eq("user_id", user_id) \
-                .execute()
+            # Query database - use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table("tasks") \
+                    .select("*") \
+                    .eq("result_id", result_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                result = self.client.client.table("tasks") \
+                    .select("*") \
+                    .eq("result_id", result_id) \
+                    .eq("user_id", user_id) \
+                    .execute()
             
             # Check if task exists
             if not result.data or len(result.data) == 0:
@@ -349,10 +396,11 @@ class TaskService(TaskServiceInterface):
                 return None
                 
             task = result.data[0]
-            self.logger.info(f"Successfully retrieved task for result {masked_result_id}")
+            masked_task_id = mask_id(task["id"])
+            self.logger.info(f"Successfully retrieved task {masked_task_id} for result {masked_result_id}")
             
             return task
             
         except Exception as e:
-            self.logger.error(f"Error getting task for result {mask_id(result_id)}: {str(e)}")
-            raise TaskError(f"Failed to retrieve task: {str(e)}") 
+            self.logger.error(f"Error getting task for result {masked_result_id}: {str(e)}")
+            raise TaskError(f"Failed to retrieve task by result: {str(e)}") 

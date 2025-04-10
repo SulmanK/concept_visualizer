@@ -13,7 +13,64 @@
   - [x] Update background task functions to use dedicated tasks table
   - [x] Add endpoints to retrieve task status
   - [x] Add support for error handling and state persistence
-- [ ] Update frontend to handle the asynchronous task workflow
+- [x] Update frontend to handle the asynchronous task workflow
+
+## Frontend Task Workflow Integration
+
+**Goal:** Update the frontend to handle the asynchronous task workflow introduced in the backend for concept generation and refinement.
+
+### 1. API Client & Types
+- [x] **Update API Types (`src/types/api.types.ts`)**:
+  - [x] Define the `TaskResponse` interface matching the backend response model (id, status, type, result_id, error_message, etc.).
+  - [x] Update the return types for API client functions related to generation/refinement to expect `TaskResponse` instead of `GenerationResponse`.
+- [x] **Update API Client (`src/services/apiClient.ts`)**:
+  - [x] Add new functions or update existing ones to call the task status endpoints (`/api/tasks/{task_id}`, `/api/tasks`).
+  - [x] Ensure request/response handling is correct for task-related endpoints.
+
+### 2. Hooks & State Management
+- [x] **Update Mutation Hooks (`src/hooks/useConceptMutations.ts`)**:
+  - [x] Modify `useGenerateConceptMutation`:
+    - [x] Change the `mutationFn` to call the `/concepts/generate-with-palettes` endpoint.
+    - [x] Update the expected return type to `TaskResponse`.
+    - [x] Implement logic in `onSuccess` (or elsewhere) to handle the `TaskResponse` (e.g., store `task_id`, initiate polling).
+  - [x] Modify `useRefineConceptMutation`:
+    - [x] Change the `mutationFn` to call the `/concepts/refine` endpoint (which now returns a TaskResponse).
+    - [x] Update the expected return type to `TaskResponse`.
+    - [x] Implement logic in `onSuccess` to handle the `TaskResponse`.
+- [x] **Create Task Polling Hook (`src/hooks/useTaskPolling.ts` - New Hook)**:
+  - [x] Create a new hook responsible for polling the `/api/tasks/{task_id}` endpoint.
+  - [x] Input: `task_id` and polling interval.
+  - [x] Output: Current task status (`pending`, `processing`, `completed`, `failed`), result data (`result_id`, `error_message`).
+  - [x] Implement logic to stop polling when task reaches a terminal state (`completed`, `failed`).
+  - [x] Handle potential errors during polling.
+
+### 3. Component Updates
+- [x] **Landing Page (`src/features/landing/LandingPage.tsx`)**:
+  - [x] Modify `handleGenerateConcept` (or the mutation trigger) to handle the `TaskResponse`.
+  - [x] Store the returned `task_id`.
+  - [x] Display a "Processing" or similar state while the task is `pending` or `processing` (use the new polling hook).
+  - [x] When the task status is `completed`, use the `result_id` to fetch the final `GenerationResponse` (perhaps using `useConceptDetail` or a dedicated fetch).
+  - [x] Update `ResultsSection` to potentially display processing state before showing the final result.
+  - [x] Handle task `failed` status by displaying an appropriate error message.
+- [x] **Refinement Page (`src/features/refinement/RefinementPage.tsx`)**:
+  - [x] Modify `handleRefineConcept` (or the mutation trigger) to handle the `TaskResponse`.
+  - [x] Store the returned `task_id`.
+  - [x] Display a "Processing" state while the task runs.
+  - [x] Fetch the refined concept details using the `result_id` upon task completion.
+  - [x] Update `ComparisonView` or surrounding logic to show the refined concept only after the task is `completed`.
+  - [x] Handle task `failed` status.
+- [x] **Concept Forms (`ConceptForm.tsx`, `ConceptRefinementForm.tsx`)**:
+  - [x] Update UI feedback during submission to indicate task queuing/processing rather than immediate result generation.
+  - [x] Potentially disable form fields while a task is actively processing.
+- [x] **Loading/Progress Indicators (`LoadingIndicator.tsx`, etc.)**:
+  - [x] Use loading indicators to show task processing status clearly in relevant UI sections.
+- [x] **Error Display (`ErrorMessage.tsx`)**:
+  - [x] Ensure error messages from failed tasks (`error_message` field) can be displayed effectively.
+
+### 4. Cache Management (React Query)
+- [x] Review query invalidation logic in mutation hooks (`useConceptMutations.ts`):
+  - [x] Invalidate relevant queries (e.g., `recentConcepts`, `conceptDetail`) only *after* a task successfully completes and the final result is available/fetched.
+  - [x] Consider adding query invalidation for task lists if a task details page is added.
 
 ### 2. Service Layer Granularity
 - [ ] Review and refine `ImageService` (`backend/app/services/image/service.py`)
@@ -128,8 +185,6 @@
 - [ ] Add tests for consolidated components
 - [ ] Test React Query integration
 - [ ] Verify error handling UI components
-
-
 
 ## Implementation Plan
 

@@ -12,4 +12,9 @@ export * from './concept.types';
 export * from './ui.types';
 
 // Form Types
-export * from './form.types'; 
+export * from './form.types';
+
+/**
+ * Form status type
+ */
+export type FormStatus = 'idle' | 'submitting' | 'processing' | 'success' | 'error'; 

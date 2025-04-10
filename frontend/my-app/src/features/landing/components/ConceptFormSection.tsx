@@ -3,10 +3,13 @@ import { ConceptForm } from '../../../components/concept/ConceptForm';
 import { FormStatus } from '../../../types';
 
 interface ConceptFormSectionProps {
+  id?: string;
   onSubmit: (logoDescription: string, themeDescription: string) => void;
   status: FormStatus;
-  error: string | null;
+  errorMessage: string | null;
   onReset?: () => void;
+  isProcessing?: boolean;
+  processingMessage?: string;
 }
 
 /**
@@ -14,18 +17,23 @@ interface ConceptFormSectionProps {
  * Optimized for responsive viewing on both mobile and desktop
  */
 export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
+  id,
   onSubmit,
   status,
-  error,
-  onReset
+  errorMessage,
+  onReset,
+  isProcessing,
+  processingMessage
 }) => {
   return (
-    <div id="create-form" className="mb-8 sm:mb-16">
+    <div id={id} className="mb-8 sm:mb-16">
       <ConceptForm 
         onSubmit={onSubmit}
         status={status}
-        error={error}
+        error={errorMessage}
         onReset={onReset}
+        isProcessing={isProcessing}
+        processingMessage={processingMessage}
       />
     </div>
   );

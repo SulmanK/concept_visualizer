@@ -8,6 +8,7 @@ import { RefinementActions } from './components/RefinementActions';
 import { Card } from '../../components/ui/Card';
 import { fetchConceptDetail } from '../../services/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { TaskResponse } from '../../types';
 
 /**
  * Main page component for the Concept Refinement feature
@@ -100,7 +101,7 @@ export const RefinementPage: React.FC = () => {
   // Use React Query mutation hook for refinement
   const {
     mutate: refineConceptMutation,
-    data: result,
+    data: taskData,
     isPending,
     isSuccess,
     isError,
@@ -110,16 +111,31 @@ export const RefinementPage: React.FC = () => {
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   
-  // Map mutation state to form status
+  // Map task and mutation state to form status
   const getFormStatus = () => {
     if (isPending) return 'submitting';
-    if (isSuccess) return 'success';
+    if (taskData) {
+      switch (taskData.status) {
+        case 'pending':
+        case 'processing':
+          return 'processing';
+        case 'completed':
+          return 'success';
+        case 'failed':
+          return 'error';
+        default:
+          return 'idle';
+      }
+    }
     if (isError) return 'error';
     return 'idle';
   };
   
-  // Extract error message from the error object
+  // Extract error message from the error object or task
   const getErrorMessage = (): string | null => {
+    if (taskData?.status === 'failed') {
+      return taskData.error_message || 'Task failed';
+    }
     if (!error) return null;
     return error instanceof Error ? error.message : String(error);
   };
@@ -202,6 +218,9 @@ export const RefinementPage: React.FC = () => {
     );
   }
   
+  // Check if a completed task result is available
+  const showComparisonView = taskData?.status === 'completed' && taskData.result_id;
+  
   return (
     <div className="space-y-8 relative">
       {/* Under Construction Watermark */}
@@ -216,7 +235,7 @@ export const RefinementPage: React.FC = () => {
         variationName={originalConcept.colorVariation?.palette_name} 
       />
       
-      {!result && (
+      {!showComparisonView && (
         <div className="relative">
           <RefinementForm
             originalImageUrl={originalConcept.imageUrl}
@@ -227,6 +246,8 @@ export const RefinementPage: React.FC = () => {
             initialLogoDescription={originalConcept.logoDescription}
             initialThemeDescription={originalConcept.themeDescription}
             colorVariation={originalConcept.colorVariation}
+            isProcessing={taskData?.status === 'processing'}
+            processingMessage={taskData?.status === 'processing' ? 'Processing your refinement request...' : undefined}
           />
           
           {/* Informational banner */}
@@ -241,31 +262,19 @@ export const RefinementPage: React.FC = () => {
         </div>
       )}
       
-      {result && (
+      {showComparisonView && taskData.result_id && (
         <div className="mt-8 pt-8 border-t border-dark-200">
           <RefinementActions 
             onReset={handleReset} 
             onCreateNew={() => navigate('/')} 
           />
           
-          <ComparisonView 
-            originalConcept={originalConcept} 
-            refinedConcept={result} 
+          <ComparisonView
+            originalImageUrl={originalConcept.imageUrl}
+            refinedConceptId={taskData.result_id}
             onColorSelect={handleColorSelect}
-            onRefineRequest={handleReset}
+            selectedColor={selectedColor}
           />
-          
-          {/* Selected color feedback */}
-          {selectedColor && (
-            <div className="mt-4 text-center text-sm text-dark-600">
-              <span className="bg-dark-100 px-2 py-1 rounded font-mono">
-                {selectedColor}
-              </span>
-              <span className="ml-2">
-                copied to clipboard
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>

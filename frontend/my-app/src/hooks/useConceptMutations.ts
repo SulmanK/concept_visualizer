@@ -3,12 +3,15 @@ import { apiClient } from '../services/apiClient';
 import { 
   GenerationResponse, 
   PromptRequest, 
-  RefinementRequest 
+  RefinementRequest,
+  TaskResponse
 } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useErrorHandling } from './useErrorHandling';
 import { createQueryErrorHandler } from '../utils/errorUtils';
 import { useRateLimitsDecrement } from '../contexts/RateLimitContext';
+import { useTaskPolling } from './useTaskPolling';
+import { useState } from 'react';
 
 /**
  * Hook for generating a new concept using React Query's mutation capabilities
@@ -18,16 +21,56 @@ export function useGenerateConceptMutation() {
   const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
+  const [taskId, setTaskId] = useState<string | null>(null);
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to generate concept',
     showToast: true
   });
+
+  // Set up task polling
+  const { data: taskData } = useTaskPolling(taskId, {
+    onSuccess: async (task) => {
+      if (task.result_id) {
+        // Fetch the completed concept
+        try {
+          const response = await apiClient.get<GenerationResponse>(`/concepts/${task.result_id}`);
+          const data = response.data;
+
+          // Update caches and invalidate queries
+          if (data) {
+            console.log('[Mutation] Generation task completed, invalidating queries', {
+              newConceptId: data.id,
+              userId: user?.id,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Invalidate recent concepts list
+            queryClient.invalidateQueries({ 
+              queryKey: ['concepts', 'recent', user?.id] 
+            });
+            
+            // Pre-populate the detail view cache
+            queryClient.setQueryData(['concepts', 'detail', data.id, user?.id], data);
+            
+            // Invalidate rate limits
+            queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+          }
+        } catch (error) {
+          console.error('[useGenerateConceptMutation] Error fetching completed concept:', error);
+          onQueryError(error);
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[useGenerateConceptMutation] Task failed:', error);
+      onQueryError(error);
+    }
+  });
   
-  return useMutation<GenerationResponse, Error, PromptRequest>({
+  return useMutation<TaskResponse, Error, PromptRequest>({
     mutationKey: ['conceptGeneration'],
     mutationFn: async (data) => {
-      // Log the start of generation with timestamp
       console.log('[useGenerateConceptMutation] Starting generation', {
         timestamp: new Date().toISOString(),
         logoDescription: data.logo_description.substring(0, 20) + '...',
@@ -38,98 +81,32 @@ export function useGenerateConceptMutation() {
         // Apply optimistic update for rate limits
         decrementLimit('generate_concept');
         
-        // Get API base URL
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-        const url = `${API_BASE_URL}/concepts/generate-with-palettes`;
+        // Make the API request
+        const response = await apiClient.post<TaskResponse>('/concepts/generate-with-palettes', data);
         
-        console.log('[useGenerateConceptMutation] Making direct fetch to:', url);
-        
-        // Get auth headers from Supabase
-        const authHeaders = {};
-        try {
-          const { supabase } = await import('../services/supabaseClient');
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.access_token) {
-            authHeaders['Authorization'] = `Bearer ${session.access_token}`;
-          }
-        } catch (authErr) {
-          console.error('[useGenerateConceptMutation] Auth error:', authErr);
+        if (!response.data) {
+          throw new Error('No task data returned from API');
         }
         
-        // Make the request directly with fetch for debugging
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...authHeaders
-          },
-          body: JSON.stringify(data),
-          credentials: 'include'
-        });
+        // Store task ID for polling
+        setTaskId(response.data.id);
         
-        // Log response status for debugging
-        console.log('[useGenerateConceptMutation] Response status:', response.status);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[useGenerateConceptMutation] API error (${response.status}):`, errorText);
-          throw new Error(`API error: ${response.status} - ${errorText}`);
-        }
-        
-        const responseData = await response.json();
-        
-        console.log('[useGenerateConceptMutation] Successfully received API response', {
-          timestamp: new Date().toISOString(),
-          conceptId: responseData.id,
-          hasVariations: (responseData.variations?.length || 0) > 0
-        });
-        
-        // Make sure the variations array is included in the result
-        return {
-          ...responseData,
-          variations: responseData.variations || []
-        };
+        return response.data;
       } catch (error) {
         console.error('[useGenerateConceptMutation] Error during fetch:', error);
         throw error;
       }
     },
-    onSuccess: (data) => {
-      console.log('[Mutation] Generation successful, invalidating queries', {
-        newConceptId: data?.id,
-        userId: user?.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Invalidate recent concepts list on success
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'recent', user?.id] 
-      });
-      
-      // Optionally pre-populate the detail view cache
-      if (data?.id) {
-        console.log('[Mutation] Pre-populating detail cache for new concept', data.id);
-        queryClient.setQueryData(['concepts', 'detail', data.id, user?.id], data);
-      }
-      
-      // Also invalidate rate limits to refresh them
-      queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
-      
-      console.log('[Mutation] Query invalidation complete for generation');
-    },
     onError: (error) => {
       console.error('[useGenerateConceptMutation] Error during generation:', error);
       onQueryError(error);
     },
-    // Add an onSettled handler to ensure cleanup
-    onSettled: (data, error) => {
+    onSettled: () => {
       console.log('[useGenerateConceptMutation] Generation settled', {
-        timestamp: new Date().toISOString(),
-        success: !!data,
-        error: !!error
+        timestamp: new Date().toISOString()
       });
       
-      // Clean up the mutation cache to ensure fresh state for next generation
+      // Clean up the mutation cache
       setTimeout(() => {
         queryClient.removeQueries({ queryKey: ['conceptGeneration'] });
       }, 300);
@@ -145,94 +122,89 @@ export function useRefineConceptMutation() {
   const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
+  const [taskId, setTaskId] = useState<string | null>(null);
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to refine concept',
     showToast: true
   });
+
+  // Set up task polling
+  const { data: taskData } = useTaskPolling(taskId, {
+    onSuccess: async (task) => {
+      if (task.result_id) {
+        // Fetch the completed concept
+        try {
+          const response = await apiClient.get<GenerationResponse>(`/concepts/${task.result_id}`);
+          const data = response.data;
+
+          if (data) {
+            console.log('[Mutation] Refinement task completed, invalidating queries', {
+              newConceptId: data.id,
+              userId: user?.id,
+              timestamp: new Date().toISOString()
+            });
+            
+            // Invalidate recent concepts list
+            queryClient.invalidateQueries({ 
+              queryKey: ['concepts', 'recent', user?.id] 
+            });
+            
+            // Pre-populate the detail view cache
+            queryClient.setQueryData(['concepts', 'detail', data.id, user?.id], data);
+            
+            // Invalidate rate limits
+            queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+          }
+        } catch (error) {
+          console.error('[useRefineConceptMutation] Error fetching completed concept:', error);
+          onQueryError(error);
+        }
+      }
+    },
+    onError: (error) => {
+      console.error('[useRefineConceptMutation] Task failed:', error);
+      onQueryError(error);
+    }
+  });
   
-  return useMutation<GenerationResponse, Error, RefinementRequest>({
+  return useMutation<TaskResponse, Error, RefinementRequest>({
     mutationKey: ['conceptRefinement'],
     mutationFn: async (data) => {
-      // Log the start of refinement
       console.log('[useRefineConceptMutation] Starting refinement', {
         timestamp: new Date().toISOString()
       });
       
-      // Apply optimistic update for rate limits
-      decrementLimit('refine_concept');
-      
-      // Make the API request
-      const response = await apiClient.post<GenerationResponse>('/concepts/refine', data);
-      
-      if (response.error) {
-        console.error('[useRefineConceptMutation] API returned an error:', response.error);
-        throw new Error(response.error.message);
+      try {
+        // Apply optimistic update for rate limits
+        decrementLimit('refine_concept');
+        
+        // Make the API request
+        const response = await apiClient.post<TaskResponse>('/concepts/refine', data);
+        
+        if (!response.data) {
+          throw new Error('No task data returned from API');
+        }
+        
+        // Store task ID for polling
+        setTaskId(response.data.id);
+        
+        return response.data;
+      } catch (error) {
+        console.error('[useRefineConceptMutation] Error during fetch:', error);
+        throw error;
       }
-      
-      if (!response.data) {
-        console.error('[useRefineConceptMutation] API returned no data');
-        throw new Error('No data returned from API');
-      }
-      
-      console.log('[useRefineConceptMutation] Successfully received API response', {
-        timestamp: new Date().toISOString(),
-        conceptId: response.data.id
-      });
-      
-      return response.data;
-    },
-    onSuccess: (data, variables) => {
-      // Extract concept ID from the original image URL if possible
-      // This assumes the URL contains the concept ID in a predictable format
-      const originalUrl = variables.original_image_url;
-      const conceptIdMatch = originalUrl.match(/\/concepts\/([^\/]+)/);
-      const originalConceptId = conceptIdMatch ? conceptIdMatch[1] : null;
-      
-      console.log('[Mutation] Refinement successful, invalidating queries', {
-        originalConceptId,
-        newConceptId: data?.id,
-        userId: user?.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Invalidate specific concept detail if we could extract an ID
-      if (originalConceptId) {
-        console.log('[Mutation] Invalidating original concept detail', originalConceptId);
-        queryClient.invalidateQueries({ 
-          queryKey: ['concepts', 'detail', originalConceptId, user?.id] 
-        });
-      }
-      
-      // Invalidate recent concepts list
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'recent', user?.id] 
-      });
-      
-      // Optionally pre-populate the detail view cache for the new concept
-      if (data?.id) {
-        console.log('[Mutation] Pre-populating detail cache for new refined concept', data.id);
-        queryClient.setQueryData(['concepts', 'detail', data.id, user?.id], data);
-      }
-      
-      // Also invalidate rate limits to refresh them
-      queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
-      
-      console.log('[Mutation] Query invalidation complete for refinement');
     },
     onError: (error) => {
       console.error('[useRefineConceptMutation] Error during refinement:', error);
       onQueryError(error);
     },
-    // Add an onSettled handler to ensure cleanup
-    onSettled: (data, error) => {
+    onSettled: () => {
       console.log('[useRefineConceptMutation] Refinement settled', {
-        timestamp: new Date().toISOString(),
-        success: !!data,
-        error: !!error
+        timestamp: new Date().toISOString()
       });
       
-      // Clean up the mutation cache to ensure fresh state for next refinement
+      // Clean up the mutation cache
       setTimeout(() => {
         queryClient.removeQueries({ queryKey: ['conceptRefinement'] });
       }, 300);
