@@ -259,4 +259,43 @@ class ConceptStorageService(StorageServiceInterface):
                 
         except Exception as e:
             self.logger.error(f"Error deleting all concepts: {e}")
-            raise StorageError(f"Failed to delete concepts: {str(e)}") 
+            raise StorageError(f"Failed to delete concepts: {str(e)}")
+    
+    async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a concept by its task ID.
+        
+        Args:
+            task_id: Task ID of the concept to retrieve
+            user_id: User ID for security validation
+            
+        Returns:
+            Concept data or None if not found
+            
+        Raises:
+            StorageError: If retrieval fails
+        """
+        try:
+            masked_task_id = mask_id(task_id)
+            self.logger.info(f"Getting concept for task: {masked_task_id}")
+            
+            # Get the concept from storage
+            concept_data = self.concept_storage.get_concept_by_task_id(task_id, user_id)
+            
+            if not concept_data:
+                self.logger.info(f"No concept found for task ID: {masked_task_id}")
+                return None
+            
+            # Add signed URL for the image
+            image_path = concept_data.get("image_path")
+            if image_path:
+                concept_data["image_url"] = self.image_storage.get_image_url(
+                    image_path, 
+                    "concept-images"
+                )
+            
+            return concept_data
+            
+        except Exception as e:
+            self.logger.error(f"Error getting concept by task ID: {e}")
+            raise StorageError(f"Failed to retrieve concept for task: {str(e)}") 

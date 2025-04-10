@@ -537,4 +537,102 @@ class ConceptStorage:
             return True
         except Exception as e:
             self.logger.error(f"Error deleting concepts: {e}")
-            return False 
+            return False
+    
+    def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get a concept by its task ID.
+        
+        Args:
+            task_id: Task ID of the concept to retrieve
+            user_id: UUID of the authenticated user (for security/RLS)
+            
+        Returns:
+            Concept data or None if not found
+        """
+        try:
+            # Try using service role key first for highest reliability
+            result = self._get_concept_by_task_id_with_service_role(task_id, user_id)
+            if result:
+                return result
+            
+            # Fall back to regular client if service role fails
+            self.logger.warning("Service role query for task failed, trying regular client")
+            
+            # Get the concept
+            query = self.client.client.table("concepts") \
+                .select("*") \
+                .eq("task_id", task_id) \
+                .eq("user_id", user_id) \
+                .limit(1)
+                
+            result = query.execute()
+            
+            # Check if we got a result
+            if not result.data or len(result.data) == 0:
+                masked_task_id = mask_id(task_id)
+                self.logger.info(f"No concept found for task ID: {masked_task_id}")
+                return None
+            
+            concept = result.data[0]
+            masked_concept_id = mask_id(concept.get("id", ""))
+            self.logger.info(f"Retrieved concept {masked_concept_id} for task ID: {mask_id(task_id)}")
+            
+            return concept
+            
+        except Exception as e:
+            self.logger.error(f"Error getting concept by task ID: {e}")
+            return None
+    
+    def _get_concept_by_task_id_with_service_role(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get a concept by its task ID using the service role key to bypass RLS.
+        
+        Args:
+            task_id: Task ID of the concept to retrieve
+            user_id: UUID of the authenticated user (for security/RLS)
+            
+        Returns:
+            Concept data or None if not found
+        """
+        try:
+            # Get the service role key
+            service_role_key = settings.SUPABASE_SERVICE_ROLE
+            if not service_role_key:
+                self.logger.warning("No service role key available, cannot use service role")
+                return None
+            
+            # Log the attempt
+            masked_task_id = mask_id(task_id)
+            masked_user_id = mask_id(user_id)
+            self.logger.info(f"Attempting to get concept with service role key for task ID: {masked_task_id}, user: {masked_user_id}")
+            
+            # Use the REST API directly with the service role key
+            import requests
+            
+            api_url = settings.SUPABASE_URL
+            query_params = f"task_id=eq.{task_id}&user_id=eq.{user_id}&limit=1"
+            table_endpoint = f"{api_url}/rest/v1/concepts?{query_params}"
+            
+            response = requests.get(
+                table_endpoint,
+                headers={
+                    "apikey": service_role_key,
+                    "Authorization": f"Bearer {service_role_key}",
+                    "Content-Type": "application/json"
+                }
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if result and len(result) > 0:
+                    self.logger.info(f"Successfully retrieved concept with service role key for task ID: {masked_task_id}")
+                    return result[0]
+                else:
+                    self.logger.info(f"No concept found for task ID: {masked_task_id}")
+                    return None
+            else:
+                self.logger.warning(f"Service role query failed: {response.status_code}, {response.text}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error getting concept by task ID with service role: {e}")
+            return None 

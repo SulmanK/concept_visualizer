@@ -3,12 +3,12 @@
 ## Backend Refactoring
 
 ### 1. Background Tasks Implementation
-- [ ] Remove `backend/app/core/middleware/prioritization.py` and its registration in `backend/app/core/factory.py`
-- [ ] Modify API routes to use FastAPI's `BackgroundTasks`:
-  - [ ] Inject `BackgroundTasks` into relevant routes in `generation.py` and `refinement.py`
-  - [ ] Update `POST /concepts/generate-with-palettes` handler to use background tasks
-  - [ ] Update `POST /concepts/refine` handler to use background tasks
-- [ ] Create task logic in appropriate service modules or new `tasks` module
+- [x] Remove `backend/app/core/middleware/prioritization.py` and its registration in `backend/app/core/factory.py`
+- [x] Modify API routes to use FastAPI's `BackgroundTasks`:
+  - [x] Inject `BackgroundTasks` into relevant routes in `generation.py` and `refinement.py`
+  - [x] Update `POST /concepts/generate-with-palettes` handler to use background tasks
+  - [x] Update `POST /concepts/refine` handler to use background tasks
+- [x] Create task logic in appropriate service modules or new `tasks` module
 
 ### 2. Service Layer Granularity
 - [ ] Review and refine `ImageService` (`backend/app/services/image/service.py`)

@@ -79,4 +79,21 @@ class StorageServiceInterface(abc.ABC):
         Raises:
             StorageError: If deletion fails
         """
+        pass
+    
+    @abc.abstractmethod
+    async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a concept by its task ID.
+        
+        Args:
+            task_id: Task ID of the concept to retrieve
+            user_id: User ID for security validation
+            
+        Returns:
+            Concept data or None if not found
+            
+        Raises:
+            StorageError: If retrieval fails
+        """
         pass 

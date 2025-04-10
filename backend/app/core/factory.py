@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.router import configure_api_routes
 from app.core.config import settings
-from app.core.middleware.prioritization import PrioritizationMiddleware
 from app.core.limiter.config import setup_limiter_for_app
 from app.utils.logging.setup import setup_logging
 from app.api.middleware.auth_middleware import AuthMiddleware
@@ -82,11 +81,6 @@ def create_app() -> FastAPI:
     # Add rate limit headers middleware
     app.add_middleware(RateLimitHeadersMiddleware)
     logger.info("Added rate limit headers middleware")
-    
-    # Add prioritization middleware - this should be the last middleware added
-    app.add_middleware(
-        PrioritizationMiddleware,
-    )
     
     # Configure API routes
     configure_api_routes(app)

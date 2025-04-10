@@ -7,6 +7,16 @@ This module contains all the response models for the Concept Visualizer API.
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 
+class TaskResponse(BaseModel):
+    """Response model for background tasks."""
+    
+    task_id: str = Field(..., description="Unique ID for the task")
+    status: str = Field(..., description="Current status of the task (e.g., processing, completed, failed)")
+    message: str = Field(..., description="Additional information about the task status")
+    result_id: Optional[str] = Field(None, description="ID of the result resource (e.g., concept_id) when completed")
+    error: Optional[str] = Field(None, description="Error message if the task failed")
+
+
 class ColorPalette(BaseModel):
     """Color palette model containing hex color codes."""
     
