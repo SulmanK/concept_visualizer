@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ColorPalette } from '../../../../components/ui/ColorPalette';
 import { ConceptData } from '../../../../services/supabaseClient';
@@ -38,9 +38,9 @@ interface ConceptCardProps {
   /** Callback when a specific color variation is clicked */
   onColorClick?: (variationId: string) => void;
   /** Callback when the Edit button is clicked */
-  onEdit?: (conceptId: string, variationIndex: number) => void;
+  onEdit?: (conceptId: string, variationId?: string | null) => void;
   /** Callback when the View Details button is clicked */
-  onViewDetails?: (conceptId: string, variationIndex: number) => void;
+  onViewDetails?: (conceptId: string, variationId?: string | null) => void;
 }
 
 /**
@@ -116,43 +116,60 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     e.preventDefault(); // Prevent navigation when clicking on color circles
     e.stopPropagation(); // Prevent the card click from triggering
 
-    console.log('Palette click - before state update:', { 
+    console.log('Palette click:', { 
       currentIndex: selectedVariationIndex, 
       newIndex: index, 
       isOriginal: index === -1 
     });
 
+    // Update the selected variation index (local state only)
     setSelectedVariationIndex(index);
     
-    console.log('Palette click - after state update:', { 
-      newIndex: index, 
-      isOriginal: index === -1 
-    });
-    
     // If onColorClick is provided and it's a variation (not original)
-    if (onColorClick && concept.color_variations && index >= 0) {
-      console.log('Calling onColorClick with variation ID:', concept.color_variations[index].id);
-      onColorClick(concept.color_variations[index].id);
+    // This is optional - only if you need immediate parent notification on color change
+    if (onColorClick && concept.color_variations && index >= 0 && index < concept.color_variations.length) {
+      const variationId = concept.color_variations[index].id;
+      if (variationId) {
+        console.log('Calling onColorClick with variation ID:', variationId);
+        onColorClick(variationId);
+      }
     }
+  };
+  
+  // Get variation ID from selected index
+  const getVariationId = (index: number): string | null => {
+    if (index < 0 || !concept.color_variations || concept.color_variations.length === 0) {
+      return null;
+    }
+    
+    if (index < concept.color_variations.length) {
+      return concept.color_variations[index]?.id || null;
+    }
+    
+    return null;
   };
   
   // Handle edit button click
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Get variation ID from selected index
+    const variationId = getVariationId(selectedVariationIndex);
+    
+    console.log('[ConceptCard] Edit clicked:', { 
+      conceptId: concept.id, 
+      selectedIndex: selectedVariationIndex, 
+      mappedVariationId: variationId
+    });
+    
+    // Send the variation ID to the parent handler if provided
     if (onEdit) {
-      onEdit(concept.id, selectedVariationIndex);
+      onEdit(concept.id, variationId);
     } else {
       // If no callback provided, navigate to refine page with selected variation
-      if (selectedVariationIndex >= 0 && concept.color_variations) {
-        const variation = concept.color_variations?.[selectedVariationIndex];
-        const variationId = variation ? variation.id : null;
-        
-        if (variationId) {
-          navigate(`/refine/${concept.id}?colorId=${variationId}`);
-        } else {
-          navigate(`/refine/${concept.id}`);
-        }
+      if (variationId) {
+        navigate(`/refine/${concept.id}?colorId=${variationId}`);
       } else {
         // Navigate to refine with original
         navigate(`/refine/${concept.id}`);
@@ -165,25 +182,22 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    // Add debug logging
-    console.log('View Details clicked with variation index:', selectedVariationIndex);
+    // Get variation ID from selected index
+    const variationId = getVariationId(selectedVariationIndex);
     
-    const currentIndex = selectedVariationIndex; // Capture the current index value to ensure it's consistent
+    console.log('[ConceptCard] View details clicked:', { 
+      conceptId: concept.id, 
+      selectedIndex: selectedVariationIndex, 
+      mappedVariationId: variationId 
+    });
     
+    // Send the variation ID to the parent handler if provided  
     if (onViewDetails) {
-      console.log('Calling onViewDetails with:', concept.id, currentIndex);
-      onViewDetails(concept.id, currentIndex);
+      onViewDetails(concept.id, variationId);
     } else {
       // If no callback provided, navigate to concept details page with selected variation
-      if (currentIndex >= 0 && concept.color_variations) {
-        const variation = concept.color_variations?.[currentIndex];
-        const variationId = variation ? variation.id : null;
-        
-        if (variationId) {
-          navigate(`/concepts/${concept.id}?colorId=${variationId}`);
-        } else {
-          navigate(`/concepts/${concept.id}`);
-        }
+      if (variationId) {
+        navigate(`/concepts/${concept.id}?colorId=${variationId}`);
       } else {
         // Navigate to details with original
         navigate(`/concepts/${concept.id}`);
@@ -191,25 +205,48 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     }
   };
   
-  // Get the current image URL based on selection
+  // Get the current image URL based on selection using memoization for performance
   // If we're showing the original (-1), use the concept's original image URL
   // Otherwise get the image URL from the selected variation
-  let currentImageUrl = concept.image_url || concept.base_image_url;
-  
-  if (selectedVariationIndex >= 0 && 
-      concept.color_variations && 
-      selectedVariationIndex < concept.color_variations.length) {
-    // Get the variation at the exact index (no need to adjust for extra original images)
-    const variation = concept.color_variations[selectedVariationIndex];
-    if (variation && variation.image_url) {
-      currentImageUrl = variation.image_url;
-      console.log(`ConceptCard: Using variation ${selectedVariationIndex} image:`, currentImageUrl);
+  const currentImageUrl = useMemo(() => {
+    // Default to the original/base image URL
+    let urlToUse = concept.image_url || concept.base_image_url;
+    
+    console.log(`[DEBUG] ConceptCard image selection:`, {
+      conceptId: concept.id,
+      selectedVariationIndex,
+      hasVariations: Boolean(concept.color_variations && concept.color_variations.length > 0),
+      variationsCount: concept.color_variations?.length || 0,
+      baseImageUrl: concept.base_image_url,
+      imageUrl: concept.image_url
+    });
+    
+    if (selectedVariationIndex >= 0 && 
+        concept.color_variations && 
+        selectedVariationIndex < concept.color_variations.length) {
+      // Get the variation at the exact index
+      const variation = concept.color_variations[selectedVariationIndex];
+      console.log(`[DEBUG] Selected variation:`, {
+        index: selectedVariationIndex,
+        variationId: variation?.id,
+        variationName: variation?.palette_name,
+        hasImage: Boolean(variation?.image_url)
+      });
+      
+      if (variation && variation.image_url) {
+        urlToUse = variation.image_url;
+        console.log(`ConceptCard: Using variation ${selectedVariationIndex} image:`, urlToUse);
+      } else {
+        console.log(`ConceptCard: Variation ${selectedVariationIndex} has no image, using original:`, urlToUse);
+      }
     } else {
-      console.log(`ConceptCard: Variation ${selectedVariationIndex} has no image, using original:`, currentImageUrl);
+      console.log(`ConceptCard: Using original image (index ${selectedVariationIndex}):`, urlToUse);
     }
-  } else {
-    console.log(`ConceptCard: Using original image (index ${selectedVariationIndex}):`, currentImageUrl);
-  }
+    
+    console.log(`[DEBUG] Final image URL selected: ${urlToUse?.substring(0, 50)}${urlToUse && urlToUse.length > 50 ? '...' : ''}`);
+    
+    return urlToUse || '/placeholder-image.png'; // Fallback if no URL available
+  }, [concept, selectedVariationIndex]); // Recalculate only when these dependencies change
   
   // Use a consistent neutral background color
   const neutralBackgroundColor = '#f0f0f5';
@@ -233,11 +270,11 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         {/* Title container with fixed height */}
         <div className="h-16 mb-2">
           <h3 className="font-semibold text-dark-900 line-clamp-2">
-            {concept.title || (concept.logo_description ? 
+            {concept.logo_description ? 
               (concept.logo_description.length > 40 ? 
                 concept.logo_description.substring(0, 40) + '...' : 
                 concept.logo_description) : 
-              'Untitled Concept')}
+              'Untitled Concept'}
           </h3>
         </div>
         
@@ -260,24 +297,26 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
                 }`}
                 style={{ background: 'white' }}
                 title="Original Image"
+                aria-label="View original image"
               >
                 <span className="text-xs">O</span>
               </button>
               
               {/* Color variations */}
               {concept.color_variations?.map((variation, index) => {
-                const color = variation.colors[0] || '#4F46E5';
+                const color = variation.colors && variation.colors.length > 0 ? variation.colors[0] : '#4F46E5';
                 const isLight = isLightColor(color);
                 
                 return (
                   <button 
-                    key={index}
+                    key={variation.id || `var-${index}`}
                     onClick={(e) => handlePaletteClick(e, index)}
                     className={`w-6 h-6 rounded-full transition-all duration-300 ${
                       selectedVariationIndex === index ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
                     } ${isLight ? 'border-2 border-gray-400' : ''}`}
                     style={{ backgroundColor: color }}
-                    title={`${onColorClick ? 'Refine' : 'View'} ${variation.palette_name || `Color Palette ${index + 1}`}`}
+                    title={variation.palette_name || `Color Palette ${index + 1}`}
+                    aria-label={`View ${variation.palette_name || `Color Palette ${index + 1}`}`}
                   />
                 );
               })}

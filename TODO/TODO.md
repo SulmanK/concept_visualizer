@@ -106,12 +106,12 @@
 ***NEW TASKS START HERE***
 ---
 
-- [ ] **Create Global Task Status Bar/Indicator:**
-    - [ ] Design and implement a UI component (`TaskStatusBar.tsx`) that displays the status of the active task.
-    - [ ] Place this component in a persistent layout area (e.g., `MainLayout.tsx`).
-    - [ ] Connect the component to the global task state.
-    - [ ] Show appropriate messages/progress indicators based on task status (`pending`, `processing`, granular steps if implemented, `completed`, `failed`).
-    - [ ] Hide the component when no task is active.
+- [x] **Create Global Task Status Bar/Indicator:**
+    - [x] Design and implement a UI component (`TaskStatusBar.tsx`) that displays the status of the active task.
+    - [x] Place this component in a persistent layout area (e.g., `MainLayout.tsx`).
+    - [x] Connect the component to the global task state.
+    - [x] Show appropriate messages/progress indicators based on task status (`pending`, `processing`, granular steps if implemented, `completed`, `failed`).
+    - [x] Hide the component when no task is active.
 - [ ] **Prevent Concurrent Task UI:**
     - [ ] In `ConceptForm.tsx` and `RefinementForm.tsx`, disable the submit button if the global task state indicates a task is already `pending` or `processing`.
     - [ ] Display a message like "A generation/refinement is already in progress..." near the disabled button.

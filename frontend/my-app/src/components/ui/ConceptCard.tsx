@@ -139,6 +139,15 @@ export interface ConceptCardProps {
    * This bypasses the Supabase storage processing
    */
   sampleImageUrl?: string;
+  
+  /**
+   * Optional color variation data including IDs
+   * This is used to map UI indices to backend variation IDs
+   */
+  colorData?: Array<{
+    id: string;
+    colors: string[];
+  }>;
 }
 
 /**
@@ -155,7 +164,8 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   onEdit,
   onViewDetails,
   editButtonText = "Edit",
-  sampleImageUrl
+  sampleImageUrl,
+  colorData
 }) => {
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
@@ -200,7 +210,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   });
   
   // Ensure we have at least one variation
-  const hasVariations = colorVariations && colorVariations.length > 0;
+  const hasVariations = colorVariations && Array.isArray(colorVariations) && colorVariations.length > 0;
   
   // Get the color array for the currently selected variation
   // Adjust index if we're including original (where index 0 is original, 1+ are variations)
@@ -218,7 +228,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     : [];
   
   // Get the main color from the current variation
-  const mainColor = colors.length > 0 ? colors[0] : '#4F46E5';
+  const mainColor = colors && colors.length > 0 ? colors[0] : '#4F46E5';
   
   // Handle color variation selection
   const handleVariationSelect = (index: number) => {
@@ -269,6 +279,8 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex}: ${rawUrl.substring(0, 30)}${rawUrl.length > 30 ? '...' : ''}`);
     } else {
       console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex} is not a string:`, rawUrl);
+      // Return undefined if the URL is not a string (will show default initials instead)
+      return undefined;
     }
     
     return processImageUrl(rawUrl);
@@ -323,12 +335,14 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           )}
           
           {/* Color variations */}
-          {colorVariations.map((colorSet, variationIndex) => {
+          {hasVariations && Array.isArray(colorVariations) && colorVariations.map((colorSet, variationIndex) => {
             // Adjust the index to account for the original option
             const displayIndex = includeOriginal ? variationIndex + 1 : variationIndex;
             
             // Get the primary color (first color in the set)
-            const primaryColor = colorSet[0] || '#4F46E5';
+            const primaryColor = Array.isArray(colorSet) && colorSet.length > 0
+              ? colorSet[0] 
+              : '#4F46E5';
             
             return (
               <button 
@@ -353,7 +367,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         <div className="mt-4 flex justify-between">
           {onEdit && (
             <button 
-              onClick={() => onEdit(selectedVariationIndex)}
+              onClick={() => {
+                // If colorData is available, use it to map indices to variation IDs
+                if (colorData && Array.isArray(colorData) && selectedVariationIndex > 0) {
+                  // Convert UI index to colorData index
+                  const colorIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+                  
+                  // Get the variation ID if available
+                  if (colorIndex >= 0 && colorIndex < colorData.length) {
+                    const variationId = colorData[colorIndex]?.id;
+                    console.log(`ConceptCard edit: mapped variation index ${selectedVariationIndex} to ID ${variationId}`);
+                  } else {
+                    console.log(`ConceptCard edit: could not map variation index ${selectedVariationIndex} (color index ${colorIndex}) - out of range of colorData (length: ${colorData.length})`);
+                  }
+                }
+                
+                // Always call the original handler with the index for backwards compatibility
+                onEdit(selectedVariationIndex);
+              }}
               className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -365,7 +396,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           
           {onViewDetails && (
             <button 
-              onClick={() => onViewDetails(selectedVariationIndex)}
+              onClick={() => {
+                // If colorData is available, use it to map indices to variation IDs
+                if (colorData && Array.isArray(colorData) && selectedVariationIndex > 0) {
+                  // Convert UI index to colorData index
+                  const colorIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+                  
+                  // Get the variation ID if available
+                  if (colorIndex >= 0 && colorIndex < colorData.length) {
+                    const variationId = colorData[colorIndex]?.id;
+                    console.log(`ConceptCard view details: mapped variation index ${selectedVariationIndex} to ID ${variationId}`);
+                  } else {
+                    console.log(`ConceptCard view details: could not map variation index ${selectedVariationIndex} (color index ${colorIndex}) - out of range of colorData (length: ${colorData.length})`);
+                  }
+                }
+                
+                // Always call the original handler with the index for backwards compatibility
+                onViewDetails(selectedVariationIndex);
+              }}
               className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
             >
               <span className="mr-1">View Details</span>

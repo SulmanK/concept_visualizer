@@ -84,50 +84,97 @@ export function useTaskPolling(taskId: string | null, options: UseTaskPollingOpt
 
   // Keep track of the last status to detect changes
   const lastStatusRef = useRef<string | null>(null);
+  // Keep track of polling rounds for debugging
+  const pollCountRef = useRef(0);
 
   const query = useQuery<TaskResponse>({
     queryKey: ['tasks', effectiveTaskId],
     queryFn: async () => {
       if (!effectiveTaskId) throw new Error('No task ID provided');
-      const response = await apiClient.get<TaskResponse>(`/tasks/${effectiveTaskId}`);
-      return response.data;
+      
+      try {
+        pollCountRef.current += 1;
+        console.log(`[useTaskPolling] Polling task ${effectiveTaskId} (round ${pollCountRef.current})`);
+        
+        const response = await apiClient.get<TaskResponse>(`/tasks/${effectiveTaskId}`);
+        console.log(`[useTaskPolling] Received response for task ${effectiveTaskId}:`, response.data);
+        
+        // Normalize the response by ensuring the id field is set properly
+        if (response.data.task_id && !response.data.id) {
+          response.data.id = response.data.task_id;
+        }
+        
+        return response.data;
+      } catch (error) {
+        console.error(`[useTaskPolling] Error polling task ${effectiveTaskId}:`, error);
+        throw error;
+      }
     },
     enabled: !!effectiveTaskId && enabled,
     refetchInterval: (data) => {
+      // Log the current status
+      console.log(`[useTaskPolling] Current status for task ${effectiveTaskId}:`, data?.status);
+      
       // Stop polling if task reaches a terminal state
       if (data?.status === 'completed' || data?.status === 'failed') {
+        console.log(`[useTaskPolling] Task ${effectiveTaskId} reached terminal state (${data.status}), stopping poll`);
         return false;
       }
+      
+      console.log(`[useTaskPolling] Continuing to poll task ${effectiveTaskId} every ${pollingInterval}ms`);
       return pollingInterval;
     },
-    // Don't retry on error for task polling
-    retry: false,
-    // Keep data fresh
+    // Decrease stale time to ensure we're getting fresh data
     staleTime: 0,
+    // Force refetch on window focus to catch updates
+    refetchOnWindowFocus: true,
+    // Retry a few times on error
+    retry: 3,
+    retryDelay: 1000,
   });
 
   // Handle status changes
   useEffect(() => {
     const currentStatus = query.data?.status;
+    console.log(`[useTaskPolling] Status check: last=${lastStatusRef.current}, current=${currentStatus}`);
+    
     if (currentStatus && currentStatus !== lastStatusRef.current) {
+      console.log(`[useTaskPolling] Status changed from ${lastStatusRef.current} to ${currentStatus} for task ${effectiveTaskId}`);
       lastStatusRef.current = currentStatus;
 
       if (currentStatus === 'completed' && onSuccess && query.data) {
+        console.log(`[useTaskPolling] Calling onSuccess for completed task ${effectiveTaskId}`);
         onSuccess(query.data);
       } else if (currentStatus === 'failed' && onError && query.data) {
+        console.log(`[useTaskPolling] Calling onError for failed task ${effectiveTaskId}`);
         onError(new Error(query.data.error_message || 'Task failed'), query.data);
       }
     }
-  }, [query.data?.status, onSuccess, onError]);
+  }, [query.data?.status, onSuccess, onError, effectiveTaskId, query.data]);
+
+  // Force manual refetch when needed
+  useEffect(() => {
+    if (effectiveTaskId && enabled) {
+      const interval = setInterval(() => {
+        // Force a refetch every so often in case the refetchInterval approach isn't working
+        queryClient.invalidateQueries({ queryKey: ['tasks', effectiveTaskId] });
+        console.log(`[useTaskPolling] Forced refetch for task ${effectiveTaskId}`);
+      }, pollingInterval * 2.5);  // Use longer interval for forced refetch
+      
+      return () => clearInterval(interval);
+    }
+  }, [effectiveTaskId, enabled, pollingInterval, queryClient]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (effectiveTaskId) {
+        console.log(`[useTaskPolling] Cleaning up task polling for ${effectiveTaskId}`);
         queryClient.removeQueries({ queryKey: ['tasks', effectiveTaskId] });
         
         // Optionally, clear the global task state if it matches our task ID
         if (useGlobalTaskId && globalTaskId === effectiveTaskId) {
+          console.log(`[useTaskPolling] Clearing global task state for ${effectiveTaskId}`);
           setActiveTask(null);
         }
       }
@@ -141,5 +188,10 @@ export function useTaskPolling(taskId: string | null, options: UseTaskPollingOpt
     isProcessing: query.data?.status === 'processing',
     isCompleted: query.data?.status === 'completed',
     isFailed: query.data?.status === 'failed',
+    // Provide method to force refresh
+    forceRefresh: () => {
+      console.log(`[useTaskPolling] Manually forcing refresh for task ${effectiveTaskId}`);
+      return queryClient.invalidateQueries({ queryKey: ['tasks', effectiveTaskId] });
+    }
   };
 } 

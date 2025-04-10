@@ -153,29 +153,16 @@ const LandingPageContent: React.FC = () => {
       });
   };
   
-  const handleEdit = (conceptId: string, variationIndex: number = 0) => {
+  const handleEdit = (conceptId: string, variationId?: string | null) => {
     // Check if this is a sample concept
     if (conceptId.startsWith('sample-')) {
       alert('This is a sample concept. Please generate a real concept to edit it.');
       return;
     }
     
-    // Find the concept
-    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
-    if (!concept) {
-      navigate(`/refine/${conceptId}`);
-      return;
-    }
+    console.log('handleEdit in LandingPage:', { conceptId, variationId });
     
-    // Get the variation ID if available
-    const variation = concept.color_variations && 
-                      variationIndex < concept.color_variations.length ? 
-                      concept.color_variations[variationIndex] : null;
-    
-    // If we have a variation, use its ID, otherwise just use the concept ID
-    const variationId = variation ? variation.id : null;
-    
-    // Navigate to the refine page with variation ID as query parameter if available
+    // Navigate directly with concept ID and variationId (if available)
     if (variationId) {
       navigate(`/refine/${conceptId}?colorId=${variationId}`);
     } else {
@@ -183,35 +170,16 @@ const LandingPageContent: React.FC = () => {
     }
   };
   
-  const handleViewDetails = (conceptId: string, variationIndex: number = -1) => {
+  const handleViewDetails = (conceptId: string, variationId?: string | null) => {
     // Check if this is a sample concept
     if (conceptId.startsWith('sample-')) {
       alert('This is a sample concept. Please generate a real concept to view details.');
       return;
     }
     
-    // If variationIndex is -1, it means the original image is selected
-    if (variationIndex === -1) {
-      navigate(`/concepts/${conceptId}`);
-      return;
-    }
+    console.log('handleViewDetails in LandingPage:', { conceptId, variationId });
     
-    // Find the concept
-    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
-    if (!concept) {
-      navigate(`/concepts/${conceptId}`);
-      return;
-    }
-    
-    // Get the variation ID if available
-    const variation = concept.color_variations && 
-                      variationIndex < concept.color_variations.length ? 
-                      concept.color_variations[variationIndex] : null;
-    
-    // If we have a variation, use its ID, otherwise just use the concept ID
-    const variationId = variation ? variation.id : null;
-    
-    // Navigate to the concept details page with variation ID as query parameter if available
+    // Navigate directly with concept ID and variationId (if available)
     if (variationId) {
       navigate(`/concepts/${conceptId}?colorId=${variationId}`);
     } else {
@@ -231,62 +199,9 @@ const LandingPageContent: React.FC = () => {
   const formatConceptsForDisplay = () => {
     if (!recentConcepts || recentConcepts.length === 0) return [];
     
-    return recentConcepts.slice(0, 3).map((concept: ConceptData) => {
-      // Get initials from the logo description
-      const words = concept.logo_description.trim().split(/\s+/);
-      const initials = words.length === 1 
-        ? words[0].substring(0, 2).toUpperCase()
-        : (words[0][0] + words[1][0]).toUpperCase();
-      
-      // Get color variations - each variation has its own set of colors
-      // This creates a 2D array where each inner array represents a color variation
-      const colorVariations = concept.color_variations?.map(variation => variation.colors) || [];
-      
-      // If no color variations, provide a fallback
-      if (colorVariations.length === 0) {
-        colorVariations.push(['#4F46E5', '#60A5FA', '#1E293B']); // Fallback colors
-      }
-      
-      // Debug image URLs
-      console.log(`Concept ${concept.id} original image:`, {
-        image_url: concept.image_url,
-        base_image_url: concept.base_image_url,
-        has_variations: concept.color_variations && concept.color_variations.length > 0
-      });
-      
-      // Get images from color variations
-      const images = concept.color_variations?.map(variation => {
-        // Debug each variation's image URL
-        console.log(`Variation ${variation.id} image:`, {
-          image_url: variation.image_url,
-          image_path: variation.image_path
-        });
-        
-        // Return the URL string directly, not an object
-        return variation.image_url;
-      }) || [];
-      
-      // Add the original image as the first item if it exists
-      if (concept.image_url) {
-        images.unshift(concept.image_url);
-      }
-      
-      return {
-        id: concept.id,
-        title: concept.logo_description,
-        description: concept.theme_description,
-        initials,
-        colorVariations,
-        images, // Now this is an array of strings as expected by ConceptCard
-        originalImage: concept.image_url, // Pass the original image separately
-        image_url: concept.image_url, // For sample concepts
-        gradient: { from: 'blue-400', to: 'indigo-500' }, // Add default gradient
-        onEdit: handleEdit,
-        onViewDetails: handleViewDetails,
-        onColorSelect: handleColorSelect,
-        selectedColor
-      };
-    });
+    // Return the first three concepts directly - no transformation needed
+    // Our new RecentConceptsSection works directly with Concept data
+    return recentConcepts.slice(0, 3);
   };
   
   return (

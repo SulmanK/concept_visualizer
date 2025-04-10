@@ -8,8 +8,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 interface ResultsSectionProps {
   conceptId: string;
-  onEdit: (conceptId: string, variationIndex?: number) => void;
-  onViewDetails: (conceptId: string, variationIndex?: number) => void;
+  onEdit: (conceptId: string, variationId?: string | null) => void;
+  onViewDetails: (conceptId: string, variationId?: string | null) => void;
   onColorSelect: (color: string) => void;
   selectedColor: string | null;
 }

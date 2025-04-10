@@ -2,36 +2,110 @@ import React from 'react';
 import { ConceptCard } from '../../../components/ui/ConceptCard';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { Link } from 'react-router-dom';
-
-interface ConceptData {
-  id: string;
-  title: string;
-  description: string;
-  colorVariations: string[][];
-  gradient: {
-    from: string;
-    to: string;
-  };
-  initials: string;
-  images?: string[];
-  originalImage?: string;
-  image_url?: string;
-}
+import { ConceptData } from '../../../services/supabaseClient';
 
 interface RecentConceptsSectionProps {
-  concepts: ConceptData[];
-  onEdit: (conceptId: string, variationIndex: number) => void;
-  onViewDetails: (conceptId: string, variationIndex?: number) => void;
+  concepts: Array<ConceptData>;
+  onEdit: (conceptId: string, variationId?: string | null) => void;
+  onViewDetails: (conceptId: string, variationId?: string | null) => void;
   isLoading?: boolean;
+}
+
+/**
+ * Helper function to adapt Concept data for the UI ConceptCard
+ * with additional safety checks to prevent errors
+ */
+function adaptConceptForUiCard(concept: ConceptData) {
+  if (!concept) {
+    console.warn('Received null or undefined concept in adaptConceptForUiCard');
+    // Return default data if concept is null or undefined
+    return {
+      title: "Missing Concept",
+      description: "No data available",
+      colorVariations: [['#4F46E5', '#60A5FA', '#1E293B']],
+      images: [],
+      initials: "NA",
+      includeOriginal: false,
+      gradient: { from: 'blue-400', to: 'indigo-500' },
+      colorData: [],
+      id: 'missing'
+    };
+  }
+
+  try {
+    // Get initials from the logo description (with safety checks)
+    const logoDescription = concept.logo_description || "Untitled";
+    const words = logoDescription.trim().split(/\s+/);
+    const initials = words.length === 1 
+      ? words[0].substring(0, 2).toUpperCase()
+      : (words[0][0] + (words.length > 1 ? words[1][0] : '')).toUpperCase();
+    
+    // Create color variations array - each variation has its own set of colors
+    const colorVariations = concept.color_variations?.map(variation => 
+      Array.isArray(variation.colors) && variation.colors.length > 0 
+        ? variation.colors 
+        : ['#4F46E5']
+    ) || [];
+    
+    // If no color variations, provide a fallback
+    if (!colorVariations || colorVariations.length === 0) {
+      colorVariations.push(['#4F46E5', '#60A5FA', '#1E293B']);
+    }
+    
+    // Get images from color variations (with safety checks)
+    const images = (concept.color_variations || [])
+      .map(variation => variation?.image_url)
+      .filter(Boolean) || [];
+    
+    // Add the original image as the first item if it exists
+    const originalImage = concept.image_url || concept.base_image_url;
+    if (originalImage) {
+      images.unshift(originalImage);
+    }
+    
+    // Create colorData for mapping indices to variation IDs
+    const colorData = (concept.color_variations || []).map(variation => ({
+      id: variation.id,
+      colors: Array.isArray(variation.colors) ? variation.colors : ['#4F46E5']
+    }));
+    
+    console.log(`[adaptConceptForUiCard] Adapted concept ${concept.id}:`, {
+      variationsCount: colorVariations.length, 
+      imagesCount: images.length
+    });
+    
+    return {
+      title: concept.logo_description || "Untitled Concept",
+      description: concept.theme_description || "No description available",
+      colorVariations,
+      images,
+      initials,
+      includeOriginal: !!originalImage,
+      gradient: { from: 'blue-400', to: 'indigo-500' },
+      colorData,
+      id: concept.id
+    };
+  } catch (error) {
+    console.error('Error in adaptConceptForUiCard:', error);
+    // Return a safe fallback on error
+    return {
+      title: "Error Processing Concept",
+      description: "An error occurred while processing this concept",
+      colorVariations: [['#4F46E5', '#60A5FA', '#1E293B']],
+      images: [],
+      initials: "ER",
+      includeOriginal: false,
+      gradient: { from: 'red-400', to: 'red-600' },
+      colorData: [],
+      id: concept?.id || 'error'
+    };
+  }
 }
 
 /**
  * Recent concepts section showing previously created concepts
  * Optimized for responsive viewing on mobile and desktop
- * 
- * Note: This component no longer uses eventService for refreshing.
- * Instead, it relies on React Query's automatic cache invalidation
- * which is triggered in the mutation hooks directly.
+ * Uses direct ConceptCards like in ConceptList
  */
 export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   concepts,
@@ -51,6 +125,18 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
         <SkeletonLoader type="card" height="360px" className="rounded-xl" />
       </div>
     ));
+  };
+  
+  // Handle click on edit button
+  const handleEdit = (conceptId: string, variationId?: string | null) => {
+    console.log('[RecentConceptsSection] Edit clicked:', { conceptId, variationId });
+    onEdit(conceptId, variationId);
+  };
+  
+  // Handle click on view details button
+  const handleViewDetails = (conceptId: string, variationId?: string | null) => {
+    console.log('[RecentConceptsSection] View details clicked:', { conceptId, variationId });
+    onViewDetails(conceptId, variationId);
   };
   
   return (
@@ -79,52 +165,50 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
             </Link>
           </div>
           
-          {/* Grid with responsive columns - 1 column on mobile, 2 on medium screens, 3 on large */}
-          {/* Added min-h-full to ensure consistent heights across cards */}
+          {/* Grid with responsive columns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {isLoading ? renderSkeletonCards() : concepts.map((concept) => {
-              // Check if sample concept (using direct image) or normal concept (using Supabase storage)
+              // Adapt the concept for the UI card using our helper function
+              const adaptedConcept = adaptConceptForUiCard(concept);
+              
+              // Check if sample concept (using direct image) or normal concept
               const isSampleConcept = concept.id.startsWith('sample-');
-              
-              // For sample concepts, directly use the image_url without modification
-              let cardImages = concept.images || [];
-              let includeOriginal = false;
-              
-              if (isSampleConcept && concept.image_url) {
-                // For sample concepts, use the image_url directly as a simple image
-                cardImages = [];  // Don't provide any images to avoid Supabase signed URL processing
-              } else if (concept.originalImage) {
-                // For real concepts with originalImage, use standard processing
-                cardImages = concept.originalImage 
-                  ? [concept.originalImage, ...(concept.images || [])] 
-                  : concept.images || [];
-                includeOriginal = !!concept.originalImage;
-              }
+              const sampleImageUrl = isSampleConcept ? concept.image_url : undefined;
               
               return (
-                <div key={concept.id} className="h-full flex">
-                  <div className="flex-1 flex flex-col transform transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                    <ConceptCard
-                      title={concept.title}
-                      description={concept.description}
-                      colorVariations={concept.colorVariations}
-                      images={cardImages}
-                      gradient={concept.gradient}
-                      initials={concept.initials}
-                      includeOriginal={includeOriginal}
-                      editButtonText="Refine"
-                      onEdit={(index) => {
-                        const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
-                        onEdit(concept.id, adjustedIndex);
-                      }}
-                      onViewDetails={(index: number) => {
-                        const adjustedIndex = concept.originalImage && index === 0 ? -1 : index - (concept.originalImage ? 1 : 0);
-                        onViewDetails(concept.id, adjustedIndex);
-                      }}
-                      // Pass image_url directly for sample concepts
-                      sampleImageUrl={isSampleConcept ? concept.image_url : undefined}
-                    />
-                  </div>
+                <div key={concept.id} className="h-full">
+                  <ConceptCard 
+                    title={adaptedConcept.title}
+                    description={adaptedConcept.description}
+                    colorVariations={adaptedConcept.colorVariations}
+                    images={adaptedConcept.images}
+                    initials={adaptedConcept.initials}
+                    includeOriginal={adaptedConcept.includeOriginal}
+                    gradient={adaptedConcept.gradient}
+                    colorData={adaptedConcept.colorData}
+                    sampleImageUrl={sampleImageUrl}
+                    editButtonText="Refine"
+                    onEdit={(index) => {
+                      // Map the index to a variation ID
+                      let variationId = null;
+                      
+                      if (index > 0 && adaptedConcept.colorData && index - 1 < adaptedConcept.colorData.length) {
+                        variationId = adaptedConcept.colorData[index - 1].id;
+                      }
+                      
+                      handleEdit(concept.id, variationId);
+                    }}
+                    onViewDetails={(index) => {
+                      // Map the index to a variation ID
+                      let variationId = null;
+                      
+                      if (index > 0 && adaptedConcept.colorData && index - 1 < adaptedConcept.colorData.length) {
+                        variationId = adaptedConcept.colorData[index - 1].id;
+                      }
+                      
+                      handleViewDetails(concept.id, variationId);
+                    }}
+                  />
                 </div>
               );
             })}

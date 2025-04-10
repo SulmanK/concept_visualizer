@@ -59,72 +59,43 @@ export const ConceptList: React.FC = () => {
   }, [user?.id, refreshConcepts]);
   
   // Handle navigation to the edit/refine page
-  const handleEdit = (conceptId: string, variationIndex: number) => {
-    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
-    if (!concept) {
-      navigate(`/refine/${conceptId}`);
+  const handleEdit = (conceptId: string, variationId?: string | null) => {
+    console.log('[ConceptList] Edit clicked:', { conceptId, variationId });
+    
+    // Check if this is a sample concept
+    if (conceptId.startsWith('sample-')) {
+      console.warn('Cannot edit sample concept');
       return;
     }
     
-    // If variationIndex is -1, it means the original image is selected
-    if (variationIndex === -1) {
-      navigate(`/refine/${conceptId}`);
-      return;
-    }
-    
-    const variation = concept.color_variations && 
-                      variationIndex < concept.color_variations.length ? 
-                      concept.color_variations[variationIndex] : null;
-    
-    const variationId = variation ? variation.id : null;
-    
+    // If we have a variation ID, add it as a query parameter
     if (variationId) {
+      console.log(`Navigating to refine with variation: /refine/${conceptId}?colorId=${variationId}`);
       navigate(`/refine/${conceptId}?colorId=${variationId}`);
     } else {
+      // Otherwise navigate to the concept without a variation
+      console.log(`Navigating to refine original: /refine/${conceptId}`);
       navigate(`/refine/${conceptId}`);
     }
   };
   
   // Handle navigation to the concept details page
-  const handleViewDetails = (conceptId: string, variationIndex: number) => {
-    console.log('handleViewDetails called with:', { conceptId, variationIndex });
+  const handleViewDetails = (conceptId: string, variationId?: string | null) => {
+    console.log('[ConceptList] View details clicked:', { conceptId, variationId });
     
-    const concept = recentConcepts.find((c: ConceptData) => c.id === conceptId);
-    if (!concept) {
-      console.log('Concept not found, navigating to default:', `/concepts/${conceptId}`);
-      navigate(`/concepts/${conceptId}`);
+    // Check if this is a sample concept
+    if (conceptId.startsWith('sample-')) {
+      console.warn('Cannot view sample concept details');
       return;
     }
     
-    console.log('Concept found:', { 
-      id: concept.id, 
-      hasVariations: (concept.color_variations?.length || 0) > 0,
-      variationsCount: concept.color_variations?.length || 0 
-    });
-    
-    // If variationIndex is -1, it means the original image is selected
-    if (variationIndex === -1) {
-      console.log('Original image selected, navigating to:', `/concepts/${conceptId}`);
-      navigate(`/concepts/${conceptId}`);
-      return;
-    }
-    
-    const variation = concept.color_variations && 
-                      variationIndex < concept.color_variations.length ? 
-                      concept.color_variations[variationIndex] : null;
-    
-    console.log('Selected variation:', { 
-      index: variationIndex, 
-      variation: variation ? { id: variation.id, name: variation.palette_name } : null 
-    });
-    
-    const variationId = variation ? variation.id : null;
-    
+    // If we have a variation ID, add it as a query parameter
     if (variationId) {
-      console.log('Navigating to variation:', `/concepts/${conceptId}?colorId=${variationId}`);
+      console.log(`Navigating to details with variation: /concepts/${conceptId}?colorId=${variationId}`);
       navigate(`/concepts/${conceptId}?colorId=${variationId}`);
     } else {
-      console.log('No valid variation found, navigating to default:', `/concepts/${conceptId}`);
+      // Otherwise navigate to the concept without a variation
+      console.log(`Navigating to details original: /concepts/${conceptId}`);
       navigate(`/concepts/${conceptId}`);
     }
   };

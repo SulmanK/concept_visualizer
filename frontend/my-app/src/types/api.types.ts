@@ -30,6 +30,7 @@ export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
  */
 export interface TaskResponse {
   id: string;
+  task_id?: string;
   status: TaskStatus;
   type: 'generate_concept' | 'refine_concept';
   result_id?: string;
