@@ -1,95 +1,138 @@
 # Concept Visualizer - Project TODO
 
-## Export Options Refactoring
+## Backend Refactoring
 
-### Phase 1: Backend Implementation (New Endpoint & Logic)
+### 1. Background Tasks Implementation
+- [ ] Remove `backend/app/core/middleware/prioritization.py` and its registration in `backend/app/core/factory.py`
+- [ ] Modify API routes to use FastAPI's `BackgroundTasks`:
+  - [ ] Inject `BackgroundTasks` into relevant routes in `generation.py` and `refinement.py`
+  - [ ] Update `POST /concepts/generate-with-palettes` handler to use background tasks
+  - [ ] Update `POST /concepts/refine` handler to use background tasks
+- [ ] Create task logic in appropriate service modules or new `tasks` module
 
-- [x] Define new API endpoint
-  - [x] Create `backend/app/api/routes/export/export_routes.py` and `backend/app/api/routes/export/__init__.py`
-  - [x] Define `POST /api/export/process` route
-  - [x] Create Pydantic request model in `backend/app/models/export/request.py`
-  - [x] Implement response handling (Direct File Response)
-  - [x] Add authentication protection
+### 2. Service Layer Granularity
+- [ ] Review and refine `ImageService` (`backend/app/services/image/service.py`)
+- [ ] Ensure `ConceptService` components maintain single responsibilities
+- [ ] Consider splitting JigsawStack interactions into a separate service if needed
 
-- [x] Implement backend service logic
-  - [x] Create or modify service in `backend/app/services/export/service.py`
-  - [x] Implement secure image fetching based on image identifier
-  - [x] Implement processing logic for different formats (PNG/JPG/SVG)
-  - [x] Move and refactor vtracer logic from old SVG endpoint
-  - [x] Implement direct file response handling
+### 3. Rate Limiting Application
+- [ ] Refine `backend/app/utils/api_limits/endpoints.py` functions
+- [ ] Replace direct calls to rate limiting functions in route handlers with:
+  - [ ] Option A: Enhance `RateLimitHeadersMiddleware` or create new middleware
+- [ ] Extract rate limit info storage logic into reusable dependency function
 
-- [x] Register new route in `backend/app/api/router.py`
+### 4. Supabase Client & Storage
+- [ ] Refocus `backend/app/core/supabase/client.py` on client creation only
+- [ ] Move `purge_all_data` to a dedicated admin service or script
+- [ ] Add clear comments to `backend/app/core/supabase/image_storage.py` about API usage
+- [ ] Review Supabase client library for potential SDK updates
 
-- [x] Add rate limiting to export endpoint
+### 5. DRY - Route Logic
+- [ ] Extract duplicated logic for storing rate limit info in routes to a reusable function
 
-### Phase 2: Frontend Refactoring (Adopt New Endpoint)
+### 6. URL Handling Consistency
+- [ ] Ensure services that return concept/image data always include ready-to-use URLs
+- [ ] Standardize URL generation using `ImageStorageService.get_signed_url`
 
-- [x] Update API client
-  - [x] Add `exportImage` function to `frontend/my-app/src/services/apiClient.ts`
-  - [x] Handle appropriate response types (Blob)
+### 7. Legacy Code Cleanup
+- [ ] Review and remove:
+  - [ ] `backend/app/api/routes/api.py`
+  - [ ] `backend/app/models/concept.py`, `request.py`, `response.py`
+  - [ ] `backend/app/services/concept_service.py`
+  - [ ] `backend/app/services/image_processing.py`
+  - [ ] `backend/app/services/image_service.py`
+- [ ] Consolidate `backend/app/services/concept_storage_service.py` into `backend/app/services/storage/concept_storage.py`
 
-- [x] Create new React Query mutation hook
-  - [x] Create `frontend/my-app/src/hooks/useExportImageMutation.ts`
-  - [x] Implement download functionality in `onSuccess` handler
-  - [x] Add error handling with `createQueryErrorHandler`
+## Frontend Refactoring
 
-- [x] Refactor `ExportOptions.tsx` component
-  - [x] Remove old client-side Canvas processing logic
-  - [x] Remove usage of old `useSvgConversionMutation` hook
-  - [x] Integrate new `useExportImageMutation` hook
-  - [x] Update download and preview buttons to use new mutation
-  - [x] Update error handling
+### 1. State Management
+- [ ] Remove `frontend/my-app/src/contexts/ConceptContext.tsx`
+- [ ] Update components importing `useConceptContext` to use React Query hooks directly
+- [ ] Review React Query caching settings in `frontend/my-app/src/main.tsx`
+- [ ] Evaluate necessity of `useFreshConceptDetail`'s forced refetch in `useConceptQueries.ts`
 
-- [x] Clean up old SVG hook
-  - [x] Remove `frontend/my-app/src/hooks/useSvgConversionMutation.ts`
-  - [x] Remove related imports
+### 2. Component Consolidation
+- [ ] Consolidate `ConceptCard` components from different features into a single reusable component
+- [ ] Review UI components to ensure adherence to Single Responsibility Principle
+- [ ] Review feature components to minimize direct cross-feature imports
 
-### Phase 3: Backend Cleanup
+### 3. URL Handling Consistency
+- [ ] Simplify URL logic in `frontend/my-app/src/services/supabaseClient.ts`
+- [ ] Update components to use ready-to-use URLs from backend
+- [ ] Simplify or remove `extractStoragePathFromUrl` in `frontend/my-app/src/utils/url.ts` if no longer needed
 
-- [x] Remove old SVG endpoint
-  - [x] Delete `backend/app/api/routes/svg/converter.py`
-  - [x] Update `backend/app/api/routes/svg/__init__.py` or remove directory
-  - [x] Update `backend/app/api/router.py` to remove old SVG router
+### 4. Page Transitions
+- [ ] Remove `PageTransition` component in `frontend/my-app/src/components/layout/PageTransition.tsx`
+- [ ] Implement a performant packaged animation library for page transitions
+- [ ] Update `frontend/my-app/src/App.tsx` for proper page transition handling
 
-- [x] Remove old SVG models
-  - [x] Delete `backend/app/models/svg/conversion.py` if unused
-  - [x] Update related import files
+### 5. API Client & Fetch Interceptor
+- [ ] Move fetch interceptor logic from `App.tsx` to `frontend/my-app/src/services/apiClient.ts`
+- [ ] Consider switching to Axios with interceptors for more robust API client
 
-- [x] Final code review and testing
-  - [x] Search codebase for remaining dependencies on old SVG endpoint/models
-  - [x] Update SVG exceptions to more generic Export exceptions
-  - [x] Test all export formats and sizes
-  - [x] Verify rate limiting functionality
+### 6. Legacy Hooks Cleanup
+- [ ] Remove and replace:
+  - [ ] `frontend/my-app/src/hooks/useConceptGeneration.ts`
+  - [ ] `frontend/my-app/src/hooks/useConceptRefinement.ts`
+  - [ ] `frontend/my-app/src/hooks/useApi.ts`
+- [ ] Update components to use React Query-based hooks
 
-## Image Processing and Rate Limit Improvements
+## Code Quality Improvements
 
-### Part 1: Fix Image Palette Application
+### 1. Backend Logging Cleanup
+- [ ] Review and clean up logger statements in:
+  - [ ] API middleware files
+  - [ ] API route handlers
+  - [ ] Core configuration modules
+  - [ ] Service implementations
+  - [ ] Utility functions
+- [ ] Keep essential error logs while removing/reducing debug-only logs
 
-- [x] Rework image processing in LAB color space
-  - [x] Modify `apply_palette_with_masking_optimized` function in `backend/app/services/image/processing.py`
-  - [x] Convert image to LAB color space for better color handling
-  - [x] Implement lightness-based color mapping for palette application
-  - [x] Remove or simplify K-means logic for dominant color extraction
-  - [x] Add helper functions for LAB conversion and lightness sorting if needed
-  - [x] Optimize processing using vectorized operations
-  - [x] Implement robust error handling
+### 2. Frontend Console Logging Cleanup
+- [ ] Review and clean up console.log statements in:
+  - [ ] Context providers
+  - [ ] Service implementations
+  - [ ] React Query hooks
+  - [ ] UI components
+- [ ] Guard remaining console statements with environment checks
 
-### Part 2: Refactor Export Rate Limiting
+### 3. DRY Code Refactoring
+- [ ] Create reusable components for common UI patterns:
+  - [ ] Create `QueryResultHandler` component for loading/error/empty states
+  - [ ] Update list and detail components to use the handler
+- [ ] Refactor backend rate limit application logic
+- [ ] Create helper methods for common Supabase operations
+- [ ] Centralize JigsawStack API request handling
+- [ ] Consolidate image upload/storage logic
 
-- [x] Consolidate export rate limits
-  - [x] Define unified export limit category (e.g., `export_action`)
-  - [x] Set appropriate rate limit string (e.g., "50/hour")
+### 4. UI Consistency
+- [ ] Ensure consistent use of Tailwind CSS classes across the entire frontend
+- [ ] Review and update all component styling to follow Tailwind best practices
+- [ ] Create common utility classes for frequently used styling patterns
 
-- [x] Backend rate limit changes
-  - [x] Modify export route in `backend/app/api/routes/export/export_routes.py`
-  - [x] Replace format-specific rate limits with single unified rate limit
-  - [x] Update rate limit configuration in relevant files if needed
-  - Great!
+## Testing Strategy
 
-- [x] Frontend rate limit changes  
-  - [x] Update rate limit types in `frontend/my-app/src/services/rateLimitService.ts`
-  - [x] Modify `RateLimitCategory` type and related interfaces
-  - [x] Update mapping functions for endpoints and categories
-  - [x] Update export mutation hook in `frontend/my-app/src/hooks/useExportImageMutation.ts`
-  - [x] Modify rate limit UI components in `frontend/my-app/src/components/RateLimitsPanel/RateLimitsPanel.tsx`
+### 1. Backend Testing
+- [ ] Add unit tests for new background task functions
+- [ ] Add integration tests for API routes with background tasks
+- [ ] Enhance tests for refactored services
+- [ ] Test error handling for background tasks
+
+### 2. Frontend Testing
+- [ ] Update tests for components after context removal
+- [ ] Add tests for consolidated components
+- [ ] Test React Query integration
+- [ ] Verify error handling UI components
+
+
+
+## Implementation Plan
+
+- [ ] Review and approve this design plan
+- [ ] Break down plan into smaller tasks
+- [ ] Prioritize implementation order
+- [ ] Create development branches for each major change
+- [ ] Implement changes incrementally with testing
+- [ ] Conduct code reviews for all changes
+
 
