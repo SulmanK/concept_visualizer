@@ -14,6 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.exceptions import ApplicationError
+from app.services.task.service import TaskNotFoundError
 
 # Configure logging
 logger = logging.getLogger("api_errors")
@@ -395,6 +396,28 @@ async def application_error_handler(request: Request, exc: ApplicationError) -> 
     return JSONResponse(
         status_code=status_code,
         content=response
+    )
+
+
+@app.exception_handler(TaskNotFoundError)
+async def task_not_found_handler(request: Request, exc: TaskNotFoundError):
+    """
+    Handle TaskNotFoundError by returning 404 Not Found.
+    
+    Args:
+        request: The FastAPI request object
+        exc: The TaskNotFoundError exception instance
+        
+    Returns:
+        JSONResponse with 404 status code and error details
+    """
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={
+            "error": True,
+            "detail": str(exc),
+            "code": "task_not_found"
+        }
     )
 
 

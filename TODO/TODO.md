@@ -8,7 +8,12 @@
   - [x] Inject `BackgroundTasks` into relevant routes in `generation.py` and `refinement.py`
   - [x] Update `POST /concepts/generate-with-palettes` handler to use background tasks
   - [x] Update `POST /concepts/refine` handler to use background tasks
-- [x] Create task logic in appropriate service modules or new `tasks` module
+- [x] Implement the task management system:
+  - [x] Create a TaskService to handle task CRUD operations
+  - [x] Update background task functions to use dedicated tasks table
+  - [x] Add endpoints to retrieve task status
+  - [x] Add support for error handling and state persistence
+- [ ] Update frontend to handle the asynchronous task workflow
 
 ### 2. Service Layer Granularity
 - [ ] Review and refine `ImageService` (`backend/app/services/image/service.py`)

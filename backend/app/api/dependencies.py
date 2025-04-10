@@ -16,10 +16,12 @@ from app.core.supabase.client import get_supabase_client
 from app.services.concept import get_concept_service
 from app.services.image import get_image_service
 from app.services.storage import get_concept_storage_service
+from app.services.task import get_task_service
 from app.services.interfaces import (
     ConceptServiceInterface,
     ImageServiceInterface,
-    StorageServiceInterface
+    StorageServiceInterface,
+    TaskServiceInterface
 )
 from app.services.jigsawstack.client import get_jigsawstack_client
 from app.api.middleware.auth_middleware import get_current_user
@@ -55,6 +57,7 @@ def get_common_services():
         "concept_service": get_concept_service(),
         "image_service": get_image_service(),
         "storage_service": get_concept_storage_service(),
+        "task_service": get_task_service(),
         "supabase_client": get_supabase_client()
     }
 
@@ -72,6 +75,7 @@ class CommonDependencies:
         concept_service: ConceptServiceInterface = Depends(get_concept_service),
         image_service: ImageServiceInterface = Depends(get_image_service),
         storage_service: StorageServiceInterface = Depends(get_concept_storage_service),
+        task_service: TaskServiceInterface = Depends(get_task_service),
         request: Request = None,
     ):
         """
@@ -81,11 +85,13 @@ class CommonDependencies:
             concept_service: Service for concept generation and refinement
             image_service: Service for image processing and storage
             storage_service: Service for concept storage operations
+            task_service: Service for managing background tasks
             request: FastAPI request object for accessing user information
         """
         self.concept_service = concept_service
         self.image_service = image_service
         self.storage_service = storage_service
+        self.task_service = task_service
         self.request = request
         self.user = get_current_user(request) if request else None
         

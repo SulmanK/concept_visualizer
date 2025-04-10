@@ -4,17 +4,21 @@ Response model definitions.
 This module contains all the response models for the Concept Visualizer API.
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
 class TaskResponse(BaseModel):
     """Response model for background tasks."""
     
     task_id: str = Field(..., description="Unique ID for the task")
-    status: str = Field(..., description="Current status of the task (e.g., processing, completed, failed)")
+    status: str = Field(..., description="Current status of the task (pending, processing, completed, failed)")
     message: str = Field(..., description="Additional information about the task status")
+    type: Optional[str] = Field(None, description="Type of task (e.g., concept_generation, concept_refinement)")
+    created_at: Optional[str] = Field(None, description="Timestamp when the task was created")
+    updated_at: Optional[str] = Field(None, description="Timestamp when the task was last updated")
     result_id: Optional[str] = Field(None, description="ID of the result resource (e.g., concept_id) when completed")
     error: Optional[str] = Field(None, description="Error message if the task failed")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional task metadata")
 
 
 class ColorPalette(BaseModel):

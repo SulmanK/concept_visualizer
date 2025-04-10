@@ -11,6 +11,7 @@ from app.api.routes.concept_storage import router as concept_storage_router
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.export import router as export_router
+from app.api.routes.task import router as task_router
 from app.api.errors import configure_error_handlers
 
 
@@ -35,6 +36,9 @@ def create_api_router() -> APIRouter:
     )
     api_router.include_router(
         export_router, prefix="/export", tags=["export"]
+    )
+    api_router.include_router(
+        task_router, prefix="/tasks", tags=["tasks"]
     )
     
     return api_router
