@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGenerateConceptMutation } from '../../hooks/useConceptMutations';
-import { useRecentConcepts } from '../../hooks/useConceptQueries';
+import { useRecentConcepts, useConceptDetail } from '../../hooks/useConceptQueries';
 import { useAuth } from '../../contexts/AuthContext';
 import { ErrorBoundary } from '../../components/ui';
 import { ConceptHeader } from './components/ConceptHeader';
@@ -12,6 +12,7 @@ import { RecentConceptsSection } from './components/RecentConceptsSection';
 import { ConceptData } from '../../services/supabaseClient';
 import { useQueryClient } from '@tanstack/react-query';
 import { TaskResponse } from '../../types';
+import { useTaskContext } from '../../contexts/TaskContext';
 
 /**
  * Main landing page content component
@@ -19,6 +20,7 @@ import { TaskResponse } from '../../types';
 const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { latestResultId } = useTaskContext();
   
   // Use React Query mutation hook for generation
   const { 
@@ -39,6 +41,7 @@ const LandingPageContent: React.FC = () => {
   } = useRecentConcepts(user?.id, 10);
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [completedResultId, setCompletedResultId] = useState<string | null>(null);
   
   const queryClient = useQueryClient();
   
@@ -49,6 +52,50 @@ const LandingPageContent: React.FC = () => {
     // to prevent an infinite loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Effect to detect when task completes and set the result ID for direct fetch
+  useEffect(() => {
+    if (taskData?.status === 'completed' && taskData.result_id) {
+      console.log(`[LandingPage] Task completed with result_id: ${taskData.result_id}`);
+      setCompletedResultId(taskData.result_id);
+      
+      // Force invalidate the cache for this concept to ensure fresh data
+      queryClient.invalidateQueries({ 
+        queryKey: ['concepts', 'detail', taskData.result_id]
+      });
+      
+      // Also refresh recent concepts to ensure this appears there
+      queryClient.invalidateQueries({ 
+        queryKey: ['concepts', 'recent'] 
+      });
+    }
+  }, [taskData?.status, taskData?.result_id, queryClient]);
+  
+  // Directly fetch the concept when we have a result ID
+  const { 
+    data: directConceptData,
+    isLoading: isLoadingDirectConcept
+  } = useConceptDetail(
+    completedResultId || undefined, // Convert null to undefined for proper type compatibility
+    user?.id
+  );
+  
+  // Effect to debug direct concept fetching
+  useEffect(() => {
+    if (completedResultId) {
+      console.log(`[LandingPage] Direct concept fetch state:`, {
+        resultId: completedResultId,
+        isLoading: isLoadingDirectConcept,
+        hasData: !!directConceptData,
+        conceptId: directConceptData?.id
+      });
+    }
+  }, [completedResultId, directConceptData, isLoadingDirectConcept]);
+  
+  // Use the latestResultId from TaskContext as a fallback if we don't get it from taskData
+  const effectiveResultId = (taskData?.status === 'completed' && taskData.result_id) 
+    ? taskData.result_id 
+    : (taskData?.status === 'completed' ? latestResultId : null);
   
   // Map task and mutation state to form status
   const getFormStatus = () => {
@@ -221,14 +268,48 @@ const LandingPageContent: React.FC = () => {
           processingMessage={taskData?.status === 'processing' ? 'Generating your concept...' : undefined}
         />
         
-        {taskData?.status === 'completed' && taskData.result_id && (
+        {/* Show results when we have an effective result ID from either source */}
+        {(taskData?.status === 'completed' && (taskData.result_id || latestResultId)) && (
           <ResultsSection
-            conceptId={taskData.result_id}
+            conceptId={taskData.result_id || latestResultId!}
             onEdit={handleEdit}
             onViewDetails={handleViewDetails}
             onColorSelect={handleColorSelect}
             selectedColor={selectedColor}
           />
+        )}
+
+        {/* Fallback to direct fetch data if available */}
+        {!(taskData?.status === 'completed' && (taskData.result_id || latestResultId)) && completedResultId && directConceptData && (
+          <div className="mb-4">
+            <p className="text-sm text-indigo-600 mb-2">Using direct concept data:</p>
+            <ResultsSection
+              conceptId={completedResultId}
+              onEdit={handleEdit}
+              onViewDetails={handleViewDetails}
+              onColorSelect={handleColorSelect}
+              selectedColor={selectedColor}
+            />
+          </div>
+        )}
+
+        {/* Debug section to show task data details */}
+        {taskData && (
+          <div className="p-4 mb-4 bg-blue-50 rounded-lg text-sm border border-blue-200">
+            <div>Task ID: {taskData.id || taskData.task_id}</div>
+            <div>Task Status: {taskData.status}</div>
+            <div>Result ID: {taskData.result_id || 'Not set'}</div>
+            <div>Latest Result ID from Context: {latestResultId || 'Not set'}</div>
+            <div>Effective Result ID: {effectiveResultId || 'Not available'}</div>
+            <div>Error: {taskData.error_message || 'None'}</div>
+            <div>Render condition met: {(taskData.status === 'completed' && (taskData.result_id || latestResultId)) ? 'Yes' : 'No'}</div>
+            {completedResultId && (
+              <>
+                <div>Completed Result ID: {completedResultId}</div>
+                <div>Direct data loaded: {directConceptData ? 'Yes' : 'No'}</div>
+              </>
+            )}
+          </div>
         )}
         
         <RecentConceptsSection

@@ -69,10 +69,10 @@
 ***NEW TASKS START HERE***
 ---
 
-- [ ] **Implement Global Task State:**
-    - [ ] Choose a state management approach (Context API, Zustand, etc.) for the *currently active* task initiated by the user.
-    - [ ] Create a context/store to hold the active `taskId` and potentially the latest `TaskResponse` from polling.
-    - [ ] Wrap the application (`App.tsx` or `MainLayout.tsx`) with the provider for this global state.
+- [x] **Implement Global Task State:**
+    - [x] Choose a state management approach (Context API, Zustand, etc.) for the *currently active* task initiated by the user.
+    - [x] Create a context/store to hold the active `taskId` and potentially the latest `TaskResponse` from polling.
+    - [x] Wrap the application (`App.tsx` or `MainLayout.tsx`) with the provider for this global state.
 - [ ] **Integrate Polling with Global State:**
     - [ ] Modify mutation hooks (`useConceptMutations.ts`) to update the global active `taskId` when a task starts (`pending` status received).
     - [ ] Modify `useTaskPolling` hook to read the active `taskId` from the global state.

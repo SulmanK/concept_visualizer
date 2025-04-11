@@ -85,14 +85,14 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     }
     
     // Check minimum length for logo description
-    if (logoDescription.trim().length < 3) {
-      setValidationError('Logo description must be at least 3 characters');
+    if (logoDescription.trim().length < 5) {
+      setValidationError('Logo description must be at least 5 characters');
       return false;
     }
     
     // Check minimum length for theme description
-    if (themeDescription.trim().length < 3) {
-      setValidationError('Theme description must be at least 3 characters');
+    if (themeDescription.trim().length < 5) {
+      setValidationError('Theme description must be at least 5 characters');
       return false;
     }
     
@@ -187,6 +187,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               disabled={isSubmitting || isSuccess}
               fullWidth
               required
+              helperText="Must be at least 5 characters"
             />
             
             <TextArea
@@ -198,12 +199,21 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               disabled={isSubmitting || isSuccess}
               fullWidth
               required
+              helperText="Must be at least 5 characters"
             />
             
             <div className="flex justify-end items-center">
               {isSubmitting && (
                 <div className="flex items-center mr-4">
                   <LoadingIndicator size="small" showLabel labelText="Generating concept..." />
+                </div>
+              )}
+              
+              {hasActiveTask && !isSubmitting && (
+                <div className="flex items-center mr-4">
+                  <p className="text-amber-600 text-sm">
+                    A generation task is already in progress
+                  </p>
                 </div>
               )}
               

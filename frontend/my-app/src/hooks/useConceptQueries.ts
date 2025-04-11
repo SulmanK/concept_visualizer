@@ -120,7 +120,12 @@ export function useConceptDetail(
       return processedConcept;
     },
     enabled: !!conceptId && !!userId, // Only run if we have both IDs
-    // Removed overriding staleTime to use the global configuration
+    // Force refetch when parameters change to avoid stale data problems
+    refetchOnMount: true,
+    // Use shorter stale time to ensure we get fresh data
+    staleTime: 1000, // Only consider data fresh for 1 second
+    // Force refetch on window focus
+    refetchOnWindowFocus: true,
     onError: onQueryError, // Use standardized error handling
   });
 }

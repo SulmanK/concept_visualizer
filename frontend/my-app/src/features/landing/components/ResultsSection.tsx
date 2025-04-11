@@ -28,11 +28,26 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Add debug logging
+  console.log(`[ResultsSection] Rendering with conceptId: ${conceptId}, userId: ${user?.id}`);
+  
   // Fetch the concept details
   const { data: concept, isLoading } = useConceptDetail(conceptId, user?.id);
 
+  // Add more debug logging
+  console.log(`[ResultsSection] Concept data loaded:`, { 
+    conceptLoaded: !!concept,
+    isLoading,
+    conceptId: concept?.id,
+    imageUrl: concept?.image_url,
+    timestamp: new Date().toISOString()
+  });
+
   // If no concept and not loading, render nothing
-  if (!concept && !isLoading) return null;
+  if (!concept && !isLoading) {
+    console.log(`[ResultsSection] No concept and not loading, returning null`);
+    return null;
+  }
 
   // Handler to navigate to the concept details page
   const handleExport = (conceptId: string) => {

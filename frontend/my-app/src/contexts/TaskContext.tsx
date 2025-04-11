@@ -62,6 +62,16 @@ interface TaskContextType {
    * Force a manual refresh of the task status
    */
   refreshTaskStatus: () => void;
+
+  /**
+   * The result ID from the most recently completed task
+   */
+  latestResultId: string | null;
+  
+  /**
+   * Set the result ID manually (for cases where the result_id isn't coming from the task)
+   */
+  setLatestResultId: (resultId: string | null) => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -84,6 +94,8 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const [hasSeenCompletedStatus, setHasSeenCompletedStatus] = useState<boolean>(false);
   // Track when initiating state started
   const [initiatingStartTime, setInitiatingStartTime] = useState<number | null>(null);
+  // Track the latest result ID from completed tasks
+  const [latestResultId, setLatestResultId] = useState<string | null>(null);
   
   // Update initiatingStartTime when isTaskInitiating changes
   useEffect(() => {
@@ -142,12 +154,21 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
       if (taskData.status === 'completed') {
         setHasSeenCompletedStatus(true);
         
+        // Store the result_id if it exists
+        if (taskData.result_id) {
+          console.log(`[TaskContext] Setting latest result ID: ${taskData.result_id}`);
+          setLatestResultId(taskData.result_id);
+        } else {
+          console.log(`[TaskContext] Task completed but no result_id was found`);
+        }
+        
         // Auto-clear completed tasks after a delay
         const timer = setTimeout(() => {
           console.log(`[TaskContext] Auto-clearing completed task ${taskData.id} after timeout`);
           setActiveTaskId(null);
           setHasSeenCompletedStatus(false);
-        }, 5000); // Auto-clear completed tasks after 5 seconds
+          // Note: we don't clear the latestResultId here as it should persist
+        }, 15000); // Auto-clear completed tasks after 15 seconds (increased from 5 seconds)
         
         return () => clearTimeout(timer);
       }
@@ -165,10 +186,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     }
   });
   
+  // Watch for result_id in task data even if onSuccess hasn't been called yet
+  useEffect(() => {
+    if (activeTaskData?.status === 'completed' && activeTaskData.result_id) {
+      console.log(`[TaskContext] Detected result_id in task data: ${activeTaskData.result_id}`);
+      setLatestResultId(activeTaskData.result_id);
+    }
+  }, [activeTaskData]);
+  
   // Log changes to task status for debugging
   useEffect(() => {
     if (activeTaskData) {
-      console.log(`[TaskContext] Task status update - ID: ${activeTaskData.id}, Status: ${activeTaskData.status}`);
+      console.log(`[TaskContext] Task status update - ID: ${activeTaskData.id}, Status: ${activeTaskData.status}, Result ID: ${activeTaskData.result_id || 'none'}`);
       console.log(`[TaskContext] Status flags - isPending: ${isPending}, isProcessing: ${isProcessing}, isCompleted: ${isCompleted}, isFailed: ${isFailed}`);
     }
   }, [activeTaskData, isPending, isProcessing, isCompleted, isFailed]);
@@ -178,6 +207,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     setActiveTaskId(null);
     setIsTaskInitiating(false);
     setHasSeenCompletedStatus(false);
+    // Note: we don't clear the latestResultId here as it should persist
   }, [activeTaskId]);
   
   // Update hasSeenCompletedStatus when isCompleted becomes true
@@ -213,7 +243,9 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     isTaskFailed: isFailed,
     isTaskInitiating,
     setIsTaskInitiating,
-    refreshTaskStatus
+    refreshTaskStatus,
+    latestResultId,
+    setLatestResultId
   };
   
   return (

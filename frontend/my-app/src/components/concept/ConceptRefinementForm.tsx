@@ -220,8 +220,8 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
               fullWidth
               disabled={isTaskInProgress}
               helperText={isColorVariation 
-                ? "Describe what you want to change while keeping the color scheme" 
-                : "Be specific about what you want to change"
+                ? "Describe what you want to change while keeping the color scheme (minimum 5 characters)" 
+                : "Be specific about what you want to change (minimum 5 characters)"
               }
               rows={3}
             />
@@ -290,26 +290,36 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           
           {/* Form buttons */}
           <div className="flex justify-between pt-2">
-            {onCancel && (
-              <Button 
-                type="button" 
-                variant="secondary" 
-                onClick={onCancel}
-                disabled={isTaskInProgress}
-              >
-                Cancel
-              </Button>
+            {hasActiveTask && !isSubmitting && (
+              <div className="flex items-center">
+                <p className="text-amber-600 text-sm">
+                  A generation task is already in progress
+                </p>
+              </div>
             )}
             
-            <Button 
-              type="submit" 
-              variant="primary"
-              disabled={isTaskInProgress}
-            >
-              {isSubmitting ? 'Processing...' : 
-               hasActiveTask ? 'Task already in progress...' : 
-               'Refine Concept'}
-            </Button>
+            <div className="ml-auto flex items-center space-x-3">
+              {onCancel && (
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={onCancel}
+                  disabled={isTaskInProgress}
+                >
+                  Cancel
+                </Button>
+              )}
+              
+              <Button 
+                type="submit" 
+                variant="primary"
+                disabled={isTaskInProgress}
+              >
+                {isSubmitting ? 'Processing...' : 
+                hasActiveTask ? 'Task already in progress...' : 
+                'Refine Concept'}
+              </Button>
+            </div>
           </div>
         </form>
       )}

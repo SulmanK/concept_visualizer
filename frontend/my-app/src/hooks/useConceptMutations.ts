@@ -15,6 +15,62 @@ import { useState } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 
 /**
+ * Extract a more user-friendly error message from API error responses
+ */
+const getErrorMessageFromResponse = (error: any): string => {
+  // Default error message
+  let message = 'An unexpected error occurred';
+
+  try {
+    // Check if it's an axios error with response data
+    if (error.response) {
+      // Handle 422 Unprocessable Entity errors
+      if (error.response.status === 422) {
+        const data = error.response.data;
+        
+        // Extract validation error details
+        if (data.detail) {
+          if (Array.isArray(data.detail)) {
+            // Get the first validation error message
+            const firstError = data.detail[0];
+            if (firstError.msg) {
+              return firstError.msg;
+            } else if (firstError.message) {
+              return firstError.message;
+            }
+          } else if (typeof data.detail === 'string') {
+            return data.detail;
+          } else if (data.detail.msg) {
+            return data.detail.msg;
+          }
+        }
+        
+        // Fallback for 422 errors
+        return 'Invalid input: Please check your descriptions (minimum 5 characters required)';
+      }
+      
+      // Extract message from other error responses
+      if (error.response.data) {
+        if (error.response.data.message) {
+          message = error.response.data.message;
+        } else if (error.response.data.error) {
+          message = error.response.data.error;
+        } else if (typeof error.response.data === 'string') {
+          message = error.response.data;
+        }
+      }
+    } else if (error.message) {
+      // Direct error message
+      message = error.message;
+    }
+  } catch (e) {
+    console.error('Error while parsing API error:', e);
+  }
+  
+  return message;
+};
+
+/**
  * Hook for generating a new concept using React Query's mutation capabilities
  */
 export function useGenerateConceptMutation() {
@@ -22,7 +78,7 @@ export function useGenerateConceptMutation() {
   const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
-  const { setActiveTask, clearActiveTask, setIsTaskInitiating } = useTaskContext();
+  const { setActiveTask, clearActiveTask, setIsTaskInitiating, setLatestResultId } = useTaskContext();
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to generate concept',
@@ -67,12 +123,22 @@ export function useGenerateConceptMutation() {
         console.log(`[useGenerateConceptMutation] Setting active task ID: ${taskId}`);
         setActiveTask(taskId);
         
+        // If result_id is already available, store it in the global context
+        if (response.data.result_id) {
+          console.log(`[useGenerateConceptMutation] Initial response already has result_id: ${response.data.result_id}`);
+          setLatestResultId(response.data.result_id);
+        }
+        
         return response.data;
       } catch (error) {
         console.error('[useGenerateConceptMutation] Error during fetch:', error);
         // Make sure we clear the initiating state
         setIsTaskInitiating(false);
-        throw error;
+        
+        // Create a more user-friendly error message
+        const errorMessage = getErrorMessageFromResponse(error);
+        const enhancedError = new Error(errorMessage);
+        throw enhancedError;
       }
     },
     onError: (error) => {
@@ -104,7 +170,7 @@ export function useRefineConceptMutation() {
   const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
-  const { setActiveTask, clearActiveTask, setIsTaskInitiating } = useTaskContext();
+  const { setActiveTask, clearActiveTask, setIsTaskInitiating, setLatestResultId } = useTaskContext();
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to refine concept',
@@ -149,12 +215,22 @@ export function useRefineConceptMutation() {
         console.log(`[useRefineConceptMutation] Setting active task ID: ${taskId}`);
         setActiveTask(taskId);
         
+        // If result_id is already available, store it in the global context
+        if (response.data.result_id) {
+          console.log(`[useRefineConceptMutation] Initial response already has result_id: ${response.data.result_id}`);
+          setLatestResultId(response.data.result_id);
+        }
+        
         return response.data;
       } catch (error) {
         console.error('[useRefineConceptMutation] Error during fetch:', error);
         // Make sure we clear the initiating state
         setIsTaskInitiating(false);
-        throw error;
+        
+        // Create a more user-friendly error message
+        const errorMessage = getErrorMessageFromResponse(error);
+        const enhancedError = new Error(errorMessage);
+        throw enhancedError;
       }
     },
     onError: (error) => {

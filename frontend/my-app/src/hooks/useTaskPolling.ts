@@ -142,19 +142,37 @@ export function useTaskPolling(taskId: string | null, options: UseTaskPollingOpt
       console.log(`[useTaskPolling] Status changed from ${lastStatusRef.current} to ${currentStatus} for task ${effectiveTaskId}`);
       lastStatusRef.current = currentStatus;
 
-      if (currentStatus === 'completed' && onSuccess && query.data) {
+      if (currentStatus === 'completed' && query.data) {
         console.log(`[useTaskPolling] Calling onSuccess for completed task ${effectiveTaskId}`);
-        onSuccess(query.data);
+        
+        // If the task has a result_id, invalidate the related concept queries
+        if (query.data.result_id) {
+          console.log(`[useTaskPolling] Invalidating concept queries for result_id: ${query.data.result_id}`);
+          // Invalidate concept detail queries for this specific result_id
+          queryClient.invalidateQueries({ queryKey: ['concepts', 'detail', query.data.result_id] });
+          // Also invalidate recent concepts in case this should appear there
+          queryClient.invalidateQueries({ queryKey: ['concepts', 'recent'] });
+        } else {
+          console.log(`[useTaskPolling] No result_id in completed task, cannot invalidate concept queries`);
+        }
+        
+        if (onSuccess) {
+          onSuccess(query.data);
+        }
       } else if (currentStatus === 'failed' && onError && query.data) {
         console.log(`[useTaskPolling] Calling onError for failed task ${effectiveTaskId}`);
         onError(new Error(query.data.error_message || 'Task failed'), query.data);
       }
     }
-  }, [query.data?.status, onSuccess, onError, effectiveTaskId, query.data]);
+  }, [query.data?.status, onSuccess, onError, effectiveTaskId, query.data, queryClient]);
 
   // Force manual refetch when needed
   useEffect(() => {
     if (effectiveTaskId && enabled) {
+      // Initial immediate refetch in case we're joining an already-completed task
+      queryClient.invalidateQueries({ queryKey: ['tasks', effectiveTaskId] });
+      
+      // Set up interval for periodic refetches
       const interval = setInterval(() => {
         // Force a refetch every so often in case the refetchInterval approach isn't working
         queryClient.invalidateQueries({ queryKey: ['tasks', effectiveTaskId] });
@@ -164,6 +182,46 @@ export function useTaskPolling(taskId: string | null, options: UseTaskPollingOpt
       return () => clearInterval(interval);
     }
   }, [effectiveTaskId, enabled, pollingInterval, queryClient]);
+
+  // Add an effect that specifically looks for task completion
+  useEffect(() => {
+    // When we first start polling, do a direct check to catch quick completions
+    if (effectiveTaskId && enabled && !query.data?.status) {
+      const checkDirectly = async () => {
+        try {
+          console.log(`[useTaskPolling] Initial direct check for task ${effectiveTaskId}`);
+          const response = await apiClient.get<TaskResponse>(`/tasks/${effectiveTaskId}`);
+          
+          if (response.data.status === 'completed' || response.data.status === 'failed') {
+            console.log(`[useTaskPolling] Direct check found terminal state: ${response.data.status}`);
+            
+            // If completed and has result_id, update the task context
+            if (response.data.status === 'completed' && response.data.result_id) {
+              console.log(`[useTaskPolling] Direct check found completed task with result_id: ${response.data.result_id}`);
+              
+              // Try to update the global task context with the result_id
+              try {
+                const { useTaskContext } = require('../contexts/TaskContext');
+                const taskContext = useTaskContext();
+                if (taskContext.setLatestResultId) {
+                  console.log(`[useTaskPolling] Setting latest result ID in global context: ${response.data.result_id}`);
+                  taskContext.setLatestResultId(response.data.result_id);
+                }
+              } catch (error) {
+                console.error('[useTaskPolling] Error updating global task context:', error);
+              }
+            }
+            
+            queryClient.setQueryData(['tasks', effectiveTaskId], response.data);
+          }
+        } catch (error) {
+          console.error(`[useTaskPolling] Error in direct task check:`, error);
+        }
+      };
+      
+      checkDirectly();
+    }
+  }, [effectiveTaskId, enabled, query.data?.status, queryClient]);
 
   // Cleanup on unmount
   useEffect(() => {
