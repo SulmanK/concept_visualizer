@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { 
   supabase, 
@@ -16,7 +16,6 @@ interface AuthContextType {
   error: Error | null;
   signOut: () => Promise<boolean>;
   linkEmail: (email: string) => Promise<boolean>;
-  refreshAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,80 +26,25 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   const [isAnonymous, setIsAnonymous] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  const refreshTimerRef = useRef<number | null>(null);
   
-  // Function to refresh authentication
-  const refreshAuth = async (): Promise<void> => {
-    try {
-      console.log('[AUTH:Context] Proactively refreshing authentication token');
-      const authSession = await initializeAnonymousAuth();
-      if (authSession) {
-        console.log('[AUTH:Context] Auth session refreshed successfully', { 
-          userId: authSession.user?.id,
-          expiresAt: new Date(authSession.expires_at! * 1000).toISOString()
-        });
-        setSession(authSession);
-        setUser(authSession.user);
-        
-        // Check if user is anonymous
-        const anonymous = await isAnonymousUser();
-        setIsAnonymous(anonymous);
-        console.log('[AUTH:Context] User anonymous status:', anonymous);
-      } else {
-        console.error('[AUTH:Context] Failed to refresh auth session - no session returned');
-      }
-    } catch (err) {
-      console.error('[AUTH:Context] Error refreshing authentication:', err);
-    }
-  };
+  // We're removing the refreshAuth function and the refresh timer logic
+  // since the Axios interceptors will now handle token refreshing
   
-  // Set up token refresh timer
+  // Set up auth-error-needs-logout event listener
   useEffect(() => {
-    // Clear any existing timer
-    if (refreshTimerRef.current) {
-      window.clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = null;
-    }
-    
-    if (!session) {
-      console.log('[AUTH:Context] No session available, skipping refresh timer setup');
-      return;
-    }
-    
-    // Calculate time until refresh is needed (5 minutes before expiration)
-    const expiresAt = session.expires_at;
-    if (!expiresAt) {
-      console.warn('[AUTH:Context] Session missing expires_at timestamp');
-      return;
-    }
-    
-    const now = Math.floor(Date.now() / 1000);
-    const timeUntilRefresh = (expiresAt - now - 300) * 1000; // 5 minutes before expiry, in ms
-    
-    console.log(`[AUTH:Context] Token expires in ${(expiresAt - now)} seconds, will refresh in ${timeUntilRefresh/1000} seconds`);
-    
-    // Set a timer to refresh if token is valid but will expire
-    if (timeUntilRefresh > 0) {
-      console.log(`[AUTH:Context] Setting refresh timer for ${new Date(Date.now() + timeUntilRefresh).toISOString()}`);
-      refreshTimerRef.current = window.setTimeout(() => {
-        console.log('[AUTH:Context] Refresh timer triggered, refreshing auth');
-        refreshAuth();
-      }, timeUntilRefresh);
-    } else {
-      // If token is already close to expiry, refresh immediately
-      console.log('[AUTH:Context] Token close to expiry, refreshing immediately');
-      refreshAuth();
-    }
-    
-    // Cleanup function
-    return () => {
-      if (refreshTimerRef.current) {
-        console.log('[AUTH:Context] Cleaning up refresh timer on unmount/update');
-        window.clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
+    const handleAuthError = () => {
+      console.log('[AUTH:Context] Received auth-error-needs-logout event, signing out');
+      handleSignOut();
     };
-  }, [session]);
+    
+    // Add event listener
+    document.addEventListener('auth-error-needs-logout', handleAuthError);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('auth-error-needs-logout', handleAuthError);
+    };
+  }, []);
   
   useEffect(() => {
     // Initialize auth on mount
@@ -208,8 +152,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
     isLoading,
     error,
     signOut: handleSignOut,
-    linkEmail: handleLinkEmail,
-    refreshAuth
+    linkEmail: handleLinkEmail
   };
   
   return (

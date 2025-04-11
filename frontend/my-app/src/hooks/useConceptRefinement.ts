@@ -3,12 +3,15 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useApi } from './useApi';
 import { 
   GenerationResponse,
   RefinementRequest,
   FormStatus
 } from '../types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '../services/apiClient';
+import { useErrorHandling } from './useErrorHandling';
+import { useRateLimitContext } from '../contexts/RateLimitContext';
 
 export interface ConceptRefinementState {
   status: FormStatus;
@@ -16,15 +19,84 @@ export interface ConceptRefinementState {
   error: string | null;
 }
 
+interface RefinementParams {
+  originalImageUrl: string;
+  refinementPrompt: string;
+  logoDescription?: string;
+  themeDescription?: string;
+  preserveAspects?: string[];
+}
+
 /**
  * Hook for refining existing visual concepts
  */
 export function useConceptRefinement() {
-  const { post, loading, error, clearError } = useApi();
+  const queryClient = useQueryClient();
+  const errorHandler = useErrorHandling();
+  const { decrementLimit } = useRateLimitContext();
+  
   const [refinementState, setRefinementState] = useState<ConceptRefinementState>({
     status: 'idle',
     result: null,
     error: null,
+  });
+
+  // Create a mutation for refining concepts
+  const refinementMutation = useMutation({
+    mutationFn: async (params: RefinementParams) => {
+      const request: RefinementRequest = {
+        original_image_url: params.originalImageUrl,
+        refinement_prompt: params.refinementPrompt,
+        logo_description: params.logoDescription,
+        theme_description: params.themeDescription,
+        preserve_aspects: params.preserveAspects || []
+      };
+
+      // Make the API call using apiClient
+      const response = await apiClient.post<GenerationResponse>('/concepts/refine', request);
+      return response.data;
+    },
+    onMutate: () => {
+      // Set submitting state
+      setRefinementState({
+        status: 'submitting',
+        result: null,
+        error: null,
+      });
+      
+      // Apply optimistic update - decrement rate limit
+      decrementLimit('refine_concept');
+    },
+    onSuccess: (result) => {
+      setRefinementState({
+        status: 'success',
+        result,
+        error: null,
+      });
+      
+      // Invalidate queries to reflect the new data
+      if (result.id) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['concepts', 'detail', result.id] 
+        });
+      }
+      
+      // Also invalidate any other related queries
+      queryClient.invalidateQueries({
+        queryKey: ['concepts'],
+        exact: false
+      });
+    },
+    onError: (error) => {
+      setRefinementState({
+        status: 'error',
+        result: null,
+        error: error instanceof Error ? error.message : 'Failed to refine concept',
+      });
+      
+      // Let the error handler display the error
+      errorHandler.handleError(error);
+    }
   });
 
   /**
@@ -47,47 +119,15 @@ export function useConceptRefinement() {
       return;
     }
 
-    try {
-      setRefinementState({
-        status: 'submitting',
-        result: null,
-        error: null,
-      });
-
-      const request: RefinementRequest = {
-        original_image_url: originalImageUrl,
-        refinement_prompt: refinementPrompt,
-        logo_description: logoDescription,
-        theme_description: themeDescription,
-        preserve_aspects: preserveAspects
-      };
-
-      const response = await post<GenerationResponse>('/concepts/refine', request);
-
-      if (response.error) {
-        setRefinementState({
-          status: 'error',
-          result: null,
-          error: response.error.message,
-        });
-        return;
-      }
-
-      if (response.data) {
-        setRefinementState({
-          status: 'success',
-          result: response.data,
-          error: null,
-        });
-      }
-    } catch (err) {
-      setRefinementState({
-        status: 'error',
-        result: null,
-        error: err instanceof Error ? err.message : 'Failed to refine concept',
-      });
-    }
-  }, [post]);
+    // Run the mutation
+    refinementMutation.mutate({
+      originalImageUrl,
+      refinementPrompt,
+      logoDescription,
+      themeDescription,
+      preserveAspects
+    });
+  }, [refinementMutation]);
 
   /**
    * Reset the refinement state
@@ -98,8 +138,7 @@ export function useConceptRefinement() {
       result: null,
       error: null,
     });
-    clearError();
-  }, [clearError]);
+  }, []);
 
   return {
     refineConcept,

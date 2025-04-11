@@ -1,5 +1,4 @@
 // API Hooks
-export { useApi } from './useApi';
 export { useConceptGeneration } from './useConceptGeneration';
 export { useConceptRefinement } from './useConceptRefinement';
 

@@ -73,11 +73,11 @@
     - [x] Choose a state management approach (Context API, Zustand, etc.) for the *currently active* task initiated by the user.
     - [x] Create a context/store to hold the active `taskId` and potentially the latest `TaskResponse` from polling.
     - [x] Wrap the application (`App.tsx` or `MainLayout.tsx`) with the provider for this global state.
-- [ ] **Integrate Polling with Global State:**
-    - [ ] Modify mutation hooks (`useConceptMutations.ts`) to update the global active `taskId` when a task starts (`pending` status received).
-    - [ ] Modify `useTaskPolling` hook to read the active `taskId` from the global state.
-    - [ ] Update the global state with the latest task details received from polling.
-    - [ ] Clear the global active `taskId` when the task completes or fails (or when the user navigates away/resets).
+- [x] **Integrate Polling with Global State:**
+    - [x] Modify mutation hooks (`useConceptMutations.ts`) to update the global active `taskId` when a task starts (`pending` status received).
+    - [x] Modify `useTaskPolling` hook to read the active `taskId` from the global state.
+    - [x] Update the global state with the latest task details received from polling.
+    - [x] Clear the global active `taskId` when the task completes or fails (or when the user navigates away/resets).
 
 ### 3. Component Updates
 - [x] **Landing Page (`src/features/landing/LandingPage.tsx`)**:
@@ -252,3 +252,146 @@
 - [ ] Create development branches for each major change
 - [ ] Implement changes incrementally with testing
 - [ ] Conduct code reviews for all changes
+
+### Task Status Management Improvements
+
+- [x] **Centralize Status Management:**
+    - [x] Remove direct API calls from `TaskStatusBar` component to avoid race conditions with the polling mechanism.
+    - [x] Remove `directTaskStatus` state and the `checkTaskStatus` function from `TaskStatusBar`.
+    - [x] Simplify the `determineStatus` function to only rely on states from `useTaskContext`.
+
+- [x] **Simplify TaskContext:**
+    - [x] Remove `hasSeenCompletedStatus` state and related complex logic.
+    - [x] Let `TaskStatusBar` handle the temporary display of "completed" status.
+    - [x] Remove auto-clear timeout in `onSuccess` callback to let task remain set until manually cleared.
+    - [x] Simplify `hasActiveTask` logic to be more reliable.
+
+- [x] **Refine Results Display:**
+    - [x] Ensure `ResultsSection` is rendered based on `isTaskCompleted` from context and having a valid `latestResultId`.
+    - [x] Modify `ResultsSection` to receive fetched concept data as a prop rather than fetching it internally.
+    - [x] Add improved status messages to better communicate the task state to users.
+    - [x] Create a more consistent transition from task completion to results display.
+
+- [x] **Review Cleanup Logic:**
+    - [x] Ensure cleanup functions in `useTaskPolling` properly clear intervals and remove queries from cache on unmount.
+    - [x] Verify that resources are properly released when components unmount during active polling.
+    - [x] Add safeguards to prevent memory leaks in polling mechanisms.
+
+
+
+    Okay, let's break down the implementation of the centralized authentication system using Axios interceptors into a set of actionable tasks.
+
+**Goal:** Refactor the frontend API handling to use Axios interceptors for reliable authentication token management, eliminating potential race conditions and stale token issues.
+
+---
+
+### Phase 1: Setup and Axios Integration
+
+**Objective:** Replace the current `fetch`-based API utility with an Axios instance.
+
+1.  **Install Axios:**
+    *   [x] Task: Add Axios and its types to the frontend project.
+    *   [x] Command: `npm install axios @types/axios` or `yarn add axios @types/axios`
+    *   [x] File: `frontend/my-app/package.json`
+
+2.  **Refactor `apiClient.ts`:**
+    *   [x] Task: Modify `src/services/apiClient.ts`.
+    *   [x] Action: Remove the existing `fetch`-based `request`, `get`, `post` functions.
+    *   [x] Action: Create a configured Axios instance (`axiosInstance`) using `axios.create()`, setting the `baseURL`.
+    *   [x] Action: Re-implement the exported `apiClient.get`, `apiClient.post`, and `apiClient.exportImage` methods using the `axiosInstance`. Ensure `exportImage` correctly sets `responseType: 'blob'`.
+    *   [x] Note: Keep the function signatures the same for now to minimize changes in consuming hooks/components.
+
+---
+
+### Phase 2: Implement Axios Interceptors
+
+**Objective:** Add interceptors to automatically handle token injection and refresh attempts.
+
+3.  **Implement Request Interceptor:**
+    *   [x] Task: Add a request interceptor to the `axiosInstance` in `src/services/apiClient.ts`.
+    *   [x] Action: Inside the interceptor (`axiosInstance.interceptors.request.use(async (config) => { ... })`):
+        *   [x] Fetch the current session using `supabase.auth.getSession()`.
+        *   [x] If a valid `session.access_token` exists, add the `Authorization: Bearer <token>` header to `config.headers`.
+        *   [x] If no token exists, ensure the `Authorization` header is *removed* (`delete config.headers.Authorization;`).
+        *   [x] Add `console.log` statements to track token presence/absence for debugging.
+        *   [x] Return the modified `config`.
+    *   [x] Action: Add basic error handling within the interceptor's error callback.
+
+4.  **Implement Response Error Interceptor (401 Handling & Refresh):**
+    *   [x] Task: Add a response error interceptor (`axiosInstance.interceptors.response.use(null, async (error) => { ... })`) in `src/services/apiClient.ts`.
+    *   [x] Action: Check if the error response status is 401 (`error.response?.status === 401`).
+    *   [x] Action: Check if the original request hasn't already been retried (add a custom flag like `config._retry = true`).
+    *   [x] Action: If it's a 401 and not a retry:
+        *   [x] Attempt to refresh the token using `supabase.auth.refreshSession()`.
+        *   [x] If refresh succeeds:
+            *   [x] Get the new token from the refreshed session.
+            *   [x] Update the original request's `Authorization` header.
+            *   [x] Retry the original request using `axiosInstance(originalRequest)`.
+        *   [x] If refresh fails:
+            *   [x] Log the failure.
+            *   [x] Dispatch a custom DOM event (e.g., `auth-error-needs-logout`) to signal a global logout requirement.
+            *   [x] Reject the promise with the original error.
+    *   [x] Action: If it's not a 401 or it's already a retry, reject the promise with the error (or a processed version).
+
+5.  **Implement Response Interceptor (Rate Limit & Header Handling):**
+    *   [x] Task: Extend the response interceptor (or use the success callback `axiosInstance.interceptors.response.use((response) => { ... })`) in `src/services/apiClient.ts`.
+    *   [x] Action: In the *success* part of the interceptor, extract rate limit headers using the existing `extractRateLimitHeaders` function (adapt it if necessary to work with Axios response objects).
+    *   [x] Action: In the *error* part of the interceptor:
+        *   [x] Check if the error status is 429.
+        *   [x] If 429, parse rate limit details from headers/body.
+        *   [x] Create and throw the custom `RateLimitError`.
+        *   [x] Dispatch the `show-rate-limits` and `show-api-toast` custom events.
+
+---
+
+### Phase 3: Refactor Authentication Context
+
+**Objective:** Simplify `AuthProvider` to rely more on Supabase's state management and the interceptors.
+
+6.  **Simplify `AuthProvider.tsx`:**
+    *   [x] Task: Review and potentially remove the proactive refresh timer (`useEffect` based on `session.expires_at`). Assess if Supabase's built-in refresh + the interceptor's retry logic is sufficient. *Recommendation: Remove it first, test thoroughly, and add back only if necessary.*
+    *   [x] Task: Ensure the `onAuthStateChange` listener correctly updates the context's `session`, `user`, and `isAnonymous` state. This should be the primary driver of state updates.
+    *   [x] Task: Add an effect to listen for the `auth-error-needs-logout` DOM event dispatched by the interceptor. When caught, call the `handleSignOut` function.
+    *   [x] Task: Remove any direct token fetching logic within the provider that might conflict with interceptors. `initializeAnonymousAuth` is still needed for the initial anonymous sign-in.
+
+---
+
+### Phase 4: Cleanup and Deprecation
+
+**Objective:** Remove old, redundant token management code.
+
+7.  **Remove `tokenService.ts`:**
+    *   [x] Task: Delete the file `src/services/tokenService.ts`.
+    *   [x] Task: Search the codebase for any remaining imports of `tokenService` and remove/refactor them.
+
+8.  **Remove Old `apiClient` Logic:**
+    *   [x] Task: Delete the `getAuthHeaders` function from `src/services/apiClient.ts`.
+
+9.  **Deprecate `useApi.ts`:**
+    *   [x] Task: Add a prominent `@deprecated` JSDoc comment to `src/hooks/useApi.ts`.
+    *   [x] Task: Add a `console.warn` inside the hook advising developers to switch to `apiClient` methods or React Query.
+    *   [x] Task: (Optional but recommended) Gradually refactor components/hooks currently using `useApi` to use the new `apiClient` methods or integrate directly with React Query's `useQuery`/`useMutation` using `apiClient` methods as the `queryFn`/`mutationFn`.
+
+---
+
+### Phase 5: Testing and Verification
+
+**Objective:** Ensure the new authentication flow is robust and fixes the original issue.
+
+10. **Update/Write Tests:**
+    *   [x] Task: Write unit tests for the Axios request and response interceptors in `apiClient.ts`, mocking `supabase.auth` methods.
+    *   [ ] Task: Update existing integration tests (or create new ones) that involve API calls to ensure they pass with the new Axios client and interceptor logic.
+    *   [ ] Task: Specifically test scenarios involving token expiry and refresh (this might require mocking timers or Supabase responses).
+
+11. **Manual Testing:**
+    *   Task: Clear all application storage (localStorage, cookies).
+    *   Task: Load the application and perform actions requiring API calls. Verify success.
+    *   Task: Leave the application idle for ~5 minutes (longer than the refresh buffer) and perform actions. Verify success.
+    *   Task: Leave the application idle for ~1 hour (longer than token expiry) and perform actions. Verify success (refresh should occur).
+    *   Task: Monitor the browser's Network tab and Console for 401 errors, retries, and successful calls. Check for any auth-related errors.
+    *   Task: Test the logout functionality.
+    *   Task: Test rate limit scenarios if possible to ensure `RateLimitError` is handled correctly.
+
+---
+
+This structured approach should help you systematically implement the centralized authentication handling and resolve the intermittent functionality loss. Remember to commit frequently and test each phase.

@@ -20,7 +20,14 @@ import { useTaskContext } from '../../contexts/TaskContext';
 const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { latestResultId } = useTaskContext();
+  const { 
+    activeTaskId,
+    isTaskCompleted,
+    isTaskPending,
+    isTaskProcessing,
+    isTaskInitiating,
+    latestResultId
+  } = useTaskContext();
   
   // Use React Query mutation hook for generation
   const { 
@@ -41,7 +48,6 @@ const LandingPageContent: React.FC = () => {
   } = useRecentConcepts(user?.id, 10);
   
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [completedResultId, setCompletedResultId] = useState<string | null>(null);
   
   const queryClient = useQueryClient();
   
@@ -53,15 +59,38 @@ const LandingPageContent: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Effect to detect when task completes and set the result ID for direct fetch
+  // Use the best available result ID for fetching concept data
+  const effectiveResultId = 
+    // First try task data result ID
+    (taskData?.status === 'completed' && taskData.result_id) ? taskData.result_id 
+    // Then try latest result ID from context
+    : (isTaskCompleted && latestResultId) ? latestResultId 
+    // Finally, nothing
+    : null;
+  
+  // Directly fetch the concept when we have a result ID
+  const { 
+    data: conceptData,
+    isLoading: isLoadingConcept
+  } = useConceptDetail(
+    effectiveResultId || undefined, // Convert null to undefined for proper type compatibility
+    user?.id
+  );
+  
+  // Effect to debug concept fetching and cache invalidation
   useEffect(() => {
-    if (taskData?.status === 'completed' && taskData.result_id) {
-      console.log(`[LandingPage] Task completed with result_id: ${taskData.result_id}`);
-      setCompletedResultId(taskData.result_id);
+    if (effectiveResultId) {
+      console.log(`[LandingPage] Concept fetch state:`, {
+        resultId: effectiveResultId,
+        isLoading: isLoadingConcept,
+        hasData: !!conceptData,
+        conceptId: conceptData?.id,
+        timestamp: new Date().toISOString()
+      });
       
       // Force invalidate the cache for this concept to ensure fresh data
       queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'detail', taskData.result_id]
+        queryKey: ['concepts', 'detail', effectiveResultId]
       });
       
       // Also refresh recent concepts to ensure this appears there
@@ -69,52 +98,26 @@ const LandingPageContent: React.FC = () => {
         queryKey: ['concepts', 'recent'] 
       });
     }
-  }, [taskData?.status, taskData?.result_id, queryClient]);
-  
-  // Directly fetch the concept when we have a result ID
-  const { 
-    data: directConceptData,
-    isLoading: isLoadingDirectConcept
-  } = useConceptDetail(
-    completedResultId || undefined, // Convert null to undefined for proper type compatibility
-    user?.id
-  );
-  
-  // Effect to debug direct concept fetching
-  useEffect(() => {
-    if (completedResultId) {
-      console.log(`[LandingPage] Direct concept fetch state:`, {
-        resultId: completedResultId,
-        isLoading: isLoadingDirectConcept,
-        hasData: !!directConceptData,
-        conceptId: directConceptData?.id
-      });
-    }
-  }, [completedResultId, directConceptData, isLoadingDirectConcept]);
-  
-  // Use the latestResultId from TaskContext as a fallback if we don't get it from taskData
-  const effectiveResultId = (taskData?.status === 'completed' && taskData.result_id) 
-    ? taskData.result_id 
-    : (taskData?.status === 'completed' ? latestResultId : null);
+  }, [effectiveResultId, conceptData, isLoadingConcept, queryClient]);
   
   // Map task and mutation state to form status
   const getFormStatus = () => {
     if (isSubmitting) return 'submitting';
-    if (taskData) {
-      switch (taskData.status) {
-        case 'pending':
-        case 'processing':
-          return 'processing';
-        case 'completed':
-          return 'success';
-        case 'failed':
-          return 'error';
-        default:
-          return 'idle';
-      }
-    }
+    if (isTaskInitiating) return 'initiating';
+    if (isTaskPending) return 'pending';
+    if (isTaskProcessing) return 'processing';
+    if (isTaskCompleted) return 'success';
+    if (taskData?.status === 'failed') return 'error';
     if (isError) return 'error';
     return 'idle';
+  };
+  
+  // Get the appropriate processing message based on task state
+  const getProcessingMessage = (): string | undefined => {
+    if (isTaskInitiating) return 'Preparing your request...';
+    if (isTaskPending) return 'Request queued...';
+    if (isTaskProcessing) return 'Generating your concept...';
+    return undefined;
   };
   
   // Extract error message from the error object or task
@@ -163,7 +166,7 @@ const LandingPageContent: React.FC = () => {
   // Make sure generation can only be triggered when not already pending
   const handleGenerateConcept = useCallback((logoDescription: string, themeDescription: string) => {
     // Safety check to prevent multiple submissions
-    if (isSubmitting || (taskData?.status === 'pending' || taskData?.status === 'processing')) {
+    if (isSubmitting || isTaskPending || isTaskProcessing) {
       console.warn('[LandingPage] Generation already in progress, ignoring duplicate submission');
       return;
     }
@@ -184,7 +187,7 @@ const LandingPageContent: React.FC = () => {
     });
     
     setSelectedColor(null);
-  }, [isSubmitting, taskData, resetGeneration, generateConceptMutation]);
+  }, [isSubmitting, isTaskPending, isTaskProcessing, resetGeneration, generateConceptMutation]);
   
   const handleColorSelect = (color: string) => {
     setSelectedColor(color);
@@ -246,10 +249,12 @@ const LandingPageContent: React.FC = () => {
   const formatConceptsForDisplay = () => {
     if (!recentConcepts || recentConcepts.length === 0) return [];
     
-    // Return the first three concepts directly - no transformation needed
     // Our new RecentConceptsSection works directly with Concept data
     return recentConcepts.slice(0, 3);
   };
+  
+  // Determine if we should show results
+  const shouldShowResults = isTaskCompleted && effectiveResultId;
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -264,14 +269,16 @@ const LandingPageContent: React.FC = () => {
           onReset={handleReset}
           status={getFormStatus()}
           errorMessage={getErrorMessage()}
-          isProcessing={taskData?.status === 'processing'}
-          processingMessage={taskData?.status === 'processing' ? 'Generating your concept...' : undefined}
+          isProcessing={isTaskPending || isTaskProcessing || isTaskInitiating}
+          processingMessage={getProcessingMessage()}
         />
         
-        {/* Show results when we have an effective result ID from either source */}
-        {(taskData?.status === 'completed' && (taskData.result_id || latestResultId)) && (
+        {/* Show results using the effectiveResultId and pre-fetched concept data */}
+        {shouldShowResults && (
           <ResultsSection
-            conceptId={taskData.result_id || latestResultId!}
+            conceptId={effectiveResultId!}
+            conceptData={conceptData}
+            isLoading={isLoadingConcept}
             onEdit={handleEdit}
             onViewDetails={handleViewDetails}
             onColorSelect={handleColorSelect}
@@ -279,36 +286,18 @@ const LandingPageContent: React.FC = () => {
           />
         )}
 
-        {/* Fallback to direct fetch data if available */}
-        {!(taskData?.status === 'completed' && (taskData.result_id || latestResultId)) && completedResultId && directConceptData && (
-          <div className="mb-4">
-            <p className="text-sm text-indigo-600 mb-2">Using direct concept data:</p>
-            <ResultsSection
-              conceptId={completedResultId}
-              onEdit={handleEdit}
-              onViewDetails={handleViewDetails}
-              onColorSelect={handleColorSelect}
-              selectedColor={selectedColor}
-            />
-          </div>
-        )}
-
         {/* Debug section to show task data details */}
-        {taskData && (
+        {activeTaskId && (
           <div className="p-4 mb-4 bg-blue-50 rounded-lg text-sm border border-blue-200">
-            <div>Task ID: {taskData.id || taskData.task_id}</div>
-            <div>Task Status: {taskData.status}</div>
-            <div>Result ID: {taskData.result_id || 'Not set'}</div>
+            <div>Task ID: {activeTaskId}</div>
+            <div>Task Status: {taskData?.status || (isTaskInitiating ? 'initiating' : 'unknown')}</div>
+            <div>Result ID: {taskData?.result_id || 'Not set'}</div>
             <div>Latest Result ID from Context: {latestResultId || 'Not set'}</div>
             <div>Effective Result ID: {effectiveResultId || 'Not available'}</div>
-            <div>Error: {taskData.error_message || 'None'}</div>
-            <div>Render condition met: {(taskData.status === 'completed' && (taskData.result_id || latestResultId)) ? 'Yes' : 'No'}</div>
-            {completedResultId && (
-              <>
-                <div>Completed Result ID: {completedResultId}</div>
-                <div>Direct data loaded: {directConceptData ? 'Yes' : 'No'}</div>
-              </>
-            )}
+            <div>Error: {taskData?.error_message || 'None'}</div>
+            <div>Should Show Results: {shouldShowResults ? 'Yes' : 'No'}</div>
+            <div>Concept Data Loaded: {conceptData ? 'Yes' : 'No'}</div>
+            <div>Loading Concept: {isLoadingConcept ? 'Yes' : 'No'}</div>
           </div>
         )}
         

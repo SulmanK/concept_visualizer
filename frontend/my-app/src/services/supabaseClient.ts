@@ -4,7 +4,6 @@
 
 import { createClient, Session, User } from '@supabase/supabase-js';
 import { getBucketName } from './configService';
-import { tokenService } from './tokenService';
 import { fetchRateLimits } from './rateLimitService';
 
 // Environment variables for Supabase
@@ -230,15 +229,27 @@ export async function getAuthenticatedImageUrl(bucket: string, path: string): Pr
       return data.signedUrl;
     }
     
-    // If signed URL fails, try with token
-    const token = await tokenService.getToken();
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}?token=${token}`;
+    if (error) {
+      console.error('Error generating signed URL:', error);
+    }
+    
+    // If signed URL creation fails, use the public URL as fallback
+    // This might not work if the bucket requires authentication
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(path);
+      
+    return publicUrl;
   } catch (error) {
     console.error('Error generating authenticated URL:', error);
-    // Create a fallback URL with token
+    
+    // Create a fallback public URL as last resort
     try {
-      const token = await tokenService.getToken();
-      return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}?token=${token}`;
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(path);
+        
+      return publicUrl;
     } catch (fallbackError) {
       console.error('Error creating fallback URL:', fallbackError);
       return ''; // Return empty string to indicate failure

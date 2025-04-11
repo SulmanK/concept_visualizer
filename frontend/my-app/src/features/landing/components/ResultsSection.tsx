@@ -5,6 +5,7 @@ import { Button } from '../../../components/ui/Button';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
+import { ConceptData } from '../../../services/supabaseClient';
 
 interface ResultsSectionProps {
   conceptId: string;
@@ -12,6 +13,15 @@ interface ResultsSectionProps {
   onViewDetails: (conceptId: string, variationId?: string | null) => void;
   onColorSelect: (color: string) => void;
   selectedColor: string | null;
+  /**
+   * Optional pre-fetched concept data. If provided, the component won't fetch it again.
+   */
+  conceptData?: ConceptData | null;
+  /**
+   * Optional loading state. If conceptData is not provided, this loading state will be used
+   * instead of the internal loading state from useConceptDetail.
+   */
+  isLoading?: boolean;
 }
 
 /**
@@ -23,23 +33,40 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   onEdit,
   onViewDetails,
   onColorSelect,
-  selectedColor
+  selectedColor,
+  conceptData,
+  isLoading: externalLoading
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
   // Add debug logging
-  console.log(`[ResultsSection] Rendering with conceptId: ${conceptId}, userId: ${user?.id}`);
+  console.log(`[ResultsSection] Rendering with conceptId: ${conceptId}, userId: ${user?.id}, preloaded data: ${!!conceptData}`);
   
-  // Fetch the concept details
-  const { data: concept, isLoading } = useConceptDetail(conceptId, user?.id);
+  // Only fetch the concept details if not provided as a prop
+  const { 
+    data: fetchedConcept, 
+    isLoading: isFetching 
+  } = useConceptDetail(
+    conceptData ? undefined : conceptId, // Only fetch if no data provided
+    user?.id
+  );
+
+  // Use either the provided concept data or the fetched data
+  const concept = conceptData || fetchedConcept;
+  
+  // Use either the provided loading state or the internal loading state
+  const isLoading = externalLoading !== undefined ? externalLoading : isFetching;
 
   // Add more debug logging
-  console.log(`[ResultsSection] Concept data loaded:`, { 
-    conceptLoaded: !!concept,
-    isLoading,
+  console.log(`[ResultsSection] Concept data status:`, { 
+    conceptProvided: !!conceptData,
+    conceptFetched: !!fetchedConcept,
+    effectiveConcept: !!concept,
+    isFetching,
+    externalLoading,
+    effectiveLoading: isLoading,
     conceptId: concept?.id,
-    imageUrl: concept?.image_url,
     timestamp: new Date().toISOString()
   });
 

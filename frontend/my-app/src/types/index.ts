@@ -17,4 +17,4 @@ export * from './form.types';
 /**
  * Form status type
  */
-export type FormStatus = 'idle' | 'submitting' | 'processing' | 'success' | 'error'; 
+export type FormStatus = 'idle' | 'submitting' | 'initiating' | 'pending' | 'processing' | 'success' | 'error'; 
