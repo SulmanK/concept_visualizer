@@ -126,8 +126,8 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   
   // Get active task type for message customization
   const activeTaskType = activeTaskData?.type || '';
-  const isActiveTaskGeneration = activeTaskType === 'concept_generation';
-  const isActiveTaskRefinement = activeTaskType === 'concept_refinement';
+  const isActiveTaskGeneration = activeTaskType === 'generate_concept';
+  const isActiveTaskRefinement = activeTaskType === 'refine_concept';
   
   // Create a more descriptive task message based on the active task type
   const getTaskInProgressMessage = () => {
