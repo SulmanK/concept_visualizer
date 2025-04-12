@@ -5,7 +5,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**1. Prevent Concurrent Tasks (Backend)**
+**1. Prevent Concurrent Tasks (Backend)** [x] - Completed and merged in PR #1
 
 *   **Goal:** Ensure a user cannot start a new generation or refinement task if one is already running.
 *   **Target Files:**
@@ -31,11 +31,11 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
     2.  **Modify `refine_concept` (`refinement.py`):**
         *   Repeat the logic from Step 1, but filter for `task.get("type") == "concept_refinement"`.
         *   Ensure the response message and type in the `TaskResponse` are appropriate for refinement.
-    3.  **Testing:** Add integration tests (using `TestClient`) that attempt to create a second task while the first (mocked) one is still 'pending' or 'processing' and verify the 409 response and body.
+    3.  **Testing:** Add integration tests (using `TestClient`) that attempt to create a second task while the first (mocked) one is still 'pending' or 'processing' and verify the 409 response and body. [SKIP for now]
 
 ---
 
-**2. Prevent Concurrent Task UI (Frontend)**
+**2. Prevent Concurrent Task UI (Frontend)** [x] - Completed in branch refactor/prevent-concurrent-tasks-ui
 
 *   **Goal:** Disable submission and inform the user if a task is already running.
 *   **Target Files:**
@@ -54,7 +54,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Render this element only when `!isSubmitting && (hasActiveTask || isTaskPending || isTaskProcessing)`.
         *   Set the text content to "A generation/refinement task is already in progress".
         *   Apply appropriate styling (e.g., `text-amber-600 text-sm mr-4`).
-    4.  **Testing:** Update unit tests for both forms. Mock `useTaskContext` to return states where `hasActiveTask`, `isTaskPending`, or `isTaskProcessing` are true. Verify the button is disabled and the message appears.
+    4.  **Testing:** Update unit tests for both forms. Mock `useTaskContext` to return states where `hasActiveTask`, `isTaskPending`, or `isTaskProcessing` are true. Verify the button is disabled and the message appears. [SKIP FOR NOW]
 
 ---
 
@@ -110,7 +110,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
     5.  **Remove Calls from Route Handlers:**
         *   Go through all route handlers in `backend/app/api/routes/` currently calling `apply_rate_limit` or `apply_multiple_rate_limits`.
         *   Delete these calls. The middleware now handles the application.
-    6.  **Testing:** Update integration tests to verify that requests to rate-limited endpoints fail with 429 when limits are exceeded *without* the explicit call in the route handler. Verify the response headers are still set correctly on successful requests.
+    6.  **Testing:** Update integration tests to verify that requests to rate-limited endpoints fail with 429 when limits are exceeded *without* the explicit call in the route handler. Verify the response headers are still set correctly on successful requests. [SKIP FOR NOW]
 
 ---
 
@@ -173,7 +173,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   For each concept/variation, call the standardized `get_signed_url` method (from Step 1) using the corresponding `image_path` and bucket type (`concept-images` or `palette-images`).
         *   Store the resulting signed URL in the `image_url` field of the data dictionary being returned.
         *   Remove any separate `get_image_url` calls from the API route handlers themselves. The service should return the complete data with URLs included.
-    3.  **Testing:** Update tests for the services to mock `create_signed_url` and verify that the returned data structures contain absolute, signed URLs in the `image_url` fields.
+    3.  **Testing:** Update tests for the services to mock `create_signed_url` and verify that the returned data structures contain absolute, signed URLs in the `image_url` fields. [SKIP FOR NOW]
 
 ---
 
@@ -200,7 +200,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Merge any unique, relevant logic from the old file into the new one.
         *   Delete `backend/app/services/concept_storage_service.py`.
         *   Update imports (likely in `backend/app/services/storage/__init__.py` and potentially dependencies/routes).
-    5.  **Run Tests:** Execute the full backend test suite (`uv run pytest`) to confirm no regressions were introduced.
+    5.  **Run Tests:** Execute the full backend test suite (`uv run pytest`) to confirm no regressions were introduced. [SKIP FOR NOW]
 
 ---
 
@@ -222,7 +222,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
     4.  **Refactor Other Components:** Repeat the refactoring process for any other component identified in Step 1.
     5.  **Remove Context File:** Delete `frontend/my-app/src/contexts/ConceptContext.tsx`.
     6.  **Remove Provider:** Open `frontend/my-app/src/App.tsx` (or wherever the provider is wrapped) and remove the `<ConceptProvider>...</ConceptProvider>` wrapper. Delete the import for `ConceptProvider`.
-    7.  **Testing:** Update unit tests for the refactored components. Mock the React Query hooks (`useRecentConcepts`, etc.) instead of the context. Run E2E tests if available.
+    7.  **Testing:** Update unit tests for the refactored components. Mock the React Query hooks (`useRecentConcepts`, etc.) instead of the context. Run E2E tests if available. [SKIP FOR NOW]
 
 ---
 
@@ -265,7 +265,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Change the import from `'./ConceptCard'` to `'../../../components/ui/ConceptCard'`.
         *   Ensure the props being passed match the updated interface of the UI card (pass `onEdit`, `onViewDetails` handlers).
     6.  **Delete Redundant File:** Delete `features/concepts/recent/components/ConceptCard.tsx`.
-    7.  **Test:** Run unit tests for the UI `ConceptCard`. Manually test the Recent Concepts page and any other place the card was used.
+    7.  **Test:** Run unit tests for the UI `ConceptCard`. Manually test the Recent Concepts page and any other place the card was used. [SKIP FOR NOW]
 
 ---
 
@@ -362,7 +362,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
             };
             ```
     4.  **Adjust Styling/Layout:** Ensure the `motion.div` and its parent containers have appropriate styling (e.g., `position: relative`, `height`, `width`) to allow the animation to work correctly without layout shifts. Remove the old `PageTransition` wrapper from `AppRoutes`.
-    5.  **Test:** Navigate between different pages and verify the transition animation plays smoothly.
+    5.  **Test:** Navigate between different pages and verify the transition animation plays smoothly. [SKIP FOR NOW]
 
 ---
 
@@ -381,7 +381,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
             *   *Response Error Interceptor:* Handle 401 (token refresh logic, retry original request, dispatch `auth-error-needs-logout`), handle 429 (create/throw `RateLimitError`, dispatch toast event).
     2.  **Remove `setupFetchInterceptor`:** Delete the function and its call from `App.tsx`.
     3.  **Confirm Axios Usage:** Verify that all API interactions throughout the app go through the `apiClient` methods (`get`, `post`, `exportImage`) which use the configured `axiosInstance`. Replace any remaining direct `fetch` calls.
-    4.  **Testing:** Update/add tests for `apiClient.ts` (like `apiInterceptors.test.ts`) to specifically verify the interceptor logic for auth headers, rate limit extraction, 401 refresh, and 429 handling.
+    4.  **Testing:** Update/add tests for `apiClient.ts` (like `apiInterceptors.test.ts`) to specifically verify the interceptor logic for auth headers, rate limit extraction, 401 refresh, and 429 handling. [SKIP FOR NOW]
 
 ---
 
@@ -412,7 +412,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Replace `useApi().get(...)` calls with `useQuery` from `@tanstack/react-query`. Define appropriate query keys and query functions using `apiClient.get`.
         *   Replace `useApi().post(...)` calls with `useMutation` from `@tanstack/react-query`. Define mutation functions using `apiClient.post`.
     5.  **Delete Files:** Delete `useConceptGeneration.ts`, `useConceptRefinement.ts`, and `useApi.ts` from the `hooks` directory. Remove exports from `hooks/index.ts`.
-    6.  **Testing:** Update unit/integration tests for the components that were modified. Ensure they correctly mock the new React Query mutation hooks.
+    6.  **Testing:** Update unit/integration tests for the components that were modified. Ensure they correctly mock the new React Query mutation hooks. [SKIP FOR NOW]
 
 ---
 
@@ -427,7 +427,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
     4.  **Analyze `logger.warning`:** Ensure these represent potentially problematic but non-fatal situations. Are they actionable?
     5.  **Analyze `logger.error` / `logger.critical`:** Ensure these are used for actual errors that require attention. Include relevant context (masked IDs, error details). Avoid logging full stack traces unless necessary (FastAPI's error handlers might already do this).
     6.  **Check for Sensitive Data:** Double-check that no unmasked IDs, keys, tokens, or full prompts/image data are being logged. Use the `mask_*` utilities.
-    7.  **Test:** Run the backend locally (`uvicorn`) and perform common actions. Observe the log output. Is it concise but informative?
+    7.  **Test:** Run the backend locally (`uvicorn`) and perform common actions. Observe the log output. Is it concise but informative? [SKIP FOR NOW]
 
 ---
 
@@ -490,7 +490,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**21. Backend Testing Enhancements**
+**21. Backend Testing Enhancements**[SKIP FOR NOW]
 
 *   **Goal:** Improve backend test coverage, especially for new/refactored areas.
 
@@ -505,7 +505,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**22. Frontend Testing Enhancements**
+**22. Frontend Testing Enhancements**[SKIP FOR NOW]
 
 *   **Goal:** Ensure frontend tests align with refactored state management and components.
 
@@ -528,19 +528,13 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 *   **Goal:** Organize the execution of the refactoring.
 
-    3.  **Prioritize:** 
-        *   Backend refactoring (Services, Constants, Error Types, Rate Limiting Middleware) before Frontend refactoring.
-        *   Frontend State Management (Context removal) before Legacy Hooks Cleanup.
-        *   DRY/Consolidation tasks.
-        *   Testing updates alongside implementation.
-        *   Logging cleanup near the end.
     4.  **Branching:** Use descriptive branch names (e.g., `refactor/backend-error-handling`, `feature/task-concurrency-limit`, `chore/remove-concept-context`).
     5.  **Implement & Test:** Work on one ticket/branch at a time. Write code, update/write tests.
     6.  **Code Review:** Create Pull Requests. Ensure reviewers check code logic, adherence to the plan, and test coverage. Merge PRs frequently.
 
 ---
 
-**I. Refine Backend Error Types**
+**24. Refine Backend Error Types**
 
 *   **Goal:** More specific error handling in the service layer.
 
@@ -617,7 +611,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**II. Transaction Management**
+**25. Transaction Management**
 
 *   **Goal:** Ensure atomicity for multi-step DB/Storage operations.
 *   **Target:** `ConceptStorageService.store_concept` (handles concept + variations).
@@ -637,7 +631,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**III. Background Task Robustness**
+**26. Background Task Robustness**
 
 *   **Goal:** Make background tasks more resilient.
 
@@ -684,7 +678,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**IV. Configuration Validation**
+**27. Configuration Validation**
 
 *   **Goal:** Fail fast on missing critical configuration.
 
@@ -708,7 +702,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**V. Frontend Global Error Handling Integration**
+**28. Frontend Global Error Handling Integration**
 
 *   **Goal:** Centralize UI error handling.
 
@@ -741,7 +735,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**VI. Frontend User Feedback for Errors**
+**29. Frontend User Feedback for Errors**
 
 *   **Goal:** Provide clear, actionable error feedback.
 
@@ -781,7 +775,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**VII. Frontend Network Status Integration**
+**30. Frontend Network Status Integration**
 
 *   **Goal:** Improve UI responsiveness to network state.
 
@@ -816,7 +810,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**VIII. Constants and Configuration Management**
+**31. Constants and Configuration Management**
 
 *   **Goal:** Reduce magic strings, centralize config.
 
