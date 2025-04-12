@@ -61,7 +61,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   const errorHandler = useErrorHandling();
   
   // Get global task status
-  const { hasActiveTask, isTaskPending, isTaskProcessing } = useTaskContext();
+  const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } = useTaskContext();
   
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -124,6 +124,23 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   // Check if any task is in progress
   const isTaskInProgress = hasActiveTask || isSubmitting || isSuccess || isProcessing;
   
+  // Get active task type for message customization
+  const activeTaskType = activeTaskData?.type || '';
+  const isActiveTaskGeneration = activeTaskType === 'concept_generation';
+  const isActiveTaskRefinement = activeTaskType === 'concept_refinement';
+  
+  // Create a more descriptive task message based on the active task type
+  const getTaskInProgressMessage = () => {
+    if (isActiveTaskGeneration) {
+      return "A concept generation task is already in progress";
+    } else if (isActiveTaskRefinement) {
+      return "A concept refinement task is already in progress";
+    } else if (hasActiveTask) {
+      return "A task is already in progress";
+    }
+    return "";
+  };
+  
   // Create a mock error for the RateLimitErrorMessage when needed
   const createRateLimitError = (): ErrorWithCategory => {
     return {
@@ -184,7 +201,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               value={logoDescription}
               onChange={e => setLogoDescription(e.target.value)}
               rows={2}
-              disabled={isSubmitting || isSuccess}
+              disabled={isTaskInProgress}
               fullWidth
               required
               helperText="Must be at least 5 characters"
@@ -196,7 +213,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               value={themeDescription}
               onChange={e => setThemeDescription(e.target.value)}
               rows={2}
-              disabled={isSubmitting || isSuccess}
+              disabled={isTaskInProgress}
               fullWidth
               required
               helperText="Must be at least 5 characters"
@@ -211,8 +228,11 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
               
               {hasActiveTask && !isSubmitting && (
                 <div className="flex items-center mr-4">
-                  <p className="text-amber-600 text-sm">
-                    A generation task is already in progress
+                  <p className="text-amber-600 text-sm font-medium flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    {getTaskInProgressMessage()}
                   </p>
                 </div>
               )}
@@ -222,9 +242,10 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
                 disabled={isTaskInProgress}
                 variant="primary"
                 size="lg"
+                className={hasActiveTask ? "opacity-50" : ""}
               >
                 {isSubmitting ? 'Please wait...' : 
-                 hasActiveTask ? 'Task already in progress...' : 
+                 hasActiveTask ? 'Task in progress...' : 
                  'Generate Concept'}
               </Button>
             </div>

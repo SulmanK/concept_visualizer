@@ -102,7 +102,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
   
   // Get global task status
-  const { hasActiveTask, isTaskPending, isTaskProcessing } = useTaskContext();
+  const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } = useTaskContext();
   
   // Update preserve aspects when defaultPreserveAspects changes
   useEffect(() => {
@@ -124,6 +124,23 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   
   // Check if any task is in progress
   const isTaskInProgress = hasActiveTask || isSubmitting || isSuccess || isProcessing;
+  
+  // Get active task type for message customization
+  const activeTaskType = activeTaskData?.type || '';
+  const isActiveTaskGeneration = activeTaskType === 'concept_generation';
+  const isActiveTaskRefinement = activeTaskType === 'concept_refinement';
+  
+  // Create a more descriptive task message based on the active task type
+  const getTaskInProgressMessage = () => {
+    if (isActiveTaskGeneration) {
+      return "A concept generation task is already in progress";
+    } else if (isActiveTaskRefinement) {
+      return "A concept refinement task is already in progress";
+    } else if (hasActiveTask) {
+      return "A task is already in progress";
+    }
+    return "";
+  };
   
   const validateForm = (): boolean => {
     if (!refinementPrompt.trim()) {
@@ -257,67 +274,81 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           
           {/* Preserve aspects checkboxes */}
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-2">Preserve from Original</p>
-            <div className="flex flex-wrap gap-3">
-              {aspectOptions.map((option) => (
-                <label 
-                  key={option.id}
+            <label className="block text-sm font-medium text-indigo-900 mb-2">
+              Preserve Aspects (Optional)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {aspectOptions.map((aspect) => (
+                <div
+                  key={aspect.id}
+                  onClick={() => !isTaskInProgress && toggleAspect(aspect.id)}
                   className={`
-                    inline-flex items-center px-3 py-1.5 rounded-full text-sm
-                    ${preserveAspects.includes(option.id)
-                      ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                      : 'bg-gray-50 text-gray-700 border-gray-200'
-                    }
-                    border cursor-pointer transition-colors
-                    ${isTaskInProgress ? 'opacity-50 cursor-not-allowed' : 'hover:bg-indigo-50'}
+                    px-3 py-1 rounded-full text-sm cursor-pointer transition-colors
+                    ${preserveAspects.includes(aspect.id)
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'}
+                    ${isTaskInProgress ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
                 >
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={preserveAspects.includes(option.id)}
-                    onChange={() => !isTaskInProgress && toggleAspect(option.id)}
-                    disabled={isTaskInProgress}
-                  />
-                  {option.label}
-                </label>
+                  {aspect.label}
+                </div>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Select elements you want to keep from the original concept
+            <p className="mt-1 text-sm text-gray-500">
+              Select aspects of the original design you'd like to preserve
             </p>
           </div>
           
-          {/* Form buttons */}
-          <div className="flex justify-between pt-2">
-            {hasActiveTask && !isSubmitting && (
-              <div className="flex items-center">
-                <p className="text-amber-600 text-sm">
-                  A generation task is already in progress
-                </p>
-              </div>
+          {/* Error message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <strong className="font-bold">Error: </strong>
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
+          
+          {/* Active task message */}
+          {hasActiveTask && !isSubmitting && !showProcessing && (
+            <div className="flex items-center bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded relative" role="alert">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="block sm:inline font-medium">{getTaskInProgressMessage()}</span>
+            </div>
+          )}
+          
+          {/* Action buttons */}
+          <div className="flex justify-between items-center pt-2">
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="outline"
+                size="md"
+                onClick={onCancel}
+                disabled={isTaskInProgress}
+              >
+                Cancel
+              </Button>
             )}
             
-            <div className="ml-auto flex items-center space-x-3">
-              {onCancel && (
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  onClick={onCancel}
-                  disabled={isTaskInProgress}
-                >
-                  Cancel
-                </Button>
+            <div className="flex items-center ml-auto">
+              {isSubmitting && (
+                <div className="flex items-center mr-4">
+                  <Spinner size="sm" className="mr-2" />
+                  <span className="text-indigo-600 text-sm">Submitting...</span>
+                </div>
               )}
               
               <Button 
                 type="submit" 
                 variant="primary"
+                size="lg"
                 disabled={isTaskInProgress}
+                className={hasActiveTask ? "opacity-50" : ""}
               >
-                {isSubmitting ? 'Processing...' : 
-                hasActiveTask ? 'Task already in progress...' : 
-                'Refine Concept'}
+                {isSubmitting ? 'Please wait...' : 
+                 hasActiveTask ? 'Task in progress...' : 
+                 'Refine Concept'}
               </Button>
             </div>
           </div>
