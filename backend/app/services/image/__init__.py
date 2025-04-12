@@ -1,56 +1,71 @@
 """
 Image processing and storage services.
 
-This package provides services for processing, storing, and retrieving images.
+This module provides services for processing, storing, and retrieving images.
 """
 
 from functools import lru_cache
-from fastapi import Depends
+from typing import Optional
 
-from app.core.config import settings
-from app.services.interfaces import ImageServiceInterface
-from app.services.image.service import ImageService
+from supabase import Client
+from app.services.image.service import ImageService, ImageError
+from app.services.image.processing_service import ImageProcessingService, ImageProcessingError
 from app.services.image.storage import ImageStorageService
-from app.services.image.processing import apply_palette_with_masking_optimized
-from app.services.image.conversion import (
-    convert_image_format,
-    generate_thumbnail,
-    optimize_image
-)
-from app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
-from app.core.supabase.client import SupabaseClient, get_supabase_client
+from app.services.jigsawstack.client import JigsawStackClient
+from app.services.jigsawstack.service import get_jigsawstack_service
+from app.core.dependencies import get_supabase_client
 
+# Export symbols that should be available to importers of this package
 __all__ = [
-    "ImageService",
+    "ImageService", 
+    "ImageError",
+    "ImageProcessingService",
+    "ImageProcessingError",
     "get_image_service",
-    "ImageStorageService",
-    "apply_palette_with_masking_optimized",
-    "convert_image_format",
-    "generate_thumbnail",
-    "optimize_image"
+    "get_image_processing_service"
 ]
 
+@lru_cache()
+def get_image_processing_service() -> ImageProcessingService:
+    """
+    Get image processing service instance.
+    
+    Returns:
+        ImageProcessingService: Service for processing images
+    """
+    return ImageProcessingService()
 
 @lru_cache()
 def get_image_service(
-    jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client),
-    supabase_client: SupabaseClient = Depends(get_supabase_client),
-) -> ImageServiceInterface:
+    jigsawstack_client: Optional[JigsawStackClient] = None,
+    supabase_client: Optional[Client] = None,
+    processing_service: Optional[ImageProcessingService] = None
+) -> ImageService:
     """
-    Get a singleton instance of ImageService.
+    Get image service instance.
     
     Args:
-        jigsawstack_client: JigsawStack API client
-        supabase_client: Supabase client
+        jigsawstack_client: JigsawStack client to use, created if None
+        supabase_client: Supabase client to use, created if None
+        processing_service: Image processing service to use, created if None
         
     Returns:
-        ImageService: A service for processing and storing images
+        ImageService: Service for generating, processing, and storing images
     """
-    # Create storage service
+    if jigsawstack_client is None:
+        jigsawstack_client = get_jigsawstack_service().client
+    
+    if supabase_client is None:
+        supabase_client = get_supabase_client()
+    
+    if processing_service is None:
+        processing_service = get_image_processing_service()
+    
     storage_service = ImageStorageService(supabase_client)
     
     return ImageService(
         jigsawstack_client=jigsawstack_client,
         supabase_client=supabase_client,
-        storage_service=storage_service
+        storage_service=storage_service,
+        processing_service=processing_service
     ) 
