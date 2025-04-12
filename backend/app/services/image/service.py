@@ -18,15 +18,9 @@ from supabase import Client
 from PIL import Image as PILImage
 
 from app.services.interfaces import ImageServiceInterface
+from app.services.interfaces.image_service import ImageProcessingServiceInterface
 from app.services.image.storage import ImageStorageService, ImageStorageError, ImageNotFoundError
-from app.services.image.processing import apply_palette_with_masking_optimized, extract_dominant_colors
-from app.services.image.conversion import (
-    convert_image_format,
-    generate_thumbnail,
-    optimize_image,
-    get_image_metadata,
-    ConversionError
-)
+from app.services.image.processing_service import ImageProcessingError
 from app.services.jigsawstack.client import JigsawStackClient
 from app.utils.security.mask import mask_id, mask_path
 from app.core.config import settings
@@ -34,16 +28,14 @@ from app.core.config import settings
 # Set up logging
 logger = logging.getLogger(__name__)
 
+
 class ImageError(Exception):
     """Base exception for image service errors."""
     pass
 
+
 class ImageGenerationError(ImageError):
     """Exception raised for image generation errors."""
-    pass
-
-class ImageProcessingError(ImageError):
-    """Exception raised for image processing errors."""
     pass
 
 
@@ -59,7 +51,8 @@ class ImageService(ImageServiceInterface):
         self, 
         jigsawstack_client: JigsawStackClient,
         supabase_client: Client,
-        storage_service: ImageStorageService
+        storage_service: ImageStorageService,
+        processing_service: ImageProcessingServiceInterface
     ):
         """
         Initialize the image service.
@@ -68,10 +61,12 @@ class ImageService(ImageServiceInterface):
             jigsawstack_client: Client for JigsawStack API
             supabase_client: Supabase client
             storage_service: Service for image storage operations
+            processing_service: Service for image processing operations
         """
         self.jigsawstack = jigsawstack_client
         self.supabase = supabase_client
         self.storage = storage_service
+        self.processing = processing_service
         self.logger = logging.getLogger(__name__)
         
     async def process_image(
@@ -93,104 +88,11 @@ class ImageService(ImageServiceInterface):
             ImageProcessingError: If processing fails
         """
         try:
-            current_image = image_data
-            
-            for operation in operations:
-                op_type = operation.get("type", "").lower()
-                
-                if op_type == "resize":
-                    width = operation.get("width")
-                    height = operation.get("height")
-                    preserve_aspect = operation.get("preserve_aspect_ratio", True)
-                    
-                    # Convert to bytes if it's not already
-                    if isinstance(current_image, str):
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(current_image)
-                            current_image = response.content
-                    elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
-                    
-                    # Generate thumbnail with target dimensions
-                    current_image = generate_thumbnail(
-                        current_image, 
-                        size=(width, height),
-                        preserve_aspect_ratio=preserve_aspect
-                    )
-                    
-                elif op_type == "convert":
-                    target_format = operation.get("format", "png")
-                    quality = operation.get("quality", 95)
-                    
-                    # Convert to bytes if it's not already
-                    if isinstance(current_image, str):
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(current_image)
-                            current_image = response.content
-                    elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
-                        
-                    current_image = convert_image_format(
-                        current_image,
-                        target_format=target_format,
-                        quality=quality
-                    )
-                    
-                elif op_type == "optimize":
-                    quality = operation.get("quality", 85)
-                    max_width = operation.get("max_width")
-                    max_height = operation.get("max_height")
-                    
-                    # Calculate max_size
-                    max_size = None
-                    if max_width or max_height:
-                        max_size = (
-                            max_width or 10000,  # Large default if only height specified
-                            max_height or 10000  # Large default if only width specified
-                        )
-                    
-                    # Convert to bytes if it's not already
-                    if isinstance(current_image, str):
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(current_image)
-                            current_image = response.content
-                    elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
-                        
-                    current_image = optimize_image(
-                        current_image,
-                        quality=quality,
-                        max_size=max_size
-                    )
-                    
-                elif op_type == "apply_palette":
-                    palette_colors = operation.get("colors", [])
-                    blend_strength = operation.get("blend_strength", 0.75)
-                    
-                    # Process the image with the palette
-                    current_image = apply_palette_with_masking_optimized(
-                        current_image,
-                        palette_colors=palette_colors,
-                        blend_strength=blend_strength
-                    )
-                    
-                else:
-                    self.logger.warning(f"Unknown image operation type: {op_type}")
-            
-            # Ensure final result is bytes
-            if isinstance(current_image, str):
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(current_image)
-                    current_image = response.content
-            elif isinstance(current_image, BytesIO):
-                current_image = current_image.getvalue()
-                
-            return current_image
-            
+            return await self.processing.process_image(image_data, operations)
         except Exception as e:
             error_msg = f"Error processing image: {str(e)}"
             self.logger.error(error_msg)
-            raise ImageProcessingError(error_msg)
+            raise ImageError(error_msg)
             
     def store_image(
         self, 
@@ -331,12 +233,12 @@ class ImageService(ImageServiceInterface):
             ImageError: If conversion fails
         """
         try:
-            return convert_image_format(
+            return self.processing.convert_to_format(
                 image_data=image_data,
                 target_format=target_format,
                 quality=quality
             )
-        except ConversionError as e:
+        except Exception as e:
             raise ImageError(f"Failed to convert image format: {str(e)}")
             
     def generate_thumbnail(
@@ -364,13 +266,14 @@ class ImageService(ImageServiceInterface):
             ImageError: If thumbnail generation fails
         """
         try:
-            return generate_thumbnail(
+            return self.processing.generate_thumbnail(
                 image_data=image_data,
-                size=(width, height),
+                width=width,
+                height=height,
                 format=format,
                 preserve_aspect_ratio=preserve_aspect_ratio
             )
-        except ConversionError as e:
+        except Exception as e:
             raise ImageError(f"Failed to generate thumbnail: {str(e)}")
             
     async def extract_color_palette(
@@ -392,7 +295,7 @@ class ImageService(ImageServiceInterface):
             ImageError: If color extraction fails
         """
         try:
-            return await extract_dominant_colors(image_data, num_colors)
+            return await self.processing.extract_color_palette(image_data, num_colors)
         except Exception as e:
             error_msg = f"Failed to extract color palette: {str(e)}"
             self.logger.error(error_msg)
@@ -652,11 +555,14 @@ class ImageService(ImageServiceInterface):
                         self.logger.warning(f"Empty color palette: {palette_name}, skipping")
                         continue
                     
-                    # Apply the palette to the base image
-                    colorized_image = apply_palette_with_masking_optimized(
+                    # Apply the palette to the base image using the processing service
+                    colorized_image = await self.processing.process_image(
                         validated_image_data,
-                        palette_colors=palette_colors,
-                        blend_strength=blend_strength
+                        operations=[{
+                            "type": "apply_palette",
+                            "colors": palette_colors,
+                            "blend_strength": blend_strength
+                        }]
                     )
                     
                     if not colorized_image:
