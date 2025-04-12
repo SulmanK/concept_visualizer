@@ -30,6 +30,13 @@ from app.services.interfaces import (
 from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError, TaskNotFoundError
 from app.core.config import settings
+from app.core.constants import (
+    TASK_STATUS_PENDING, 
+    TASK_STATUS_PROCESSING, 
+    TASK_STATUS_COMPLETED, 
+    TASK_STATUS_FAILED, 
+    TASK_TYPE_GENERATION
+)
 from app.utils.api_limits.decorators import store_rate_limit_info
 from app.utils.api_limits.endpoints import apply_rate_limit, apply_multiple_rate_limits
 from app.utils.security.mask import mask_id
@@ -247,27 +254,23 @@ async def generate_concept_with_palettes(
         # Check rate limits for concept storage
         await apply_rate_limit(req, "/concepts/store", "10/month")
         
-        # Create metadata for the task
-        task_metadata = {
-            "logo_description": request.logo_description,
-            "theme_description": request.theme_description,
-            "num_palettes": num_palettes
-        }
-        
         # Check for existing active tasks for this user
         try:
             # Look for any pending or processing tasks of type concept_generation
             active_tasks = await commons.task_service.get_tasks_by_user(
                 user_id=user_id,
-                status="pending"
+                status=TASK_STATUS_PENDING
             )
-            active_tasks.extend(await commons.task_service.get_tasks_by_user(
+            processing_tasks = await commons.task_service.get_tasks_by_user(
                 user_id=user_id,
-                status="processing"
-            ))
+                status=TASK_STATUS_PROCESSING
+            )
+            
+            # Combine the task lists
+            all_active_tasks = active_tasks + processing_tasks
             
             # Filter for concept_generation tasks
-            active_generation_tasks = [task for task in active_tasks if task.get("type") == "concept_generation"]
+            active_generation_tasks = [task for task in all_active_tasks if task.get("type") == TASK_TYPE_GENERATION]
             
             if active_generation_tasks:
                 # Return the existing task instead of creating a new one
@@ -280,19 +283,26 @@ async def generate_concept_with_palettes(
                     task_id=existing_task["id"],
                     status=existing_task["status"],
                     message="A concept generation task is already in progress",
-                    type="concept_generation",
+                    type=TASK_TYPE_GENERATION,
                     created_at=existing_task.get("created_at"),
                     updated_at=existing_task.get("updated_at"),
-                    metadata=existing_task.get("metadata", task_metadata)
+                    metadata=existing_task.get("metadata", {})
                 )
         except Exception as e:
             # Log the error but continue with creating a new task
             logger.warning(f"Error checking for existing tasks: {str(e)}")
         
+        # Create metadata for the task
+        task_metadata = {
+            "logo_description": request.logo_description,
+            "theme_description": request.theme_description,
+            "num_palettes": num_palettes
+        }
+        
         try:
             task = await commons.task_service.create_task(
                 user_id=user_id,
-                task_type="concept_generation",
+                task_type=TASK_TYPE_GENERATION,
                 metadata=task_metadata
             )
             
@@ -319,13 +329,13 @@ async def generate_concept_with_palettes(
             # Return the task information
             return TaskResponse(
                 task_id=task_id,
-                status="pending",
+                status=TASK_STATUS_PENDING,
                 message="Concept generation task created and queued for processing",
-                type="concept_generation",
+                type=TASK_TYPE_GENERATION,
                 created_at=task.get("created_at"),
                 metadata=task_metadata
             )
-        
+            
         except TaskError as e:
             logger.error(f"Error creating task: {str(e)}")
             raise ServiceUnavailableError(detail=f"Error creating task: {str(e)}")
@@ -351,7 +361,7 @@ async def generate_concept_background_task(
     task_service: TaskServiceInterface
 ):
     """
-    Background task function to generate a concept with palettes.
+    Background task function to generate a concept.
     
     Args:
         task_id: Unique ID for tracking this task
@@ -368,32 +378,32 @@ async def generate_concept_background_task(
         # Update task status to processing and update the timestamp
         await task_service.update_task_status(
             task_id=task_id,
-            status="processing"
+            status=TASK_STATUS_PROCESSING
         )
         
         logger.info(f"Starting background generation task {mask_id(task_id)} for user {mask_id(user_id)}")
         
-        # Generate base image and store it in Supabase Storage
+        # Generate and store the image
         try:
             image_path, image_url = await image_service.generate_and_store_image(
-                logo_description,
-                user_id
+                prompt=f"Generate a logo for: {logo_description}",
+                user_id=user_id
             )
             
             if not image_path or not image_url:
                 logger.error(f"Task {mask_id(task_id)}: Failed to generate or store image")
                 await task_service.update_task_status(
                     task_id=task_id,
-                    status="failed",
-                    error_message="Failed to generate or store base image: No image data returned from service"
+                    status=TASK_STATUS_FAILED,
+                    error_message="Failed to generate or store image: No image data returned from service"
                 )
                 return
         except Exception as e:
-            error_message = f"Failed to generate or store base image: {str(e)}"
+            error_message = f"Failed to generate or store image: {str(e)}"
             logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
-                status="failed",
+                status=TASK_STATUS_FAILED,
                 error_message=error_message
             )
             return
@@ -402,20 +412,19 @@ async def generate_concept_background_task(
         try:
             raw_palettes = await concept_service.generate_color_palettes(
                 theme_description=theme_description,
-                logo_description=logo_description,
-                num_palettes=num_palettes
+                logo_description=logo_description
             )
         except Exception as e:
             error_message = f"Failed to generate color palettes: {str(e)}"
             logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
-                status="failed",
+                status=TASK_STATUS_FAILED,
                 error_message=error_message
             )
             return
         
-        # Apply color palettes to create variations and store in Supabase Storage
+        # Apply color palettes to create variations
         try:
             palette_variations = await image_service.create_palette_variations(
                 image_path,
@@ -423,11 +432,11 @@ async def generate_concept_background_task(
                 user_id
             )
         except Exception as e:
-            error_message = f"Failed to create color variations: {str(e)}"
+            error_message = f"Failed to create palette variations: {str(e)}"
             logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
-                status="failed",
+                status=TASK_STATUS_FAILED,
                 error_message=error_message
             )
             return
@@ -441,78 +450,48 @@ async def generate_concept_background_task(
                 "image_path": image_path,
                 "image_url": image_url,
                 "color_palettes": palette_variations,
-                "is_anonymous": True
+                "is_anonymous": True,
+                "task_id": task_id
             })
             
-            if not stored_concept:
-                logger.error(f"Task {mask_id(task_id)}: Failed to store concept")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status="failed",
-                    error_message="Failed to store concept: No concept ID returned from storage service"
-                )
-                return
+            concept_id = stored_concept
+            if isinstance(stored_concept, dict):
+                concept_id = stored_concept.get("id", stored_concept)
+                
+            if not concept_id:
+                raise ValueError("No concept ID returned from storage service")
+                
+            logger.info(f"Task {mask_id(task_id)}: Successfully stored concept {mask_id(concept_id)}")
+            
+            # Update task status to completed
+            await task_service.update_task_status(
+                task_id=task_id,
+                status=TASK_STATUS_COMPLETED,
+                result_id=concept_id
+            )
+            
+            logger.info(f"Task {mask_id(task_id)}: Completed successfully with result {mask_id(concept_id)}")
+            
         except Exception as e:
-            error_message = f"Failed to store concept in database: {str(e)}"
+            error_message = f"Failed to store concept: {str(e)}"
             logger.error(f"Task {mask_id(task_id)}: {error_message}")
             await task_service.update_task_status(
                 task_id=task_id,
-                status="failed",
+                status=TASK_STATUS_FAILED,
                 error_message=error_message
             )
             return
-        
-        # Update task status to completed with result ID
-        concept_id = stored_concept
-        if isinstance(stored_concept, dict):
-            concept_id = stored_concept.get("id", stored_concept)
             
-        await task_service.update_task_status(
-            task_id=task_id,
-            status="completed",
-            result_id=concept_id
-        )
-        
-        # Now that the task has successfully completed, increment the rate limits
-        try:
-            # Use check_rate_limit directly, which doesn't require a full request object
-            from app.core.limiter import check_rate_limit
-            
-            # Format user_id for the rate limit checks
-            full_user_id = f"user:{user_id}"
-            
-            # Increment rate limits for both endpoints (use check_only=False to actually increment)
-            check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/generate-with-palettes",
-                limit="10/month",
-                check_only=False
-            )
-            
-            check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/store",
-                limit="10/month",
-                check_only=False
-            )
-            
-            logger.info(f"Task {mask_id(task_id)}: Incremented rate limits after successful task completion")
-        except Exception as rate_limit_error:
-            logger.error(f"Task {mask_id(task_id)}: Failed to increment rate limits: {str(rate_limit_error)}")
-            # Don't raise here, as the task already completed successfully
-        
-        logger.info(f"Task {mask_id(task_id)}: Successfully completed concept generation")
-        
     except Exception as e:
-        error_message = f"Unexpected error in concept generation background task: {str(e)}"
+        # Catch-all for any other unexpected errors
+        error_message = f"Unexpected error in background task: {str(e)}"
         logger.error(f"Task {mask_id(task_id)}: {error_message}")
-        logger.debug(f"Task {mask_id(task_id)}: Exception traceback: {traceback.format_exc()}")
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
         
-        # Update task status to failed
         try:
             await task_service.update_task_status(
                 task_id=task_id,
-                status="failed",
+                status=TASK_STATUS_FAILED,
                 error_message=error_message
             )
         except Exception as update_error:
