@@ -1,3 +1,6 @@
+
+
+
 Okay, let's break down your existing TODO list into more granular, step-by-step plans.
 
 ---
@@ -55,27 +58,23 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**3. Service Layer Granularity (Backend)** [x] - Completed
+**3. Service Layer Granularity (Backend)**
 
 *   **Goal:** Ensure backend services follow the Single Responsibility Principle.
 
 *   **Steps:**
-    1.  **Review `ImageService` (`backend/app/services/image/service.py`):** [x]
-        *   Created a dedicated `ImageProcessingService` with clear responsibility for image processing
-        *   Implemented `ImageProcessingServiceInterface` to define the contract
-        *   Moved processing methods from `ImageService` to `ImageProcessingService`
-        *   Updated `ImageService` to delegate to the processing service
-        *   Updated `__init__.py` to expose the new service
-        
-    2.  **Review `ConceptService` Components (`backend/app/services/concept/`):** [x]
-        *   Confirmed classes maintain single responsibility
-        
-    3.  **Evaluate JigsawStack Service Split:** [x]
-        *   Created `JigsawStackService` class to wrap the client
-        *   Implemented `JigsawStackServiceInterface` for clean contract
-        *   Added error handling and logging in the service layer
-        *   Created a factory function `get_jigsawstack_service()`
-        *   Updated imports and exports
+    1.  **Review `ImageService` (`backend/app/services/image/service.py`):**
+        *   Read through each method (`generate_and_store_image`, `refine_and_store_image`, `create_palette_variations`, `process_image`, `store_image`, etc.).
+        *   **Ask:** Is this method *only* coordinating tasks related to images, or is it implementing complex *processing* logic itself?
+        *   **Action:** If complex processing logic (e.g., detailed color manipulation beyond simple format conversion/resizing) is found, move that logic into dedicated functions within `backend/app/services/image/processing.py` or `conversion.py`. The service method should then call these functions. Ensure clear delegation to `JigsawStackClient` for generation/refinement and `ImageStorageService` for storage.
+    2.  **Review `ConceptService` Components (`backend/app/services/concept/`):**
+        *   Open `generation.py`, `refinement.py`, `palette.py`.
+        *   **Ask:** Does `ConceptGenerator` only generate? Does `ConceptRefiner` only refine? Does `PaletteGenerator` only handle palettes? Do they delegate API calls correctly to `JigsawStackClient`?
+        *   **Action:** If a class is performing tasks outside its core responsibility (e.g., `ConceptGenerator` doing complex palette manipulation), move that logic to the appropriate class or a utility function.
+    3.  **Evaluate JigsawStack Service Split:**
+        *   Open `backend/app/services/jigsawstack/client.py`.
+        *   **Ask:** Does this class *only* contain methods that directly map to JigsawStack API endpoints, handling request formatting and basic response parsing? Or does it contain significant logic *before* or *after* the API call (e.g., complex prompt construction strategies, merging results from multiple calls)?
+        *   **Action:** If it's just direct API wrappers, keep it as a `Client`. If complex logic exists or is anticipated, *consider* creating `backend/app/services/jigsawstack/service.py` with a `JigsawStackService` class that *uses* the `JigsawStackClient`. For now, the client structure seems sufficient.
 
 ---
 
@@ -689,8 +688,8 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Add `if not self.VARIABLE_NAME:` checks for essential variables like:
             *   `SUPABASE_JWT_SECRET`
             *   `SUPABASE_SERVICE_ROLE` (crucial if service role calls are used)
-            *   `STORAGE_BUCKET_CONCEPTS`
-            *   `STORAGE_BUCKET_PALETTES`
+            *   `STORAGE_BUCKET_CONCEPT`
+            *   `STORAGE_BUCKET_PALETTE`
         *   Conditionally check Redis variables if rate limiting is enabled:
             ```python
             if self.RATE_LIMITING_ENABLED:
