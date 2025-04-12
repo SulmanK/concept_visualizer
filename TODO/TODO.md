@@ -528,10 +528,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 *   **Goal:** Organize the execution of the refactoring.
 
-*   **Steps:**
-    1.  **Review & Approve:** Share the detailed step-by-step plan with the team. Get feedback and approval.
-    2.  **Break Down:** Create issues/tickets in your project management system (e.g., GitHub Issues) for each numbered item (or logical group of steps). Assign priorities.
-    3.  **Prioritize:** Order the tickets. Suggestions:
+    3.  **Prioritize:** 
         *   Backend refactoring (Services, Constants, Error Types, Rate Limiting Middleware) before Frontend refactoring.
         *   Frontend State Management (Context removal) before Legacy Hooks Cleanup.
         *   DRY/Consolidation tasks.
