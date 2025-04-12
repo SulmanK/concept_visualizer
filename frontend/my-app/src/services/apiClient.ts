@@ -165,14 +165,13 @@ axiosInstance.interceptors.response.use(
   (response) => {
     // Skip rate limit header extraction for the rate-limits endpoints to avoid circular updates
     if (!response.config.url?.includes('/health/rate-limits')) {
-      // Convert Axios response to a format compatible with extractRateLimitHeaders
-      const fetchCompatResponse = {
-        headers: {
-          get: (name: string) => response.headers[name.toLowerCase()]
-        }
-      } as unknown as Response;
-      
-      extractRateLimitHeaders(fetchCompatResponse, response.config.url || '');
+      try {
+        // Call the updated extractRateLimitHeaders with the Axios response
+        extractRateLimitHeaders(response, response.config.url);
+      } catch (error) {
+        // Ensure errors in header processing don't break the request flow
+        console.error('[RATE LIMIT INTERCEPTOR] Error extracting rate limit headers:', error);
+      }
     }
     
     return response;

@@ -5,11 +5,11 @@ import App from './App'
 import './styles/global.css'
 
 // Create a client
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 10, // 10 seconds (reduced from 5 minutes)
-      cacheTime: 1000 * 60 * 30, // 30 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
       refetchOnWindowFocus: false, // Enable refetching on window focus for better data freshness
       retry: 1, // Only retry failed requests once
     },

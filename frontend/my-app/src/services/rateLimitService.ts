@@ -1,4 +1,6 @@
 import { apiClient } from './apiClient';
+import { AxiosResponse } from 'axios';
+import { queryClient } from '../main';
 
 export interface RateLimitInfo {
   limit: string;
@@ -29,14 +31,6 @@ export type RateLimitCategory =
   | 'sessions' 
   | 'export_action';
 
-interface RateLimitHeaderInfo {
-  limit: number;
-  remaining: number;
-  reset: number;     // Unix timestamp when this limit resets
-  endpoint: string;
-  updatedAt: number; // Time when this header info was last updated
-}
-
 interface RateLimitCache {
   limits: RateLimitsResponse;
   timestamp: number; // When the cache was last updated
@@ -45,10 +39,6 @@ interface RateLimitCache {
 
 // Global cache for rate limits from the API
 const rateLimitCache: Record<string, RateLimitCache> = {};
-
-// Cache for endpoint-specific rate limit headers
-// This is the primary cache we'll be using for more accurate limit tracking
-const rateLimitHeaderCache: Record<string, RateLimitHeaderInfo> = {};
 
 // Map to track category to endpoint relationships for reverse lookup
 const categoryToEndpointMap: Record<string, string[]> = {
@@ -82,62 +72,18 @@ export const mapEndpointToCategory = (endpoint: string): RateLimitCategory | nul
 };
 
 /**
- * Get the most recent header info for a specific category
- * @param category Rate limit category
- * @returns The most recent header info or null if none exists
- */
-export const getMostRecentHeaderInfoForCategory = (
-  category: RateLimitCategory
-): RateLimitHeaderInfo | null => {
-  // Get all endpoints for this category
-  const endpoints = categoryToEndpointMap[category] || [];
-  if (endpoints.length === 0) return null;
-  
-  // Find the most recent header info across all endpoints for this category
-  let mostRecent: RateLimitHeaderInfo | null = null;
-  
-  for (const endpoint of endpoints) {
-    // Check each endpoint that might contain info for this category
-    for (const cachedEndpoint in rateLimitHeaderCache) {
-      if (cachedEndpoint.includes(endpoint)) {
-        const info = rateLimitHeaderCache[cachedEndpoint];
-        if (!mostRecent || info.updatedAt > mostRecent.updatedAt) {
-          mostRecent = info;
-        }
-      }
-    }
-  }
-  
-  return mostRecent;
-};
-
-/**
- * Check if header-based cache is valid for a specific category
- * @param category Rate limit category
- * @returns True if valid header cache exists for this category
- */
-export const hasValidHeaderCache = (category: RateLimitCategory): boolean => {
-  const headerInfo = getMostRecentHeaderInfoForCategory(category);
-  if (!headerInfo) return false;
-  
-  // Check if the reset time is in the future
-  const now = Math.floor(Date.now() / 1000); // Current time in seconds
-  return headerInfo.reset > now;
-};
-
-/**
  * Update rate limit cache based on headers from API response
- * @param response Fetch Response object
- * @param endpoint API endpoint that was called
+ * @param response Axios Response object
+ * @param endpoint API endpoint that was called (or undefined)
  */
 export const extractRateLimitHeaders = (
-  response: Response,
-  endpoint: string
+  response: AxiosResponse,
+  endpoint: string | undefined
 ): void => {
-  // Get header values
-  const limit = response.headers.get('X-RateLimit-Limit');
-  const remaining = response.headers.get('X-RateLimit-Remaining');
-  const reset = response.headers.get('X-RateLimit-Reset');
+  // Get header values - Axios headers are typically lowercase
+  const limit = response.headers['x-ratelimit-limit'];
+  const remaining = response.headers['x-ratelimit-remaining'];
+  const reset = response.headers['x-ratelimit-reset'];
   
   if (limit && remaining && reset) {
     console.log(`Extracted rate limit headers from ${endpoint}:`, { 
@@ -148,46 +94,46 @@ export const extractRateLimitHeaders = (
     });
     
     // Find category for this endpoint
-    const category = mapEndpointToCategory(endpoint);
+    const category = mapEndpointToCategory(endpoint || '');
     
     if (category) {
       console.log(`Updating rate limit for category: ${category} with remaining: ${remaining}`);
-    }
-    
-    // Update cache for this specific endpoint with current timestamp
-    updateRateLimitHeaderCache(endpoint, {
-      limit: parseInt(limit, 10),
-      remaining: parseInt(remaining, 10),
-      reset: parseInt(reset, 10),
-      endpoint,
-      updatedAt: Math.floor(Date.now() / 1000) // Current time in seconds
-    });
-    
-    // Also update the main rate limit cache if we have an appropriate category
-    if (category && rateLimitCache.main?.limits) {
-      // Create a deep copy of the existing limits
-      const updatedLimits = JSON.parse(JSON.stringify(rateLimitCache.main.limits));
       
-      // Only update the specific category
-      if (updatedLimits.limits[category]) {
-        const oldRemaining = updatedLimits.limits[category].remaining;
+      // Directly update the React Query cache
+      queryClient.setQueryData<RateLimitsResponse>(['rateLimits'], (oldData) => {
+        // If we don't have existing data in the cache, we can't update it
+        if (!oldData || !oldData.limits || !oldData.limits[category]) {
+          console.warn('Cannot update rate limit cache: no existing data for category', category);
+          return oldData;
+        }
         
-        updatedLimits.limits[category] = {
-          ...updatedLimits.limits[category],
-          limit: `${limit}/custom`,
-          remaining: parseInt(remaining, 10),
-          reset_after: parseInt(reset, 10) - Math.floor(Date.now() / 1000) // Convert to seconds from now
+        // Create a deep copy to avoid mutation
+        const newData = JSON.parse(JSON.stringify(oldData)) as RateLimitsResponse;
+        
+        // Parse values safely
+        const parsedLimit = parseInt(String(limit), 10);
+        const parsedRemaining = parseInt(String(remaining), 10);
+        const parsedReset = parseInt(String(reset), 10);
+        const now = Math.floor(Date.now() / 1000);
+        
+        // Update the specific category
+        newData.limits[category] = {
+          ...newData.limits[category],
+          limit: `${parsedLimit}/custom`,
+          remaining: parsedRemaining,
+          reset_after: parsedReset - now // Convert to seconds from now
         };
         
-        console.log(`Rate limit for ${category} updated: ${oldRemaining} -> ${remaining}`);
+        console.log(`[RateLimitService] Updated rate limit cache for category: ${category}, remaining: ${parsedRemaining}`);
         
-        // Update the main cache
-        updateRateLimitCache('main', updatedLimits);
-      }
+        return newData;
+      });
+    } else {
+      console.warn(`Could not map endpoint ${endpoint} to a rate limit category`);
     }
   } else {
     // Log if we expected but didn't get rate limit headers
-    if (endpoint.includes('/export/process')) {
+    if (endpoint && endpoint.includes('/export/process')) {
       console.warn(`Expected rate limit headers from ${endpoint} but didn't receive them:`, { 
         hasLimit: !!limit,
         hasRemaining: !!remaining,
@@ -196,24 +142,12 @@ export const extractRateLimitHeaders = (
       
       // Log all headers for debugging
       const headers: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        headers[key] = value;
+      Object.entries(response.headers).forEach(([key, value]) => {
+        headers[key] = String(value);
       });
       console.debug('Response headers:', headers);
     }
   }
-};
-
-/**
- * Update the rate limit header cache for an endpoint
- * @param endpoint API endpoint
- * @param headerInfo Rate limit header information
- */
-export const updateRateLimitHeaderCache = (
-  endpoint: string,
-  headerInfo: RateLimitHeaderInfo
-): void => {
-  rateLimitHeaderCache[endpoint] = headerInfo;
 };
 
 /**
@@ -245,27 +179,22 @@ const hasCachedRateLimits = (): boolean => {
 };
 
 /**
- * Get rate limit info for a specific category using header cache if available
+ * Get rate limit info for a specific category from the React Query cache
  * @param category Rate limit category
  * @returns Rate limit info or null if not available
  */
 export const getRateLimitInfoForCategory = (
   category: RateLimitCategory
 ): RateLimitInfo | null => {
-  // Try to get info from header cache first (most accurate)
-  const headerInfo = getMostRecentHeaderInfoForCategory(category);
+  // Try to get data directly from React Query cache
+  const cachedData = queryClient.getQueryData<RateLimitsResponse>(['rateLimits']);
   
-  if (headerInfo) {
-    const now = Math.floor(Date.now() / 1000);
-    return {
-      limit: `${headerInfo.limit}/custom`,
-      remaining: headerInfo.remaining,
-      reset_after: Math.max(0, headerInfo.reset - now) // Ensure positive or zero
-    };
+  if (cachedData?.limits && cachedData.limits[category]) {
+    return cachedData.limits[category];
   }
   
-  // Fall back to main API cache if available
-  if (rateLimitCache.main?.limits?.limits[category]) {
+  // Fallback to the separate local cache if React Query cache not available
+  if (rateLimitCache.main?.limits?.limits && rateLimitCache.main.limits.limits[category]) {
     return rateLimitCache.main.limits.limits[category];
   }
   
@@ -273,198 +202,117 @@ export const getRateLimitInfoForCategory = (
 };
 
 /**
- * Optimistically update a rate limit category before the API call completes
- * This provides immediate UI feedback while waiting for the actual server response
- * @param category Rate limit category to decrement
- * @param amount Amount to decrement (default: 1)
- * @returns Updated rate limit info (or null if category not found)
+ * Optimistically decrement the rate limit for a category
+ * @param category Category to decrement
+ * @param amount Amount to decrement by (default: 1)
+ * @returns Updated rate limit info or null if not available
  */
 export const decrementRateLimit = (
   category: RateLimitCategory,
   amount: number = 1
 ): RateLimitInfo | null => {
-  // Get current info for this category
-  const currentInfo = getRateLimitInfoForCategory(category);
-  if (!currentInfo) return null;
+  const rateLimit = getRateLimitInfoForCategory(category);
   
-  // Create updated info with decremented remaining count
-  const updatedInfo: RateLimitInfo = {
-    ...currentInfo,
-    remaining: Math.max(0, currentInfo.remaining - amount)
+  if (!rateLimit) {
+    console.warn(`Cannot decrement rate limit for ${category}: no rate limit info available`);
+    return null;
+  }
+  
+  // Create a copy with decremented remaining value
+  const updatedRateLimit: RateLimitInfo = {
+    ...rateLimit,
+    remaining: Math.max(0, rateLimit.remaining - amount)
   };
   
-  // If we have header cache for this category, update it
-  const headerInfo = getMostRecentHeaderInfoForCategory(category);
-  if (headerInfo) {
-    headerInfo.remaining = Math.max(0, headerInfo.remaining - amount);
-    updateRateLimitHeaderCache(headerInfo.endpoint, headerInfo);
-  }
+  // Update React Query cache
+  queryClient.setQueryData<RateLimitsResponse>(['rateLimits'], (oldData) => {
+    if (!oldData || !oldData.limits) return oldData;
+    
+    // Create a deep copy
+    const updatedData = JSON.parse(JSON.stringify(oldData)) as RateLimitsResponse;
+    
+    // Update the specific category
+    updatedData.limits[category] = updatedRateLimit;
+    
+    return updatedData;
+  });
   
-  // If we have main cache that includes this category, update it
-  if (rateLimitCache.main?.limits?.limits[category]) {
-    const updatedLimits = { ...rateLimitCache.main.limits };
-    updatedLimits.limits[category] = updatedInfo;
-    updateRateLimitCache('main', updatedLimits);
-  }
-  
-  return updatedInfo;
+  console.log(`Decremented rate limit for ${category} by ${amount}`, updatedRateLimit);
+  return updatedRateLimit;
 };
 
 /**
- * Fetch current rate limit information for the user
- * Uses a non-counting endpoint and implements caching
- * @param forceRefresh Force a refresh of the cache
- * @returns Promise resolving to rate limit information
+ * Fetch rate limits from the API
+ * @param forceRefresh Force a refresh from the API
+ * @returns Rate limits response
  */
 export const fetchRateLimits = async (forceRefresh: boolean = false): Promise<RateLimitsResponse> => {
+  // If we already have cached data and we're not forcing a refresh, use it
+  if (!forceRefresh && hasCachedRateLimits()) {
+    console.log('Using cached rate limits');
+    return rateLimitCache.main.limits;
+  }
+  
   try {
-    // Get fresh data from API when forced or cache is expired
-    if (forceRefresh || !hasCachedRateLimits()) {
-      console.log('Fetching fresh rate limits from API');
-      
-      // Use the non-counting endpoint to avoid decrementing the rate limit
-      const response = await apiClient.get<RateLimitsResponse>('/health/rate-limits-status');
-      
-      // Cache the results
-      updateRateLimitCache('main', response.data);
-      
-      // Before returning, apply any header-based updates
-      // This ensures we use the most accurate data from recent API calls
-      const mergedData = applyHeaderUpdatesToLimits(response.data);
-      return mergedData;
-    } else {
-      console.log('Using cached rate limits');
-      
-      // Apply any header-based updates to ensure accuracy
-      const mergedData = applyHeaderUpdatesToLimits(rateLimitCache.main.limits);
-      return mergedData;
-    }
-  } catch (error) {
-    console.error('Failed to fetch rate limits:', error);
+    console.log(`Fetching rate limits from API (force=${forceRefresh})`);
     
-    // Check if we have expired cached data as fallback
-    if (rateLimitCache.main) {
-      console.log('Using expired cache as fallback');
-      
-      // Even for fallback, apply header updates for accuracy
-      const mergedData = applyHeaderUpdatesToLimits(rateLimitCache.main.limits);
-      return mergedData;
-    }
+    // Fetch the rate limits from the API
+    const response = await apiClient.get<RateLimitsResponse>('/health/rate-limits-status');
+    const data = response.data;
     
-    // Return a fallback response with default values
-    return {
-      user_identifier: 'unknown',
-      limits: {
-        generate_concept: {
-          limit: '10/month',
-          remaining: 10,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        },
-        refine_concept: {
-          limit: '10/hour',
-          remaining: 10,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        },
-        store_concept: {
-          limit: '10/month',
-          remaining: 10,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        },
-        get_concepts: {
-          limit: '30/minute',
-          remaining: 30,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        },
-        sessions: {
-          limit: '60/hour',
-          remaining: 60,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        },
-        export_action: {
-          limit: '20/hour',
-          remaining: 20,
-          reset_after: 0,
-          error: 'Failed to fetch rate limits'
-        }
-      },
-      default_limits: ['200/day', '50/hour', '10/minute']
+    // Format the response so it's more usable
+    const formattedResponse: RateLimitsResponse = {
+      user_identifier: data.user_identifier,
+      limits: data.limits,
+      default_limits: data.default_limits
     };
+    
+    // Cache the formatted response
+    updateRateLimitCache('main', formattedResponse);
+    
+    return formattedResponse;
+  } catch (error) {
+    console.error('Error fetching rate limits:', error);
+    
+    // If we have cached data, use it as a fallback
+    if (hasCachedRateLimits()) {
+      console.warn('Using cached rate limits as fallback after API error');
+      return rateLimitCache.main.limits;
+    }
+    
+    // Otherwise, create an error response
+    const errorResponse: RateLimitsResponse = {
+      user_identifier: 'error',
+      limits: {
+        generate_concept: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' },
+        refine_concept: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' },
+        store_concept: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' },
+        get_concepts: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' },
+        sessions: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' },
+        export_action: { limit: 'error', remaining: 0, reset_after: 0, error: 'Error fetching rate limits' }
+      },
+      default_limits: []
+    };
+    
+    return errorResponse;
   }
 };
 
 /**
- * Apply the most recent header-based updates to rate limit data
- * This ensures we always show the most accurate values from actual API responses
- * @param baseData Base rate limit data to update
- * @returns Updated rate limit data with header-based information applied
- */
-function applyHeaderUpdatesToLimits(baseData: RateLimitsResponse): RateLimitsResponse {
-  // Create a deep copy to avoid mutating the original
-  const updatedData = JSON.parse(JSON.stringify(baseData));
-  let hasUpdates = false;
-  
-  // For each category, check if we have more recent header info
-  for (const category in updatedData.limits) {
-    const typedCategory = category as RateLimitCategory;
-    const headerInfo = getMostRecentHeaderInfoForCategory(typedCategory);
-    
-    if (headerInfo) {
-      const now = Math.floor(Date.now() / 1000);
-      const oldRemaining = updatedData.limits[typedCategory].remaining;
-      const newRemaining = headerInfo.remaining;
-      
-      // Only update if header value is different (helps with debugging)
-      if (oldRemaining !== newRemaining) {
-        console.log(`Applying header update for ${typedCategory}: ${oldRemaining} -> ${newRemaining}`);
-        
-        updatedData.limits[typedCategory] = {
-          ...updatedData.limits[typedCategory],
-          remaining: newRemaining,
-          reset_after: Math.max(0, headerInfo.reset - now) // Ensure positive or zero
-        };
-        hasUpdates = true;
-      }
-    }
-  }
-  
-  // Update the main cache if we made changes
-  if (hasUpdates) {
-    updateRateLimitCache('main', updatedData);
-    console.log('Updated rate limit cache with header-based values');
-  }
-  
-  return updatedData;
-}
-
-/**
- * Format seconds into a human-readable time string
+ * Format seconds into a user-friendly string
  * @param seconds Number of seconds
- * @returns Formatted time string (e.g., "2h 15m 30s" or "5d 12h")
+ * @returns Formatted time string (e.g., "2 minutes")
  */
 export const formatTimeRemaining = (seconds: number): string => {
-  if (seconds < 0) return 'Unknown';
-  
-  const days = Math.floor(seconds / (24 * 60 * 60));
-  seconds -= days * 24 * 60 * 60;
-  
-  const hours = Math.floor(seconds / (60 * 60));
-  seconds -= hours * 60 * 60;
-  
-  const minutes = Math.floor(seconds / 60);
-  seconds -= minutes * 60;
-  
-  if (days > 0) {
-    return `${days}d ${hours}h`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  } else {
-    return `${seconds}s`;
+  if (seconds < 60) {
+    return seconds === 1 ? '1 second' : `${seconds} seconds`;
   }
+  
+  if (seconds < 3600) {
+    const minutes = Math.ceil(seconds / 60);
+    return minutes === 1 ? '1 minute' : `${minutes} minutes`;
+  }
+  
+  const hours = Math.ceil(seconds / 3600);
+  return hours === 1 ? '1 hour' : `${hours} hours`;
 }; 
