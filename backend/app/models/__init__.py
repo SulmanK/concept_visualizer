@@ -8,17 +8,25 @@ This package contains all the data models used in the application.
 from .common.base import APIBaseModel, ErrorResponse
 
 # Concept models
-from .concept import (
-    ColorPalette, 
+from .concept.domain import (
+    ColorPalette as ConceptColorPalette, 
     ConceptSummary, 
     ConceptDetail, 
     ConceptCreate,
     ColorVariationCreate,
-    PromptRequest, 
-    RefinementRequest,
+)
+from .concept.request import PromptRequest, RefinementRequest
+from .concept.response import (
     GenerationResponse, 
     PaletteVariation,
+    ColorPalette,
+    RefinementResponse,
+    ConceptSummary as ConceptResponseSummary,
+    ConceptDetail as ConceptResponseDetail,
 )
+
+# Task models
+from .task.response import TaskResponse
 
 # Export models
 from .export import ExportRequest
@@ -30,6 +38,7 @@ __all__ = [
     
     # Concept models
     "ColorPalette",
+    "ConceptColorPalette",
     "ConceptSummary",
     "ConceptDetail",
     "ConceptCreate",
@@ -37,7 +46,13 @@ __all__ = [
     "PromptRequest",
     "RefinementRequest",
     "GenerationResponse",
+    "RefinementResponse",
     "PaletteVariation",
+    "ConceptResponseSummary",
+    "ConceptResponseDetail",
+    
+    # Task models
+    "TaskResponse",
     
     # Export models
     "ExportRequest",

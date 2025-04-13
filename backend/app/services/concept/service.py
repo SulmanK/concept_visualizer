@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any, Tuple
 import os
 
 from app.core.exceptions import ConceptError
-from app.models.response import GenerationResponse, ColorPalette
+from app.models.concept.response import GenerationResponse, ColorPalette
 from app.services.concept.interface import ConceptServiceInterface
 from app.services.image.interface import ImageServiceInterface
 from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface, ImagePersistenceServiceInterface

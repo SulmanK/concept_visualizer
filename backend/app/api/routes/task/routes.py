@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Request, Query
 
-from app.models.response import TaskResponse
+from app.models.task.response import TaskResponse
 from app.services.task.interface import TaskServiceInterface
 from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
