@@ -2,7 +2,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
 
 **Analysis & Refactoring Plan:**
 
-**1. `backend/app/models/`**
+**1. `backend/app/models/`** [x]
 
 *   **Current State:** Contains domain-specific subdirectories (`common`, `concept`, `export`, `svg`, `task`) which is good. However, it also has potentially redundant root-level files (`concept.py`, `request.py`, `response.py`). Models primarily use Pydantic.
 *   **Issues:**
@@ -15,7 +15,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
     3.  **(Review `common/base.py`)** `APIBaseModel` seems appropriate. `ErrorResponse` is specific to API output; consider if it should live in `api/errors.py` or `models/api/response.py` eventually, but keeping it in `common` is acceptable for now.
     4.  **(Verify Purity)** Quickly scan models to confirm they only contain data definitions and Pydantic validation logic.
 
-**2. `backend/app/core/`**
+**2. `backend/app/core/`**[x]
 
 *   **Current State:** Houses configuration (`config.py`), application factory (`factory.py`), core exceptions (`exceptions.py`), constants (`constants.py`), low-level Supabase interaction (`supabase/`), rate limiting setup (`limiter/`), and some middleware (`middleware/`).
 *   **Issues:**
@@ -27,8 +27,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
     2.  **(Decoupling)** Review `core/limiter/`: Keep the core limiter setup (`config.py`, `redis_store.py`) here. Accept the necessary `Request` coupling in `keys.py` for practical reasons, but ensure no *API-specific rules* (like endpoint paths) leak into this core module. Those rules belong in `api/middleware/rate_limit_apply.py`.
     3.  **(Clarity)** Refine `core/exceptions.py`: Ensure `ApplicationError` and its subclasses represent *domain-level* or *service-level* errors, distinct from HTTP/API errors. API errors should *wrap* or *translate* these domain errors.
     4.  **(Review `constants.py`)** Confirm constants are genuinely core/shared. Relocate any constants used *only* within a specific layer (e.g., API route paths) closer to their usage.
-    5.  **(Review `core/supabase/`)** Reiterate (from services plan): These components (`ConceptStorage`, `ImageStorage`, `SupabaseClient`, `SupabaseAuthClient`) should encapsulate *all* direct Supabase SDK or HTTP interactions. Services should use these components, not bypass them. `ImageStorage` will contain the necessary direct HTTP calls for storage RLS.
-
+    5.  **(Review `core/supabase/`)** Reiterate (from services plan): These components (`ConceptStorage`, `ImageStorage`, `SupabaseClient`, `SupabaseAuthClient`) should encapsulate *all* direct Supabase SDK or HTTP interactions. Services should use these components, not bypass them. `ImageStorage` will contain the necessary direct HTTP calls for storage RLS. We needed direct https because supabase python client doesnt have the functionality to add response headers
 
 
 
