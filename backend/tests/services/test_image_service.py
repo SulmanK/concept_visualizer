@@ -8,8 +8,8 @@ import io
 from datetime import datetime
 
 from app.services.image.service import ImageService
-from app.services.image.storage import ImageStorageService
-from app.services.interfaces import ImageServiceInterface
+from app.services.persistence.image_persistence_service import ImagePersistenceService
+from app.services.interfaces import ImageServiceInterface, ImagePersistenceServiceInterface
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def mock_jigsawstack_client():
 @pytest.fixture
 def mock_storage_service():
     """Create a mock storage service for testing."""
-    service = MagicMock(spec=ImageStorageService)
+    service = MagicMock(spec=ImagePersistenceService)
     service.store_image = MagicMock()
     return service
 

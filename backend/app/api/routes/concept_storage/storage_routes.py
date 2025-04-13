@@ -17,7 +17,7 @@ from app.models.response import GenerationResponse
 from app.models.concept import ConceptSummary, ConceptDetail
 from app.services.image import get_image_service
 from app.services.concept import get_concept_service
-from app.services.storage import get_concept_storage_service
+from app.services.persistence import get_concept_persistence_service
 from app.services.interfaces import (
     ConceptServiceInterface,
     ImageServiceInterface,
@@ -87,7 +87,7 @@ async def generate_and_store_concept(
         )
         
         # Store concept in Supabase database
-        stored_concept = await commons.storage_service.store_concept({
+        stored_concept = await commons.concept_persistence_service.store_concept({
             "user_id": user_id,
             "logo_description": request.logo_description,
             "theme_description": request.theme_description,
@@ -149,7 +149,7 @@ async def get_recent_concepts(
             raise HTTPException(status_code=401, detail="Authentication required")
         
         # Get recent concepts with signed image URLs using user_id
-        return await commons.storage_service.get_recent_concepts(user_id)
+        return await commons.concept_persistence_service.get_recent_concepts(user_id)
     except Exception as e:
         logger.error(f"Error fetching recent concepts: {str(e)}")
         raise ServiceUnavailableError(detail=f"Error fetching recent concepts: {str(e)}")
@@ -184,7 +184,7 @@ async def get_concept_detail(
             raise HTTPException(status_code=401, detail="Authentication required")
         
         # Get concept detail using storage service with user_id instead of session_id
-        concept = await commons.storage_service.get_concept_detail(concept_id, user_id)
+        concept = await commons.concept_persistence_service.get_concept_detail(concept_id, user_id)
         
         if not concept:
             # Use our custom error class instead of generic HTTPException
