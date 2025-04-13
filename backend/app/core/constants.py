@@ -21,10 +21,4 @@ TASK_TYPE_REFINEMENT = "concept_refinement"
 BUCKET_NAME_CONCEPTS = settings.STORAGE_BUCKET_CONCEPT
 BUCKET_NAME_PALETTES = settings.STORAGE_BUCKET_PALETTE
 
-# Rate Limit Keys/Strings
-RATE_LIMIT_ENDPOINT_GENERATE = "/concepts/generate-with-palettes"
-RATE_LIMIT_STRING_GENERATE = "10/month"
-RATE_LIMIT_ENDPOINT_REFINE = "/concepts/refine"
-RATE_LIMIT_STRING_REFINE = "10/month"
-RATE_LIMIT_ENDPOINT_STORE = "/concepts/store"
-RATE_LIMIT_STRING_STORE = "10/month" 
+# Rate Limit Keys/Strings were removed - these should be defined in api/middleware/rate_limit_apply.py 
