@@ -28,7 +28,10 @@ def create_app() -> FastAPI:
         FastAPI: Configured FastAPI application
     """
     # Set up logging
-    setup_logging()
+    setup_logging(
+        log_level=settings.LOG_LEVEL,
+        log_dir="logs"  # Create a logs directory in the project root
+    )
     
     # Create FastAPI app with OpenAPI configuration
     app = FastAPI(

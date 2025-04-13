@@ -2,7 +2,7 @@
 Image service implementation.
 
 This module provides the implementation of the ImageServiceInterface
-which coordinates image generation, storage, and processing.
+which coordinates image processing and conversion.
 """
 
 import logging
@@ -14,15 +14,12 @@ from datetime import datetime
 import uuid
 
 from fastapi import UploadFile
-from supabase import Client
 from PIL import Image as PILImage
 
-from app.services.interfaces import ImageServiceInterface
+from app.services.interfaces import ImageServiceInterface, ImagePersistenceServiceInterface
 from app.services.interfaces.image_service import ImageProcessingServiceInterface
-from app.services.image.storage import ImageStorageService, ImageStorageError, ImageNotFoundError
-from app.services.image.processing_service import ImageProcessingError
-from app.services.jigsawstack.client import JigsawStackClient
-from app.utils.security.mask import mask_id, mask_path
+from app.core.exceptions import ImageStorageError
+from app.utils.security.mask import mask_id
 from app.core.config import settings
 
 # Set up logging
@@ -34,38 +31,27 @@ class ImageError(Exception):
     pass
 
 
-class ImageGenerationError(ImageError):
-    """Exception raised for image generation errors."""
-    pass
-
-
 class ImageService(ImageServiceInterface):
     """
-    Service for generating, processing, and storing images.
+    Service for processing and manipulating images.
     
-    This service coordinates between image generation, storage,
-    and various image processing operations.
+    This service provides operations for processing, converting,
+    and transforming image data.
     """
     
     def __init__(
         self, 
-        jigsawstack_client: JigsawStackClient,
-        supabase_client: Client,
-        storage_service: ImageStorageService,
+        persistence_service: ImagePersistenceServiceInterface,
         processing_service: ImageProcessingServiceInterface
     ):
         """
         Initialize the image service.
         
         Args:
-            jigsawstack_client: Client for JigsawStack API
-            supabase_client: Supabase client
-            storage_service: Service for image storage operations
+            persistence_service: Service for image persistence operations
             processing_service: Service for image processing operations
         """
-        self.jigsawstack = jigsawstack_client
-        self.supabase = supabase_client
-        self.storage = storage_service
+        self.persistence = persistence_service
         self.processing = processing_service
         self.logger = logging.getLogger(__name__)
         
@@ -85,7 +71,7 @@ class ImageService(ImageServiceInterface):
             Processed image data as bytes
             
         Raises:
-            ImageProcessingError: If processing fails
+            ImageError: If processing fails
         """
         try:
             return await self.processing.process_image(image_data, operations)
@@ -121,8 +107,8 @@ class ImageService(ImageServiceInterface):
             ImageError: If storage fails
         """
         try:
-            # Use the storage service to store the image
-            return self.storage.store_image(
+            # Use the persistence service to store the image
+            return self.persistence.store_image(
                 image_data=image_data,
                 user_id=user_id,
                 concept_id=concept_id,
@@ -193,8 +179,8 @@ class ImageService(ImageServiceInterface):
                         is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
                         
                         self.logger.info(f"Extracted path from signed URL: {path}")
-                        # Use storage service directly with the path
-                        return self.storage.get_image(path, is_palette=is_palette)
+                        # Use persistence service directly with the path
+                        return self.persistence.get_image(path, is_palette=is_palette)
                 
                 # If we can't extract a path or it doesn't match expected format,
                 # try to use the URL directly
@@ -205,7 +191,7 @@ class ImageService(ImageServiceInterface):
             
             # Otherwise it's a storage path
             else:
-                return self.storage.get_image(image_url_or_path, is_palette=is_palette)
+                return self.persistence.get_image(image_url_or_path, is_palette=is_palette)
                 
         except Exception as e:
             error_msg = f"Failed to get image {image_url_or_path}: {str(e)}"
@@ -300,180 +286,10 @@ class ImageService(ImageServiceInterface):
             error_msg = f"Failed to extract color palette: {str(e)}"
             self.logger.error(error_msg)
             raise ImageError(error_msg)
-        
-    async def generate_and_store_image(self, prompt: str, user_id: str) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Generate an image based on a prompt and store it in Supabase.
-        
-        Args:
-            prompt: Image generation prompt
-            user_id: Current user ID
-            
-        Returns:
-            Tuple of (storage_path, signed_url) or (None, None) on error
-            
-        Raises:
-            ImageProcessingError: If image generation fails
-            StorageError: If storing the image fails
-        """
-        try:
-            # Log the image generation request
-            masked_user_id = mask_id(user_id)
-            self.logger.info(f"Generating image with prompt: {prompt}")
-            
-            # Generate the image
-            response = await self.jigsawstack.generate_image(prompt=prompt)
-            
-            # Check if we received image data directly or need to download it
-            image_data = None
-            if "binary_data" in response:
-                image_data = response["binary_data"]
-            elif "url" in response:
-                # Download the image from the URL
-                self.logger.info(f"Downloading image from URL: {response['url']}")
-                async with httpx.AsyncClient() as client:
-                    img_response = await client.get(response["url"])
-                    if img_response.status_code == 200:
-                        image_data = img_response.content
-                    else:
-                        raise ImageProcessingError(f"Failed to download image: HTTP {img_response.status_code}")
-            
-            if not image_data:
-                self.logger.error("Failed to generate image: No binary data returned")
-                raise ImageProcessingError("Failed to generate image: No binary data returned")
-            
-            self.logger.info(f"Image generated successfully. Binary data received: {len(image_data)} bytes")
-            
-            # Determine image format
-            img = PILImage.open(BytesIO(image_data))
-            format_ext = img.format.lower() if img.format else "png"
-            
-            # Generate a unique filename
-            unique_id = str(uuid.uuid4())
-            filename = f"{unique_id}.{format_ext}"
-            
-            # Store the image
-            try:
-                storage_path, signed_url = self.storage.store_image(
-                    image_data=image_data,
-                    user_id=user_id,
-                    file_name=filename,
-                    metadata={"prompt": prompt}
-                )
-                
-                if not storage_path or not signed_url:
-                    self.logger.error("Failed to store generated image")
-                    raise ImageProcessingError("Failed to store generated image")
-                
-                self.logger.info(f"Image stored successfully: {mask_path(storage_path)}")
-                return storage_path, signed_url
-                
-            except ImageStorageError as e:
-                self.logger.error(f"Failed to store image: {str(e)}")
-                raise ImageProcessingError(f"Failed to store image: {str(e)}")
-            
-        except Exception as e:
-            self.logger.error(f"Error in generate_and_store_image: {str(e)}")
-            if isinstance(e, ImageProcessingError):
-                raise
-            raise ImageProcessingError(f"Error generating and storing image: {str(e)}")
-    
-    async def refine_and_store_image(
-        self, 
-        prompt: str, 
-        original_image_url: str, 
-        user_id: str,
-        strength: float = 0.7
-    ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Refine an image based on a prompt and store the result in Supabase.
-        
-        Args:
-            prompt: Refinement prompt
-            original_image_url: URL of the original image
-            user_id: Current user ID
-            strength: How much to change the original (0.0-1.0)
-            
-        Returns:
-            Tuple of (storage_path, signed_url) or (None, None) on error
-            
-        Raises:
-            ImageProcessingError: If image refinement fails
-            StorageError: If storing the image fails
-        """
-        try:
-            # Log the refinement request
-            masked_user_id = mask_id(user_id)
-            self.logger.info(f"Refining image with prompt: {prompt}")
-            
-            # Refine the image
-            response = await self.jigsawstack.refine_image(
-                prompt=prompt,
-                image_url=original_image_url,
-                strength=strength
-            )
-            
-            # Check if we received image data directly or need to download it
-            image_data = None
-            if isinstance(response, bytes):
-                # The refine_image method might directly return bytes
-                image_data = response
-            elif isinstance(response, dict):
-                if "binary_data" in response:
-                    image_data = response["binary_data"]
-                elif "url" in response:
-                    # Download the image from the URL
-                    self.logger.info(f"Downloading refined image from URL: {response['url']}")
-                    async with httpx.AsyncClient() as client:
-                        img_response = await client.get(response["url"])
-                        if img_response.status_code == 200:
-                            image_data = img_response.content
-                        else:
-                            raise ImageProcessingError(f"Failed to download refined image: HTTP {img_response.status_code}")
-            
-            if not image_data:
-                self.logger.error("Failed to refine image: No binary data returned")
-                raise ImageProcessingError("Failed to refine image: No binary data returned")
-            
-            self.logger.info(f"Image refined successfully. Binary data received: {len(image_data)} bytes")
-            
-            # Determine image format
-            img = PILImage.open(BytesIO(image_data))
-            format_ext = img.format.lower() if img.format else "png"
-            
-            # Generate a unique filename
-            unique_id = str(uuid.uuid4())
-            filename = f"{unique_id}.{format_ext}"
-            
-            # Store the refined image
-            try:
-                storage_path, signed_url = self.storage.store_image(
-                    image_data=image_data,
-                    user_id=user_id,
-                    file_name=filename,
-                    metadata={"prompt": prompt, "refinement": True}
-                )
-                
-                if not storage_path or not signed_url:
-                    self.logger.error("Failed to store refined image")
-                    raise ImageProcessingError("Failed to store refined image")
-                
-                self.logger.info(f"Refined image stored successfully: {mask_path(storage_path)}")
-                return storage_path, signed_url
-                
-            except ImageStorageError as e:
-                self.logger.error(f"Failed to store refined image: {str(e)}")
-                raise ImageProcessingError(f"Failed to store refined image: {str(e)}")
-            
-        except Exception as e:
-            self.logger.error(f"Error in refine_and_store_image: {str(e)}")
-            if isinstance(e, ImageProcessingError):
-                raise
-            raise ImageProcessingError(f"Error refining and storing image: {str(e)}")
     
     async def create_palette_variations(
         self, 
-        base_image_path: str, 
+        base_image_data: bytes, 
         palettes: List[Dict[str, Any]], 
         user_id: str,
         blend_strength: float = 0.75
@@ -482,7 +298,7 @@ class ImageService(ImageServiceInterface):
         Create variations of an image with different color palettes.
         
         Args:
-            base_image_path: Storage path of the base image
+            base_image_data: Binary image data of the base image
             palettes: List of color palette dictionaries
             user_id: Current user ID
             blend_strength: How strongly to apply the new colors (0.0-1.0)
@@ -491,38 +307,13 @@ class ImageService(ImageServiceInterface):
             List of palettes with added image_path and image_url fields
             
         Raises:
-            ImageProcessingError: If applying palettes fails
-            StorageError: If storing the variations fails
+            ImageError: If applying palettes fails
         """
         result_palettes = []
         masked_user_id = mask_id(user_id)
-        masked_base_path = mask_path(base_image_path)
         
         try:
-            # Get the base image once and reuse it for all palettes
             self.logger.info(f"Creating {len(palettes)} palette variations for user: {masked_user_id}")
-            
-            # Get the base image directly using service role key for maximum reliability
-            # This avoids issues with signed URLs and permissions
-            try:
-                # First try direct download using service role
-                bucket_name = settings.STORAGE_BUCKET_CONCEPT
-                base_image_data = await self.download_with_service_role(bucket_name, base_image_path)
-                self.logger.info(f"Successfully downloaded base image with service role: {len(base_image_data)} bytes")
-            except Exception as e:
-                self.logger.warning(f"Service role download failed: {str(e)}, trying fallback method")
-                
-                # Fall back to getting a signed URL and downloading it
-                base_image_url = self.get_image_url(base_image_path, "concept-images")
-                if not base_image_url:
-                    self.logger.error(f"Failed to get URL for base image: {masked_base_path}")
-                    raise ImageProcessingError("Failed to get URL for base image")
-                    
-                # Download the base image from the URL
-                base_image_data = await self.get_image_async(base_image_url)
-                if not base_image_data:
-                    self.logger.error("Failed to download base image")
-                    raise ImageProcessingError("Failed to download base image")
             
             # Preprocess the base image to ensure it's valid
             try:
@@ -577,11 +368,10 @@ class ImageService(ImageServiceInterface):
                     metadata = {
                         "palette_name": palette_name,
                         "description": palette_description,
-                        "colors": json.dumps(palette_colors),
-                        "base_image_path": base_image_path
+                        "colors": json.dumps(palette_colors)
                     }
                     
-                    palette_path, palette_url = self.storage.store_image(
+                    palette_path, palette_url = self.persistence.store_image(
                         image_data=colorized_image,
                         user_id=user_id,
                         file_name=filename,
@@ -611,136 +401,142 @@ class ImageService(ImageServiceInterface):
             
         except Exception as e:
             self.logger.error(f"Error in create_palette_variations: {str(e)}")
-            if isinstance(e, ImageProcessingError):
-                raise
-            raise ImageProcessingError(f"Error creating palette variations: {str(e)}")
+            raise ImageError(f"Error creating palette variations: {str(e)}")
             
-    async def apply_color_palette(
+    async def apply_palette_to_image(
         self, 
-        base_image: tuple,
+        image_data: bytes,
         palette_colors: list, 
-        user_id: str,
         blend_strength: float = 0.75
-    ) -> tuple:
+    ) -> bytes:
         """
-        Apply a color palette to an image and store the result.
+        Apply a color palette to an image.
         
         Args:
-            base_image: Tuple of (image_url, image_path)
+            image_data: Binary image data
             palette_colors: List of hex color codes
-            user_id: User ID for access control
             blend_strength: Strength of the palette application (0-1)
             
         Returns:
-            Tuple[str, str]: (image_path, image_url) - The storage path and signed URL
+            Processed image data as bytes
             
         Raises:
-            ImageError: If processing or storage fails
+            ImageError: If processing fails
         """
         try:
-            # Create a palette dictionary with the required format
-            palette = {
-                "name": "Custom Palette",
+            # Apply the palette using the processing service
+            return await self.processing.process_image(
+                image_data,
+                operations=[{
+                    "type": "apply_palette",
                 "colors": palette_colors,
-                "description": "Custom color palette"
-            }
-            
-            # Use the image_path from the tuple
-            image_url, image_path = base_image
-            
-            # Create a list with just one palette
-            palettes = [palette]
-            
-            # Use the create_palette_variations method which already handles downloading the image
-            result_palettes = await self.create_palette_variations(
-                image_path,
-                palettes,
-                user_id,
-                blend_strength
+                    "blend_strength": blend_strength
+                }]
             )
-            
-            # Return the first (and only) result
-            if result_palettes and len(result_palettes) > 0:
-                return (
-                    result_palettes[0]["image_path"],
-                    result_palettes[0]["image_url"]
-                )
-            else:
-                raise ImageProcessingError("Failed to apply color palette")
-                
         except Exception as e:
-            self.logger.error(f"Error in apply_color_palette: {str(e)}")
-            if isinstance(e, ImageProcessingError):
-                raise
-            raise ImageProcessingError(f"Error applying color palette: {str(e)}")
+            self.logger.error(f"Error applying palette to image: {str(e)}")
+            raise ImageError(f"Failed to apply palette to image: {str(e)}")
 
-    def get_image_url(self, image_path: str, bucket_name: str) -> str:
+    def get_image_url(self, image_path: str, is_palette: bool = False) -> str:
         """
         Get a signed URL for an image in storage.
         
         Args:
             image_path: Path to the image in storage
-            bucket_name: Name of the bucket (e.g., "concept-images" or "palette-images")
+            is_palette: Whether this is a palette image
             
         Returns:
-            Signed URL for the image with 3-day expiration
+            Signed URL for the image
             
         Raises:
             ImageError: If URL generation fails
         """
         try:
-            # Determine if this is a palette image based on the bucket name
-            # Compare with settings values instead of hardcoded strings
-            is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
-            
-            # Use the storage service to get the signed URL
-            return self.storage.get_signed_url(image_path, is_palette=is_palette)
+            # Use the persistence service to get the signed URL
+            return self.persistence.get_signed_url(image_path, is_palette=is_palette)
             
         except Exception as e:
             self.logger.error(f"Error getting signed image URL: {str(e)}")
             raise ImageError(f"Failed to get signed image URL: {str(e)}")
 
-    def get_image_with_token(
+    async def generate_and_store_image(
         self,
-        path: str,
-        token: str,
-        is_palette: bool = False
-    ) -> bytes:
+        prompt: str, 
+        user_id: str,
+        concept_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Tuple[str, str]:
         """
-        Get image data using a JWT token for authentication.
+        Generate an image using an external API and store it.
+        
+        This method is a placeholder since we've refactored the architecture to move image 
+        generation responsibilities to the ConceptService. This implementation simply throws 
+        an appropriate error message to guide developers to use the correct service.
         
         Args:
-            path: Path to the image in storage
-            token: JWT token for authentication
-            is_palette: Whether this is a palette image
+            prompt: Text prompt for image generation
+            user_id: User ID for storage
+            concept_id: Optional concept ID for association
+            metadata: Optional metadata to store with the image
             
         Returns:
-            Image data as bytes
+            Tuple of (image_path, image_url)
             
         Raises:
-            ImageError: If retrieval fails
+            ImageError: Always raises this error since this method should not be called directly
         """
-        try:
-            return self.storage.get_image_with_token(
-                path=path,
-                token=token,
-                is_palette=is_palette
-            )
-        except (ImageStorageError, ImageNotFoundError) as e:
-            # Re-raise as ImageError
-            raise ImageError(f"Failed to get image with token: {str(e)}")
+        error_msg = (
+            "The ImageService no longer handles image generation. "
+            "Please use ConceptService.generate_concept instead."
+        )
+        self.logger.error(error_msg)
+        raise ImageError(error_msg)
+        
+    async def refine_and_store_image(
+        self, 
+        original_image_path: str, 
+        refinement_prompt: str,
+        user_id: str,
+        concept_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Tuple[str, str]:
+        """
+        Refine an existing image using an external API and store the result.
+        
+        This method is a placeholder since we've refactored the architecture to move image 
+        refinement responsibilities to the ConceptService. This implementation simply throws 
+        an appropriate error message to guide developers to use the correct service.
+        
+        Args:
+            original_image_path: Path of the original image to refine
+            refinement_prompt: Text instructions for refinement
+            user_id: User ID for storage
+            concept_id: Optional concept ID for association
+            metadata: Optional metadata to store with the image
+            
+        Returns:
+            Tuple of (image_path, image_url)
+            
+        Raises:
+            ImageError: Always raises this error since this method should not be called directly
+        """
+        error_msg = (
+            "The ImageService no longer handles image refinement. "
+            "Please use ConceptService.refine_concept instead."
+        )
+        self.logger.error(error_msg)
+        raise ImageError(error_msg)
 
     # Cache for storing recently downloaded images to avoid repeated downloads
     _image_cache = {}
     _cache_size_limit = 20  # Maximum number of images to keep in cache
 
-    async def get_image_async(self, image_url_or_path: str, is_palette: bool = False) -> bytes:
+    async def get_image_async(self, image_url_or_path: str) -> bytes:
         """
-        Asynchronously retrieve an image by URL or storage path with caching.
+        Asynchronously get image data from a URL or path.
         
         Args:
             image_url_or_path: URL or storage path of the image
-            is_palette: Whether this is a palette image
             
         Returns:
             Image data as bytes
@@ -748,215 +544,41 @@ class ImageService(ImageServiceInterface):
         Raises:
             ImageError: If retrieval fails
         """
-        # Check the cache first
-        cache_key = f"{image_url_or_path}:{is_palette}"
-        if cache_key in self._image_cache:
-            self.logger.debug(f"Using cached image data for: {mask_path(image_url_or_path)}")
-            return self._image_cache[cache_key]
+        # Check cache first
+        if image_url_or_path in self._image_cache:
+            self.logger.debug(f"Cache hit for {image_url_or_path}")
+            return self._image_cache[image_url_or_path]
             
         try:
-            # Convert relative signed URLs to full URLs if needed
-            if image_url_or_path.startswith("/object/sign/") or image_url_or_path.startswith("/storage/v1/object/"):
-                image_url_or_path = f"{settings.SUPABASE_URL}{image_url_or_path}"
-                self.logger.info(f"Converted relative URL to full URL: {mask_path(image_url_or_path)}")
-            
-            # Extract token from URL if present (for authenticated endpoints)
-            token = None
-            if "?token=" in image_url_or_path:
-                url_parts = image_url_or_path.split("?token=", 1)
-                if len(url_parts) > 1:
-                    image_url_or_path = url_parts[0]
-                    token = url_parts[1].split("&")[0]  # Extract just the token
-                    self.logger.info(f"Extracted token from URL (length: {len(token) if token else 0})")
-            
-            # Check if it's an external URL or a storage path
+            # Handle URLs
             if image_url_or_path.startswith(("http://", "https://")):
-                # It's an external URL, fetch it asynchronously with a timeout
-                headers = {}
-                if token:
-                    headers["Authorization"] = f"Bearer {token}"
-                
-                self.logger.info(f"Fetching image from URL: {mask_path(image_url_or_path)}")
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    response = await client.get(
-                        image_url_or_path, 
-                        follow_redirects=True,
-                        headers=headers
-                    )
-                    
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_url_or_path)
                     if response.status_code != 200:
-                        # If there was a 404 or 403, try alternative authentication approach
-                        if response.status_code in (404, 403, 401) and '/storage/v1/object/' in image_url_or_path:
-                            self.logger.warning(f"Access denied ({response.status_code}), trying service role key")
-                            
-                            # Try to parse the path from the URL
-                            try:
-                                # Extract path elements from URL
-                                url_parts = image_url_or_path.split('/storage/v1/object/')
-                                if len(url_parts) > 1:
-                                    path_parts = url_parts[1].split('/', 1)
-                                    if len(path_parts) > 1:
-                                        bucket = path_parts[0]
-                                        path = path_parts[1]
-                                        self.logger.info(f"Extracted bucket={bucket}, path={mask_path(path)}")
-                                        
-                                        # Use service role key
-                                        service_role_key = settings.SUPABASE_SERVICE_ROLE
-                                        if service_role_key:
-                                            download_url = f"{settings.SUPABASE_URL}/storage/v1/object/{bucket}/{path}"
-                                            self.logger.info(f"Attempting to download with service role key: {mask_path(download_url)}")
-                                            
-                                            async with httpx.AsyncClient(timeout=30.0) as service_client:
-                                                service_response = await service_client.get(
-                                                    download_url,
-                                                    headers={
-                                                        "Authorization": f"Bearer {service_role_key}",
-                                                        "apikey": service_role_key
-                                                    },
-                                                    follow_redirects=True
-                                                )
-                                                
-                                                if service_response.status_code == 200:
-                                                    self.logger.info("Successfully downloaded with service role key")
-                                                    image_data = service_response.content
-                                                    
-                                                    # Cache the successful result
-                                                    if len(self._image_cache) >= self._cache_size_limit:
-                                                        # Remove oldest entry if cache is full
-                                                        oldest_key = next(iter(self._image_cache))
-                                                        del self._image_cache[oldest_key]
-                                                    self._image_cache[cache_key] = image_data
-                                                    return image_data
-                                                else:
-                                                    self.logger.warning(f"Service role download failed: {service_response.status_code}")
-                            except Exception as path_e:
-                                self.logger.warning(f"Failed to parse path from URL: {str(path_e)}")
-                        
                         raise ImageError(f"Failed to fetch image from URL: {response.status_code}")
                     
+                    # Add to cache
                     image_data = response.content
-                    self.logger.info(f"Successfully downloaded image: {len(image_data)} bytes")
-            
-            # Check if it's a signed URL from our Supabase storage
-            elif '/object/sign/' in image_url_or_path:
-                # Extract the real path from signed URL
-                path_parts = image_url_or_path.split('/object/sign/')
-                if len(path_parts) > 1:
-                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
-                    bucket_parts = bucket_path.split('/', 1)
-                    if len(bucket_parts) > 1:
-                        bucket_name = bucket_parts[0]
-                        path = bucket_parts[1]
-                        
-                        # Determine if it's a palette image
-                        is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
-                        
-                        self.logger.info(f"Extracted path from signed URL: {mask_path(path)}")
-                        # Use storage service directly with the path
-                        try:
-                            image_data = self.storage.get_image(path, is_palette=is_palette)
-                            self.logger.info(f"Successfully retrieved image via storage service")
-                        except Exception as storage_e:
-                            # If storage service fails, try with service role key
-                            self.logger.warning(f"Storage service failed: {str(storage_e)}, trying service role key")
-                            
-                            service_role_key = settings.SUPABASE_SERVICE_ROLE
-                            if service_role_key:
-                                try:
-                                    # Prepare direct download URL
-                                    download_url = f"{settings.SUPABASE_URL}/storage/v1/object/{bucket_name}/{path}"
-                                    
-                                    # Use sync request here as we're in an async method already
-                                    headers = {
-                                        "Authorization": f"Bearer {service_role_key}",
-                                        "apikey": service_role_key
-                                    }
-                                    
-                                    async with httpx.AsyncClient(timeout=30.0) as client:
-                                        response = await client.get(download_url, headers=headers)
-                                        
-                                        if response.status_code == 200:
-                                            self.logger.info("Successfully downloaded with service role key")
-                                            image_data = response.content
-                                        else:
-                                            raise ImageError(f"Service role download failed: {response.status_code}")
-                                except Exception as role_e:
-                                    raise ImageError(f"Service role download failed: {str(role_e)}")
-                            else:
-                                raise ImageError("No service role key available and storage service failed")
-                    else:
-                        # If we can't extract a path, try to use the URL directly
-                        async with httpx.AsyncClient(timeout=30.0) as client:
-                            response = await client.get(image_url_or_path)
-                            if response.status_code != 200:
-                                raise ImageError(f"Failed to fetch image from signed URL: {response.status_code}")
-                            image_data = response.content
-            
-            # Otherwise it's a storage path
-            else:
-                image_data = self.storage.get_image(image_url_or_path, is_palette=is_palette)
-                self.logger.info(f"Retrieved image directly from storage: {len(image_data)} bytes")
-            
-            # Cache the image data to avoid re-downloading
-            if len(self._image_cache) >= self._cache_size_limit:
-                # Remove oldest entry if cache is full
-                oldest_key = next(iter(self._image_cache))
-                del self._image_cache[oldest_key]
-                
-            self._image_cache[cache_key] = image_data
-            return image_data
-                
-        except Exception as e:
-            error_msg = f"Failed to get image: {str(e)}"
-            self.logger.error(f"Error fetching {mask_path(image_url_or_path)}: {error_msg}")
-            raise ImageError(error_msg)
-
-    async def download_with_service_role(self, bucket_name: str, path: str) -> bytes:
-        """
-        Directly download an image using the service role key, bypassing RLS policies.
-        
-        This method is useful for administrative functions or when normal access methods fail.
-        
-        Args:
-            bucket_name: Name of the bucket
-            path: Path to the image within the bucket
-            
-        Returns:
-            Image data as bytes
-            
-        Raises:
-            ImageError: If download fails
-        """
-        try:
-            service_role_key = settings.SUPABASE_SERVICE_ROLE
-            if not service_role_key:
-                raise ImageError("Service role key not available in settings")
-            
-            # Normalize path
-            if path.startswith('/'):
-                path = path[1:]
-            
-            self.logger.info(f"Attempting direct download with service role key: bucket={bucket_name}, path={mask_path(path)}")
-            
-            # Create a direct download URL
-            download_url = f"{settings.SUPABASE_URL}/storage/v1/object/{bucket_name}/{path}"
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    download_url,
-                    headers={
-                        "Authorization": f"Bearer {service_role_key}",
-                        "apikey": service_role_key
-                    }
-                )
-                
-                if response.status_code != 200:
-                    raise ImageError(f"Failed to download with service role key: {response.status_code}")
+                    if len(self._image_cache) >= self._cache_size_limit:
+                        # Remove oldest item if cache is full
+                        self._image_cache.pop(next(iter(self._image_cache)))
+                    self._image_cache[image_url_or_path] = image_data
                     
-                self.logger.info(f"Successfully downloaded image with service role key: {len(response.content)} bytes")
-                return response.content
+                    return image_data
+            # Handle storage paths
+            else:
+                # For now, we don't have an async version of the persistence.get_image method
+                # So we'll just call the synchronous version
+                image_data = self.persistence.get_image(image_url_or_path)
                 
+                # Add to cache
+                if len(self._image_cache) >= self._cache_size_limit:
+                    # Remove oldest item if cache is full
+                    self._image_cache.pop(next(iter(self._image_cache)))
+                self._image_cache[image_url_or_path] = image_data
+                
+                return image_data
         except Exception as e:
-            error_msg = f"Service role download failed: {str(e)}"
+            error_msg = f"Failed to get image asynchronously: {str(e)}"
             self.logger.error(error_msg)
             raise ImageError(error_msg) 

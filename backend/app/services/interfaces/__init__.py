@@ -8,11 +8,19 @@ This module provides abstract interface definitions for service classes.
 from .concept_service import ConceptServiceInterface
 from .image_service import ImageServiceInterface
 from .storage_service import StorageServiceInterface
+from .persistence_service import (
+    PersistenceServiceInterface,
+    ConceptPersistenceServiceInterface,
+    ImagePersistenceServiceInterface
+)
 from .task_service import TaskServiceInterface
 
 __all__ = [
     "ConceptServiceInterface", 
     "ImageServiceInterface",
     "StorageServiceInterface",
-    "TaskServiceInterface"
+    "TaskServiceInterface",
+    "PersistenceServiceInterface",
+    "ConceptPersistenceServiceInterface",
+    "ImagePersistenceServiceInterface"
 ] 
