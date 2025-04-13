@@ -6,9 +6,8 @@ following the Single Responsibility Principle.
 """
 
 import logging
-from typing import List, Dict, Any, Union, Optional, BinaryIO
+from typing import List, Dict, Any, Union, Optional, BinaryIO, Tuple
 from io import BytesIO
-import httpx
 
 from app.services.image.interface import ImageProcessingServiceInterface
 from app.services.image.processing import apply_palette_with_masking_optimized, extract_dominant_colors
@@ -19,6 +18,7 @@ from app.services.image.conversion import (
     get_image_metadata,
     ConversionError
 )
+from app.utils.http_utils import download_image
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -34,7 +34,8 @@ class ImageProcessingService(ImageProcessingServiceInterface):
     Service for processing images.
     
     This service handles image transformations, format conversions,
-    and other processing operations.
+    and other processing operations. It focuses solely on processing 
+    image data and does not handle storage operations.
     """
     
     def __init__(self):
@@ -60,47 +61,61 @@ class ImageProcessingService(ImageProcessingServiceInterface):
             ImageProcessingError: If processing fails
         """
         try:
+            # Note: image_data could be a URL, bytes, or BytesIO
             current_image = image_data
             
             for operation in operations:
                 op_type = operation.get("type", "").lower()
                 
-                if op_type == "resize":
-                    width = operation.get("width")
-                    height = operation.get("height")
-                    preserve_aspect = operation.get("preserve_aspect_ratio", True)
-                    
-                    # Convert to bytes if it's not already
-                    if isinstance(current_image, str):
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(current_image)
-                            current_image = response.content
-                    elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
-                    
-                    # Generate thumbnail with target dimensions
-                    current_image = generate_thumbnail(
-                        current_image, 
-                        size=(width, height),
-                        preserve_aspect_ratio=preserve_aspect
-                    )
-                    
-                elif op_type == "convert":
-                    target_format = operation.get("format", "png")
+                if op_type == "format_conversion":
+                    target_format = operation.get("target_format", "png")
                     quality = operation.get("quality", 95)
                     
-                    # Convert to bytes if it's not already
-                    if isinstance(current_image, str):
-                        async with httpx.AsyncClient() as client:
-                            response = await client.get(current_image)
-                            current_image = response.content
-                    elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
-                        
-                    current_image = convert_image_format(
-                        current_image,
+                    current_image = await self.convert_format(
+                        current_image, 
                         target_format=target_format,
                         quality=quality
+                    )
+                    
+                elif op_type == "resize":
+                    width = operation.get("width")
+                    height = operation.get("height")
+                    maintain_aspect_ratio = operation.get("maintain_aspect_ratio", True)
+                    
+                    if width is None and height is None:
+                        continue  # Skip this operation
+                        
+                    current_image = await self.resize_image(
+                        current_image,
+                        width=width,
+                        height=height,
+                        maintain_aspect_ratio=maintain_aspect_ratio
+                    )
+                    
+                elif op_type == "thumbnail":
+                    width = operation.get("width", 128)
+                    height = operation.get("height", 128)
+                    preserve_aspect_ratio = operation.get("preserve_aspect_ratio", True)
+                    format = operation.get("format", "png")
+                    
+                    # Ensure we have bytes before generating thumbnail
+                    if isinstance(current_image, str):
+                        # Download image from URL
+                        import httpx
+                        async with httpx.AsyncClient() as client:
+                            response = await client.get(current_image)
+                            img_bytes = response.content
+                    elif isinstance(current_image, BytesIO):
+                        img_bytes = current_image.getvalue()
+                    else:
+                        img_bytes = current_image
+                        
+                    current_image = self.generate_thumbnail(
+                        img_bytes,
+                        width=width,
+                        height=height,
+                        preserve_aspect_ratio=preserve_aspect_ratio,
+                        format=format
                     )
                     
                 elif op_type == "optimize":
@@ -108,44 +123,46 @@ class ImageProcessingService(ImageProcessingServiceInterface):
                     max_width = operation.get("max_width")
                     max_height = operation.get("max_height")
                     
-                    # Calculate max_size
                     max_size = None
-                    if max_width or max_height:
-                        max_size = (
-                            max_width or 10000,  # Large default if only height specified
-                            max_height or 10000  # Large default if only width specified
-                        )
-                    
-                    # Convert to bytes if it's not already
+                    if max_width is not None and max_height is not None:
+                        max_size = (max_width, max_height)
+                        
+                    # Ensure we have bytes
                     if isinstance(current_image, str):
+                        import httpx
                         async with httpx.AsyncClient() as client:
                             response = await client.get(current_image)
-                            current_image = response.content
+                            img_bytes = response.content
                     elif isinstance(current_image, BytesIO):
-                        current_image = current_image.getvalue()
+                        img_bytes = current_image.getvalue()
+                    else:
+                        img_bytes = current_image
                         
                     current_image = optimize_image(
-                        current_image,
+                        img_bytes,
                         quality=quality,
                         max_size=max_size
                     )
                     
                 elif op_type == "apply_palette":
-                    palette_colors = operation.get("colors", [])
+                    palette = operation.get("palette", [])
                     blend_strength = operation.get("blend_strength", 0.75)
                     
-                    # Process the image with the palette
-                    current_image = apply_palette_with_masking_optimized(
+                    if not palette:
+                        continue  # Skip if no palette provided
+                        
+                    current_image = await self.apply_palette(
                         current_image,
-                        palette_colors=palette_colors,
+                        palette_colors=palette,
                         blend_strength=blend_strength
                     )
                     
                 else:
-                    self.logger.warning(f"Unknown image operation type: {op_type}")
+                    self.logger.warning(f"Unsupported operation type: {op_type}")
             
             # Ensure final result is bytes
             if isinstance(current_image, str):
+                import httpx
                 async with httpx.AsyncClient() as client:
                     response = await client.get(current_image)
                     current_image = response.content
@@ -187,7 +204,84 @@ class ImageProcessingService(ImageProcessingServiceInterface):
             )
         except ConversionError as e:
             raise ImageProcessingError(f"Failed to convert image format: {str(e)}")
-    
+            
+    async def resize_image(
+        self, 
+        image_data: Union[bytes, BytesIO, str],
+        width: int,
+        height: Optional[int] = None, 
+        maintain_aspect_ratio: bool = True
+    ) -> bytes:
+        """
+        Resize an image to specified dimensions.
+        
+        Args:
+            image_data: Image data as bytes, BytesIO, or URL string
+            width: Target width in pixels
+            height: Target height in pixels (optional if maintaining aspect ratio)
+            maintain_aspect_ratio: Whether to preserve aspect ratio
+            
+        Returns:
+            Resized image as bytes
+            
+        Raises:
+            ImageProcessingError: If resizing fails
+        """
+        try:
+            # Ensure image_data is bytes
+            if isinstance(image_data, str):
+                import httpx
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_data)
+                    image_data = response.content
+            elif isinstance(image_data, BytesIO):
+                image_data = image_data.getvalue()
+                
+            # Open as PIL Image
+            from PIL import Image
+            img = Image.open(BytesIO(image_data))
+            
+            # Determine target size
+            if maintain_aspect_ratio and height is None:
+                # Calculate height to maintain aspect ratio
+                aspect_ratio = img.width / img.height
+                height = int(width / aspect_ratio)
+            elif maintain_aspect_ratio and width is None:
+                # Calculate width to maintain aspect ratio
+                aspect_ratio = img.width / img.height
+                width = int(height * aspect_ratio)
+            elif maintain_aspect_ratio:
+                # Both width and height provided, but maintain aspect ratio
+                # Use the dimension that results in smaller resize
+                current_aspect = img.width / img.height
+                target_aspect = width / height
+                
+                if current_aspect > target_aspect:
+                    # Image is wider than target, constrain by width
+                    new_width = width
+                    new_height = int(width / current_aspect)
+                else:
+                    # Image is taller than target, constrain by height
+                    new_height = height
+                    new_width = int(height * current_aspect)
+                    
+                width, height = new_width, new_height
+            
+            # Resize the image
+            resized_img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Convert back to bytes
+            output = BytesIO()
+            img_format = img.format or "PNG"
+            resized_img.save(output, format=img_format)
+            
+            return output.getvalue()
+            
+        except Exception as e:
+            error_msg = f"Failed to resize image: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageProcessingError(error_msg)
+            
     def generate_thumbnail(
         self, 
         image_data: bytes, 
@@ -220,8 +314,10 @@ class ImageProcessingService(ImageProcessingServiceInterface):
                 preserve_aspect_ratio=preserve_aspect_ratio
             )
         except ConversionError as e:
-            raise ImageProcessingError(f"Failed to generate thumbnail: {str(e)}")
-    
+            error_msg = f"Failed to generate thumbnail: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageProcessingError(error_msg)
+            
     async def extract_color_palette(
         self, 
         image_data: bytes, 
@@ -290,6 +386,7 @@ class ImageProcessingService(ImageProcessingServiceInterface):
         try:
             # Ensure image_data is bytes
             if isinstance(image_data, str):
+                import httpx
                 async with httpx.AsyncClient() as client:
                     response = await client.get(image_data)
                     image_data = response.content
@@ -305,49 +402,44 @@ class ImageProcessingService(ImageProcessingServiceInterface):
             error_msg = f"Failed to convert image format: {str(e)}"
             self.logger.error(error_msg)
             raise ImageProcessingError(error_msg)
-    
-    async def resize_image(
+            
+    async def apply_palette(
         self,
-        image_data: Union[bytes, BinaryIO, str],
-        width: int,
-        height: Optional[int] = None,
-        maintain_aspect_ratio: bool = True
+        image_data: Union[bytes, BytesIO, str],
+        palette_colors: List[str],
+        blend_strength: float = 0.75
     ) -> bytes:
         """
-        Resize an image to specified dimensions.
+        Apply a color palette to an image.
         
         Args:
-            image_data: Image data as bytes, file-like object, or path/URL
-            width: Target width in pixels
-            height: Target height in pixels (optional if maintaining aspect ratio)
-            maintain_aspect_ratio: Whether to preserve the aspect ratio
+            image_data: Image data as bytes, BytesIO, or URL
+            palette_colors: List of hex color codes to apply
+            blend_strength: Strength of the palette application (0.0 to 1.0)
             
         Returns:
-            Resized image as bytes
+            Processed image as bytes
             
         Raises:
-            ImageProcessingError: If resizing fails
+            ImageProcessingError: If palette application fails
         """
         try:
-            # Ensure image_data is bytes
+            # Ensure we have bytes
             if isinstance(image_data, str):
+                import httpx
                 async with httpx.AsyncClient() as client:
                     response = await client.get(image_data)
                     image_data = response.content
-            elif hasattr(image_data, 'read'):
-                image_data = image_data.read()
+            elif isinstance(image_data, BytesIO):
+                image_data = image_data.getvalue()
                 
-            # If height is None but maintaining aspect ratio, use a placeholder
-            # The thumbnail function will calculate the correct height
-            actual_height = height or width
-                
-            return self.generate_thumbnail(
-                image_data=image_data,
-                width=width,
-                height=actual_height,
-                preserve_aspect_ratio=maintain_aspect_ratio
+            # Apply the palette - Note the await here
+            return await apply_palette_with_masking_optimized(
+                image_data,
+                palette_colors,
+                blend_strength
             )
         except Exception as e:
-            error_msg = f"Failed to resize image: {str(e)}"
+            error_msg = f"Failed to apply palette to image: {str(e)}"
             self.logger.error(error_msg)
             raise ImageProcessingError(error_msg) 

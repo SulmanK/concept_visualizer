@@ -12,92 +12,9 @@ from io import BytesIO
 from typing import List, Dict, Any, Tuple, Union
 from PIL import Image
 
+from app.utils.http_utils import download_image
+
 logger = logging.getLogger(__name__)
-
-
-def download_image(image_url_or_data: Union[str, BytesIO, bytes]) -> np.ndarray:
-    """
-    Download or read an image and convert to OpenCV format.
-    
-    Args:
-        image_url_or_data: URL of the image to download, BytesIO object, or raw bytes
-        
-    Returns:
-        Image as a numpy array in BGR format (OpenCV default)
-        
-    Raises:
-        Exception: If image download or conversion fails
-    """
-    try:
-        # Handle bytes input
-        if isinstance(image_url_or_data, bytes):
-            logger.info(f"Processing binary image data: {len(image_url_or_data)} bytes")
-            try:
-                # Try to decode directly with OpenCV
-                nparr = np.frombuffer(image_url_or_data, np.uint8)
-                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                if img is not None:
-                    return img
-            except Exception as e:
-                logger.warning(f"Failed to decode with OpenCV: {str(e)}, trying PIL")
-            
-            # Fallback to PIL
-            image = Image.open(BytesIO(image_url_or_data))
-            image_rgb = np.array(image.convert("RGB"))
-            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-        
-        # Handle BytesIO input
-        if isinstance(image_url_or_data, BytesIO):
-            image = Image.open(image_url_or_data)
-            image_rgb = np.array(image.convert("RGB"))
-            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-        
-        # Handle URL input
-        if isinstance(image_url_or_data, str) and (image_url_or_data.startswith('http://') or image_url_or_data.startswith('https://')):
-            import requests
-            
-            # Use a session that automatically handles redirects
-            session = requests.Session()
-            
-            # Be more browser-like to avoid some access restrictions
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-            }
-            
-            # Try to download the image with a longer timeout
-            response = session.get(image_url_or_data, headers=headers, timeout=30, allow_redirects=True)
-            response.raise_for_status()
-            
-            # Log success
-            logger.info(f"Successfully downloaded image: {len(response.content)} bytes")
-            
-            # Convert to numpy array via PIL
-            image = Image.open(BytesIO(response.content))
-            image_rgb = np.array(image.convert("RGB"))
-            
-            # Convert from RGB to BGR (OpenCV format)
-            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-        
-        # Handle local file paths (including those from file:// URLs)
-        if isinstance(image_url_or_data, str):
-            # If it starts with file://, remove that prefix
-            if image_url_or_data.startswith('file://'):
-                image_url_or_data = image_url_or_data[7:]
-            
-            # Open the local file
-            with open(image_url_or_data, 'rb') as f:
-                image_data = f.read()
-                
-            # Load as PIL image
-            image = Image.open(BytesIO(image_data))
-            image_rgb = np.array(image.convert("RGB"))
-            
-            # Convert from RGB to BGR (OpenCV format)
-            return cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-            
-    except Exception as e:
-        logger.error(f"Error downloading/reading image: {str(e)}")
-        raise
 
 
 def hex_to_bgr(hex_color: str) -> Tuple[int, int, int]:
@@ -263,41 +180,56 @@ def hex_to_lab(hex_color: str) -> Tuple[float, float, float]:
     return tuple(map(float, lab_array[0][0]))
 
 
-def apply_palette_with_masking_optimized(
+async def apply_palette_with_masking_optimized(
     image_url_or_data: Union[str, BytesIO, bytes], 
     palette_colors: List[str], 
     blend_strength: float = 0.75
 ) -> bytes:
-    """
-    Apply a color palette to an image using LAB color space for better color mapping.
+    """Apply palette colors to an image using optimized color mapping.
+    
+    This implementation uses a combination of k-means clustering and LAB color space
+    adjustments to map palette colors while preserving texture details.
     
     Args:
-        image_url_or_data: URL of the image, BytesIO object, or raw bytes
-        palette_colors: List of hex color codes
+        image_url_or_data: Image as URL string or bytes
+        palette_colors: List of hex color codes for the palette
         blend_strength: How strongly to apply the new colors (0.0-1.0)
         
     Returns:
         Processed image as bytes
         
     Raises:
-        Exception: If image processing fails
+        Exception: If processing fails
     """
     try:
-        # Debug input
-        logger.info(f"Applying palette to image, data type: {type(image_url_or_data)}")
-        logger.info(f"Palette colors: {palette_colors}")
-        
-        if image_url_or_data is None:
-            logger.error("Image data is None, cannot process")
-            raise ValueError("Image data cannot be None")
+        import cv2
+        import numpy as np
+        from app.utils.http_utils import download_image
         
         # Download/read image
         logger.info("Converting image to OpenCV format...")
-        image = download_image(image_url_or_data)
+        
+        # First, determine if input is URL or bytes
+        if isinstance(image_url_or_data, str) and (image_url_or_data.startswith('http://') or image_url_or_data.startswith('https://')):
+            # It's a URL, download it asynchronously
+            image_data = await download_image(image_url_or_data)
+            # Convert to OpenCV format
+            nparr = np.frombuffer(image_data, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        else:
+            # It's already bytes or BytesIO
+            if isinstance(image_url_or_data, BytesIO):
+                image_data = image_url_or_data.getvalue()
+            else:
+                image_data = image_url_or_data
+                
+            # Convert to OpenCV format
+            nparr = np.frombuffer(image_data, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         # Verify image data
         if image is None:
-            logger.error("Failed to load image, returned None from download_image")
+            logger.error("Failed to load image, returned None from cv2.imdecode")
             raise ValueError("Image could not be loaded or decoded")
             
         logger.info(f"Image loaded successfully, shape: {image.shape}, dtype: {image.dtype}")

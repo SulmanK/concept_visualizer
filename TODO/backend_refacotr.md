@@ -2,7 +2,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
 
 **Analysis & Refactoring Plan:**
 
-**1. `backend/app/models/`**
+**1. `backend/app/models/`**[x]
 
 *   **Current State:** Contains domain-specific subdirectories (`common`, `concept`, `export`, `svg`, `task`) which is good. However, it also has potentially redundant root-level files (`concept.py`, `request.py`, `response.py`). Models primarily use Pydantic.
 *   **Issues:**
@@ -15,7 +15,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
     3.  **(Review `common/base.py`)** `APIBaseModel` seems appropriate. `ErrorResponse` is specific to API output; consider if it should live in `api/errors.py` or `models/api/response.py` eventually, but keeping it in `common` is acceptable for now.
     4.  **(Verify Purity)** Quickly scan models to confirm they only contain data definitions and Pydantic validation logic.
 
-**2. `backend/app/core/`**
+**2. `backend/app/core/`**[x]
 
 *   **Current State:** Houses configuration (`config.py`), application factory (`factory.py`), core exceptions (`exceptions.py`), constants (`constants.py`), low-level Supabase interaction (`supabase/`), rate limiting setup (`limiter/`), and some middleware (`middleware/`).
 *   **Issues:**
@@ -121,7 +121,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
 
 
 
-**3. `backend/app/api/`**
+**4. `backend/app/api/`**
 
 *   **Current State:** Contains `middleware`, `routes`, `dependencies.py`, `errors.py`, `router.py`. Structure seems logical.
 *   **Issues:**
