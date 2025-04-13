@@ -12,7 +12,7 @@ from app.core.supabase.client import SupabaseClient
 from app.core.supabase.concept_storage import ConceptStorage
 from app.core.supabase.image_storage import ImageStorage
 from app.models.concept import ColorPalette, ConceptSummary, ConceptDetail
-from app.services.interfaces import StorageServiceInterface
+from app.services.interfaces.concept_persistence_service import ConceptPersistenceServiceInterface
 from app.utils.security.mask import mask_id, mask_path
 
 
@@ -32,7 +32,7 @@ class NotFoundError(Exception):
         super().__init__(self.message)
 
 
-class ConceptPersistenceService(StorageServiceInterface):
+class ConceptPersistenceService(ConceptPersistenceServiceInterface):
     """Service for storing and retrieving concepts."""
     
     def __init__(self, client: SupabaseClient):
