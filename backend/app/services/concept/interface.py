@@ -5,7 +5,7 @@ Interface for the concept generation and refinement service.
 import abc
 from typing import List, Optional, Dict, Any, Tuple
 
-from app.models.response import GenerationResponse
+from app.models.concept.response import GenerationResponse, RefinementResponse
 
 
 class ConceptServiceInterface(abc.ABC):
@@ -13,17 +13,23 @@ class ConceptServiceInterface(abc.ABC):
 
     @abc.abstractmethod
     async def generate_concept(
-        self, logo_description: str, theme_description: str
-    ) -> GenerationResponse:
+        self, 
+        logo_description: str, 
+        theme_description: str,
+        user_id: Optional[str] = None,
+        skip_persistence: bool = False
+    ) -> Dict[str, Any]:
         """
         Generate a new visual concept based on provided descriptions.
         
         Args:
             logo_description: Description of the logo to generate
             theme_description: Description of the theme/color scheme to generate
+            user_id: Optional user ID for storing the concept
+            skip_persistence: If True, don't store the concept in the database
             
         Returns:
-            GenerationResponse: The generated concept with image URL and color palette
+            Dict containing generated concept details with image URL and color palette
             
         Raises:
             JigsawStackConnectionError: If connection to the API fails
@@ -62,23 +68,27 @@ class ConceptServiceInterface(abc.ABC):
     async def refine_concept(
         self,
         original_image_url: str,
-        logo_description: Optional[str],
-        theme_description: Optional[str],
         refinement_prompt: str,
-        preserve_aspects: List[str],
-    ) -> GenerationResponse:
+        logo_description: Optional[str] = None,
+        theme_description: Optional[str] = None,
+        user_id: Optional[str] = None,
+        skip_persistence: bool = False,
+        strength: float = 0.7
+    ) -> Dict[str, Any]:
         """
         Refine an existing concept based on provided instructions.
         
         Args:
             original_image_url: URL of the original image to refine
+            refinement_prompt: Specific instructions for refinement
             logo_description: Updated description of the logo (optional)
             theme_description: Updated description of the theme (optional)
-            refinement_prompt: Specific instructions for refinement
-            preserve_aspects: Aspects of the original design to preserve
+            user_id: Optional user ID for storing the concept
+            skip_persistence: If True, don't store the concept in the database
+            strength: Control how much to preserve of the original image (0.0-1.0)
             
         Returns:
-            GenerationResponse: The refined concept with image URL and color palette
+            Dict containing refined concept details with image URL and color palette
             
         Raises:
             JigsawStackConnectionError: If connection to the API fails

@@ -58,7 +58,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**3. Service Layer Granularity (Backend)**
+**3. Service Layer Granularity (Backend)** [x]
 
 *   **Goal:** Ensure backend services follow the Single Responsibility Principle.
 

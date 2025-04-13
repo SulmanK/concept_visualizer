@@ -9,13 +9,17 @@ import logging
 from fastapi import Request
 from slowapi.util import get_remote_address
 
+# Import JWT utilities to extract user ID from tokens if needed
+from app.utils.jwt_utils import extract_user_id_from_token
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
 
 def get_user_id(request: Request) -> str:
     """
     Get the user's ID from request state for rate limiting.
-    Falls back to IP address if user ID isn't available.
+    Falls back to extracting from JWT token, then to IP address if no user ID is available.
     
     Args:
         request: FastAPI request object
@@ -27,7 +31,16 @@ def get_user_id(request: Request) -> str:
     if hasattr(request, "state") and hasattr(request.state, "user") and request.state.user:
         user_id = request.state.user.get("id")
         if user_id:
-            logger.debug(f"Using user_id for rate limiting: {user_id[:4]}****")
+            logger.debug(f"Using user_id from request state for rate limiting: {user_id[:4]}****")
+            return f"user:{user_id}"
+    
+    # If no user in state, try to extract from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+        user_id = extract_user_id_from_token(token, validate=False)
+        if user_id:
+            logger.debug(f"Using user_id extracted from JWT token for rate limiting: {user_id[:4]}****")
             return f"user:{user_id}"
     
     # Fall back to IP address if no user ID

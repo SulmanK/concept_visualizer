@@ -10,10 +10,10 @@ from fastapi import Depends
 from app.services.jigsawstack.client import JigsawStackClient, get_jigsawstack_client
 from app.services.image import get_image_service
 from app.services.persistence import get_concept_persistence_service, get_image_persistence_service
-from app.services.interfaces import ConceptServiceInterface
+from app.services.concept.interface import ConceptServiceInterface
 from app.services.concept.service import ConceptService
 
-__all__ = ["ConceptService", "get_concept_service"]
+__all__ = ["ConceptService", "get_concept_service", "ConceptServiceInterface"]
 
 
 @lru_cache()

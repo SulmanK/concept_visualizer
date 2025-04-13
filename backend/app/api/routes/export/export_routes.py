@@ -1,39 +1,44 @@
 """
-Export routes for the API.
+Export endpoints for converting and downloading images in different formats.
 
-This module provides routes for exporting images in different formats.
+This module provides routes for exporting images in various formats and sizes.
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Dict
+
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
-from typing import Dict, Optional
 
 from app.models.export.request import ExportRequest
-from app.services.export import ExportService, get_export_service
-from app.api.dependencies import get_current_user
-from app.utils.api_limits.endpoints import apply_rate_limit
+from app.utils.auth.user import get_current_user
+from app.services.export import get_export_service
+from app.core.supabase import get_supabase_client
+from app.services.image import get_image_service
 
-# Configure logging
+# Configure logger
 logger = logging.getLogger(__name__)
 
-# Create the router
+# Create router
 router = APIRouter()
 
 
 @router.post("/process")
-async def process_export(
+async def export_action(
     request_data: ExportRequest,
     req: Request,
     current_user: Dict = Depends(get_current_user),
-    export_service: ExportService = Depends(get_export_service),
+    export_service = Depends(get_export_service),
 ):
     """
-    Process an image export request.
+    Process an export request and return the file.
+    
+    This endpoint handles converting images to different formats (PNG, JPEG, SVG)
+    and resizing them according to the requested parameters.
     
     Args:
-        request_data: Export request data
-        req: FastAPI request object for rate limiting
+        request_data: Export request parameters
+        req: FastAPI request object
         current_user: Current authenticated user
         export_service: Service for handling exports
         
@@ -41,15 +46,6 @@ async def process_export(
         A streaming response with the exported file
     """
     try:
-        # Apply unified rate limiting for all export formats
-        if hasattr(req.app.state, 'limiter'):
-            await apply_rate_limit(
-                req=req,
-                endpoint="/export/process",
-                rate_limit="50/hour",
-                period="hour"
-            )
-        
         # Get user ID from authenticated user
         user_id = current_user.get("id")
         if not user_id:
