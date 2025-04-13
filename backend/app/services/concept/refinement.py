@@ -13,7 +13,7 @@ from app.core.exceptions import (
     ConceptError, 
     JigsawStackError
 )
-from app.models.response import ColorPalette, GenerationResponse
+from app.models.concept.response import ColorPalette, GenerationResponse
 from app.services.jigsawstack.client import JigsawStackClient
 
 

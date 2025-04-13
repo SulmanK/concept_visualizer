@@ -11,7 +11,7 @@ from typing import List, Dict, Optional, Any
 from app.core.supabase.client import SupabaseClient
 from app.core.supabase.concept_storage import ConceptStorage
 from app.core.supabase.image_storage import ImageStorage
-from app.models.concept import ColorPalette, ConceptSummary, ConceptDetail
+from app.models.concept.domain import ColorPalette, ConceptSummary, ConceptDetail
 from app.services.persistence.interface import ConceptPersistenceServiceInterface
 from app.utils.security.mask import mask_id, mask_path
 

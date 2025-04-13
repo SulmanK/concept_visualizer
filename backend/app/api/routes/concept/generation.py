@@ -15,8 +15,9 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.models.request import PromptRequest
-from app.models.response import GenerationResponse, PaletteVariation, TaskResponse
+from app.models.concept.request import PromptRequest
+from app.models.concept.response import GenerationResponse, PaletteVariation
+from app.models.task.response import TaskResponse
 from app.utils.api_limits import apply_rate_limit, apply_multiple_rate_limits
 from app.services.concept.interface import ConceptServiceInterface
 from app.services.image.interface import ImageServiceInterface
