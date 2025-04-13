@@ -316,18 +316,41 @@ class ImagePersistenceService:
         Raises:
             ImageStorageError: If URL generation fails
         """
+        if not path:
+            self.logger.error("Empty path provided to get_signed_url")
+            raise ImageStorageError("Cannot generate signed URL for empty path")
+            
         try:
             # Select the appropriate bucket
             bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-
+            
+            # First, try using the Supabase SDK method if available
+            try:
+                if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
+                    response = self.supabase.client.storage.from_(bucket_name).create_signed_url(
+                        path=path,
+                        expires_in=expiry_seconds
+                    )
+                    
+                    if response and isinstance(response, dict):
+                        # Extract signed URL from response
+                        signed_url = response.get('signedURL') or response.get('signedUrl')
+                        if signed_url:
+                            # Ensure URL is absolute
+                            if signed_url.startswith('/'):
+                                signed_url = f"{settings.SUPABASE_URL}{signed_url}"
+                            return signed_url
+            except Exception as sdk_error:
+                # Log the SDK error but continue to fallback method
+                self.logger.warning(f"SDK signed URL creation failed, using fallback: {str(sdk_error)}")
+                
+            # Fallback to manual URL construction
             # Generate signed URL with expiration
-            # Construct URL parts ourselves for more reliability
             base_url = settings.SUPABASE_URL
             storage_path = f"/storage/v1/object/sign/{bucket_name}/{path}"
             expiry = int(datetime.now().timestamp()) + expiry_seconds
             
             # Create a special storage JWT that includes the signature parameters
-            # Include the bucket name in the path for the JWT
             token = create_supabase_jwt_for_storage(path=f"{bucket_name}/{path}", expiry_timestamp=expiry)
             
             # Add query parameters for expiry
@@ -335,6 +358,10 @@ class ImagePersistenceService:
             
             # Construct the final URL
             signed_url = f"{base_url}{storage_path}{query_params}"
+            
+            # Log success with masked path
+            masked_path = mask_path(path)
+            self.logger.info(f"Generated signed URL for {masked_path} with {expiry_seconds}s expiry")
             
             return signed_url
         
