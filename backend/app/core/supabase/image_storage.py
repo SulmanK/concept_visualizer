@@ -124,8 +124,8 @@ class ImageStorage:
     def get_image_url(self, path: str, bucket: str) -> Optional[str]:
         """Get a signed URL for an image in storage.
         
-        This method uses direct HTTP requests instead of the Supabase SDK method for better
-        control over JWT authentication and to ensure the storage RLS policies are respected.
+        This method provides a stable interface that forwards to get_signed_url with a standard
+        expiration time of 3 days (259200 seconds).
         
         Args:
             path: Path to the image in storage (format: user_id/filename)
@@ -136,69 +136,15 @@ class ImageStorage:
             
         Note:
             - The path MUST follow the pattern `{user_id}/...` for RLS policies to work
-            - The created JWT includes the user_id from the first path segment for access control
             - The signed URL is valid for 3 days (259200 seconds)
-            - If the signed URL endpoint fails, a fallback direct token URL is generated
+            - This method ensures consistent URL handling across the application
         """
-        try:
-            # Create a JWT token for access
-            from app.utils.jwt_utils import create_supabase_jwt
-            
-            # First segment is user_id - CRITICAL for RLS policy enforcement
-            user_id = path.split('/')[0] if '/' in path else None
-            if not user_id:
-                self.logger.warning(f"Invalid path format - cannot extract user ID: {path}")
-                return None
-                
-            # Create JWT token with the user_id claim for access control
-            token = create_supabase_jwt(user_id)
-            
-            # Get the base URL
-            api_url = self.client.url
-            api_key = self.client.key
-            
-            # Use the signed URL endpoint
-            signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket}/{path}"
-            
-            # Call the signed URL endpoint with 3-day expiration using direct HTTP
-            # This is used instead of SDK methods to have better control over authentication
-            response = requests.post(
-                signed_url_endpoint,
-                headers={
-                    "Authorization": f"Bearer {token}",
-                    "apikey": api_key
-                },
-                json={"expiresIn": 259200}  # 3 days in seconds
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if "signedUrl" in data:
-                    signed_url = data["signedUrl"]
-                    # Ensure the URL is absolute and correctly formatted
-                    if signed_url.startswith('/'):
-                        # Make sure URL has the correct format with /storage/v1/
-                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
-                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
-                        signed_url = f"{api_url}{signed_url}"
-                    return signed_url
-                elif "signedURL" in data:
-                    signed_url = data["signedURL"]
-                    # Ensure the URL is absolute and correctly formatted
-                    if signed_url.startswith('/'):
-                        # Make sure URL has the correct format with /storage/v1/
-                        if '/storage/v1/' not in signed_url and '/object/sign/' in signed_url:
-                            signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
-                        signed_url = f"{api_url}{signed_url}"
-                    return signed_url
-            
-            # Fallback to direct URL with token if signed URL fails
-            self.logger.warning(f"Failed to get signed URL, using fallback URL with token")
-            return f"{api_url}/storage/v1/object/token/{bucket}/{path}?token={token}"
-        
-        except Exception as e:
-            self.logger.error(f"Error getting image URL: {str(e)}")
+        if not path:
+            self.logger.warning("Empty path provided to get_image_url")
             return None
+            
+        # Forward to get_signed_url with 3-day expiration
+        return self.get_signed_url(path=path, bucket=bucket, expiry_seconds=259200)
     
     async def apply_color_palette(self, image_path: str, palette: List[str], user_id: str) -> Optional[str]:
         """Apply a color palette to an image and store the result.
@@ -462,17 +408,30 @@ class ImageStorage:
             # Process response
             if response.status_code == 200:
                 data = response.json()
+                # Try both possible response formats (SDK variations)
                 signed_url = data.get("signedUrl") or data.get("signedURL")
                 
                 # Ensure the URL is absolute and correctly formatted
-                if signed_url and signed_url.startswith('/'):
-                    signed_url = f"{api_url}{signed_url}"
+                if signed_url:
+                    # Make URL absolute if it's relative
+                    if signed_url.startswith('/'):
+                        signed_url = f"{api_url}{signed_url}"
                     
-                return signed_url
-                
+                    # Log success with masked path
+                    masked_path = self._mask_path(path)
+                    self.logger.info(f"Generated signed URL for {masked_path} with {expiry_seconds}s expiry")
+                    
+                    return signed_url
+                else:
+                    self.logger.warning(f"Signed URL response missing URL field: {data}")
+            
             # Log if there was a problem
-            self.logger.warning(f"Failed to get signed URL for {mask_path(path)}: {response.status_code}")
-            return None
+            self.logger.warning(f"Failed to get signed URL for {self._mask_path(path)}: {response.status_code}")
+            
+            # Fallback to direct URL with token if signed URL fails
+            self.logger.info(f"Using fallback token URL for {self._mask_path(path)}")
+            fallback_url = f"{api_url}/storage/v1/object/token/{bucket}/{path}?token={token}"
+            return fallback_url
             
         except Exception as e:
             self.logger.error(f"Error getting signed URL: {str(e)}")
