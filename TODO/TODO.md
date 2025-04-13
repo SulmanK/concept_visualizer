@@ -146,7 +146,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**7. URL Handling Consistency (Backend)**
+**7. URL Handling Consistency (Backend)** [x]
 
 *   **Goal:** Ensure services return full, ready-to-use, signed URLs.
 
@@ -180,17 +180,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Delete `backend/app/models/request.py`.
         *   Delete `backend/app/models/response.py`.
         *   Search for imports of these files and update them to point to the structured locations (e.g., `backend/app/models/concept/request.py`). Run linters/type checkers.
-    3.  **Delete Old Service Files:**
-        *   Delete `backend/app/services/concept_service.py`.
-        *   Delete `backend/app/services/image_processing.py`.
-        *   Delete `backend/app/services/image_service.py`.
-        *   Search for imports and update them to the new locations (e.g., `backend/app/services/concept/service.py`, `backend/app/services/image/service.py`). Run linters/type checkers.
-    4.  **Consolidate Storage Service:**
-        *   Check if `backend/app/services/concept_storage_service.py` exists.
-        *   If it exists, compare its content with `backend/app/services/storage/concept_storage.py`.
-        *   Merge any unique, relevant logic from the old file into the new one.
-        *   Delete `backend/app/services/concept_storage_service.py`.
-        *   Update imports (likely in `backend/app/services/storage/__init__.py` and potentially dependencies/routes).
+
     5.  **Run Tests:** Execute the full backend test suite (`uv run pytest`) to confirm no regressions were introduced. [SKIP FOR NOW]
 
 ---
