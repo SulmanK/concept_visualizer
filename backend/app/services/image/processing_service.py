@@ -6,11 +6,11 @@ following the Single Responsibility Principle.
 """
 
 import logging
-from typing import List, Dict, Any, Union, Tuple, Optional
+from typing import List, Dict, Any, Union, Optional, BinaryIO
 from io import BytesIO
 import httpx
 
-from app.services.interfaces.image_service import ImageProcessingServiceInterface
+from app.services.image.interface import ImageProcessingServiceInterface
 from app.services.image.processing import apply_palette_with_masking_optimized, extract_dominant_colors
 from app.services.image.conversion import (
     convert_image_format,
@@ -23,9 +23,11 @@ from app.services.image.conversion import (
 # Set up logging
 logger = logging.getLogger(__name__)
 
+
 class ImageProcessingError(Exception):
     """Exception raised for image processing errors."""
     pass
+
 
 class ImageProcessingService(ImageProcessingServiceInterface):
     """
@@ -260,5 +262,92 @@ class ImageProcessingService(ImageProcessingServiceInterface):
         """
         try:
             return get_image_metadata(image_data)
-        except ConversionError as e:
-            raise ImageProcessingError(f"Failed to extract image metadata: {str(e)}") 
+        except Exception as e:
+            error_msg = f"Failed to extract image metadata: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageProcessingError(error_msg)
+            
+    async def convert_format(
+        self,
+        image_data: Union[bytes, BinaryIO, str],
+        target_format: str,
+        quality: Optional[int] = None
+    ) -> bytes:
+        """
+        Convert an image to a different format.
+        
+        Args:
+            image_data: Image data as bytes, file-like object, or path/URL
+            target_format: Format to convert to (PNG, JPEG, etc.)
+            quality: Quality level for lossy formats (0-100)
+            
+        Returns:
+            Converted image as bytes
+            
+        Raises:
+            ImageProcessingError: If conversion fails
+        """
+        try:
+            # Ensure image_data is bytes
+            if isinstance(image_data, str):
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_data)
+                    image_data = response.content
+            elif hasattr(image_data, 'read'):
+                image_data = image_data.read()
+                
+            return self.convert_to_format(
+                image_data=image_data,
+                target_format=target_format.lower(),
+                quality=quality or 95
+            )
+        except Exception as e:
+            error_msg = f"Failed to convert image format: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageProcessingError(error_msg)
+    
+    async def resize_image(
+        self,
+        image_data: Union[bytes, BinaryIO, str],
+        width: int,
+        height: Optional[int] = None,
+        maintain_aspect_ratio: bool = True
+    ) -> bytes:
+        """
+        Resize an image to specified dimensions.
+        
+        Args:
+            image_data: Image data as bytes, file-like object, or path/URL
+            width: Target width in pixels
+            height: Target height in pixels (optional if maintaining aspect ratio)
+            maintain_aspect_ratio: Whether to preserve the aspect ratio
+            
+        Returns:
+            Resized image as bytes
+            
+        Raises:
+            ImageProcessingError: If resizing fails
+        """
+        try:
+            # Ensure image_data is bytes
+            if isinstance(image_data, str):
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_data)
+                    image_data = response.content
+            elif hasattr(image_data, 'read'):
+                image_data = image_data.read()
+                
+            # If height is None but maintaining aspect ratio, use a placeholder
+            # The thumbnail function will calculate the correct height
+            actual_height = height or width
+                
+            return self.generate_thumbnail(
+                image_data=image_data,
+                width=width,
+                height=actual_height,
+                preserve_aspect_ratio=maintain_aspect_ratio
+            )
+        except Exception as e:
+            error_msg = f"Failed to resize image: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageProcessingError(error_msg) 

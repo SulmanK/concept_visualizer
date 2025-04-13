@@ -1,47 +1,52 @@
 """
-Concept refinement endpoints.
+Concept refinement routes.
 
-This module provides endpoints for refining existing visual concepts.
+This module provides API endpoints for refining existing visual concepts
+based on additional instructions or prompts.
 """
 
 import logging
 import traceback
-import uuid
-from typing import Optional, Dict, Any
+from typing import Dict, Any, Optional, List
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Request, BackgroundTasks, status
+from fastapi import APIRouter, Depends, Request, Response, BackgroundTasks, status
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from pydantic import ValidationError
 
-from app.models.request import RefinementRequest
-from app.models.response import GenerationResponse, PaletteVariation, TaskResponse
-from app.utils.api_limits import apply_rate_limit
-from app.services.concept import get_concept_service
-from app.services.image import get_image_service
-from app.services.persistence import get_concept_persistence_service
-from app.services.interfaces import (
-    ConceptServiceInterface,
-    ImageServiceInterface,
-    StorageServiceInterface,
-    TaskServiceInterface,
-    ConceptPersistenceServiceInterface
-)
 from app.api.dependencies import CommonDependencies
-from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError
+from app.models.concept.request import RefinementRequest
+from app.models.concept.response import RefinementResponse
+from app.models.task.response import TaskResponse
+from app.services.concept.interface import ConceptServiceInterface
+from app.services.image.interface import ImageServiceInterface
+from app.services.persistence.interface import ConceptPersistenceServiceInterface
+from app.services.task.interface import TaskServiceInterface
+from app.core.exceptions import (
+    ServiceUnavailableError,
+    ResourceNotFoundError,
+    TaskError,
+    ApplicationError
+)
+
+# Import for rate limiting
+from app.utils.api_limits import apply_rate_limit
+
+# Import for masking sensitive values in logs
+from app.utils.security.mask import mask_id, mask_url
+
+# Constants
 from app.core.constants import (
-    TASK_STATUS_PENDING, 
-    TASK_STATUS_PROCESSING, 
-    TASK_STATUS_COMPLETED, 
-    TASK_STATUS_FAILED, 
+    TASK_STATUS_PENDING,
+    TASK_STATUS_PROCESSING,
+    TASK_STATUS_COMPLETED,
+    TASK_STATUS_FAILED,
     TASK_TYPE_REFINEMENT
 )
-from app.utils.security.mask import mask_id
-from app.services.task.service import TaskError
 
-# Configure logging
-logger = logging.getLogger("concept_refinement_api")
+# Configure logger
+logger = logging.getLogger(__name__)
 
+# Create API router
 router = APIRouter()
 
 
@@ -54,16 +59,13 @@ async def refine_concept(
     commons: CommonDependencies = Depends(),
 ):
     """
-    Refine an existing concept (background task).
-    
-    This endpoint creates a background task to refine an existing concept.
-    It returns a task ID that can be used to check the status of the task.
+    Refine a concept based on refinement prompt.
     
     Args:
-        request: Refinement request containing original image URL and refinement prompt
+        request: RefinementRequest containing original image URL and refinement prompt
         background_tasks: FastAPI background tasks
         response: FastAPI response object
-        req: FastAPI request object
+        req: FastAPI request object for rate limiting
         commons: Common dependencies
         
     Returns:
@@ -71,15 +73,12 @@ async def refine_concept(
         
     Raises:
         ValidationError: If the request is invalid
-        ResourceNotFoundError: If the original image does not exist
+        ResourceNotFoundError: If the specified concept does not exist
         ServiceUnavailableError: If task creation fails
     """
     try:
         # Get dependencies from commons
         user_id = commons.user_id
-        
-        # Check rate limits for concept refinement
-        await apply_rate_limit(req, "/concepts/refine", "10/month")
         
         # Create metadata for the task
         task_metadata = {

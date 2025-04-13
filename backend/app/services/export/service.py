@@ -16,7 +16,7 @@ from PIL import Image
 import vtracer
 from app.core.supabase import SupabaseClient, get_supabase_client
 from app.core.supabase.image_storage import ImageStorage
-from app.services.interfaces import ImageServiceInterface
+from app.services.image.interface import ImageServiceInterface
 from app.services.image import get_image_service
 from app.services.persistence import get_concept_persistence_service
 from app.utils.security.mask import mask_id, mask_path

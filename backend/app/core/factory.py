@@ -15,6 +15,7 @@ from app.core.limiter.config import setup_limiter_for_app
 from app.utils.logging.setup import setup_logging
 from app.api.middleware.auth_middleware import AuthMiddleware
 from app.api.middleware.rate_limit_headers import RateLimitHeadersMiddleware
+from app.api.middleware.rate_limit_apply import RateLimitApplyMiddleware, PUBLIC_PATHS
 
 
 logger = logging.getLogger(__name__)
@@ -69,17 +70,19 @@ def create_app() -> FastAPI:
     )
     
     # Configure authentication middleware
-    public_paths = [
-        "/api/health",        # Health root endpoint
-        "/api/health/check",  # Health check endpoint
-        "/api/health/rate-limits", # Rate limits endpoint
-        "/api/health/rate-limits-status", # Non-counting rate limits endpoint
-        "/api/auth/signin-anonymous",  # Anonymous auth endpoint
-        "/docs",              # Swagger UI
-        "/redoc",             # ReDoc UI
-        "/openapi.json",      # OpenAPI schema
-    ]
-    app.add_middleware(AuthMiddleware, public_paths=public_paths)
+    # Note: These must match PUBLIC_PATHS in rate_limit_apply.py
+    # to ensure consistent handling of public endpoints
+    app.add_middleware(AuthMiddleware, public_paths=PUBLIC_PATHS)
+    
+    # Add rate limit apply middleware (must come before headers middleware)
+    # Note: The order of middleware registration is important.
+    # FastAPI/Starlette executes middleware in REVERSE order of registration:
+    # 1. First RateLimitHeadersMiddleware (adds headers to responses)
+    # 2. Then RateLimitApplyMiddleware (checks and applies limits)
+    # 3. Then AuthMiddleware (authenticates the user)
+    # This ensures that user authentication happens before rate limiting is applied.
+    app.add_middleware(RateLimitApplyMiddleware)
+    logger.info("Added rate limit apply middleware")
     
     # Add rate limit headers middleware
     app.add_middleware(RateLimitHeadersMiddleware)

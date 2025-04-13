@@ -15,13 +15,10 @@ from app.services.concept import get_concept_service
 from app.services.image import get_image_service
 from app.services.persistence import get_concept_persistence_service, get_image_persistence_service
 from app.services.task import get_task_service
-from app.services.interfaces import (
-    ConceptServiceInterface,
-    ImageServiceInterface,
-    ConceptPersistenceServiceInterface,
-    ImagePersistenceServiceInterface,
-    TaskServiceInterface
-)
+from app.services.concept.interface import ConceptServiceInterface
+from app.services.image.interface import ImageServiceInterface
+from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface, ImagePersistenceServiceInterface
+from app.services.task.interface import TaskServiceInterface
 from app.utils.security.mask import mask_id
 
 
