@@ -6,7 +6,7 @@ following the Single Responsibility Principle.
 """
 
 import logging
-from typing import List, Dict, Any, Union, Optional, BinaryIO, Tuple
+from typing import List, Dict, Any, Union, Optional, BinaryIO
 from io import BytesIO
 
 from app.services.image.interface import ImageProcessingServiceInterface
@@ -18,7 +18,6 @@ from app.services.image.conversion import (
     get_image_metadata,
     ConversionError
 )
-from app.utils.http_utils import download_image
 
 # Set up logging
 logger = logging.getLogger(__name__)

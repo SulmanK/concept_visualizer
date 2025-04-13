@@ -260,13 +260,13 @@ class ExportService:
                     
                         # Generate output filename
                         base_name = os.path.basename(original_filename)
-                    name_without_ext = os.path.splitext(base_name)[0]
-                    new_filename = f"{name_without_ext}.svg"
+                        name_without_ext = os.path.splitext(base_name)[0]
+                        new_filename = f"{name_without_ext}.svg"
                     
                         # Return the SVG bytes, filename, and content type
-                    return svg_bytes, new_filename, "image/svg+xml"
-                finally:
-                    # Clean up temporary files
+                        return svg_bytes, new_filename, "image/svg+xml"
+                    finally:
+                        # Clean up temporary files
                         if os.path.exists(input_path):
                             os.unlink(input_path)
                         if os.path.exists(output_path):
