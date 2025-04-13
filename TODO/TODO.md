@@ -78,7 +78,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**4. Rate Limiting Application (Backend)**
+**4. Rate Limiting Application (Backend)**[x]
 
 *   **Goal:** Centralize rate limit application logic, removing it from route handlers.
 
@@ -136,15 +136,6 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
             *   The role of `create_supabase_jwt`.
             *   Assumptions made about path structures (e.g., `user_id/file.png`).
             *   The reason for using the service role key in specific methods (if applicable).
-    4.  **Review Supabase SDK Updates:**
-        *   Visit `https://github.com/supabase-community/supabase-py`.
-        *   Check the latest version number and read the release notes since your current version (`1.0.3` based on `pyproject.toml`).
-        *   Look for changes in:
-            *   `create_client` options.
-            *   `storage` API (especially authentication or direct JWT support).
-            *   `auth` methods (`getSession`, `refreshSession`).
-            *   Error handling types.
-        *   If significant relevant changes exist (e.g., improved storage auth), create a *new* TODO item to upgrade the dependency (`uv pip install -U supabase`) and refactor the relevant code (e.g., potentially simplifying `ImageStorageService.store_image`).
 
 ---
 
