@@ -1,5 +1,5 @@
 """
-Concept storage service implementation.
+Concept persistence service implementation.
 
 This module provides services for storing and retrieving concepts from Supabase.
 """
@@ -12,12 +12,12 @@ from app.core.supabase.client import SupabaseClient
 from app.core.supabase.concept_storage import ConceptStorage
 from app.core.supabase.image_storage import ImageStorage
 from app.models.concept import ColorPalette, ConceptSummary, ConceptDetail
-from app.services.interfaces import StorageServiceInterface
+from app.services.interfaces.concept_persistence_service import ConceptPersistenceServiceInterface
 from app.utils.security.mask import mask_id, mask_path
 
 
-class StorageError(Exception):
-    """Exception raised for storage errors."""
+class PersistenceError(Exception):
+    """Exception raised for persistence errors."""
     
     def __init__(self, message: str):
         self.message = message
@@ -32,20 +32,20 @@ class NotFoundError(Exception):
         super().__init__(self.message)
 
 
-class ConceptStorageService(StorageServiceInterface):
+class ConceptPersistenceService(ConceptPersistenceServiceInterface):
     """Service for storing and retrieving concepts."""
     
     def __init__(self, client: SupabaseClient):
         """
-        Initialize concept storage service with a Supabase client.
+        Initialize the concept persistence service.
         
         Args:
-            client: Client for interacting with Supabase
+            client: Supabase client instance
         """
-        self.supabase_client = client
+        self.supabase = client
         self.concept_storage = ConceptStorage(client)
         self.image_storage = ImageStorage(client)
-        self.logger = logging.getLogger("concept_storage_service")
+        self.logger = logging.getLogger("concept_persistence_service")
     
     async def store_concept(self, concept_data: Dict[str, Any]) -> str:
         """
@@ -64,7 +64,7 @@ class ConceptStorageService(StorageServiceInterface):
             ID of the stored concept
             
         Raises:
-            StorageError: If storage fails
+            PersistenceError: If storage fails
         """
         try:
             # Extract required fields
@@ -96,7 +96,7 @@ class ConceptStorageService(StorageServiceInterface):
             concept = self.concept_storage.store_concept(core_concept_data)
             if not concept:
                 self.logger.error("Failed to store concept")
-                raise StorageError("Failed to store concept")
+                raise PersistenceError("Failed to store concept")
             
             masked_concept_id = mask_id(concept['id'])
             self.logger.info(f"Stored concept with ID: {masked_concept_id}")
@@ -129,7 +129,7 @@ class ConceptStorageService(StorageServiceInterface):
             
         except Exception as e:
             self.logger.error(f"Error in store_concept: {e}")
-            raise StorageError(f"Failed to store concept: {str(e)}")
+            raise PersistenceError(f"Failed to store concept: {str(e)}")
     
     async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, Any]:
         """
@@ -144,7 +144,7 @@ class ConceptStorageService(StorageServiceInterface):
             
         Raises:
             NotFoundError: If concept not found
-            StorageError: If retrieval fails
+            PersistenceError: If retrieval fails
         """
         try:
             masked_concept_id = mask_id(concept_id)
@@ -180,7 +180,7 @@ class ConceptStorageService(StorageServiceInterface):
             raise
         except Exception as e:
             self.logger.error(f"Error in get_concept_detail: {e}")
-            raise StorageError(f"Failed to retrieve concept: {str(e)}")
+            raise PersistenceError(f"Failed to retrieve concept: {str(e)}")
     
     async def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -194,7 +194,7 @@ class ConceptStorageService(StorageServiceInterface):
             List of recent concepts
             
         Raises:
-            StorageError: If retrieval fails
+            PersistenceError: If retrieval fails
         """
         try:
             masked_user_id = mask_id(user_id)
@@ -228,7 +228,7 @@ class ConceptStorageService(StorageServiceInterface):
             
         except Exception as e:
             self.logger.error(f"Error getting recent concepts: {e}")
-            raise StorageError(f"Failed to retrieve recent concepts: {str(e)}")
+            raise PersistenceError(f"Failed to retrieve recent concepts: {str(e)}")
     
     async def delete_all_concepts(self, user_id: str) -> bool:
         """
@@ -241,61 +241,58 @@ class ConceptStorageService(StorageServiceInterface):
             True if successful
             
         Raises:
-            StorageError: If deletion fails
+            PersistenceError: If deletion fails
         """
         try:
             masked_user_id = mask_id(user_id)
             self.logger.warning(f"Deleting all concepts for user: {masked_user_id}")
             
             # Delete all concepts
-            result = self.concept_storage.delete_all_concepts(user_id)
+            deleted = self.concept_storage.delete_concepts(user_id)
             
-            if result:
-                self.logger.info(f"Successfully deleted all concepts for user: {masked_user_id}")
-                return True
-            else:
-                self.logger.warning(f"No concepts found to delete for user: {masked_user_id}")
-                return True  # Return true even if nothing was deleted
-                
+            self.logger.info(f"Deleted {deleted} concepts for user: {masked_user_id}")
+            return True
+            
         except Exception as e:
-            self.logger.error(f"Error deleting all concepts: {e}")
-            raise StorageError(f"Failed to delete concepts: {str(e)}")
+            self.logger.error(f"Error deleting concepts: {e}")
+            raise PersistenceError(f"Failed to delete concepts: {str(e)}")
     
     async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
         """
         Get a concept by its task ID.
         
         Args:
-            task_id: Task ID of the concept to retrieve
+            task_id: Task ID to retrieve the concept for
             user_id: User ID for security validation
             
         Returns:
-            Concept data or None if not found
+            Concept data if found, None otherwise
             
         Raises:
-            StorageError: If retrieval fails
+            PersistenceError: If retrieval fails
         """
         try:
             masked_task_id = mask_id(task_id)
-            self.logger.info(f"Getting concept for task: {masked_task_id}")
+            self.logger.info(f"Getting concept by task ID: {masked_task_id}")
             
             # Get the concept from storage
-            concept_data = self.concept_storage.get_concept_by_task_id(task_id, user_id)
+            concept = self.concept_storage.get_concept_by_task_id(task_id, user_id)
             
-            if not concept_data:
+            # If no concept found, return None
+            if not concept:
                 self.logger.info(f"No concept found for task ID: {masked_task_id}")
                 return None
-            
-            # Add signed URL for the image
-            image_path = concept_data.get("image_path")
+                
+            # Add signed URL for image
+            image_path = concept.get("base_image_path")
             if image_path:
-                concept_data["image_url"] = self.image_storage.get_image_url(
+                concept["base_image_url"] = self.image_storage.get_image_url(
                     image_path, 
                     "concept-images"
                 )
-            
-            return concept_data
+                
+            return concept
             
         except Exception as e:
             self.logger.error(f"Error getting concept by task ID: {e}")
-            raise StorageError(f"Failed to retrieve concept for task: {str(e)}") 
+            raise PersistenceError(f"Failed to retrieve concept by task ID: {str(e)}") 

@@ -76,4 +76,115 @@ class ImageServiceInterface(abc.ABC):
             ImageProcessingError: If applying palettes fails
             StorageError: If storing the variations fails
         """
+        pass
+
+class ImageProcessingServiceInterface(abc.ABC):
+    """Interface for image processing operations."""
+    
+    @abc.abstractmethod
+    async def process_image(
+        self, 
+        image_data: Union[bytes, BinaryIO, str], 
+        operations: List[Dict[str, Any]]
+    ) -> bytes:
+        """
+        Process an image with a series of operations.
+        
+        Args:
+            image_data: Image data as bytes, BytesIO, or URL string
+            operations: List of operations to apply to the image
+            
+        Returns:
+            Processed image data as bytes
+            
+        Raises:
+            ImageProcessingError: If processing fails
+        """
+        pass
+    
+    @abc.abstractmethod
+    def convert_to_format(
+        self, 
+        image_data: bytes, 
+        target_format: str = "png", 
+        quality: int = 95
+    ) -> bytes:
+        """
+        Convert an image to a specified format.
+        
+        Args:
+            image_data: Binary image data
+            target_format: Target format ('png', 'jpg', 'webp', etc.)
+            quality: Quality for lossy formats (0-100)
+            
+        Returns:
+            Converted image as bytes
+            
+        Raises:
+            ImageProcessingError: If conversion fails
+        """
+        pass
+        
+    @abc.abstractmethod
+    def generate_thumbnail(
+        self, 
+        image_data: bytes, 
+        width: int, 
+        height: int, 
+        preserve_aspect_ratio: bool = True,
+        format: str = "png"
+    ) -> bytes:
+        """
+        Generate a thumbnail from an image.
+        
+        Args:
+            image_data: Binary image data
+            width: Target width
+            height: Target height
+            preserve_aspect_ratio: Whether to preserve the aspect ratio
+            format: Output format
+            
+        Returns:
+            Thumbnail image as bytes
+            
+        Raises:
+            ImageProcessingError: If thumbnail generation fails
+        """
+        pass
+        
+    @abc.abstractmethod
+    async def extract_color_palette(
+        self, 
+        image_data: bytes, 
+        num_colors: int = 5
+    ) -> List[str]:
+        """
+        Extract a color palette from an image.
+        
+        Args:
+            image_data: Binary image data
+            num_colors: Number of colors to extract
+            
+        Returns:
+            List of color hex codes
+            
+        Raises:
+            ImageProcessingError: If color extraction fails
+        """
+        pass
+        
+    @abc.abstractmethod
+    def get_image_metadata(self, image_data: bytes) -> Dict[str, Any]:
+        """
+        Extract metadata from an image.
+        
+        Args:
+            image_data: Binary image data
+            
+        Returns:
+            Dictionary containing image metadata
+            
+        Raises:
+            ImageProcessingError: If metadata extraction fails
+        """
         pass 

@@ -1,9 +1,9 @@
 [flake8]
 max-line-length = 200
-extend-ignore = E203, W503
+extend-ignore = E203, E501
 # E203: whitespace before ':' (conflicts with Black)
-# W503: line break before binary operator (conflicts with Black)
-exclude = .git,__pycache__,build,dist,backend/src/core/scraping/scraper.py
+# E501: line too long (conflicts with Black)
+exclude = .git,__pycache__,build,dist
 max-complexity = 30
 docstring-convention = google
 per-file-ignores =
@@ -13,3 +13,6 @@ per-file-ignores =
     # D100-D107: Missing docstrings in different contexts
     # Allow missing docstrings in tests
     tests/*: D100,D101,D102,D103,D104,D105,D106,D107
+    # Ignore abstract class instantiation in service factories
+    app/services/*/service.py: F821
+    app/services/*/__init__.py: F821

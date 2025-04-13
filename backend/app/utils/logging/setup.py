@@ -1,80 +1,102 @@
 """
-Logging utility for the Concept Visualizer API.
+Logging setup module.
 
-This module configures the application's logging system.
+This module configures logging for the application with both console
+and file handlers for persistent logs.
 """
 
+import os
 import logging
-import sys
+import logging.handlers
+from pathlib import Path
+from typing import Dict, Any, Optional
 
-from app.core.config import settings
-
-
-def setup_logging() -> None:
+def setup_logging(
+    log_level: str = "INFO",
+    log_format: Optional[str] = None,
+    log_dir: str = "logs"
+) -> None:
     """
-    Configure the application's logging system.
+    Configure logging for the application.
     
-    This function sets up logging with appropriate handlers, formatters,
-    and log levels based on application settings.
+    Args:
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        log_format: Optional custom log format
+        log_dir: Directory to store log files (default: 'logs')
     """
-    # Get the root logger
+    # Convert string log level to logging constant
+    numeric_level = getattr(logging, log_level.upper(), logging.INFO)
+    
+    # Default log format if none provided
+    if log_format is None:
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+    # Create formatter
+    formatter = logging.Formatter(log_format)
+    
+    # Configure root logger
     root_logger = logging.getLogger()
+    root_logger.setLevel(numeric_level)
     
-    # Set the log level based on settings
-    log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
-    root_logger.setLevel(log_level)
-    
-    # Create a console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(log_level)
-    
-    # Set formatter - including timestamp, level and message
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    )
-    console_handler.setFormatter(formatter)
-    
-    # Remove existing handlers to avoid duplicates
+    # Clear existing handlers to avoid duplicate logs
     if root_logger.handlers:
         root_logger.handlers.clear()
     
-    # Add the handler to the logger
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
     
-    # Configure specific loggers with custom levels
-    # Set httpx to WARNING to reduce API request logs
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    # Create log directory if it doesn't exist
+    log_directory = Path(log_dir)
+    if not log_directory.exists():
+        try:
+            log_directory.mkdir(parents=True, exist_ok=True)
+            print(f"Created log directory: {log_directory.absolute()}")
+        except Exception as e:
+            print(f"Warning: Could not create log directory {log_directory}: {str(e)}")
+            return
     
-    # Set uvicorn access logs to WARNING
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    
-    # Set session service to a higher level to reduce noise
-    logging.getLogger("session_service").setLevel(logging.INFO)
-    
-    # Keep detailed logs for concept-related services
-    logging.getLogger("concept_service").setLevel(log_level)
-    logging.getLogger("concept_api").setLevel(log_level)
-    
-    # Log that the logger has been configured
-    logging.info(f"Logging configured with level: {settings.LOG_LEVEL}")
-
-
-def get_logger(name: str, level: int = None) -> logging.Logger:
+    # File handler - rotating file handler to prevent huge log files
+    try:
+        # Main application log
+        app_log_file = log_directory / "app.log"
+        file_handler = logging.handlers.RotatingFileHandler(
+            app_log_file,
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=5,              # Keep 5 backup files max
+            encoding="utf-8"
+        )
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+        
+        # Error log - separate file for errors and above
+        error_log_file = log_directory / "error.log"
+        error_file_handler = logging.handlers.RotatingFileHandler(
+            error_log_file,
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8"
+        )
+        error_file_handler.setLevel(logging.ERROR)
+        error_file_handler.setFormatter(formatter)
+        root_logger.addHandler(error_file_handler)
+        
+        print(f"Log files will be written to: {log_directory.absolute()}")
+    except Exception as e:
+        print(f"Warning: Could not set up file logging: {str(e)}")
+        
+def get_logger(name: str) -> logging.Logger:
     """
-    Get a logger for a specific module.
+    Get a logger with the given name.
     
     Args:
-        name: The name for the logger, typically __name__
-        level: Optional custom log level to set
+        name: Logger name
         
     Returns:
-        logging.Logger: A configured logger instance
+        Logger instance
     """
-    logger = logging.getLogger(name)
-    if level is not None:
-        logger.setLevel(level)
-    return logger
+    return logging.getLogger(name)
 
 
 def is_health_check(path: str) -> bool:
@@ -82,9 +104,16 @@ def is_health_check(path: str) -> bool:
     Check if a request path is a health check.
     
     Args:
-        path: Request path
+        path: Request path to check
         
     Returns:
-        bool: True if this is a health check path
+        True if this is a health check path, False otherwise
     """
-    return path.endswith("/health") or "/health/" in path 
+    health_check_paths = [
+        "/health", 
+        "/api/health",
+        "/ping",
+        "/api/ping",
+        "/_health"
+    ]
+    return path in health_check_paths or path.endswith("/health") or path.endswith("/ping") 

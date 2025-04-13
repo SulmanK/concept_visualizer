@@ -1,108 +1,139 @@
 """
-Shared dependencies for API routes.
+Dependencies for API routes.
 
-This module provides common dependencies that can be reused across different
-API route handlers to reduce code duplication and improve maintainability.
+This module provides dependencies that can be used by API routes.
 """
 
-import logging
-from typing import Dict, Any, Optional
+import json
+import base64
+from fastapi import Depends, Header, Request
+from typing import Optional, Dict, Any
 
-from fastapi import Depends, Request
-from slowapi.util import get_remote_address
-
-from app.core.config import settings
-from app.core.supabase.client import get_supabase_client
+from app.core.supabase.client import get_supabase_client, SupabaseClient
+from app.services.jigsawstack.client import get_jigsawstack_client, JigsawStackClient
 from app.services.concept import get_concept_service
 from app.services.image import get_image_service
-from app.services.storage import get_concept_storage_service
+from app.services.persistence import get_concept_persistence_service, get_image_persistence_service
 from app.services.task import get_task_service
 from app.services.interfaces import (
     ConceptServiceInterface,
     ImageServiceInterface,
-    StorageServiceInterface,
+    ConceptPersistenceServiceInterface,
+    ImagePersistenceServiceInterface,
     TaskServiceInterface
 )
-from app.services.jigsawstack.client import get_jigsawstack_client
-from app.api.middleware.auth_middleware import get_current_user
-
-# Configure logging
-logger = logging.getLogger("api_dependencies")
+from app.utils.security.mask import mask_id
 
 
-def get_request_ip(request: Request) -> str:
+def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
     """
-    Extract the client IP address from the request.
+    Extract the current user from the request session.
     
     Args:
         request: The FastAPI request object
         
     Returns:
-        The client IP address as a string
+        The user data if authenticated, None otherwise
     """
-    return get_remote_address(request)
+    # Check if session middleware is installed and session exists
+    if request and "session" in request.scope and "user" in request.scope["session"]:
+        return request.scope["session"]["user"]
+    return None
 
 
-def get_common_services():
+def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Get all common services used across multiple endpoints.
+    Simple decode of JWT token without verification.
     
-    This dependency combines multiple service dependencies into a single
-    function to reduce boilerplate in route handlers.
-    
+    Args:
+        token: JWT token to decode
+        
     Returns:
-        A dictionary containing all common services
+        Decoded payload or None if decoding failed
     """
-    return {
-        "concept_service": get_concept_service(),
-        "image_service": get_image_service(),
-        "storage_service": get_concept_storage_service(),
-        "task_service": get_task_service(),
-        "supabase_client": get_supabase_client()
-    }
+    try:
+        # Get payload part (second segment)
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+            
+        # Decode the payload
+        padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+        decoded = base64.b64decode(padded)
+        payload = json.loads(decoded)
+        return payload
+    except Exception as e:
+        print(f"Error decoding token: {str(e)}")
+        return None
 
 
+# Create a CommonDependencies class for dependency injection
 class CommonDependencies:
     """
-    Container class for common dependencies used in route handlers.
+    Common dependencies for API routes.
     
-    This class allows dependency injection of multiple services at once
-    while still maintaining the ability to access them individually.
+    This class provides common dependencies that can be used by API routes.
+    It can be used to inject dependencies into route handlers.
     """
     
     def __init__(
         self,
+        supabase_client: SupabaseClient = Depends(get_supabase_client),
+        jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client),
         concept_service: ConceptServiceInterface = Depends(get_concept_service),
+        concept_persistence_service: ConceptPersistenceServiceInterface = Depends(get_concept_persistence_service),
         image_service: ImageServiceInterface = Depends(get_image_service),
-        storage_service: StorageServiceInterface = Depends(get_concept_storage_service),
+        image_persistence_service: ImagePersistenceServiceInterface = Depends(get_image_persistence_service),
         task_service: TaskServiceInterface = Depends(get_task_service),
-        request: Request = None,
+        authorization: Optional[str] = Header(None),
     ):
         """
-        Initialize with all common service dependencies.
+        Initialize CommonDependencies with required services.
         
         Args:
+            supabase_client: Supabase client for database operations
+            jigsawstack_client: JigsawStack API client
             concept_service: Service for concept generation and refinement
-            image_service: Service for image processing and storage
-            storage_service: Service for concept storage operations
-            task_service: Service for managing background tasks
-            request: FastAPI request object for accessing user information
+            concept_persistence_service: Service for concept persistence
+            image_service: Service for image processing
+            image_persistence_service: Service for image persistence
+            task_service: Service for background task management
+            authorization: Authorization header for extracting tokens
         """
+        self.supabase_client = supabase_client
+        self.jigsawstack_client = jigsawstack_client
         self.concept_service = concept_service
+        self.concept_persistence_service = concept_persistence_service
         self.image_service = image_service
-        self.storage_service = storage_service
+        self.image_persistence_service = image_persistence_service
         self.task_service = task_service
-        self.request = request
-        self.user = get_current_user(request) if request else None
+        self.user = None
         
-    @property
-    def user_id(self) -> Optional[str]:
+        # Extract user information from the authorization header if present
+        self.user_id = None
+        if authorization and authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            # Decode the token without verification (for development only)
+            payload = decode_jwt_token(token)
+            if payload and 'sub' in payload:
+                self.user_id = payload['sub']
+                print(f"User authenticated: {mask_id(self.user_id)}")
+    
+    def process_request(self, request: Request) -> None:
         """
-        Get the current user ID.
+        Process the request to extract user information.
         
-        Returns:
-            The current user ID if authenticated, None otherwise
+        Args:
+            request: FastAPI request object
         """
-        if self.user and "id" in self.user:
-            return self.user["id"]
-        return None 
+        if request:
+            # Try to get user from session
+            self.user = get_current_user(request)
+            
+            # Check for user in request.state (added by auth middleware)
+            if not self.user and hasattr(request, "state") and hasattr(request.state, "user"):
+                self.user = request.state.user
+            
+            # If no user_id from token but we have a user from session, use that
+            if not self.user_id and self.user and "id" in self.user:
+                self.user_id = self.user["id"] 

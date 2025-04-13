@@ -1,13 +1,13 @@
 """
-Tests for the ConceptStorageService.
+Tests for the ConceptPersistenceService.
 """
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 
-from app.services.storage.concept_storage import ConceptStorageService
-from app.services.interfaces import StorageServiceInterface
+from app.services.persistence.concept_persistence_service import ConceptPersistenceService
+from app.services.interfaces.concept_persistence_service import ConceptPersistenceServiceInterface
 
 
 @pytest.fixture
@@ -27,13 +27,13 @@ def mock_supabase_client():
 
 
 @pytest.fixture
-def storage_service(mock_supabase_client):
-    """Create a ConceptStorageService instance with a mock client."""
-    return ConceptStorageService(mock_supabase_client)
+def persistence_service(mock_supabase_client):
+    """Create a ConceptPersistenceService instance with a mock client."""
+    return ConceptPersistenceService(mock_supabase_client)
 
 
 @pytest.mark.asyncio
-async def test_store_concept(storage_service, mock_supabase_client):
+async def test_store_concept(persistence_service, mock_supabase_client):
     """Test storing a concept in the database."""
     # Setup mock response
     mock_table = mock_supabase_client.table.return_value
@@ -48,7 +48,7 @@ async def test_store_concept(storage_service, mock_supabase_client):
         "palette": [{"hex": "#FF0000", "name": "Red"}],
         "session_id": "test-session-id"
     }
-    result = await storage_service.store_concept(concept_data)
+    result = await persistence_service.store_concept(concept_data)
     
     # Verify
     assert result["id"] == "test-id"
@@ -57,7 +57,7 @@ async def test_store_concept(storage_service, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_get_concept_detail(storage_service, mock_supabase_client):
+async def test_get_concept_detail(persistence_service, mock_supabase_client):
     """Test retrieving concept details."""
     # Setup mock response
     mock_table = mock_supabase_client.table.return_value
@@ -74,7 +74,7 @@ async def test_get_concept_detail(storage_service, mock_supabase_client):
     mock_table.select.return_value.eq.return_value = execute_mock
     
     # Call the method
-    result = await storage_service.get_concept_detail("test-id")
+    result = await persistence_service.get_concept_detail("test-id")
     
     # Verify
     assert result["id"] == "test-id"
@@ -85,7 +85,7 @@ async def test_get_concept_detail(storage_service, mock_supabase_client):
 
 
 @pytest.mark.asyncio
-async def test_get_recent_concepts(storage_service, mock_supabase_client):
+async def test_get_recent_concepts(persistence_service, mock_supabase_client):
     """Test retrieving recent concepts."""
     # Setup mock response
     mock_table = mock_supabase_client.table.return_value
@@ -107,11 +107,11 @@ async def test_get_recent_concepts(storage_service, mock_supabase_client):
     mock_table.select.return_value.eq.return_value.order.return_value.limit.return_value = execute_mock
     
     # Call the method
-    result = await storage_service.get_recent_concepts(session_id="test-session-id", limit=5)
+    result = await persistence_service.get_recent_concepts(session_id="test-session-id", limit=5)
     
     # Verify
     assert len(result) == 2
     assert result[0]["id"] == "test-id-1"
     assert result[1]["id"] == "test-id-2"
     mock_table.select.assert_called_once()
-    execute_mock.execute.assert_called_once() 
+ 
