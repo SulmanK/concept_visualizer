@@ -9,11 +9,10 @@ import jwt
 from typing import Optional, Dict, Any
 
 from supabase import create_client
-from postgrest.exceptions import APIError as PostgrestAPIError
-from fastapi import Request, HTTPException, status
+from fastapi import Request
 
-from ..config import settings, get_masked_value
-from ..exceptions import DatabaseError, StorageError, AuthenticationError
+from ..config import settings
+from ..exceptions import DatabaseError, AuthenticationError
 from ...utils.security.mask import mask_id
 
 
@@ -89,141 +88,6 @@ class SupabaseClient:
                 message=error_message,
                 details={"url": self.url}
             )
-    
-    def _mask_path(self, path: str) -> str:
-        """Mask a storage path to protect session ID privacy.
-        
-        Args:
-            path: Storage path potentially containing session ID
-            
-        Returns:
-            Masked path with session ID portion obscured
-        """
-        if not path or "/" not in path:
-            return path
-            
-        # Split path at first slash to separate session ID from filename
-        parts = path.split("/", 1)
-        if len(parts) >= 2:
-            session_part = parts[0]
-            file_part = parts[1]
-            return f"{get_masked_value(session_part)}/{file_part}"
-        return path
-    
-    def purge_all_data(self, session_id: Optional[str] = None) -> bool:
-        """Purge all data for a session or all data in the system.
-        
-        WARNING: This is a destructive operation! Use with caution.
-        
-        Args:
-            session_id: Optional session ID to purge only data for this session
-            
-        Returns:
-            True if successful, False otherwise
-            
-        Raises:
-            DatabaseError: If database operation fails
-            StorageError: If storage operation fails
-        """
-        from .session_storage import SessionStorage
-        from .concept_storage import ConceptStorage
-        from .image_storage import ImageStorage
-        
-        session_storage = SessionStorage(self)
-        concept_storage = ConceptStorage(self)
-        image_storage = ImageStorage(self)
-        
-        try:
-            if session_id:
-                self.logger.warning(f"Purging all data for session ID {mask_id(session_id)}")
-                
-                try:
-                    # Delete storage objects first (no DB constraints)
-                    image_storage.delete_all_storage_objects("concepts", session_id)
-                except Exception as e:
-                    self.logger.error(f"Error deleting storage objects: {str(e)}")
-                    raise StorageError(
-                        message=f"Failed to delete storage objects for session: {str(e)}",
-                        operation="delete_all",
-                        bucket="concepts",
-                        path=session_id,
-                    )
-                
-                try:
-                    # Delete concepts (and color_variations via cascading delete)
-                    concept_storage.delete_all_concepts(session_id)
-                except PostgrestAPIError as e:
-                    self.logger.error(f"Database error deleting concepts: {str(e)}")
-                    raise DatabaseError(
-                        message=f"Failed to delete concepts: {str(e)}",
-                        operation="delete",
-                        table="concepts",
-                    )
-                except Exception as e:
-                    self.logger.error(f"Error deleting concepts: {str(e)}")
-                    raise DatabaseError(
-                        message=f"Unexpected error deleting concepts: {str(e)}",
-                        operation="delete",
-                        table="concepts",
-                    )
-                
-                # Session will remain unless explicitly deleted
-                self.logger.info(f"Successfully purged all data for session ID {mask_id(session_id)}")
-            else:
-                self.logger.warning("PURGING ALL DATA FROM THE SYSTEM!")
-                
-                try:
-                    # Delete all storage objects
-                    image_storage.delete_all_storage_objects("concepts")
-                except Exception as e:
-                    self.logger.error(f"Error deleting all storage objects: {str(e)}")
-                    raise StorageError(
-                        message=f"Failed to delete all storage objects: {str(e)}",
-                        operation="delete_all",
-                        bucket="concepts",
-                    )
-                
-                try:
-                    # Delete all concepts (and color_variations via cascading delete)
-                    self.client.table("concepts").delete().execute()
-                except PostgrestAPIError as e:
-                    self.logger.error(f"Database error deleting all concepts: {str(e)}")
-                    raise DatabaseError(
-                        message=f"Failed to delete all concepts: {str(e)}",
-                        operation="delete",
-                        table="concepts",
-                    )
-                except Exception as e:
-                    self.logger.error(f"Error deleting all concepts: {str(e)}")
-                    raise DatabaseError(
-                        message=f"Unexpected error deleting all concepts: {str(e)}",
-                        operation="delete",
-                        table="concepts",
-                    )
-                
-                try:
-                    # Delete all sessions
-                    session_storage.delete_all_sessions()
-                except Exception as e:
-                    self.logger.error(f"Error deleting all sessions: {str(e)}")
-                    raise DatabaseError(
-                        message=f"Failed to delete all sessions: {str(e)}",
-                        operation="delete",
-                        table="sessions",
-                    )
-                
-                self.logger.warning("Successfully purged ALL data from the system")
-                
-            return True
-        except (DatabaseError, StorageError):
-            # Re-raise these specific exceptions
-            raise
-        except Exception as e:
-            self.logger.error(f"Unexpected error purging data: {str(e)}")
-            raise DatabaseError(
-                message=f"Unexpected error during data purge: {str(e)}",
-                details={"session_id": mask_id(session_id) if session_id else "all_sessions"}
-            )
 
 
 class SupabaseAuthClient:
@@ -247,7 +111,7 @@ class SupabaseAuthClient:
         try:
             # Initialize Supabase client
             self.client = create_client(self.url, self.key)
-            self.logger.debug(f"Initialized Supabase auth client")
+            self.logger.debug("Initialized Supabase auth client")
         except Exception as e:
             error_message = f"Failed to initialize Supabase auth client: {str(e)}"
             self.logger.error(error_message)
@@ -257,137 +121,141 @@ class SupabaseAuthClient:
             )
     
     def verify_token(self, token: str) -> Dict[str, Any]:
-        """Verify a JWT token and return the payload.
+        """Verify a JWT token and extract user data.
         
         Args:
             token: JWT token to verify
             
         Returns:
-            Token payload with user information
+            User data from the token payload
             
         Raises:
-            HTTPException: If token is invalid or verification fails
+            AuthenticationError: If token verification fails
         """
-        try:
-            # For testing in development, if no JWT secret is available
-            if not self.jwt_secret and settings.ENVIRONMENT == "development":
-                self.logger.warning("JWT verification disabled in development mode")
-                
-                # Simple decode without verification (ONLY FOR DEVELOPMENT)
-                payload = jwt.decode(
-                    token,
-                    options={"verify_signature": False}
-                )
-                return payload
+        if not token:
+            self.logger.warning("Empty token provided for verification")
+            raise AuthenticationError(
+                message="No token provided",
+                details={"code": "no_token"}
+            )
             
-            # Extract project reference from Supabase URL to use as audience
-            # This handles cases where the token's audience is the project URL
-            project_ref = self.url.strip('/').split('.')[-2].split('/')[-1] if self.url else None
-            expected_audience = project_ref or 'authenticated'
-
-            # In development, be more permissive about audience validation
-            if settings.ENVIRONMENT == "development":
-                self.logger.debug(f"Decoding JWT in development mode with flexible audience validation")
-                # Decode with options that skip audience validation in development
-                payload = jwt.decode(
-                    token,
-                    self.jwt_secret,
-                    algorithms=["HS256"],
-                    options={
-                        "verify_signature": True,
-                        "verify_aud": False  # Skip audience validation in development
-                    }
-                )
-                
-                # Log audience information for debugging
-                if 'aud' in payload:
-                    self.logger.debug(f"Token audience: {payload['aud']}, Expected: {expected_audience}")
-                
-                return payload
-                
-            # In production, do proper validation
+        try:
+            # Define JWT decoding options based on our needs
+            options = {
+                "verify_signature": True,  # Verify using the secret
+                "verify_aud": False,       # Don't check audience claim
+                "verify_exp": True,        # Check expiration
+                "require": ["exp", "sub"]  # Require these claims
+            }
+            
+            # Decode and verify the token
             payload = jwt.decode(
                 token,
                 self.jwt_secret,
                 algorithms=["HS256"],
-                audience=expected_audience,  # Use the expected audience for validation
-                options={"verify_signature": True}
+                options=options
             )
+            
+            # Log successful verification with masked subject
+            if "sub" in payload:
+                masked_sub = mask_id(payload["sub"])
+                self.logger.debug(f"Successfully verified token for subject: {masked_sub}")
+            else:
+                self.logger.debug("Successfully verified token (no subject claim)")
+                
             return payload
+            
         except jwt.ExpiredSignatureError:
-            self.logger.warning(f"Token expired: {mask_id(token[:10])}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has expired"
+            self.logger.warning("Token expired")
+            raise AuthenticationError(
+                message="Token expired",
+                details={"code": "token_expired"}
             )
         except jwt.InvalidTokenError as e:
             self.logger.warning(f"Invalid token: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid token: {str(e)}"
+            raise AuthenticationError(
+                message=f"Invalid token: {str(e)}",
+                details={"code": "invalid_token"}
             )
         except Exception as e:
             self.logger.error(f"Unexpected error verifying token: {str(e)}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error verifying authentication token"
+            raise AuthenticationError(
+                message=f"Token verification failed: {str(e)}",
+                details={"code": "verification_error"}
             )
     
     def get_user_from_request(self, request: Request) -> Optional[Dict[str, Any]]:
-        """Extract user information from request authorization header.
+        """Extract and verify user information from a FastAPI request.
+        
+        This checks for:
+        1. Authorization header with Bearer token
+        2. Session cookie
         
         Args:
-            request: FastAPI request object
+            request: FastAPI Request object
             
         Returns:
-            User information from token or None if no valid token
+            User data if found and verified, None otherwise
+            
+        Raises:
+            AuthenticationError: If authentication fails
         """
+        # Try Authorization header first
         auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return None
-            
-        token = auth_header.replace("Bearer ", "")
-        try:
-            payload = self.verify_token(token)
-            
-            # Extract user information from token
-            user_info = {
-                "id": payload.get("sub"),
-                "email": payload.get("email"),
-                "app_metadata": payload.get("app_metadata", {}),
-                "user_metadata": payload.get("user_metadata", {}),
-                "is_anonymous": payload.get("app_metadata", {}).get("is_anonymous", False),
-                "role": payload.get("role", "authenticated"),
-                "token": token
-            }
-            
-            # Log user identification (masked for privacy)
-            self.logger.debug(f"Authenticated user: {mask_id(user_info['id'])}, role: {user_info['role']}")
-            return user_info
-        except HTTPException:
-            # Re-raise HTTP exceptions (already logged in verify_token)
-            raise
-        except Exception as e:
-            self.logger.error(f"Error extracting user from request: {str(e)}")
-            return None
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                # Get the token payload
+                payload = self.verify_token(token)
+                
+                # Extract user information from token
+                user_info = {
+                    "id": payload.get("sub"),  # The subject claim contains the user ID
+                    "email": payload.get("email"),
+                    "app_metadata": payload.get("app_metadata", {}),
+                    "user_metadata": payload.get("user_metadata", {}),
+                    "is_anonymous": payload.get("app_metadata", {}).get("is_anonymous", False),
+                    "role": payload.get("role", "authenticated"),
+                    "token": token  # Include the original token
+                }
+                
+                # Log user identification (masked for privacy)
+                if user_info["id"]:
+                    self.logger.debug(f"Authenticated user: {mask_id(user_info['id'])}, role: {user_info['role']}")
+                
+                return user_info
+            except AuthenticationError as e:
+                # Rethrow with the specific auth error
+                raise e
+            except Exception as e:
+                self.logger.error(f"Error verifying bearer token: {str(e)}")
+                raise AuthenticationError(
+                    message=f"Bearer token verification failed: {str(e)}",
+                    details={"code": "bearer_verification_error"}
+                )
+        
+        # TODO: Add support for session cookies if needed
+        
+        # No valid authentication found
+        return None
 
 
 def get_supabase_client(session_id: Optional[str] = None) -> SupabaseClient:
-    """Create a Supabase client with the specified session ID.
+    """Get a configured Supabase client instance.
     
     Args:
-        session_id: Optional session ID to use
+        session_id: Optional session ID to associate with the client
         
     Returns:
-        Initialized Supabase client
+        Configured SupabaseClient
     """
     return SupabaseClient(session_id=session_id)
 
 
 def get_supabase_auth_client() -> SupabaseAuthClient:
-    """Create a Supabase auth client.
+    """Get a configured Supabase authentication client instance.
     
     Returns:
-        Initialized Supabase auth client
+        Configured SupabaseAuthClient
     """
     return SupabaseAuthClient() 

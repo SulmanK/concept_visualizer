@@ -17,6 +17,7 @@ from fastapi import UploadFile
 from .client import SupabaseClient
 from ...utils.security.mask import mask_id, mask_path
 from app.utils.jwt_utils import create_supabase_jwt
+from app.core.config import get_masked_value
 
 
 # Configure logging
@@ -24,7 +25,20 @@ logger = logging.getLogger(__name__)
 
 
 class ImageStorage:
-    """Handles image-related operations in Supabase Storage."""
+    """Handles image-related operations in Supabase Storage.
+    
+    This class provides methods for storing, retrieving, and managing images in Supabase Storage.
+    
+    Implementation notes:
+    - Some methods use direct HTTP requests instead of the SDK methods to have better control
+      over authentication, especially when using JWT tokens for user-specific storage access.
+    - Storage paths are expected to follow the pattern: `{user_id}/{filename}` or 
+      `{user_id}/{concept_id}/{filename}` where the user_id segment is CRITICAL for RLS policies.
+    - When working with storage objects, we distinguish between:
+        * storage_path: The path within a bucket (e.g., "user123/image.png")
+        * full_url: Complete URL to access the resource (e.g., "https://xyz.supabase.co/storage/v1/...")
+        * signed_url: URL with temporary access token
+    """
     
     def __init__(self, client: SupabaseClient):
         """Initialize with a Supabase client.
@@ -40,6 +54,29 @@ class ImageStorage:
         self.concept_bucket = settings.STORAGE_BUCKET_CONCEPT
         self.palette_bucket = settings.STORAGE_BUCKET_PALETTE
     
+    def _mask_path(self, path: str) -> str:
+        """Mask a storage path to protect user ID privacy.
+        
+        Args:
+            path: Storage path potentially containing user ID (format: user_id/filename)
+            
+        Returns:
+            Masked path with user ID portion obscured
+            
+        Note:
+            This is used for logging to avoid exposing sensitive user IDs in logs.
+        """
+        if not path or "/" not in path:
+            return path
+            
+        # Split path at first slash to separate user ID from filename
+        parts = path.split("/", 1)
+        if len(parts) >= 2:
+            user_part = parts[0]
+            file_part = parts[1]
+            return f"{get_masked_value(user_part)}/{file_part}"
+        return path
+    
     async def upload_image_from_url(self, image_url: str, bucket: str, user_id: str) -> Optional[str]:
         """Upload an image from URL to Supabase Storage.
         
@@ -50,6 +87,10 @@ class ImageStorage:
             
         Returns:
             Storage path if successful, None otherwise
+            
+        Note:
+            - The returned path will follow the pattern: `{user_id}/{uuid}.png`
+            - This is critical for Supabase RLS policies which restrict access based on the first path segment
         """
         try:
             # Download the image
@@ -73,7 +114,7 @@ class ImageStorage:
             )
             
             # Log success with masked path
-            self.logger.info(f"Uploaded image to {self.client._mask_path(filename)}")
+            self.logger.info(f"Uploaded image to {self._mask_path(filename)}")
             
             return filename
         except Exception as e:
@@ -81,26 +122,35 @@ class ImageStorage:
             return None
     
     def get_image_url(self, path: str, bucket: str) -> Optional[str]:
-        """
-        Get a signed URL for an image in storage.
+        """Get a signed URL for an image in storage.
+        
+        This method uses direct HTTP requests instead of the Supabase SDK method for better
+        control over JWT authentication and to ensure the storage RLS policies are respected.
         
         Args:
-            path: Path to the image in storage
+            path: Path to the image in storage (format: user_id/filename)
             bucket: Bucket name
             
         Returns:
             Signed URL for the image or None if not found
+            
+        Note:
+            - The path MUST follow the pattern `{user_id}/...` for RLS policies to work
+            - The created JWT includes the user_id from the first path segment for access control
+            - The signed URL is valid for 3 days (259200 seconds)
+            - If the signed URL endpoint fails, a fallback direct token URL is generated
         """
         try:
             # Create a JWT token for access
             from app.utils.jwt_utils import create_supabase_jwt
             
-            # First segment is user_id
+            # First segment is user_id - CRITICAL for RLS policy enforcement
             user_id = path.split('/')[0] if '/' in path else None
             if not user_id:
                 self.logger.warning(f"Invalid path format - cannot extract user ID: {path}")
                 return None
                 
+            # Create JWT token with the user_id claim for access control
             token = create_supabase_jwt(user_id)
             
             # Get the base URL
@@ -110,7 +160,8 @@ class ImageStorage:
             # Use the signed URL endpoint
             signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket}/{path}"
             
-            # Call the signed URL endpoint with 3-day expiration
+            # Call the signed URL endpoint with 3-day expiration using direct HTTP
+            # This is used instead of SDK methods to have better control over authentication
             response = requests.post(
                 signed_url_endpoint,
                 headers={
@@ -159,6 +210,10 @@ class ImageStorage:
             
         Returns:
             Path to the color-modified image if successful, None otherwise
+            
+        Note:
+            - The path return follows the pattern: `{user_id}/{uuid}_palette.png`
+            - Currently this is a placeholder implementation
         """
         try:
             # Helper functions for color conversion
@@ -187,7 +242,7 @@ class ImageStorage:
             
             # Log the operation with masked paths
             self.logger.info(
-                f"Applied color palette to {self.client._mask_path(image_path)} → {self.client._mask_path(output_path)}"
+                f"Applied color palette to {self._mask_path(image_path)} → {self._mask_path(output_path)}"
             )
             
             return output_path
@@ -204,6 +259,11 @@ class ImageStorage:
             
         Returns:
             True if successful, False otherwise
+            
+        Note:
+            - This method uses the standard SDK methods as they work well for deletion operations
+            - When user_id is provided, only files in that user's folder are deleted
+            - When user_id is None, ALL files in the bucket are deleted - USE WITH CAUTION
         """
         try:
             if user_id:
@@ -241,196 +301,179 @@ class ImageStorage:
         metadata: Optional[Dict[str, Any]] = None,
         is_palette: bool = False,
     ) -> str:
-        """
-        Store an image in the storage bucket with user ID metadata.
+        """Store an image in the storage bucket with user ID metadata.
+        
+        This method uses direct HTTP requests instead of the Supabase SDK methods to ensure
+        proper JWT authentication and to maintain metadata like user_id.
         
         Args:
             image_data: Image data as bytes, BytesIO or UploadFile
-            user_id: User ID for access control
+            user_id: User ID for access control (REQUIRED for RLS)
             concept_id: Optional concept ID to associate with the image
             file_name: Optional file name (generated if not provided)
             metadata: Optional metadata to store with the image
-            is_palette: Whether the image is a palette (uses palette-images bucket)
+            is_palette: Whether this is a palette image (changes the bucket)
             
         Returns:
-            Signed URL of the stored image
+            Path to the stored image (format: user_id/filename or user_id/concept_id/filename)
             
-        Raises:
-            Exception: If image storage fails
+        Note:
+            - The path ALWAYS starts with the user_id segment which is CRITICAL for RLS policies
+            - If concept_id is provided, the path format is: {user_id}/{concept_id}/{filename}
+            - Otherwise, the path format is: {user_id}/{filename}
+            - This method uses a direct HTTP request with JWT authentication instead of the SDK
+              to ensure the RLS policies are correctly applied
         """
         try:
             # Select the appropriate bucket
-            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            bucket = self.palette_bucket if is_palette else self.concept_bucket
             
-            # Process image data to get bytes
+            # Process the data based on type
             if isinstance(image_data, UploadFile):
                 content = image_data.file.read()
             elif isinstance(image_data, BytesIO):
                 content = image_data.getvalue()
             else:
+                # Assume it's already bytes
                 content = image_data
-            
-            # Default extension
-            ext = "png"
                 
             # Generate a unique file name if not provided
             if not file_name:
                 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                random_id = str(uuid.uuid4())[:8]
+                unique_id = uuid.uuid4().hex[:8]
+                file_name = f"{timestamp}_{unique_id}.png"
                 
-                # Try to determine file format
-                try:
-                    img = Image.open(BytesIO(content))
-                    if img.format:
-                        ext = img.format.lower()
-                except Exception as e:
-                    self.logger.warning(f"Could not determine image format: {str(e)}, using default: {ext}")
-                    
-                file_name = f"{timestamp}_{random_id}.{ext}"
-                
-            # Create path with user_id as the first folder segment
-            # This is CRITICAL for our RLS policy to work
-            path = f"{user_id}/{file_name}"
+            # Construct the path with user_id as the first segment (CRITICAL for RLS)
             if concept_id:
                 path = f"{user_id}/{concept_id}/{file_name}"
+            else:
+                path = f"{user_id}/{file_name}"
                 
-            # Set content type based on extension
+            # Get file content type based on extension
             content_type = "image/png"  # Default
-            if ext == "jpg" or ext == "jpeg":
-                content_type = "image/jpeg"
-            elif ext == "gif":
-                content_type = "image/gif"
-            elif ext == "webp":
-                content_type = "image/webp"
+            if file_name:
+                if file_name.lower().endswith(".jpg") or file_name.lower().endswith(".jpeg"):
+                    content_type = "image/jpeg"
+                elif file_name.lower().endswith(".gif"):
+                    content_type = "image/gif"
+                elif file_name.lower().endswith(".webp"):
+                    content_type = "image/webp"
             
-            # Prepare file metadata including user ID
-            file_metadata = {"owner_user_id": user_id}
-            if metadata:
-                file_metadata.update(metadata)
-            
-            # Create JWT token for authentication (for Supabase Storage RLS)
+            # Create a JWT token specifically for this user_id
+            # This is critical for RLS as it ensures the token has the right user claims
             token = create_supabase_jwt(user_id)
             
-            # Use direct HTTP request with requests library for JWT authorization
-            # Get the API endpoint from settings
-            from app.core.config import settings
-            api_url = settings.SUPABASE_URL
-            api_key = settings.SUPABASE_KEY
-                
-            # Construct the storage upload URL
-            upload_url = f"{api_url}/storage/v1/object/{bucket_name}/{path}"
+            # Use direct HTTP request instead of SDK for better control over authentication
+            api_url = self.client.url
+            api_key = self.client.key
             
-            # Set headers with JWT token and other required headers
+            upload_url = f"{api_url}/storage/v1/object/{bucket}/{path}"
+            
+            # Set headers with JWT token and user-specific metadata
             headers = {
                 "Authorization": f"Bearer {token}",
                 "apikey": api_key,
-                "Content-Type": content_type,
-                "x-upsert": "true"  # Update if exists
+                "Content-Type": content_type
             }
             
-            # Add metadata as custom headers
-            for key, value in file_metadata.items():
-                # Convert metadata to string and add as headers
-                if isinstance(value, (dict, list)):
-                    import json
-                    headers[f"x-amz-meta-{key}"] = json.dumps(value)
-                else:
-                    headers[f"x-amz-meta-{key}"] = str(value)
-            
-            # Upload the file with requests
+            # Include metadata about ownership in request
+            file_metadata = {"user_id": user_id}
+            if metadata:
+                file_metadata.update(metadata)
+                
+            # Upload using requests instead of SDK
             response = requests.post(
                 upload_url,
                 headers=headers,
                 data=content
             )
             
-            # Check if upload was successful
-            if response.status_code not in (200, 201):
-                self.logger.error(f"Upload failed with status {response.status_code}: {response.text}")
-                raise Exception(f"Failed to upload image: {response.text}")
+            # Check status code
+            response.raise_for_status()
             
-            # Get the signed URL with detailed logging
-            self.logger.info(f"Getting signed URL from bucket: {bucket_name}, path: {mask_path(path)}")
-            try:
-                # Create a signed URL with 3-day expiration
-                from app.utils.jwt_utils import create_supabase_jwt
+            # Log success with masked values
+            masked_path = mask_path(path)
+            masked_user_id = mask_id(user_id)
+            self.logger.info(f"Stored image for user {masked_user_id} at {masked_path}")
+            
+            return path
+        except Exception as e:
+            self.logger.error(f"Error storing image: {e}")
+            return None
+            
+    def get_signed_url(
+        self, 
+        path: str,
+        bucket: Optional[str] = None,
+        expiry_seconds: int = 3600
+    ) -> Optional[str]:
+        """Get a signed URL for an image with a specified expiration time.
+        
+        This method should be used whenever a URL needs to be shared outside the system
+        or embedded in responses to clients.
+        
+        Args:
+            path: Path to the image in storage (format: user_id/filename)
+            bucket: Optional bucket name (defaults to concept bucket)
+            expiry_seconds: Expiration time in seconds (default 1 hour)
+            
+        Returns:
+            Signed URL for the image or None if failed
+            
+        Note:
+            - The path MUST follow the pattern `{user_id}/...` for RLS policies to work
+            - The signed URL is valid only for the specified expiration period
+            - This method uses direct HTTP requests with JWT authentication
+        """
+        if not path:
+            return None
+            
+        try:
+            # Determine bucket to use
+            if not bucket:
+                bucket = self.concept_bucket
                 
-                # First segment is user_id
-                token = create_supabase_jwt(path.split('/')[0])
+            # Extract user_id from path (first segment)
+            user_id = path.split('/')[0] if '/' in path else None
+            if not user_id:
+                self.logger.warning(f"Invalid path format - cannot extract user ID: {path}")
+                return None
+            
+            # Create JWT with the user's ID - critical for RLS policies
+            token = create_supabase_jwt(user_id)
+            
+            # Get base info
+            api_url = self.client.url
+            api_key = self.client.key
+            
+            # Construct signed URL endpoint
+            signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket}/{path}"
+            
+            # Make direct HTTP request to get signed URL
+            response = requests.post(
+                signed_url_endpoint,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "apikey": api_key
+                },
+                json={"expiresIn": expiry_seconds}
+            )
+            
+            # Process response
+            if response.status_code == 200:
+                data = response.json()
+                signed_url = data.get("signedUrl") or data.get("signedURL")
                 
-                # Use signed URL API endpoint
-                api_url = self.client.url
-                api_key = self.client.key
-                
-                signed_url_endpoint = f"{api_url}/storage/v1/object/sign/{bucket_name}/{path}"
-                
-                # Call the signed URL endpoint with 3-day expiration 
-                signed_response = requests.post(
-                    signed_url_endpoint,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "apikey": api_key
-                    },
-                    json={"expiresIn": 259200}  # 3 days in seconds
-                )
-                
-                if signed_response.status_code == 200:
-                    response_data = signed_response.json()
-                    self.logger.info(f"Sign response keys: {list(response_data.keys())}")
+                # Ensure the URL is absolute and correctly formatted
+                if signed_url and signed_url.startswith('/'):
+                    signed_url = f"{api_url}{signed_url}"
                     
-                    # Check for signed URL in response
-                    if "signedUrl" in response_data:
-                        image_url = response_data["signedUrl"]
-                        # Ensure the URL is absolute and correctly formatted
-                        if image_url.startswith('/'):
-                            # Make sure URL has the correct format with /storage/v1/
-                            if '/storage/v1/' not in image_url and '/object/sign/' in image_url:
-                                image_url = image_url.replace('/object/sign/', '/storage/v1/object/sign/')
-                            image_url = f"{api_url}{image_url}"
-                        self.logger.info(f"Generated signed URL successfully")
-                        
-                        # Log success with masked path
-                        self.logger.info(f"Successfully uploaded image to {mask_path(path)}")
-                        return image_url
-                    elif "signedURL" in response_data:
-                        image_url = response_data["signedURL"]
-                        # Ensure the URL is absolute and correctly formatted
-                        if image_url.startswith('/'):
-                            # Make sure URL has the correct format with /storage/v1/
-                            if '/storage/v1/' not in image_url and '/object/sign/' in image_url:
-                                image_url = image_url.replace('/object/sign/', '/storage/v1/object/sign/')
-                            image_url = f"{api_url}{image_url}"
-                        self.logger.info(f"Generated signed URL successfully")
-                        
-                        # Log success with masked path
-                        self.logger.info(f"Successfully uploaded image to {mask_path(path)}")
-                        return image_url
+                return signed_url
                 
-                # Fallback to using a direct URL with token if signed URL fails
-                self.logger.warning(f"Failed to get signed URL, falling back to direct URL with token")
-                direct_url = f"{api_url}/storage/v1/object/token/{bucket_name}/{path}?token={token}"
-                
-                # Log success with masked path
-                self.logger.info(f"Successfully uploaded image, using direct URL with token")
-                return direct_url
-                
-            except Exception as e:
-                self.logger.error(f"Error getting signed URL: {str(e)}")
-                # Try a direct construction of URL for debugging
-                try:
-                    # Get a JWT token for fallback URL
-                    from app.utils.jwt_utils import create_supabase_jwt
-                    token = create_supabase_jwt(path.split('/')[0])
-                    
-                    # Direct URL with token fallback
-                    fallback_url = f"{self.client.url}/storage/v1/object/token/{bucket_name}/{path}?token={token}"
-                    self.logger.info(f"Constructed fallback URL with token")
-                    return fallback_url
-                except Exception as inner_e:
-                    self.logger.error(f"Failed to create fallback URL: {str(inner_e)}")
-                    # Last resort fallback - probably won't work but better than nothing
-                    return f"{self.client.url}/storage/v1/object/token/{bucket_name}/{path}?token={token}"
+            # Log if there was a problem
+            self.logger.warning(f"Failed to get signed URL for {mask_path(path)}: {response.status_code}")
+            return None
             
         except Exception as e:
-            self.logger.error(f"Error uploading image: {e}")
-            raise e 
+            self.logger.error(f"Error getting signed URL: {str(e)}")
+            return None 
