@@ -7,6 +7,7 @@ This module provides services for processing and manipulating images.
 from functools import lru_cache
 from typing import Optional
 
+from app.services.image.interface import ImageServiceInterface, ImageProcessingServiceInterface
 from app.services.image.service import ImageService, ImageError
 from app.services.image.processing_service import ImageProcessingService, ImageProcessingError
 from app.services.persistence import get_image_persistence_service
@@ -19,28 +20,30 @@ __all__ = [
     "ImageProcessingService",
     "ImageProcessingError",
     "get_image_service",
-    "get_image_processing_service"
+    "get_image_processing_service",
+    "ImageServiceInterface",
+    "ImageProcessingServiceInterface"
 ]
 
 
 @lru_cache()
-def get_image_processing_service() -> ImageProcessingService:
+def get_image_processing_service() -> ImageProcessingServiceInterface:
     """
     Get image processing service instance.
     
     Returns:
-        ImageProcessingService: Service for processing images
+        ImageProcessingServiceInterface: Service for processing images
     """
     return ImageProcessingService()
 
 
 @lru_cache()
-def get_image_service() -> ImageService:
+def get_image_service() -> ImageServiceInterface:
     """
     Get image service instance.
     
     Returns:
-        ImageService: Service for processing and manipulating images
+        ImageServiceInterface: Service for processing and manipulating images
     """
     persistence_service = get_image_persistence_service()
     processing_service = get_image_processing_service()

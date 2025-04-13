@@ -7,9 +7,12 @@ access to Supabase storage buckets.
 
 import time
 import logging
+import json
+import base64
 from typing import Dict, Any, Optional
 
 from jose import jwt
+from jose.exceptions import JWTError
 
 from app.core.config import settings
 
@@ -93,7 +96,7 @@ def verify_jwt(token: str) -> Dict[str, Any]:
         error_message = "JWT token has expired"
         logger.warning(error_message)
         raise ValueError(error_message)
-    except jwt.InvalidTokenError as e:
+    except JWTError as e:
         error_message = f"Invalid JWT token: {str(e)}"
         logger.warning(error_message)
         raise ValueError(error_message)
@@ -103,18 +106,27 @@ def verify_jwt(token: str) -> Dict[str, Any]:
         raise ValueError(error_message)
 
 
-def extract_user_id_from_token(token: str) -> Optional[str]:
+def extract_user_id_from_token(token: str, validate: bool = True) -> Optional[str]:
     """
     Extract the user ID from a JWT token.
     
     Args:
         token: JWT token
+        validate: Whether to fully validate the token (set to False for rate limiting purposes)
         
     Returns:
         User ID or None if not found or token is invalid
     """
     try:
-        claims = verify_jwt(token)
+        if validate:
+            # Full validation for authentication purposes
+            claims = verify_jwt(token)
+        else:
+            # Simple decode without full validation - just for rate limiting
+            claims = decode_token(token)
+            if not claims:
+                logger.warning("Failed to decode token")
+                return None
         
         # Try to get user ID from different possible locations
         if "user_id" in claims:
@@ -129,6 +141,7 @@ def extract_user_id_from_token(token: str) -> Optional[str]:
     except Exception as e:
         logger.warning(f"Failed to extract user_id from token: {str(e)}")
         return None
+
 
 def create_supabase_jwt_for_storage(path: str, expiry_timestamp: int) -> str:
     """
@@ -153,4 +166,30 @@ def create_supabase_jwt_for_storage(path: str, expiry_timestamp: int) -> str:
     
     # Generate and sign the token
     token = jwt.encode(payload, settings.SUPABASE_JWT_SECRET, algorithm="HS256")
-    return token 
+    return token
+
+
+def decode_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Simple decode of JWT token without verification.
+    
+    Args:
+        token: JWT token to decode
+        
+    Returns:
+        Decoded payload or None if decoding failed
+    """
+    try:
+        # Get payload part (second segment)
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+            
+        # Decode the payload
+        padded = parts[1] + '=' * (4 - len(parts[1]) % 4)
+        decoded = base64.b64decode(padded)
+        payload = json.loads(decoded)
+        return payload
+    except Exception as e:
+        logger.warning(f"Error decoding token: {str(e)}")
+        return None 

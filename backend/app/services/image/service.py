@@ -16,8 +16,9 @@ import uuid
 from fastapi import UploadFile
 from PIL import Image as PILImage
 
-from app.services.interfaces import ImageServiceInterface, ImagePersistenceServiceInterface
-from app.services.interfaces.image_service import ImageProcessingServiceInterface
+# Fix circular import - import interfaces directly from their modules
+from app.services.image.interface import ImageServiceInterface, ImageProcessingServiceInterface
+from app.services.persistence.interface import ImagePersistenceServiceInterface
 from app.core.exceptions import ImageStorageError
 from app.utils.security.mask import mask_id
 from app.core.config import settings

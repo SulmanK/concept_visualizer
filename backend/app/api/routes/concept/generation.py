@@ -18,12 +18,10 @@ from slowapi.util import get_remote_address
 from app.models.request import PromptRequest
 from app.models.response import GenerationResponse, PaletteVariation, TaskResponse
 from app.utils.api_limits import apply_rate_limit, apply_multiple_rate_limits
-from app.services.interfaces import (
-    ConceptServiceInterface,
-    ImageServiceInterface,
-    StorageServiceInterface,
-    TaskServiceInterface
-)
+from app.services.concept.interface import ConceptServiceInterface
+from app.services.image.interface import ImageServiceInterface
+from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface
+from app.services.task.interface import TaskServiceInterface
 from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError, TaskNotFoundError
 from app.core.config import settings
@@ -256,12 +254,6 @@ async def generate_concept_with_palettes(
     try:
         # Get dependencies from commons
         user_id = commons.user_id
-        
-        # Check rate limits for concept generation
-        await apply_rate_limit(req, "/concepts/generate-with-palettes", "10/month")
-        
-        # Check rate limits for concept storage
-        await apply_rate_limit(req, "/concepts/store", "10/month")
         
         # Check for existing active tasks for this user
         try:

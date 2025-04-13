@@ -63,4 +63,37 @@ class GenerationResponse(APIBaseModel):
     refinement_prompt: Optional[str] = Field(
         None,
         description="Prompt used for refinement"
-    ) 
+    )
+
+
+class RefinementResponse(GenerationResponse):
+    """Response model specifically for concept refinement."""
+    
+    original_image_url: HttpUrl = Field(..., description="URL of the original image that was refined")
+    refinement_prompt: str = Field(..., description="Prompt used for refinement")
+    original_concept_id: Optional[str] = Field(None, description="ID of the original concept")
+    
+
+class ConceptSummary(APIBaseModel):
+    """Summary information about a concept for list views."""
+    
+    id: str = Field(..., description="Unique concept ID")
+    created_at: str = Field(..., description="Creation timestamp")
+    logo_description: str = Field(..., description="The logo description prompt")
+    theme_description: str = Field(..., description="The theme description prompt")
+    image_url: HttpUrl = Field(..., description="URL of the concept image")
+    has_variations: bool = Field(default=True, description="Whether the concept has color variations")
+    variations_count: int = Field(default=0, description="Number of available color variations")
+    is_refinement: bool = Field(default=False, description="Whether this is a refinement of another concept")
+    original_concept_id: Optional[str] = Field(None, description="ID of the original concept if this is a refinement")
+
+
+class ConceptDetail(ConceptSummary):
+    """Detailed information about a concept including all variations."""
+    
+    variations: List[PaletteVariation] = Field(
+        default=[],
+        description="List of all color variations with their images"
+    )
+    refinement_prompt: Optional[str] = Field(None, description="Prompt used for refinement, if applicable")
+    original_image_url: Optional[HttpUrl] = Field(None, description="URL of the original image, if this is a refinement") 

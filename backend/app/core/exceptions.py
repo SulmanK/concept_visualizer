@@ -557,4 +557,137 @@ class ImageNotFoundError(ImageStorageError):
             bucket: The storage bucket that was queried
             details: Additional error details
         """
-        super().__init__(message, operation="download", bucket=bucket, path=path, details=details) 
+        super().__init__(message, operation="download", bucket=bucket, path=path, details=details)
+
+
+# API Error Exceptions
+class ResourceNotFoundError(ApplicationError):
+    """Exception raised when a requested resource is not found."""
+    
+    def __init__(
+        self, 
+        message: str = "Resource not found", 
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with resource not found details.
+        
+        Args:
+            message: Human-readable error message
+            resource_type: Type of resource that was not found
+            resource_id: ID of the resource that was not found
+            details: Additional error details
+        """
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+        
+        error_details = details or {}
+        if resource_type:
+            error_details["resource_type"] = resource_type
+        if resource_id:
+            error_details["resource_id"] = resource_id
+            
+        super().__init__(message, error_details)
+
+
+class ValidationError(ApplicationError):
+    """Exception raised when input validation fails."""
+    
+    def __init__(
+        self, 
+        message: str = "Validation error", 
+        field_errors: Optional[Dict[str, List[str]]] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with validation error details.
+        
+        Args:
+            message: Human-readable error message
+            field_errors: Dictionary mapping field names to lists of error messages
+            details: Additional error details
+        """
+        self.field_errors = field_errors or {}
+        
+        error_details = details or {}
+        if field_errors:
+            error_details["field_errors"] = field_errors
+            
+        super().__init__(message, error_details)
+
+
+class ServiceUnavailableError(ApplicationError):
+    """Exception raised when a service is unavailable."""
+    
+    def __init__(
+        self, 
+        message: str = "Service unavailable", 
+        service_name: Optional[str] = None,
+        retry_after: Optional[int] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with service unavailable details.
+        
+        Args:
+            message: Human-readable error message
+            service_name: Name of the unavailable service
+            retry_after: Seconds after which to retry the request
+            details: Additional error details
+        """
+        self.service_name = service_name
+        self.retry_after = retry_after
+        
+        error_details = details or {}
+        if service_name:
+            error_details["service_name"] = service_name
+        if retry_after:
+            error_details["retry_after"] = retry_after
+            
+        super().__init__(message, error_details)
+
+
+class TaskError(ApplicationError):
+    """Base exception for task-related errors."""
+    
+    def __init__(
+        self, 
+        message: str = "Task error", 
+        task_id: Optional[str] = None,
+        task_type: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with task error details.
+        
+        Args:
+            message: Human-readable error message
+            task_id: ID of the task involved
+            task_type: Type of the task involved
+            details: Additional error details
+        """
+        self.task_id = task_id
+        self.task_type = task_type
+        
+        error_details = details or {}
+        if task_id:
+            error_details["task_id"] = task_id
+        if task_type:
+            error_details["task_type"] = task_type
+            
+        super().__init__(message, error_details)
+
+
+class TaskNotFoundError(TaskError):
+    """Exception raised when a task is not found."""
+    
+    def __init__(
+        self, 
+        message: str = "Task not found", 
+        task_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with task not found details."""
+        super().__init__(message, task_id=task_id, details=details) 
