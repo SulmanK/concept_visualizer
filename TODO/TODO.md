@@ -146,7 +146,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**7. URL Handling Consistency (Backend)**
+**7. URL Handling Consistency (Backend)** [x]
 
 *   **Goal:** Ensure services return full, ready-to-use, signed URLs.
 
@@ -520,6 +520,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 *   **Goal:** Organize the execution of the refactoring.
 
     4.  **Branching:** Use descriptive branch names (e.g., `refactor/backend-error-handling`, `feature/task-concurrency-limit`, `chore/remove-concept-context`).
+        Skip Writing any tests for now. If you need to run a python command use UV, 
     5.  **Implement & Test:** Work on one ticket/branch at a time. Write code, update/write tests.
     6.  **Code Review:** Create Pull Requests. Ensure reviewers check code logic, adherence to the plan, and test coverage. Merge PRs frequently.
 
