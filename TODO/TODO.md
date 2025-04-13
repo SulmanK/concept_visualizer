@@ -114,7 +114,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**5. Supabase Client & Storage (Backend)**
+**5. Supabase Client & Storage (Backend)** [x]
 
 *   **Goal:** Clean up client responsibilities and improve storage clarity.
 
@@ -139,7 +139,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**6. DRY - Route Logic (Rate Limit Info Storage)**
+**6. DRY - Route Logic (Rate Limit Info Storage)** [x]
 
 *   **Goal:** Remove redundant code setting `request.state.limiter_info`.
 *   **Action:** This task is fully addressed by the plan for **Item 4 (Rate Limiting Application)**. Once the middleware handles applying limits and storing the info in `request.state`, the duplicated logic in routes will be removed. No separate steps needed here beyond completing Item 4.
