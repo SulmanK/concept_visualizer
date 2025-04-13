@@ -58,13 +58,22 @@ async def generate_and_store_concept(
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication required")
         
-        # Generate base image and store it in Supabase Storage
-        base_image_path, base_image_url = await commons.image_service.generate_and_store_image(
-            request.logo_description,
-            user_id  # Use user_id instead of session_id
+        # Generate base concept using ConceptService (returns image data and URL)
+        concept_response = await commons.concept_service.generate_concept(
+            logo_description=request.logo_description,
+            theme_description=request.theme_description,
+            user_id=user_id,
+            skip_persistence=True  # Skip persistence in the service, we'll handle it here
         )
         
-        if not base_image_path or not base_image_url:
+        if not concept_response or "image_url" not in concept_response:
+            raise ServiceUnavailableError(detail="Failed to generate base concept")
+            
+        # Extract image URL and path
+        image_url = concept_response["image_url"]
+        image_path = concept_response.get("image_path")
+        
+        if not image_url or not image_path:
             raise ServiceUnavailableError(detail="Failed to generate or store image")
         
         # Generate color palettes
@@ -75,10 +84,12 @@ async def generate_and_store_concept(
         )
         
         # Apply color palettes to create variations and store in Supabase Storage
+        # Use image_service to process palettes but get image data through image_persistence_service
+        image_data = await commons.image_persistence_service.get_image(image_path)
         palette_variations = await commons.image_service.create_palette_variations(
-            base_image_path,
-            raw_palettes,
-            user_id  # Use user_id instead of session_id
+            base_image_data=image_data,
+            palettes=raw_palettes,
+            user_id=user_id
         )
         
         # Store concept in Supabase database
@@ -86,8 +97,8 @@ async def generate_and_store_concept(
             "user_id": user_id,
             "logo_description": request.logo_description,
             "theme_description": request.theme_description,
-            "image_path": base_image_path,
-            "image_url": base_image_url,
+            "image_path": image_path,
+            "image_url": image_url,
             "color_palettes": palette_variations,
             "is_anonymous": True
         })
@@ -98,7 +109,7 @@ async def generate_and_store_concept(
         # Return generation response
         return GenerationResponse(
             prompt_id=stored_concept["id"],
-            image_url=base_image_url,
+            image_url=image_url,
             color_palettes=[
                 {
                     "name": p["name"],

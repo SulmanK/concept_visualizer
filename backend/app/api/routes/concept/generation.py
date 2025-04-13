@@ -37,6 +37,8 @@ from app.utils.api_limits.decorators import store_rate_limit_info
 from app.utils.api_limits.endpoints import apply_rate_limit, apply_multiple_rate_limits
 from app.utils.security.mask import mask_id, mask_path
 from app.services.task.service import TaskError
+from app.services.persistence.image_persistence_service import ImagePersistenceService
+from app.core.supabase.client import SupabaseClient
 
 # Configure logging
 logger = logging.getLogger("concept_generation_api")
@@ -166,9 +168,23 @@ async def generate_concept(
         )
         
         # Apply color palettes to create variations and store in Supabase Storage
+        # First get the image data if image_path is available
+        base_image_data = None
+        if "image_path" in concept_response:
+            try:
+                # Get image data from persistence service
+                base_image_data = await commons.image_persistence_service.get_image_async(
+                    concept_response["image_path"]
+                )
+            except Exception as e:
+                logger.error(f"Error fetching image data: {str(e)}")
+                # Continue with palette variations even if we can't fetch the image data
+                # as create_palette_variations might handle this case
+                
+        # Apply color palettes to create variations
         palette_variations = await commons.image_service.create_palette_variations(
-            base_image_path=concept_response["image_path"] if "image_path" in concept_response else None,
-            raw_palettes=raw_palettes,
+            base_image_data=base_image_data,
+            palettes=raw_palettes,
             user_id=user_id
         )
         
@@ -443,7 +459,11 @@ async def generate_concept_background_task(
             raise ServiceUnavailableError(detail=error_msg)
         
         # First, store the image in Supabase
-        image_path, stored_image_url = image_service.store_image(
+        # Create a direct instance of the image persistence service
+        supabase_client = SupabaseClient(url=settings.SUPABASE_URL, key=settings.SUPABASE_KEY)
+        image_persistence_service = ImagePersistenceService(client=supabase_client)
+        
+        image_path, stored_image_url = image_persistence_service.store_image(
             image_data=image_data,
             user_id=user_id,
             metadata={
@@ -466,8 +486,21 @@ async def generate_concept_background_task(
             
         logger.info(f"Generated {len(raw_palettes)} color palettes")
         
-        # Create palette variations using the stored image path
-        palette_variations = await image_service.create_palette_variations(
+        # Create palette variations using direct service instances
+        from app.services.image.service import ImageService
+        from app.services.image.processing_service import ImageProcessingService
+        
+        # Create all needed services directly
+        image_processing_service = ImageProcessingService()
+        
+        # Create the image service with our services
+        image_svc = ImageService(
+            persistence_service=image_persistence_service,
+            processing_service=image_processing_service
+        )
+        
+        # Create palette variations
+        palette_variations = await image_svc.create_palette_variations(
             base_image_data=image_data,
             palettes=raw_palettes,
             user_id=user_id,
