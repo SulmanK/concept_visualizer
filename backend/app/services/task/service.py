@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from app.core.supabase.client import SupabaseClient
-from app.services.interfaces.task_service import TaskServiceInterface
+from app.services.task.interface import TaskServiceInterface
 from app.utils.security.mask import mask_id
 
 # Custom exceptions

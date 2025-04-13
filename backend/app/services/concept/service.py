@@ -13,12 +13,10 @@ import os
 
 from app.core.exceptions import ConceptError
 from app.models.response import GenerationResponse, ColorPalette
-from app.services.interfaces import (
-    ConceptServiceInterface,
-    ImageServiceInterface,
-    ConceptPersistenceServiceInterface,
-    ImagePersistenceServiceInterface
-)
+from app.services.concept.interface import ConceptServiceInterface
+from app.services.image.interface import ImageServiceInterface
+from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface, ImagePersistenceServiceInterface
+from app.services.task.interface import TaskServiceInterface
 from app.services.jigsawstack.client import JigsawStackClient
 from app.services.concept.generation import ConceptGenerator
 from app.services.concept.refinement import ConceptRefiner

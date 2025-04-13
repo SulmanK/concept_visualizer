@@ -1,37 +1,29 @@
 """
-Concept storage endpoints.
+Concept storage routes.
 
-This module provides endpoints for storing and retrieving concepts
-from the database using user authentication.
+This module provides API endpoints for storing and retrieving
+visual concepts from the database.
 """
 
 import logging
-from typing import Optional, List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Response, HTTPException, Request
-from slowapi.util import get_remote_address
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Response, Request
+from pydantic import ValidationError
 
-from app.models.request import PromptRequest
-from app.models.response import GenerationResponse
-from app.models.concept import ConceptSummary, ConceptDetail
-from app.services.image import get_image_service
-from app.services.concept import get_concept_service
-from app.services.persistence import get_concept_persistence_service
-from app.services.interfaces import (
-    ConceptServiceInterface,
-    ImageServiceInterface,
-    StorageServiceInterface
-)
 from app.api.dependencies import CommonDependencies
-from app.api.middleware.auth_middleware import get_current_user_id
-from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
+from app.models.concept.request import PromptRequest
+from app.models.concept.response import GenerationResponse, ConceptSummary, ConceptDetail
 from app.utils.api_limits import apply_rate_limit
-from app.utils.security.mask import mask_id
+from app.core.exceptions import ResourceNotFoundError, ServiceUnavailableError
 
-# Configure logging
-logger = logging.getLogger("concept_storage_api")
+# Utility function to get current user ID from request
+from app.utils.auth.user import get_current_user_id
 
+# Configure logger
+logger = logging.getLogger(__name__)
+
+# Create API router
 router = APIRouter()
 
 
@@ -43,20 +35,23 @@ async def generate_and_store_concept(
     commons: CommonDependencies = Depends()
 ):
     """
-    Generate a concept based on user prompt and store it in the database.
+    Generate and store a new concept based on prompt.
+    
+    This endpoint handles both generation and storage in a single call:
+    1. Generates a base image based on the logo description
+    2. Generates color palettes based on the theme
+    3. Creates color variations of the base image
+    4. Stores everything in the database
     
     Args:
-        request: User prompt request with logo and theme descriptions
-        response: FastAPI response object for setting cookies
-        req: The FastAPI request object for rate limiting
-        commons: Common dependencies including all necessary services
+        request: Prompt request with logo and theme descriptions
+        response: FastAPI response object
+        req: FastAPI request object
+        commons: Common dependencies including services
         
     Returns:
         Generated concept with image URL and color palettes
     """
-    # Apply rate limit
-    await apply_rate_limit(req, "/storage/store", "10/month")
-    
     try:
         # Get user ID from authenticated request
         user_id = get_current_user_id(req)
@@ -139,9 +134,6 @@ async def get_recent_concepts(
     Returns:
         List of recent concepts
     """
-    # Apply rate limit - higher limits for read operations
-    await apply_rate_limit(req, "/storage/recent", "30/minute", "minute")
-    
     try:
         # Get user ID from authenticated request
         user_id = get_current_user_id(req)
@@ -174,9 +166,6 @@ async def get_concept_detail(
     Returns:
         Detailed concept information
     """
-    # Apply rate limit - higher limits for read operations
-    await apply_rate_limit(req, f"/storage/concept/{concept_id}", "30/minute", "minute")
-    
     try:
         # Get user ID from authenticated request
         user_id = get_current_user_id(req)

@@ -10,7 +10,7 @@ from functools import lru_cache
 from typing import Dict, List, Any, Optional, Union
 
 from app.services.jigsawstack.client import JigsawStackClient
-from app.services.interfaces.jigsawstack_service import JigsawStackServiceInterface
+from app.services.jigsawstack.interface import JigsawStackServiceInterface
 from app.core.config import settings
 from app.core.exceptions import (
     JigsawStackError,
