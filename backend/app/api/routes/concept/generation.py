@@ -37,6 +37,8 @@ from app.utils.api_limits.decorators import store_rate_limit_info
 from app.utils.api_limits.endpoints import apply_rate_limit, apply_multiple_rate_limits
 from app.utils.security.mask import mask_id, mask_path
 from app.services.task.service import TaskError
+from app.services.persistence.image_persistence_service import ImagePersistenceService
+from app.core.supabase.client import SupabaseClient
 
 # Configure logging
 logger = logging.getLogger("concept_generation_api")
@@ -151,13 +153,55 @@ async def generate_concept(
             skip_persistence=True  # Skip persistence in the service, we'll handle it here
         )
         
-        # Extract the image URL
+        # Extract the image URL and image data
         image_url = concept_response["image_url"]
+        image_data = concept_response.get("image_data")
         
         if not image_url:
             raise ServiceUnavailableError(detail="Failed to generate base concept")
         
         logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
+        
+        # Check if we have image_data directly from the concept service
+        if not image_data:
+            # If not, we need to download it - this is a fallback for backward compatibility
+            logger.info("Image data not provided in concept response, downloading from URL")
+            try:
+                # Check if the image_url is a file path
+                if image_url.startswith("file://"):
+                    import os
+                    # Extract the file path from the URL
+                    file_path = image_url[7:]  # Remove the "file://" prefix
+                    
+                    # Check if the file exists
+                    if not os.path.exists(file_path):
+                        logger.error(f"Local file not found: {mask_id(file_path)}")
+                        raise ServiceUnavailableError(detail="Image file not found")
+                    
+                    # Read the file
+                    with open(file_path, "rb") as f:
+                        image_data = f.read()
+                        
+                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                else:
+                    # For remote URLs, use httpx to download
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(image_url)
+                        response.raise_for_status()
+                        image_data = response.content
+                        
+                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    
+                if not image_data:
+                    logger.error(f"No image data obtained from: {mask_id(image_url)}")
+                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
+            except Exception as e:
+                error_msg = f"Error getting image data: {str(e)}"
+                logger.error(error_msg)
+                raise ServiceUnavailableError(detail=error_msg)
+        else:
+            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
         
         # Generate color palettes
         raw_palettes = await commons.concept_service.generate_color_palettes(
@@ -166,9 +210,23 @@ async def generate_concept(
         )
         
         # Apply color palettes to create variations and store in Supabase Storage
+        # First get the image data if image_path is available
+        base_image_data = None
+        if "image_path" in concept_response:
+            try:
+                # Get image data from persistence service
+                base_image_data = await commons.image_persistence_service.get_image_async(
+                    concept_response["image_path"]
+                )
+            except Exception as e:
+                logger.error(f"Error fetching image data: {str(e)}")
+                # Continue with palette variations even if we can't fetch the image data
+                # as create_palette_variations might handle this case
+                
+        # Apply color palettes to create variations
         palette_variations = await commons.image_service.create_palette_variations(
-            base_image_path=concept_response["image_path"] if "image_path" in concept_response else None,
-            raw_palettes=raw_palettes,
+            base_image_data=base_image_data,
+            palettes=raw_palettes,
             user_id=user_id
         )
         
@@ -398,52 +456,62 @@ async def generate_concept_background_task(
             skip_persistence=True  # Skip persistence in the service, we'll handle it here
         )
         
-        # Extract the image URL
+        # Extract the image URL and image data
         image_url = concept_response["image_url"]
+        image_data = concept_response.get("image_data")
         
         if not image_url:
             raise ServiceUnavailableError(detail="Failed to generate base concept")
         
         logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
         
-        # Get the image data - handle both remote URLs and local file paths
-        try:
-            # Check if the image_url is a file path
-            if image_url.startswith("file://"):
-                import os
-                # Extract the file path from the URL
-                file_path = image_url[7:]  # Remove the "file://" prefix
-                
-                # Check if the file exists
-                if not os.path.exists(file_path):
-                    logger.error(f"Local file not found: {mask_id(file_path)}")
-                    raise ServiceUnavailableError(detail="Image file not found")
-                
-                # Read the file
-                with open(file_path, "rb") as f:
-                    image_data = f.read()
+        # Check if we have image_data directly from the concept service
+        if not image_data:
+            # If not, we need to download it - this is a fallback for backward compatibility
+            logger.info("Image data not provided in concept response, downloading from URL")
+            try:
+                # Check if the image_url is a file path
+                if image_url.startswith("file://"):
+                    import os
+                    # Extract the file path from the URL
+                    file_path = image_url[7:]  # Remove the "file://" prefix
                     
-                logger.info(f"Read image data from local file: {mask_id(file_path)}")
-            else:
-                # For remote URLs, use httpx to download
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(image_url)
-                    response.raise_for_status()
-                    image_data = response.content
+                    # Check if the file exists
+                    if not os.path.exists(file_path):
+                        logger.error(f"Local file not found: {mask_id(file_path)}")
+                        raise ServiceUnavailableError(detail="Image file not found")
                     
-                logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
-                
-            if not image_data:
-                logger.error(f"No image data obtained from: {mask_id(image_url)}")
-                raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
-        except Exception as e:
-            error_msg = f"Error getting image data: {str(e)}"
-            logger.error(error_msg)
-            raise ServiceUnavailableError(detail=error_msg)
+                    # Read the file
+                    with open(file_path, "rb") as f:
+                        image_data = f.read()
+                        
+                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                else:
+                    # For remote URLs, use httpx to download
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(image_url)
+                        response.raise_for_status()
+                        image_data = response.content
+                        
+                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    
+                if not image_data:
+                    logger.error(f"No image data obtained from: {mask_id(image_url)}")
+                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
+            except Exception as e:
+                error_msg = f"Error getting image data: {str(e)}"
+                logger.error(error_msg)
+                raise ServiceUnavailableError(detail=error_msg)
+        else:
+            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
         
         # First, store the image in Supabase
-        image_path, stored_image_url = image_service.store_image(
+        # Create a direct instance of the image persistence service
+        supabase_client = SupabaseClient(url=settings.SUPABASE_URL, key=settings.SUPABASE_KEY)
+        image_persistence_service = ImagePersistenceService(client=supabase_client)
+        
+        image_path, stored_image_url = image_persistence_service.store_image(
             image_data=image_data,
             user_id=user_id,
             metadata={
@@ -466,8 +534,21 @@ async def generate_concept_background_task(
             
         logger.info(f"Generated {len(raw_palettes)} color palettes")
         
-        # Create palette variations using the stored image path
-        palette_variations = await image_service.create_palette_variations(
+        # Create palette variations using direct service instances
+        from app.services.image.service import ImageService
+        from app.services.image.processing_service import ImageProcessingService
+        
+        # Create all needed services directly
+        image_processing_service = ImageProcessingService()
+        
+        # Create the image service with our services
+        image_svc = ImageService(
+            persistence_service=image_persistence_service,
+            processing_service=image_processing_service
+        )
+        
+        # Create palette variations
+        palette_variations = await image_svc.create_palette_variations(
             base_image_data=image_data,
             palettes=raw_palettes,
             user_id=user_id,

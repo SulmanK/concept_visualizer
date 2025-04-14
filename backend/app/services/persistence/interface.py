@@ -6,7 +6,9 @@ and retrieve concepts, images, and other data.
 """
 
 import abc
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Tuple
+from fastapi import UploadFile
+from io import BytesIO
 
 
 class StorageServiceInterface(abc.ABC):
@@ -198,61 +200,111 @@ class ConceptPersistenceServiceInterface(abc.ABC):
 
 
 class ImagePersistenceServiceInterface(abc.ABC):
-    """Interface for image persistence services."""
+    """Interface for image storage and retrieval services."""
     
     @abc.abstractmethod
-    def store_image(self, image_data: Union[bytes, Any], user_id: str, **kwargs) -> tuple:
+    def store_image(
+        self, 
+        image_data: Union[bytes, BytesIO, UploadFile], 
+        user_id: str,
+        concept_id: Optional[str] = None,
+        file_name: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        content_type: str = "image/png",
+        is_palette: bool = False
+    ) -> Tuple[str, str]:
         """
-        Store an image and return its path and URL.
+        Store an image and return its storage path and URL.
         
         Args:
-            image_data: Image data to store
-            user_id: User ID for security validation
-            **kwargs: Additional keyword arguments
+            image_data: Image data as bytes, BytesIO or UploadFile
+            user_id: User ID for access control and path organization
+            concept_id: Optional concept ID to associate with the image
+            file_name: Optional filename override
+            metadata: Optional metadata to store with the image
+            content_type: MIME content type of the image
+            is_palette: Whether this is a palette image
             
         Returns:
-            Tuple of (path, url)
+            Tuple[str, str]: (storage_path, access_url)
+            
+        Raises:
+            StorageError: If storage fails
         """
         pass
     
     @abc.abstractmethod
-    def get_image(self, image_path: str, **kwargs) -> bytes:
+    async def get_image(self, image_path: str) -> bytes:
         """
-        Get an image by its path.
+        Retrieve image data from storage.
         
         Args:
-            image_path: Path of the image to retrieve
-            **kwargs: Additional keyword arguments
+            image_path: Path of the image in storage
             
         Returns:
             Image data as bytes
+            
+        Raises:
+            StorageError: If retrieval fails
         """
         pass
     
     @abc.abstractmethod
-    def get_signed_url(self, path: str, **kwargs) -> str:
+    def get_image_url(self, image_path: str, expiration: int = 3600) -> str:
         """
-        Get a signed URL for an image.
+        Get a signed URL for accessing an image.
         
         Args:
-            path: Path of the image
-            **kwargs: Additional keyword arguments
+            image_path: Path of the image in storage
+            expiration: Expiration time in seconds
             
         Returns:
-            Signed URL for the image
+            Signed URL for accessing the image
+            
+        Raises:
+            StorageError: If URL generation fails
         """
         pass
     
     @abc.abstractmethod
-    def delete_image(self, image_path: str, **kwargs) -> bool:
+    def delete_image(self, image_path: str) -> bool:
         """
-        Delete an image by its path.
+        Delete an image from storage.
         
         Args:
-            image_path: Path of the image to delete
-            **kwargs: Additional keyword arguments
+            image_path: Path of the image in storage
             
         Returns:
-            True if deletion was successful
+            True if deletion was successful, False otherwise
+            
+        Raises:
+            StorageError: If deletion fails with an error
+        """
+        pass
+    
+    @abc.abstractmethod
+    def list_images(
+        self, 
+        user_id: str, 
+        concept_id: Optional[str] = None, 
+        limit: int = 100,
+        offset: int = 0,
+        include_metadata: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        List images for a user, optionally filtered by concept.
+        
+        Args:
+            user_id: User ID to list images for
+            concept_id: Optional concept ID to filter by
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+            include_metadata: Whether to include metadata in results
+            
+        Returns:
+            List of image information dictionaries
+            
+        Raises:
+            StorageError: If listing fails
         """
         pass 

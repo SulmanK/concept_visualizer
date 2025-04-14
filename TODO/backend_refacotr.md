@@ -120,7 +120,7 @@ Okay, let's extend the refactoring analysis to the `api`, `core`, and `models` d
 
 
 
-**3. `backend/app/api/`**
+**4. `backend/app/api/`**
 
 *   **Current State:** Contains `middleware`, `routes`, `dependencies.py`, `errors.py`, `router.py`. Structure seems logical.
 *   **Issues:**

@@ -13,8 +13,9 @@ from fastapi.responses import StreamingResponse
 from app.models.export.request import ExportRequest
 from app.utils.auth.user import get_current_user
 from app.services.export import get_export_service
-from app.core.supabase import get_supabase_client
-from app.services.image import get_image_service
+from app.services.persistence import get_image_persistence_service
+from app.services.persistence.interface import ImagePersistenceServiceInterface
+from app.utils.security.mask import mask_path
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ async def export_action(
     req: Request,
     current_user: Dict = Depends(get_current_user),
     export_service = Depends(get_export_service),
+    image_persistence_service: ImagePersistenceServiceInterface = Depends(get_image_persistence_service),
 ):
     """
     Process an export request and return the file.
@@ -41,6 +43,7 @@ async def export_action(
         req: FastAPI request object
         current_user: Current authenticated user
         export_service: Service for handling exports
+        image_persistence_service: Service for image storage operations
         
     Returns:
         A streaming response with the exported file
@@ -51,14 +54,38 @@ async def export_action(
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication required")
         
-        # Process the export request
+        # Verify user has access to this image (must be owner)
+        image_identifier = request_data.image_identifier
+        masked_image_id = mask_path(image_identifier)
+        
+        # Ensure the image belongs to the authenticated user
+        if not image_identifier.startswith(f"{user_id}/"):
+            logger.warning(
+                f"User attempted to access unauthorized image: {masked_image_id}"
+            )
+            raise HTTPException(status_code=403, detail="Access denied to this image")
+            
+        # Determine if it's a palette image based on the bucket
+        is_palette = request_data.storage_bucket == "palette-images"
+        
+        # Fetch the image data using the ImagePersistenceService
+        logger.info(f"Fetching image from bucket: {request_data.storage_bucket}, path: {masked_image_id}")
+        try:
+            image_data = await image_persistence_service.get_image_async(
+                image_identifier, 
+                is_palette=is_palette
+            )
+        except Exception as e:
+            logger.error(f"Failed to fetch image {masked_image_id}: {str(e)}")
+            raise HTTPException(status_code=404, detail=f"Image not found: {image_identifier}")
+        
+        # Process the export request with the refactored ExportService
         processed_bytes, filename, content_type = await export_service.process_export(
-            image_identifier=request_data.image_identifier,
+            image_data=image_data,
+            original_filename=image_identifier,
             target_format=request_data.target_format,
             target_size=request_data.target_size,
-            user_id=user_id,
             svg_params=request_data.svg_params,
-            storage_bucket=request_data.storage_bucket,
         )
         
         # Return a streaming response with the file
