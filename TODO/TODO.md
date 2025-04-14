@@ -415,16 +415,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
             ```
         *   Create simple default components (`DefaultLoading`, `DefaultError`, `DefaultEmpty`) or use existing UI components like `SkeletonLoader` and `ErrorMessage`.
         *   Refactor components like `ConceptList`, `ConceptDetailPage`, `RefinementSelectionPage`: Replace their `if (isLoading)... else if (error)... else if (!data)...` blocks with `<QueryResultHandler isLoading={...} error={...} data={...}>{(data) => /* render actual content */}</QueryResultHandler>`.
-    2.  **Refactor Backend Rate Limit Application:** Addressed by **Item 4**.
-    3.  **Create Supabase Helpers (Backend):**
-        *   In `backend/app/core/supabase/concept_storage.py` and `image_storage.py`.
-        *   Identify repetitive query patterns (e.g., `select('*').eq('id', id).eq('user_id', user_id).single()`).
-        *   Create private helper methods like `async def _get_record_by_id(self, table_name: str, record_id: str, user_id: str)` that encapsulate these patterns and include basic error handling/logging. Call these helpers from the public service methods.
-    4.  **Centralize JigsawStack Handling (Backend):** Addressed by **Item 3**. Ensure all JigsawStack logic is within `services/concept/*` or `services/jigsawstack/*`.
-    5.  **Consolidate Image Upload/Storage (Backend):**
-        *   Review `backend/app/services/image/service.py` and `storage.py`.
-        *   Ensure `ImageStorageService` handles: filename generation logic, content type determination, actual Supabase upload call (`storage.from_().upload()`), signed URL generation.
-        *   Ensure `ImageService` handles: coordinating generation (calling JigsawStack), getting the image data, *calling* `ImageStorageService.store_image`, potentially applying processing *before* storing.
+
 
 ---
 
