@@ -340,7 +340,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**16. Legacy Hooks Cleanup (Frontend)**
+**16. Legacy Hooks Cleanup (Frontend)** [x]
 
 *   **Goal:** Standardize on React Query hooks.
 

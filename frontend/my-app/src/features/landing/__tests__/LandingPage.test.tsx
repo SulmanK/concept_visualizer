@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { LandingPage } from '../LandingPage';
-import * as useConceptGenerationModule from '../../../hooks/useConceptGeneration';
+import * as useConceptMutationsModule from '../../../hooks/useConceptMutations';
 import { vi } from 'vitest';
 import { mockApiService } from '../../../services/mocks/mockApiService';
 import { setupMockApi, resetMockApi } from '../../../services/mocks/testSetup';
@@ -123,14 +123,14 @@ describe('LandingPage Component', () => {
   
   test('handles API errors gracefully', async () => {
     // Mock implementation for error state
-    vi.spyOn(useConceptGenerationModule, 'useConceptGeneration').mockImplementation(() => ({
-      generateConcept: vi.fn(),
-      resetGeneration: vi.fn(),
-      status: 'error',
-      result: null,
-      error: 'Failed to generate concept',
-      isLoading: false,
-      clearError: vi.fn()
+    vi.spyOn(useConceptMutationsModule, 'useGenerateConceptMutation').mockImplementation(() => ({
+      mutate: vi.fn(),
+      reset: vi.fn(),
+      isPending: false,
+      isSuccess: false,
+      isError: true,
+      error: new Error('Failed to generate concept'),
+      data: null
     }));
     
     renderWithRouter(<LandingPage />);
@@ -144,14 +144,14 @@ describe('LandingPage Component', () => {
   
   test('navigates to the detail page when clicking view details', () => {
     // Mock implementation with sample concepts
-    vi.spyOn(useConceptGenerationModule, 'useConceptGeneration').mockImplementation(() => ({
-      generateConcept: vi.fn(),
-      resetGeneration: vi.fn(),
-      status: 'idle',
-      result: null,
+    vi.spyOn(useConceptMutationsModule, 'useGenerateConceptMutation').mockImplementation(() => ({
+      mutate: vi.fn(),
+      reset: vi.fn(),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
       error: null,
-      isLoading: false,
-      clearError: vi.fn()
+      data: null
     }));
     
     renderWithRouter(<LandingPage />);
