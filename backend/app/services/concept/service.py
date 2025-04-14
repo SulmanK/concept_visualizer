@@ -30,9 +30,9 @@ class ConceptService(ConceptServiceInterface):
     def __init__(
         self, 
         client: JigsawStackClient,
-        image_service: Optional[ImageServiceInterface] = None,
-        concept_persistence_service: Optional[ConceptPersistenceServiceInterface] = None,
-        image_persistence_service: Optional[ImagePersistenceServiceInterface] = None
+        image_service: ImageServiceInterface,
+        concept_persistence_service: ConceptPersistenceServiceInterface,
+        image_persistence_service: ImagePersistenceServiceInterface
     ):
         """
         Initialize the concept service with specialized components.
@@ -97,50 +97,66 @@ class ConceptService(ConceptServiceInterface):
             image_url = image_response.get("url")
             self.logger.info(f"Image generated successfully: {image_url}")
             
-            # If a user ID is provided, store the concept
+            # Initialize variables
             image_path = None
             concept_id = None
             stored_image_url = None
+            image_content = None
             
+            # If a user ID is provided, download the image
             if user_id:
-                # Download the image
                 try:
+                    # Always download the image content if user_id is provided,
+                    # regardless of skip_persistence flag
+                    self.logger.info(f"Downloading image from URL: {image_url}")
                     image_content = await self._download_image(image_url)
+                    self.logger.info(f"Successfully downloaded image, size: {len(image_content)} bytes")
                     
-                    # Store the image using the persistence service
-                    image_path, stored_image_url = self.image_persistence.store_image(
-                        image_data=image_content,
-                        user_id=user_id,
-                        metadata={
-                            "logo_description": logo_description,
-                            "theme_description": theme_description
-                        }
-                    )
-                    
-                    # Store the concept in the database only if not skipped
-                    if not skip_persistence and self.concept_persistence:
-                        concept_data = {
-                            "user_id": user_id,
-                            "logo_description": logo_description,
-                            "theme_description": theme_description,
-                            "image_path": image_path,
-                            "image_url": stored_image_url
-                        }
-                        concept_id = await self.concept_persistence.store_concept(concept_data)
-                        self.logger.info(f"Stored concept {concept_id} for user {user_id}")
+                    # Only store the image and concept if not skipping persistence
+                    if not skip_persistence:
+                        # Store the image using the persistence service
+                        image_path, stored_image_url = self.image_persistence.store_image(
+                            image_data=image_content,
+                            user_id=user_id,
+                            metadata={
+                                "logo_description": logo_description,
+                                "theme_description": theme_description
+                            }
+                        )
+                        
+                        # Store the concept in the database
+                        if self.concept_persistence:
+                            concept_data = {
+                                "user_id": user_id,
+                                "logo_description": logo_description,
+                                "theme_description": theme_description,
+                                "image_path": image_path,
+                                "image_url": stored_image_url
+                            }
+                            concept_id = await self.concept_persistence.store_concept(concept_data)
+                            self.logger.info(f"Stored concept {concept_id} for user {user_id}")
                     
                 except Exception as e:
-                    self.logger.error(f"Failed to store generated image or concept: {str(e)}")
-                    # We don't raise here as we still want to return the generated image
+                    error_msg = f"Failed to process image: {str(e)}"
+                    self.logger.error(error_msg)
+                    # In this case, we need to raise the error to signal download failure
+                    raise ConceptError(error_msg)
             
             # Create the response
+            # Determine which URL to return based on persistence
+            final_image_url = stored_image_url if stored_image_url else image_url
+            
             response = {
-                "image_url": stored_image_url or image_url,  # Use stored URL if available
+                "image_url": final_image_url,
                 "image_path": image_path,
                 "concept_id": concept_id,
                 "logo_description": logo_description,
                 "theme_description": theme_description
             }
+            
+            # Include the image data if it was downloaded (useful for background tasks)
+            if image_content:
+                response["image_data"] = image_content
             
             return response
         except Exception as e:
@@ -422,7 +438,11 @@ class ConceptService(ConceptServiceInterface):
             image_url: URL of the image to download, or file:// URL for local files
             
         Returns:
-            Image data as bytes, or None if download fails
+            Image data as bytes
+            
+        Raises:
+            IOError: If the download fails or the file doesn't exist
+            ValueError: If the downloaded content is empty
         """
         try:
             # Handle local file:// URLs by reading the file directly
@@ -433,20 +453,36 @@ class ConceptService(ConceptServiceInterface):
                 # Check if the file exists
                 if not os.path.exists(file_path):
                     self.logger.error(f"Local file not found: {file_path}")
-                    return None
+                    raise FileNotFoundError(f"Local image file not found: {file_path}")
                 
                 # Read the file
                 with open(file_path, "rb") as f:
                     image_data = f.read()
                     
                 self.logger.info("Read image data from local file")
+                
+                # Clean up the temporary file after reading if needed
+                try:
+                    os.remove(file_path)
+                    self.logger.info(f"Removed temporary file: {file_path}")
+                except Exception as rm_err:
+                    self.logger.warning(f"Could not remove temporary file {file_path}: {rm_err}")
+                
                 return image_data
                 
             # For remote URLs, use httpx to download
             async with httpx.AsyncClient() as client:
                 response = await client.get(image_url)
-                response.raise_for_status()
+                response.raise_for_status()  # Raises an exception for 4xx/5xx responses
+                
+                # Check if content is empty
+                if not response.content:
+                    raise ValueError("Downloaded image content is empty")
+                    
                 return response.content
+        except httpx.HTTPStatusError as e:
+            self.logger.error(f"HTTP error downloading image from {image_url}: {e.response.status_code} - {e.response.text}")
+            raise IOError(f"HTTP error {e.response.status_code} downloading image") from e
         except Exception as e:
             self.logger.error(f"Error downloading image from {image_url}: {str(e)}")
-            return None 
+            raise IOError(f"Failed to download image: {str(e)}") from e 

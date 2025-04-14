@@ -153,13 +153,55 @@ async def generate_concept(
             skip_persistence=True  # Skip persistence in the service, we'll handle it here
         )
         
-        # Extract the image URL
+        # Extract the image URL and image data
         image_url = concept_response["image_url"]
+        image_data = concept_response.get("image_data")
         
         if not image_url:
             raise ServiceUnavailableError(detail="Failed to generate base concept")
         
         logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
+        
+        # Check if we have image_data directly from the concept service
+        if not image_data:
+            # If not, we need to download it - this is a fallback for backward compatibility
+            logger.info("Image data not provided in concept response, downloading from URL")
+            try:
+                # Check if the image_url is a file path
+                if image_url.startswith("file://"):
+                    import os
+                    # Extract the file path from the URL
+                    file_path = image_url[7:]  # Remove the "file://" prefix
+                    
+                    # Check if the file exists
+                    if not os.path.exists(file_path):
+                        logger.error(f"Local file not found: {mask_id(file_path)}")
+                        raise ServiceUnavailableError(detail="Image file not found")
+                    
+                    # Read the file
+                    with open(file_path, "rb") as f:
+                        image_data = f.read()
+                        
+                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                else:
+                    # For remote URLs, use httpx to download
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(image_url)
+                        response.raise_for_status()
+                        image_data = response.content
+                        
+                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    
+                if not image_data:
+                    logger.error(f"No image data obtained from: {mask_id(image_url)}")
+                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
+            except Exception as e:
+                error_msg = f"Error getting image data: {str(e)}"
+                logger.error(error_msg)
+                raise ServiceUnavailableError(detail=error_msg)
+        else:
+            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
         
         # Generate color palettes
         raw_palettes = await commons.concept_service.generate_color_palettes(
@@ -414,49 +456,55 @@ async def generate_concept_background_task(
             skip_persistence=True  # Skip persistence in the service, we'll handle it here
         )
         
-        # Extract the image URL
+        # Extract the image URL and image data
         image_url = concept_response["image_url"]
+        image_data = concept_response.get("image_data")
         
         if not image_url:
             raise ServiceUnavailableError(detail="Failed to generate base concept")
         
         logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
         
-        # Get the image data - handle both remote URLs and local file paths
-        try:
-            # Check if the image_url is a file path
-            if image_url.startswith("file://"):
-                import os
-                # Extract the file path from the URL
-                file_path = image_url[7:]  # Remove the "file://" prefix
-                
-                # Check if the file exists
-                if not os.path.exists(file_path):
-                    logger.error(f"Local file not found: {mask_id(file_path)}")
-                    raise ServiceUnavailableError(detail="Image file not found")
-                
-                # Read the file
-                with open(file_path, "rb") as f:
-                    image_data = f.read()
+        # Check if we have image_data directly from the concept service
+        if not image_data:
+            # If not, we need to download it - this is a fallback for backward compatibility
+            logger.info("Image data not provided in concept response, downloading from URL")
+            try:
+                # Check if the image_url is a file path
+                if image_url.startswith("file://"):
+                    import os
+                    # Extract the file path from the URL
+                    file_path = image_url[7:]  # Remove the "file://" prefix
                     
-                logger.info(f"Read image data from local file: {mask_id(file_path)}")
-            else:
-                # For remote URLs, use httpx to download
-                import httpx
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(image_url)
-                    response.raise_for_status()
-                    image_data = response.content
+                    # Check if the file exists
+                    if not os.path.exists(file_path):
+                        logger.error(f"Local file not found: {mask_id(file_path)}")
+                        raise ServiceUnavailableError(detail="Image file not found")
                     
-                logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
-                
-            if not image_data:
-                logger.error(f"No image data obtained from: {mask_id(image_url)}")
-                raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
-        except Exception as e:
-            error_msg = f"Error getting image data: {str(e)}"
-            logger.error(error_msg)
-            raise ServiceUnavailableError(detail=error_msg)
+                    # Read the file
+                    with open(file_path, "rb") as f:
+                        image_data = f.read()
+                        
+                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                else:
+                    # For remote URLs, use httpx to download
+                    import httpx
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get(image_url)
+                        response.raise_for_status()
+                        image_data = response.content
+                        
+                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    
+                if not image_data:
+                    logger.error(f"No image data obtained from: {mask_id(image_url)}")
+                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
+            except Exception as e:
+                error_msg = f"Error getting image data: {str(e)}"
+                logger.error(error_msg)
+                raise ServiceUnavailableError(detail=error_msg)
+        else:
+            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
         
         # First, store the image in Supabase
         # Create a direct instance of the image persistence service
