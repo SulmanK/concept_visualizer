@@ -5,11 +5,12 @@ import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './hooks/useToast';
 import { RateLimitProvider } from './contexts/RateLimitContext';
-import { ErrorBoundary, OfflineStatus } from './components/ui';
+import { ErrorBoundary, OfflineStatus, ErrorMessage } from './components/ui';
 import ApiToastListener from './components/ui/ApiToastListener';
 import { TaskProvider } from './contexts/TaskContext';
 import TaskStatusBar from './components/TaskStatusBar';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useErrorHandling } from './hooks/useErrorHandling';
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() => import('./features/landing').then(module => ({ default: module.LandingPage })));
@@ -112,8 +113,12 @@ const AppRoutes = () => {
   );
 };
 
-export default function App() {
+/**
+ * Inner app component that uses hooks that require ToastProvider context
+ */
+const AppContent = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const errorHandler = useErrorHandling();
 
   // Set basic debug info for development environment
   useEffect(() => {
@@ -127,29 +132,55 @@ export default function App() {
   }, []);
 
   return (
-    <div className="m-0 p-0 w-full min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-[#f5f7ff] to-[#c3cfe2] font-inter">
-      <ToastProvider position="bottom-right" defaultDuration={5000} maxToasts={5}>
-        <ErrorBoundary errorMessage="Something went wrong in the application. Please try refreshing the page.">
-          <ApiToastListener />
-          <AuthProvider>
-            <RateLimitProvider>
-              <Router>
-                {/* Offline status notification */}
-                <OfflineStatus 
-                  position="top"
-                  showConnectionInfo={true}
-                />
-                
-                {/* TaskProvider needs to be inside Router but wrap both AppRoutes and TaskStatusBar */}
-                <TaskProvider>
-                  <AppRoutes />
-                  <TaskStatusBar />
-                </TaskProvider>
-              </Router>
-            </RateLimitProvider>
-          </AuthProvider>
-        </ErrorBoundary>
-      </ToastProvider>
+    <>
+      <ErrorBoundary errorMessage="Something went wrong in the application. Please try refreshing the page.">
+        <ApiToastListener />
+        <AuthProvider>
+          <RateLimitProvider>
+            <Router>
+              {/* Global Error Message */}
+              {errorHandler.hasError && errorHandler.error && (
+                <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%', maxWidth: '600px' }}>
+                  <ErrorMessage
+                    message={errorHandler.error.message}
+                    details={errorHandler.error.details}
+                    type={errorHandler.error.category as any}
+                    error_code={errorHandler.error.originalError && typeof errorHandler.error.originalError === 'object' ? 
+                      (errorHandler.error.originalError as any).error_code : undefined}
+                    onDismiss={errorHandler.clearError}
+                    onRetry={errorHandler.error.category !== 'rateLimit' ? () => {
+                      // Implement retry logic if needed
+                      errorHandler.clearError();
+                    } : undefined}
+                    rateLimitData={
+                      errorHandler.error.category === 'rateLimit' 
+                        ? {
+                            limit: errorHandler.error.limit || 0,
+                            current: errorHandler.error.current || 0,
+                            period: errorHandler.error.period || 'unknown',
+                            resetAfterSeconds: errorHandler.error.resetAfterSeconds || 0
+                          }
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
+            
+              {/* Offline status notification */}
+              <OfflineStatus 
+                position="top"
+                showConnectionInfo={true}
+              />
+              
+              {/* TaskProvider needs to be inside Router but wrap both AppRoutes and TaskStatusBar */}
+              <TaskProvider>
+                <AppRoutes />
+                <TaskStatusBar />
+              </TaskProvider>
+            </Router>
+          </RateLimitProvider>
+        </AuthProvider>
+      </ErrorBoundary>
       
       {/* Debugging overlay - only shown in development */}
       {debugInfo && process.env.NODE_ENV === 'development' && (
@@ -161,6 +192,16 @@ export default function App() {
       
       {/* React Query Devtools - only in development */}
       {process.env.NODE_ENV === 'development' && <ReactQueryDevtools initialIsOpen={false} />}
+    </>
+  );
+};
+
+export default function App() {
+  return (
+    <div className="m-0 p-0 w-full min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-[#f5f7ff] to-[#c3cfe2] font-inter">
+      <ToastProvider position="bottom-right" defaultDuration={5000} maxToasts={5}>
+        <AppContent />
+      </ToastProvider>
     </div>
   );
 } 

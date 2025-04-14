@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '../services/apiClient';
+import { apiClient, RateLimitError } from '../services/apiClient';
 import { 
   GenerationResponse, 
   PromptRequest, 
@@ -13,6 +13,9 @@ import { useRateLimitsDecrement } from '../contexts/RateLimitContext';
 import { useTaskPolling } from './useTaskPolling';
 import { useState } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
+import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { queryKeys } from '../config/queryKeys';
+import { useNetworkStatus } from './useNetworkStatus';
 
 /**
  * Extract a more user-friendly error message from API error responses
@@ -79,6 +82,15 @@ export function useGenerateConceptMutation() {
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
   const { setActiveTask, clearActiveTask, setIsTaskInitiating, setLatestResultId } = useTaskContext();
+  const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitDetails, setRateLimitDetails] = useState<{
+    message: string;
+    limit?: number;
+    current?: number;
+    period?: string;
+    resetAfterSeconds?: number;
+  } | null>(null);
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to generate concept',
@@ -86,13 +98,24 @@ export function useGenerateConceptMutation() {
   });
 
   return useMutation<TaskResponse, Error, PromptRequest>({
-    mutationKey: ['conceptGeneration'],
+    mutationKey: queryKeys.mutations.conceptGeneration(),
     mutationFn: async (data) => {
       console.log('[useGenerateConceptMutation] Starting generation', {
         timestamp: new Date().toISOString()
       });
+
+      // Check network status first
+      if (!networkStatus.isOnline) {
+        const error = new Error("You are offline. Cannot generate concept without an internet connection.");
+        errorHandler.setError(error.message, 'network', "Please check your connection and try again.");
+        throw error;
+      }
       
       try {
+        // Reset rate limit state
+        setIsRateLimited(false);
+        setRateLimitDetails(null);
+        
         // Set initiating state to provide immediate feedback
         setIsTaskInitiating(true);
         
@@ -107,7 +130,7 @@ export function useGenerateConceptMutation() {
         decrementLimit('generate_concept');
         
         // Make the API request
-        const response = await apiClient.post<TaskResponse>('/concepts/generate-with-palettes', data);
+        const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.GENERATE_CONCEPT, data);
         
         // Clear the timeout since we got a response
         clearTimeout(initiatingTimeout);
@@ -135,6 +158,20 @@ export function useGenerateConceptMutation() {
         // Make sure we clear the initiating state
         setIsTaskInitiating(false);
         
+        // Check for rate limit errors
+        if (error instanceof RateLimitError) {
+          setIsRateLimited(true);
+          setRateLimitDetails({
+            message: error.getUserFriendlyMessage(),
+            limit: error.limit,
+            current: error.current,
+            period: error.period,
+            resetAfterSeconds: error.resetAfterSeconds
+          });
+          // Invalidate rate limits to refresh the UI
+          queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+        }
+        
         // Create a more user-friendly error message
         const errorMessage = getErrorMessageFromResponse(error);
         const enhancedError = new Error(errorMessage);
@@ -143,7 +180,18 @@ export function useGenerateConceptMutation() {
     },
     onError: (error) => {
       console.error('[useGenerateConceptMutation] Error during generation:', error);
-      onQueryError(error);
+      
+      // If it's a rate limit error, handle it specially
+      if (error instanceof RateLimitError) {
+        errorHandler.setError(
+          error.getUserFriendlyMessage(),
+          'rateLimit',
+          'Please try again later or upgrade your plan.',
+          error
+        );
+      } else {
+        onQueryError(error);
+      }
       
       // Clear the active task and initiating state on error
       clearActiveTask();
@@ -161,13 +209,13 @@ export function useGenerateConceptMutation() {
       // the data will be properly refetched
       if (response.result_id) {
         queryClient.invalidateQueries({
-          queryKey: ['concepts', 'detail', response.result_id],
+          queryKey: queryKeys.concepts.detail(response.result_id),
           exact: false
         });
         
         // Also invalidate recent concepts to ensure the concept list is refreshed
         queryClient.invalidateQueries({
-          queryKey: ['concepts', 'recent'],
+          queryKey: queryKeys.concepts.recent(),
           exact: false
         });
       }
@@ -179,7 +227,7 @@ export function useGenerateConceptMutation() {
       
       // Clean up the mutation cache
       setTimeout(() => {
-        queryClient.removeQueries({ queryKey: ['conceptGeneration'] });
+        queryClient.removeQueries({ queryKey: queryKeys.mutations.conceptGeneration() });
       }, 300);
     }
   });
@@ -194,6 +242,15 @@ export function useRefineConceptMutation() {
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
   const { setActiveTask, clearActiveTask, setIsTaskInitiating, setLatestResultId } = useTaskContext();
+  const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
+  const [isRateLimited, setIsRateLimited] = useState(false);
+  const [rateLimitDetails, setRateLimitDetails] = useState<{
+    message: string;
+    limit?: number;
+    current?: number;
+    period?: string;
+    resetAfterSeconds?: number;
+  } | null>(null);
   
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to refine concept',
@@ -201,13 +258,24 @@ export function useRefineConceptMutation() {
   });
   
   return useMutation<TaskResponse, Error, RefinementRequest>({
-    mutationKey: ['conceptRefinement'],
+    mutationKey: queryKeys.mutations.conceptRefinement(),
     mutationFn: async (data) => {
       console.log('[useRefineConceptMutation] Starting refinement', {
         timestamp: new Date().toISOString()
       });
       
+      // Check network status first
+      if (!networkStatus.isOnline) {
+        const error = new Error("You are offline. Cannot refine concept without an internet connection.");
+        errorHandler.setError(error.message, 'network', "Please check your connection and try again.");
+        throw error;
+      }
+      
       try {
+        // Reset rate limit state
+        setIsRateLimited(false);
+        setRateLimitDetails(null);
+        
         // Set initiating state to provide immediate feedback
         setIsTaskInitiating(true);
         
@@ -222,7 +290,7 @@ export function useRefineConceptMutation() {
         decrementLimit('refine_concept');
         
         // Make the API request
-        const response = await apiClient.post<TaskResponse>('/concepts/refine', data);
+        const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.REFINE_CONCEPT, data);
         
         // Clear the timeout since we got a response
         clearTimeout(initiatingTimeout);
@@ -250,6 +318,20 @@ export function useRefineConceptMutation() {
         // Make sure we clear the initiating state
         setIsTaskInitiating(false);
         
+        // Check for rate limit errors
+        if (error instanceof RateLimitError) {
+          setIsRateLimited(true);
+          setRateLimitDetails({
+            message: error.getUserFriendlyMessage(),
+            limit: error.limit,
+            current: error.current,
+            period: error.period,
+            resetAfterSeconds: error.resetAfterSeconds
+          });
+          // Invalidate rate limits to refresh the UI
+          queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+        }
+        
         // Create a more user-friendly error message
         const errorMessage = getErrorMessageFromResponse(error);
         const enhancedError = new Error(errorMessage);
@@ -258,7 +340,18 @@ export function useRefineConceptMutation() {
     },
     onError: (error) => {
       console.error('[useRefineConceptMutation] Error during refinement:', error);
-      onQueryError(error);
+      
+      // If it's a rate limit error, handle it specially
+      if (error instanceof RateLimitError) {
+        errorHandler.setError(
+          error.getUserFriendlyMessage(),
+          'rateLimit',
+          'Please try again later or upgrade your plan.',
+          error
+        );
+      } else {
+        onQueryError(error);
+      }
       
       // Clear the active task and initiating state on error
       clearActiveTask();
@@ -272,17 +365,15 @@ export function useRefineConceptMutation() {
       });
       
       // If we have a result_id, invalidate the concept detail query
-      // This ensures that when navigating to the concept detail page, 
-      // the data will be properly refetched
       if (response.result_id) {
         queryClient.invalidateQueries({
-          queryKey: ['concepts', 'detail', response.result_id],
+          queryKey: queryKeys.concepts.detail(response.result_id),
           exact: false
         });
         
         // Also invalidate recent concepts to ensure the concept list is refreshed
         queryClient.invalidateQueries({
-          queryKey: ['concepts', 'recent'],
+          queryKey: queryKeys.concepts.recent(),
           exact: false
         });
       }
@@ -294,7 +385,7 @@ export function useRefineConceptMutation() {
       
       // Clean up the mutation cache
       setTimeout(() => {
-        queryClient.removeQueries({ queryKey: ['conceptRefinement'] });
+        queryClient.removeQueries({ queryKey: queryKeys.mutations.conceptRefinement() });
       }, 300);
     }
   });
