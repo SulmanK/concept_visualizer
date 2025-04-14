@@ -16,7 +16,7 @@ import { queryClient } from '../main';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // Create a toast function for use within this file (outside of React components)
-const toast = (options: { title: string; message: string; type: string; duration?: number; action?: { label: string; onClick: () => void } }) => {
+const toast = (options: { title: string; message: string; type: string; duration?: number; action?: { label: string; onClick: () => void }; isRateLimitError?: boolean; rateLimitResetTime?: number }) => {
   // We'll handle this through a custom event since we can't directly use hooks outside components
   document.dispatchEvent(
     new CustomEvent('show-api-toast', { 
@@ -282,6 +282,8 @@ axiosInstance.interceptors.response.use(
           message: userMessage,
           type: 'warning',
           duration: 8000,
+          isRateLimitError: true,
+          rateLimitResetTime: resetAfterSeconds > 0 ? Date.now() + (resetAfterSeconds * 1000) : undefined,
           action: resetAfterSeconds > 0 ? {
             label: 'View Limits',
             onClick: () => {

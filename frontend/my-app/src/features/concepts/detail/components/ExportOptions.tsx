@@ -5,6 +5,8 @@ import { useExportImageMutation, downloadBlob } from '../../../../hooks/useExpor
 import { extractStoragePathFromUrl } from '../../../../utils/url';
 import EnhancedImagePreview from './EnhancedImagePreview';
 import './ExportOptions.css';
+import { useErrorHandling } from '../../../../hooks/useErrorHandling';
+import { createQueryErrorHandler } from '../../../../utils/errorUtils';
 
 export interface ExportOptionsProps {
   /**
@@ -96,6 +98,13 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
     reset: resetPreviewMutation
   } = useExportImageMutation();
 
+  // Add error handling utilities
+  const errorHandler = useErrorHandling();
+  const { onQueryError } = createQueryErrorHandler(errorHandler, {
+    defaultErrorMessage: 'Failed to process image export request',
+    showToast: true
+  });
+  
   // Update debug info when preview states change
   useEffect(() => {
     console.log(`[ExportOptions ${componentId.current}] isPreviewExporting changed to: ${isPreviewExporting}`);
@@ -310,6 +319,16 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
           // Clear the timeout since the request failed
           clearTimeout(timeoutId);
           
+          // Use standardized error handling
+          onQueryError(error);
+          
+          // Rate limit errors are handled specially
+          if (error instanceof RateLimitError) {
+            setErrorMessage(`Preview limit reached: ${error.getUserFriendlyMessage()}`);
+          } else {
+            setErrorMessage(`Failed to generate preview: ${error.message}`);
+          }
+          
           // Update debug info
           setDebugInfo(prev => ({
             ...prev,
@@ -348,6 +367,10 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       });
     } catch (error) {
       console.error(`[ExportOptions ${componentId.current}] Error initiating preview:`, error);
+      
+      // Use standardized error handling
+      onQueryError(error);
+      
       setErrorMessage(`Failed to create preview: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
       // Clear the timeout since we're handling the error
@@ -424,10 +447,27 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
         onSuccess: (blob) => {
           // Use the downloadBlob utility to trigger the download
           downloadBlob(blob, filename);
+        },
+        onError: (error) => {
+          console.error('Error during export:', error);
+          
+          // Use standardized error handling
+          onQueryError(error);
+          
+          // Rate limit errors are handled specially
+          if (error instanceof RateLimitError) {
+            setErrorMessage(`Export limit reached: ${error.getUserFriendlyMessage()}`);
+          } else {
+            setErrorMessage(`Failed to export image: ${error.message}`);
+          }
         }
       });
     } catch (error) {
       console.error('Error initiating download:', error);
+      
+      // Use standardized error handling
+      onQueryError(error);
+      
       setErrorMessage(`Failed to initiate download: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };

@@ -3,6 +3,8 @@ import { ConceptCard } from '../../../components/ui/ConceptCard';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { Link } from 'react-router-dom';
 import { ConceptData } from '../../../services/supabaseClient';
+import { useErrorHandling } from '../../../hooks/useErrorHandling';
+import { createAsyncErrorHandler } from '../../../utils/errorUtils';
 
 interface RecentConceptsSectionProps {
   concepts: Array<ConceptData>;
@@ -16,6 +18,12 @@ interface RecentConceptsSectionProps {
  * with additional safety checks to prevent errors
  */
 function adaptConceptForUiCard(concept: ConceptData) {
+  const errorHandler = useErrorHandling();
+  const handleAsyncError = createAsyncErrorHandler(errorHandler, {
+    defaultErrorMessage: 'Error processing concept data',
+    context: 'adaptConceptForUiCard'
+  });
+
   if (!concept) {
     console.warn('Received null or undefined concept in adaptConceptForUiCard');
     // Return default data if concept is null or undefined
@@ -87,6 +95,10 @@ function adaptConceptForUiCard(concept: ConceptData) {
     };
   } catch (error) {
     console.error('Error in adaptConceptForUiCard:', error);
+    
+    // Use standardized error handling
+    handleAsyncError(() => Promise.reject(error), 'concept-adaptation');
+    
     // Return a safe fallback on error
     return {
       title: "Error Processing Concept",
