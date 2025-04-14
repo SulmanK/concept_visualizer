@@ -2,7 +2,6 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import MainLayout from './components/layout/MainLayout';
-import PageTransition from './components/layout/PageTransition';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './hooks/useToast';
 import { RateLimitProvider } from './contexts/RateLimitContext';
@@ -10,6 +9,7 @@ import { ErrorBoundary, OfflineStatus } from './components/ui';
 import ApiToastListener from './components/ui/ApiToastListener';
 import { TaskProvider } from './contexts/TaskContext';
 import TaskStatusBar from './components/TaskStatusBar';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() => import('./features/landing').then(module => ({ default: module.LandingPage })));
@@ -66,53 +66,77 @@ const appStyle = {
 const AppRoutes = () => {
   const location = useLocation();
   
-  // Determine the appropriate transition type based on pathname
-  const getTransitionType = (pathname: string) => {
+  // Define animation variants
+  const pageVariants = {
+    initial: { opacity: 0, y: 20 },
+    in: { opacity: 1, y: 0 },
+    out: { opacity: 0, y: -20 },
+  };
+
+  // For slide transitions based on route
+  const getVariants = (pathname: string) => {
     // Using a slide-up transition for concept detail pages
     if (pathname.includes('/concepts/')) {
-      return 'slide-up';
+      return {
+        initial: { opacity: 0, y: 50 },
+        in: { opacity: 1, y: 0 },
+        out: { opacity: 0, y: -50 },
+      };
     }
     
     // Using slide-left for refinement pages
     if (pathname.includes('/refine')) {
-      return 'slide-left';
+      return {
+        initial: { opacity: 0, x: 50 },
+        in: { opacity: 1, x: 0 },
+        out: { opacity: 0, x: -50 },
+      };
     }
     
     // Default fade transition for other routes
-    return 'fade';
+    return pageVariants;
   };
   
   return (
-    // Temporarily bypassing PageTransition to diagnose state sync issues
-    // <PageTransition transitionType={getTransitionType(location.pathname)}>
-      <Suspense fallback={<LoadingFallback />}>
-        <Routes location={location}>
-          {/* Main application routes */}
-          <Route path="/" element={<MainLayout />}>
-            {/* Make LandingPage the default homepage */}
-            <Route index element={<LandingPage />} />
-            
-            {/* Create page */}
-            <Route path="create" element={<CreateConceptPage />} />
-            
-            {/* Concept detail page */}
-            <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-            
-            {/* Recent concepts page */}
-            <Route path="recent" element={<RecentConceptsPage />} />
-            
-            {/* Refinement selection page */}
-            <Route path="refine" element={<RefinementSelectionPage />} />
-            
-            {/* Refinement page with concept ID */}
-            <Route path="refine/:conceptId" element={<RefinementPage />} />
-            
-            {/* Fallback for unknown routes */}
-            <Route path="*" element={<div>Page not found</div>} />
-          </Route>
-        </Routes>
-      </Suspense>
-    // </PageTransition>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial="initial"
+        animate="in"
+        exit="out"
+        variants={getVariants(location.pathname)}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        style={{ height: '100%', width: '100%' }}
+      >
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes location={location}>
+            {/* Main application routes */}
+            <Route path="/" element={<MainLayout />}>
+              {/* Make LandingPage the default homepage */}
+              <Route index element={<LandingPage />} />
+              
+              {/* Create page */}
+              <Route path="create" element={<CreateConceptPage />} />
+              
+              {/* Concept detail page */}
+              <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
+              
+              {/* Recent concepts page */}
+              <Route path="recent" element={<RecentConceptsPage />} />
+              
+              {/* Refinement selection page */}
+              <Route path="refine" element={<RefinementSelectionPage />} />
+              
+              {/* Refinement page with concept ID */}
+              <Route path="refine/:conceptId" element={<RefinementPage />} />
+              
+              {/* Fallback for unknown routes */}
+              <Route path="*" element={<div>Page not found</div>} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 };
 
