@@ -7,29 +7,19 @@ import { ConceptCard } from './ConceptCard';
 import { ConceptData } from '../../../../services/supabaseClient';
 
 /**
- * Custom hook that wraps useRecentConcepts with forced fresh data strategy
+ * Custom hook to fetch recent concepts with logging
+ * We now rely on standard React Query cache behavior
  */
-function useFreshRecentConcepts(userId: string | undefined, limit: number = 10) {
-  const queryClient = useQueryClient();
-  
+function useRecentConceptsWithLogging(userId: string | undefined, limit: number = 10) {
   // Get data using the standard hook
   const result = useRecentConcepts(userId, limit);
   
-  // Force refetch on mount
+  // Add debug logging
   useEffect(() => {
     if (userId) {
-      console.log('[useFreshRecentConcepts] Forcing refetch on mount for userId:', userId);
-      
-      // Ensure we're getting fresh data by forcibly marking it as stale
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'recent', userId, limit],
-        exact: true 
-      });
-      
-      // Then immediately refetch
-      result.refetch();
+      console.log('[useRecentConceptsWithLogging] Using recent concepts hook for userId:', userId);
     }
-  }, [userId, limit, queryClient, result.refetch]);
+  }, [userId]);
   
   return result;
 }
@@ -44,19 +34,10 @@ export const ConceptList: React.FC = () => {
     isLoading: loadingConcepts,
     error,
     refetch: refreshConcepts
-  } = useFreshRecentConcepts(user?.id, 10);
+  } = useRecentConceptsWithLogging(user?.id, 10);
   
   const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
-  
-  // Explicitly refetch data when the component mounts or when user changes
-  // This ensures we have fresh data during navigation
-  useEffect(() => {
-    console.log('[ConceptList] Mounted or user changed. Explicitly refetching recent concepts for user:', user?.id);
-    if (user?.id) {
-      refreshConcepts();
-    }
-  }, [user?.id, refreshConcepts]);
   
   // Handle navigation to the edit/refine page
   const handleEdit = (conceptId: string, variationId?: string | null) => {

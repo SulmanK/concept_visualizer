@@ -14,29 +14,19 @@ import { useQueryClient } from '@tanstack/react-query';
 import { eventService, AppEvent } from '../../../services/eventService';
 
 /**
- * Custom hook that wraps useConceptDetail with forced fresh data strategy
+ * Custom hook to fetch concept detail data
+ * The base useConceptDetail hook now handles proper refetching, making this wrapper simpler
  */
-function useFreshConceptDetail(conceptId: string | undefined, userId: string | undefined) {
-  const queryClient = useQueryClient();
-  
-  // Force staleTime to 0 for this specific query to ensure fresh data
+function useConceptDetailWithLogging(conceptId: string | undefined, userId: string | undefined) {
+  // Use the regular hook which now has optimized refetching behavior
   const result = useConceptDetail(conceptId, userId);
   
-  // Force refetch on mount
+  // Just add some debug logging
   useEffect(() => {
     if (conceptId && userId) {
-      console.log('[useFreshConceptDetail] Forcing refetch on mount for conceptId:', conceptId);
-      
-      // Ensure we're getting fresh data by forcibly marking it as stale
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'detail', conceptId, userId],
-        exact: true 
-      });
-      
-      // Then immediately refetch
-      result.refetch();
+      console.log('[useConceptDetailWithLogging] Using concept detail hook for conceptId:', conceptId);
     }
-  }, [conceptId, userId, queryClient, result.refetch]);
+  }, [conceptId, userId]);
   
   return result;
 }
@@ -54,25 +44,16 @@ const ConceptDetailContent: React.FC = () => {
   const showExport = searchParams.get('showExport') === 'true';
   const { user } = useAuth();
   
-  // Use our custom hook to ensure fresh data
+  // Use our custom hook with logging
   const { 
     data: concept, 
     isLoading: loading, 
     error: queryError,
     refetch 
-  } = useFreshConceptDetail(conceptId, user?.id);
+  } = useConceptDetailWithLogging(conceptId, user?.id);
   
   const [selectedVariation, setSelectedVariation] = useState<ColorVariationData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  // Explicitly refetch data when the component mounts or when conceptId changes
-  // This ensures we have fresh data during navigation
-  useEffect(() => {
-    console.log('[ConceptDetailPage] Mounted or conceptId changed. Explicitly refetching data for conceptId:', conceptId);
-    if (conceptId && user?.id) {
-      refetch();
-    }
-  }, [conceptId, user?.id, refetch]);
   
   // Update error state based on query error
   useEffect(() => {

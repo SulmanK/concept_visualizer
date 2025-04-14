@@ -149,6 +149,29 @@ export function useGenerateConceptMutation() {
       clearActiveTask();
       setIsTaskInitiating(false);
     },
+    onSuccess: (response) => {
+      console.log('[useGenerateConceptMutation] Success response:', {
+        taskId: response.id || response.task_id,
+        resultId: response.result_id,
+        timestamp: new Date().toISOString()
+      });
+      
+      // If we have a result_id, invalidate the concept detail query
+      // This ensures that when navigating to the concept detail page, 
+      // the data will be properly refetched
+      if (response.result_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['concepts', 'detail', response.result_id],
+          exact: false
+        });
+        
+        // Also invalidate recent concepts to ensure the concept list is refreshed
+        queryClient.invalidateQueries({
+          queryKey: ['concepts', 'recent'],
+          exact: false
+        });
+      }
+    },
     onSettled: () => {
       console.log('[useGenerateConceptMutation] Generation settled', {
         timestamp: new Date().toISOString()
@@ -240,6 +263,29 @@ export function useRefineConceptMutation() {
       // Clear the active task and initiating state on error
       clearActiveTask();
       setIsTaskInitiating(false);
+    },
+    onSuccess: (response) => {
+      console.log('[useRefineConceptMutation] Success response:', {
+        taskId: response.id || response.task_id,
+        resultId: response.result_id,
+        timestamp: new Date().toISOString()
+      });
+      
+      // If we have a result_id, invalidate the concept detail query
+      // This ensures that when navigating to the concept detail page, 
+      // the data will be properly refetched
+      if (response.result_id) {
+        queryClient.invalidateQueries({
+          queryKey: ['concepts', 'detail', response.result_id],
+          exact: false
+        });
+        
+        // Also invalidate recent concepts to ensure the concept list is refreshed
+        queryClient.invalidateQueries({
+          queryKey: ['concepts', 'recent'],
+          exact: false
+        });
+      }
     },
     onSettled: () => {
       console.log('[useRefineConceptMutation] Refinement settled', {
