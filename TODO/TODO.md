@@ -275,7 +275,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**13. URL Handling Consistency (Frontend)**
+**13. URL Handling Consistency (Frontend)** [x]
 
 *   **Goal:** Rely on backend-provided URLs and simplify frontend logic.
 

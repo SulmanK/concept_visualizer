@@ -194,30 +194,9 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       return 'palette-images';
     }
     
-    // Check if the storage path indicates a palette variation
-    if (storagePath && (
-      storagePath.includes('palette-images') || 
-      storagePath.includes('/palette/') ||
-      storagePath.includes('/color/')
-    )) {
-      console.log(`[ExportOptions ${componentId.current}] Using palette-images bucket: storage path indicates palette`);
-      return 'palette-images';
-    }
-    
-    // Check if the URL contains palette indicators
-    if (imageUrl && (
-      imageUrl.includes('palette-images') || 
-      imageUrl.includes('/palette/') ||
-      imageUrl.includes('/color/')
-    )) {
-      console.log(`[ExportOptions ${componentId.current}] Using palette-images bucket: image URL indicates palette`);
-      return 'palette-images';
-    }
-    
-    // Default to concept-images bucket
-    console.log(`[ExportOptions ${componentId.current}] Using concept-images bucket (default)`);
+    // Use concept-images bucket by default
     return 'concept-images';
-  }, [isPaletteVariation, storagePath, imageUrl, variationName, componentId]);
+  }, [isPaletteVariation, variationName]);
   
   // Force clear all React Query state for this component
   const forceClearMutationState = useCallback(() => {
@@ -244,10 +223,6 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   // Handle preview button click
   const handlePreview = async () => {
     console.log(`[ExportOptions ${componentId.current}] Preview button clicked. Current state: isPreviewExporting=${isPreviewExporting}`);
-    console.log(`[ExportOptions ${componentId.current}] Image URL:`, imageUrl);
-    console.log(`[ExportOptions ${componentId.current}] Storage path:`, storagePath);
-    console.log(`[ExportOptions ${componentId.current}] Is palette variation:`, isPaletteVariation);
-    console.log(`[ExportOptions ${componentId.current}] Variation name:`, variationName);
     
     // Safety check - if somehow we're already in a loading state, force reset it first
     if (isPreviewExporting) {
@@ -298,15 +273,6 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       
       // Build a distinct request ID for logging/debugging
       const requestId = `prev_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      
-      console.log(`[ExportOptions ${componentId.current}] Starting preview request ${requestId}`);
-      console.log(`[ExportOptions ${componentId.current}] Request params:`, {
-        imageIdentifier: imagePath,
-        format: selectedFormat,
-        size: selectedSize,
-        svgParams: selectedFormat === 'svg' ? { color_mode: 'color', hierarchical: true } : undefined,
-        bucket: bucket,
-      });
       
       // Use the preview mutation to generate the preview
       previewImage({

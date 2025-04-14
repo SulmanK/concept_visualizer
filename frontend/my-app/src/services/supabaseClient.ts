@@ -213,13 +213,17 @@ export async function getAuthenticatedClient() {
 }
 
 /**
- * Get authenticated URL for an image
+ * Get authenticated URL for an image - simplified since backend provides full URLs
+ * Only used as a fallback if the backend URL is not available
+ * 
  * @param bucket Supabase storage bucket name
  * @param path File path in storage
  * @returns Authenticated URL with JWT token
  */
 export async function getAuthenticatedImageUrl(bucket: string, path: string): Promise<string> {
   try {
+    if (!path) return '';
+    
     // Use createSignedUrl with 3-day expiration
     const { data, error } = await supabase.storage
       .from(bucket)
@@ -234,7 +238,6 @@ export async function getAuthenticatedImageUrl(bucket: string, path: string): Pr
     }
     
     // If signed URL creation fails, use the public URL as fallback
-    // This might not work if the bucket requires authentication
     const { data: { publicUrl } } = supabase.storage
       .from(bucket)
       .getPublicUrl(path);
@@ -258,223 +261,82 @@ export async function getAuthenticatedImageUrl(bucket: string, path: string): Pr
 }
 
 /**
- * Get a signed URL for an image in Supabase Storage
- * Works for both public and private buckets
+ * Format image URL - simplified since backend now provides complete URLs
+ * Only used as a fallback or for directly provided URLs that need processing
  * 
- * @param path Path to the image in storage
- * @param bucketType Type of bucket ('concept' or 'palette')
- * @returns Signed URL for the image with 3-day expiration
+ * @param imageUrl The URL to format
+ * @returns Properly formatted URL
  */
-export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette'): Promise<string> => {
-  // Get actual bucket name from config
-  const bucket = getBucketName(bucketType);
-  
-  // If path is empty or null, return empty string
-  if (!path) {
-    console.error('No path provided to getImageUrl');
+export const formatImageUrl = (imageUrl: string | null | undefined): string => {
+  // If URL is null or undefined, return empty string
+  if (!imageUrl) {
     return '';
   }
   
-  // If path already contains a signed URL token, it's already a complete URL - return it directly
-  if (path.includes('/object/sign/') && path.includes('token=')) {
-    console.log(`Path is already a complete signed URL: ${path.substring(0, 50)}...`);
-    
-    // Ensure the URL is absolute by adding the Supabase URL if it's relative
-    if (path.startsWith('/')) {
-      return `${SUPABASE_URL}${path}`;
-    }
-    
-    return path;
+  // If URL is already a complete URL (starts with http or https), return it directly
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
   }
   
-  // If path already looks like a complete URL with http, return it directly
-  if (path.startsWith('http')) {
-    console.log(`Using provided URL directly: ${path.substring(0, 50)}...`);
-    return path;
+  // If URL is a relative path starting with /, prepend the Supabase URL
+  if (imageUrl.startsWith('/')) {
+    return `${SUPABASE_URL}${imageUrl}`;
   }
   
-  // Clean up the path - remove any Supabase URL prefix
-  let cleanPath = path;
-  
-  // If the path includes the full supabase URL, extract just the relative path
-  if (path.includes('supabase.co/storage')) {
-    const parts = path.split('/');
-    cleanPath = parts[parts.length - 1].split('?')[0]; // Get filename without query params
-    console.log(`Extracted filename from path: ${cleanPath}`);
-  }
-  
-  try {
-    // Use createSignedUrl with 3-day expiration
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(cleanPath, 259200); // 3 days in seconds
-    
-    if (data && data.signedUrl) {
-      console.log(`Generated signed URL for ${cleanPath}`);
-      return data.signedUrl;
-    }
-    
-    // If signed URL creation fails, log error and try fallback
-    console.error(`Failed to create signed URL: ${error?.message}`);
-    
-    // Try to get an authenticated URL as fallback (uses JWT token)
-    return getAuthenticatedImageUrl(bucket, cleanPath);
-  } catch (error) {
-    console.error(`Error getting signed URL for ${cleanPath}:`, error);
-    return '';
-  }
+  // Return the URL as is
+  return imageUrl;
 };
 
 /**
- * Synchronous version of getImageUrl for when async/await isn't possible
- * This tries to provide a signed URL, but may fallback to token-based URL
- * 
- * @param path Path to the image in storage
- * @param bucketType Type of bucket ('concept' or 'palette')
- * @returns URL for the image with access token
+ * Legacy function - kept for backward compatibility
+ * Use formatImageUrl for new code
+ */
+export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette'): Promise<string> => {
+  if (!path) return '';
+  
+  // If path already looks like a complete URL, just format it
+  if (path.startsWith('http') || path.startsWith('/')) {
+    return formatImageUrl(path);
+  }
+  
+  // Otherwise, generate a signed URL
+  const bucket = getBucketName(bucketType);
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 259200); // 3 days in seconds
+  
+  if (data?.signedUrl) {
+    return data.signedUrl;
+  }
+  
+  if (error) {
+    console.error(`Failed to create signed URL: ${error.message}`);
+  }
+  
+  // Fallback to public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+    
+  return publicUrl;
+};
+
+/**
+ * Legacy function - kept for backward compatibility
+ * Use formatImageUrl for new code
  */
 export const getSignedImageUrl = (path: string | null | undefined, bucketType: 'concept' | 'palette'): string => {
-  // If path is empty, null, or not a string, use a fallback image
-  if (!path || typeof path !== 'string') {
-    console.warn(`Invalid path provided to getSignedImageUrl (${typeof path}), using fallback`);
-    return '/vite.svg'; // Use the Vite logo as a fallback
+  // Handle null or empty path
+  if (!path) return '';
+  
+  // If path already looks like a complete URL, just format it
+  if (path.startsWith('http') || path.startsWith('/')) {
+    return formatImageUrl(path);
   }
   
-  // If path already contains a signed URL token, it's already a complete URL - return it directly
-  if (path.includes('/object/sign/') && path.includes('token=')) {
-    console.log(`Path is already a complete signed URL: ${path.substring(0, 50)}...`);
-    
-    // Check if this URL is missing the /storage/v1/ segment
-    if (!path.includes('/storage/v1/') && path.includes('/object/sign/')) {
-      const fixedUrl = path.replace('/object/sign/', '/storage/v1/object/sign/');
-      console.log(`Fixed URL with proper /storage/v1/ path: ${fixedUrl.substring(0, 50)}...`);
-      
-      // Ensure the URL is absolute by adding the Supabase URL if it's relative
-      if (fixedUrl.startsWith('/')) {
-        return `${SUPABASE_URL}${fixedUrl}`;
-      }
-      
-      return fixedUrl;
-    }
-    
-    // Check if this is a double-signed URL (a URL within a URL)
-    if (path.indexOf('/object/sign/') !== path.lastIndexOf('/object/sign/')) {
-      console.log('Detected doubly-signed URL, attempting to fix it');
-      
-      // Extract the path part after the second bucket occurrence
-      const bucketName = bucketType === 'concept' ? 'concept-images' : 'palette-images';
-      const partAfterFirstBucket = path.split(`${bucketName}/`)[1];
-      
-      if (partAfterFirstBucket && partAfterFirstBucket.includes(`${bucketName}/`)) {
-        // Find the second bucket occurrence and extract the real path
-        const realPath = partAfterFirstBucket.split(`${bucketName}/`)[1].split('?')[0];
-        console.log('Extracted real path:', realPath);
-        
-        // Generate a fresh signed URL with the clean path
-        // Use the try-catch to handle localStorage safely
-        try {
-          const token = localStorage.getItem('supabase_token');
-          if (token) {
-            return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${realPath}?token=${token}`;
-          }
-        } catch (e) {
-          console.warn('Failed to get token from localStorage', e);
-        }
-        
-        // Return a direct URL as fallback
-        return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${realPath}`;
-      }
-    }
-    
-    // Ensure the URL is absolute by adding the Supabase URL if it's relative
-    if (path.startsWith('/')) {
-      return `${SUPABASE_URL}${path}`;
-    }
-    
-    return path;
-  }
-  
-  // If path already looks like a complete URL with http, return it directly
-  if (path.startsWith('http')) {
-    // Check if this URL is missing the /storage/v1/ segment
-    if (path.includes('/object/sign/') && !path.includes('/storage/v1/')) {
-      const fixedUrl = path.replace('/object/sign/', '/storage/v1/object/sign/');
-      console.log(`Fixed http URL with proper /storage/v1/ path: ${fixedUrl.substring(0, 50)}...`);
-      return fixedUrl;
-    }
-    
-    // Check if this is a malformed URL with duplicated base URL
-    // Example: https://project.supabase.co/storage/v1/object/public/bucket/https://project.supabase.co/...
-    if (path.includes(`${SUPABASE_URL}/storage/v1/object/public/`) && 
-        path.includes(`${SUPABASE_URL}`, path.indexOf('/storage/v1/object/public/') + 20)) {
-      
-      // Extract the correct portion of the URL
-      const dupeIndex = path.indexOf(SUPABASE_URL, path.indexOf('/storage/v1/object/public/') + 20);
-      if (dupeIndex > 0) {
-        console.warn(`Found and fixed malformed URL with duplicated base`);
-        return path.substring(dupeIndex);
-      }
-    }
-    
-    // Try to extract path from URLs like /storage/v1/object/public/concept-images/123/image.png
-    const bucketName = bucketType === 'concept' ? 'concept-images' : 'palette-images';
-    if (path.includes(`/storage/v1/object/public/${bucketName}/`)) {
-      const pathParts = path.split(`/storage/v1/object/public/${bucketName}/`);
-      if (pathParts.length > 1) {
-        const cleanPath = pathParts[1].split('?')[0];
-        console.log(`Extracted clean path from URL: ${cleanPath}`);
-        
-        // Generate a fresh token-based URL
-        try {
-          const token = localStorage.getItem('supabase_token');
-          if (token) {
-            return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${cleanPath}?token=${token}`;
-          }
-        } catch (e) {
-          console.warn('Failed to get token from localStorage', e);
-        }
-      }
-    }
-    
-    console.log(`Using provided URL directly: ${path.substring(0, 50)}...`);
-    return path;
-  }
-  
-  // Get actual bucket name from config
+  // For direct paths, create a public URL
   const bucket = getBucketName(bucketType);
-  
-  // Clean up the path - remove any Supabase URL prefix
-  let cleanPath = path;
-  
-  // Check if path is already a storage path that includes the bucket name
-  if (path.includes(`/${bucket}/`) || path.includes(`storage/v1/object/public/${bucket}`)) {
-    // This is already a complete path - extract just the path portion
-    const bucketPrefix = `${bucket}/`;
-    const bucketIndex = path.indexOf(bucketPrefix);
-    
-    if (bucketIndex >= 0) {
-      cleanPath = path.substring(bucketIndex + bucketPrefix.length);
-      console.log(`Extracted clean path from full path: ${cleanPath}`);
-    }
-  }
-  
-  // Try to get an API key from local storage
-  try {
-    const token = localStorage.getItem('supabase_token');
-    if (token) {
-      // Use the token directly in a URL
-      const tokenUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${cleanPath}?token=${token}`;
-      console.log(`Using token-based URL for ${cleanPath}`);
-      return tokenUrl;
-    }
-  } catch (e) {
-    console.warn('Failed to get token from localStorage', e);
-  }
-  
-  // Not ideal but necessary for synchronous operation - return a direct URL
-  // This will likely redirect to sign-in page if bucket is private
-  console.warn(`Returning direct URL for ${cleanPath} - this may fail for private buckets`);
-  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${cleanPath}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 };
 
 /**
