@@ -6,8 +6,8 @@ import { RefinementForm } from './components/RefinementForm';
 import { ComparisonView } from './components/ComparisonView';
 import { RefinementActions } from './components/RefinementActions';
 import { Card } from '../../components/ui/Card';
-import { fetchConceptDetail } from '../../services/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConceptDetail } from '../../hooks/useConceptQueries';
 import { TaskResponse } from '../../types';
 import { useErrorHandling } from '../../hooks/useErrorHandling';
 import { createAsyncErrorHandler } from '../../utils/errorUtils';
@@ -30,86 +30,50 @@ export const RefinementPage: React.FC = () => {
   });
   
   const [originalConcept, setOriginalConcept] = useState<any>(null);
-  const [isLoadingConcept, setIsLoadingConcept] = useState<boolean>(true);
-  const [conceptLoadError, setConceptLoadError] = useState<string | null>(null);
+  const { 
+    data: conceptData, 
+    isLoading: isLoadingConcept, 
+    error: conceptFetchError 
+  } = useConceptDetail(conceptId, user?.id);
+  const conceptLoadError = conceptFetchError ? 
+    (conceptFetchError instanceof Error ? conceptFetchError.message : 'Error loading concept') : 
+    null;
   
-  // Load the original concept data
+  // Process the concept data when it's available
   useEffect(() => {
-    const loadConcept = async () => {
-      if (!conceptId) {
-        setConceptLoadError('No concept ID provided');
-        setIsLoadingConcept(false);
-        return;
-      }
-      
-      // Wait for auth to finish loading
-      if (authLoading) {
-        return;
-      }
-      
-      if (!user || !user.id) {
-        setConceptLoadError('Not authenticated');
-        setIsLoadingConcept(false);
-        return;
-      }
-      
-      try {
-        setIsLoadingConcept(true);
-        const conceptData = await fetchConceptDetail(conceptId, user.id);
-        
-        if (!conceptData) {
-          setConceptLoadError('Concept not found');
-          setIsLoadingConcept(false);
-          return;
-        }
-        
-        // If colorId is specified, find the matching color variation
-        if (colorId && conceptData.color_variations) {
-          const colorVariation = conceptData.color_variations.find(v => v.id === colorId);
-          
-          if (colorVariation) {
-            setOriginalConcept({
-              id: conceptData.id,
-              imageUrl: colorVariation.image_url,
-              logoDescription: conceptData.logo_description,
-              themeDescription: conceptData.theme_description,
-              colorVariation: colorVariation
-            });
-          } else {
-            // If color variation not found, fall back to base concept
-            setOriginalConcept({
-              id: conceptData.id,
-              imageUrl: conceptData.image_url || conceptData.base_image_url,
-              logoDescription: conceptData.logo_description,
-              themeDescription: conceptData.theme_description,
-            });
-          }
-        } else {
-          // No color variation specified, use base concept
-          setOriginalConcept({
-            id: conceptData.id,
-            imageUrl: conceptData.image_url || conceptData.base_image_url,
-            logoDescription: conceptData.logo_description,
-            themeDescription: conceptData.theme_description,
-          });
-        }
-        
-        setIsLoadingConcept(false);
-      } catch (err) {
-        // Use standardized error handling
-        handleAsyncError(
-          () => Promise.reject(err), 
-          'load-concept'
-        );
-        
-        setConceptLoadError('Error loading concept');
-        setIsLoadingConcept(false);
-        console.error('Error loading concept:', err);
-      }
-    };
+    if (!conceptData) return;
     
-    loadConcept();
-  }, [conceptId, colorId, authLoading, user, handleAsyncError]);
+    // If colorId is specified, find the matching color variation
+    if (colorId && conceptData.color_variations) {
+      const colorVariation = conceptData.color_variations.find(v => v.id === colorId);
+      
+      if (colorVariation) {
+        setOriginalConcept({
+          id: conceptData.id,
+          imageUrl: colorVariation.image_url,
+          logoDescription: conceptData.logo_description,
+          themeDescription: conceptData.theme_description,
+          colorVariation: colorVariation
+        });
+      } else {
+        // If color variation not found, fall back to base concept
+        setOriginalConcept({
+          id: conceptData.id,
+          imageUrl: conceptData.image_url || conceptData.base_image_url,
+          logoDescription: conceptData.logo_description,
+          themeDescription: conceptData.theme_description,
+        });
+      }
+    } else {
+      // No color variation specified, use base concept
+      setOriginalConcept({
+        id: conceptData.id,
+        imageUrl: conceptData.image_url || conceptData.base_image_url,
+        logoDescription: conceptData.logo_description,
+        themeDescription: conceptData.theme_description,
+      });
+    }
+  }, [conceptData, colorId]);
   
   // Use React Query mutation hook for refinement
   const {
