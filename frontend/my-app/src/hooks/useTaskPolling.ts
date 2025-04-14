@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { TaskResponse } from '../types/api.types';
-import { fetchTaskStatus } from '../api/task';
 import { useNetworkStatus } from './useNetworkStatus';
 import { queryKeys } from '../config/queryKeys';
 import { DEFAULT_POLLING_INTERVAL, TASK_STATUS } from '../config/apiEndpoints';
+import { useTaskStatusQuery } from './useTaskQueries';
 
 // In-memory cache to store task results and prevent polling completed tasks
 const completedTasksCache = new Map<string, TaskResponse>();
@@ -68,22 +68,13 @@ export function useTaskPolling({
   // Also check network status - don't poll when offline
   const shouldPoll = Boolean(enabled && taskId && !cachedTask && !isTaskCompleted && networkStatus.isOnline);
   
-  // Query for the task status
-  const query = useQuery<TaskResponse, Error>({
-    queryKey: queryKeys.tasks.detail(taskId),
-    queryFn: () => {
-      if (!taskId) {
-        return Promise.reject(new Error('No task ID provided'));
-      }
-      return fetchTaskStatus(taskId);
-    },
+  // Use our standardized query hook instead of direct implementation
+  const query = useTaskStatusQuery(taskId, {
     enabled: shouldPoll,
-    staleTime: 0,
-    retry: 3,
-    refetchOnReconnect: true, // Refetch when the connection is restored
+    refetchInterval: shouldPoll ? pollingInterval : false,
   });
   
-  // Set up polling with setInterval
+  // Set up polling with setInterval - we can keep this for additional control
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
     
@@ -91,7 +82,7 @@ export function useTaskPolling({
       // Initial fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       
-      // Set up polling interval
+      // Set up polling interval for additional invalidation control
       intervalId = setInterval(() => {
         if (!isTaskCompleted) {
           queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
