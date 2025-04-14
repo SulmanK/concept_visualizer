@@ -5,12 +5,13 @@ This module provides services for storing and retrieving concepts from Supabase.
 """
 
 import logging
-from typing import List, Dict, Optional, Any
+from typing import Dict, List, Any, Optional
 
+from app.services.persistence.interface import ConceptPersistenceServiceInterface
 from app.core.supabase.client import SupabaseClient
 from app.core.supabase.concept_storage import ConceptStorage
-from app.services.persistence.interface import ConceptPersistenceServiceInterface
 from app.utils.security.mask import mask_id, mask_path
+from app.core.exceptions import DatabaseTransactionError
 
 
 class PersistenceError(Exception):
@@ -61,6 +62,7 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
             
         Raises:
             PersistenceError: If storage fails
+            DatabaseTransactionError: If a multi-step operation fails and cleanup is required
         """
         try:
             # Extract required fields
@@ -90,7 +92,8 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                 self.logger.error("Failed to store concept")
                 raise PersistenceError("Failed to store concept")
             
-            masked_concept_id = mask_id(concept['id'])
+            concept_id = concept['id']
+            masked_concept_id = mask_id(concept_id)
             self.logger.info(f"Stored concept with ID: {masked_concept_id}")
             
             # Insert color variations if provided
@@ -102,7 +105,7 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                     self.logger.debug(f"Adding palette variation: {palette.get('name')}, path: {masked_palette_path}")
                     
                     variation = {
-                        "concept_id": concept["id"],
+                        "concept_id": concept_id,
                         "palette_name": palette.get("name"),
                         "colors": palette.get("colors"),
                         "description": palette.get("description"),
@@ -112,14 +115,108 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                     
                     variations.append(variation)
                 
-                variations_result = self.concept_storage.store_color_variations(variations)
-                self.logger.info(f"Stored {len(variations_result)} color variations")
+                try:
+                    variations_result = self.concept_storage.store_color_variations(variations)
+                    if not variations_result:
+                        # Color variations storage failed, we need to clean up the concept
+                        self.logger.error(f"Failed to store color variations for concept {masked_concept_id}. Cleaning up...")
+                        
+                        # Attempt to delete the concept
+                        cleanup_successful = await self._delete_concept(concept_id)
+                        
+                        # Log cleanup result
+                        if cleanup_successful:
+                            self.logger.info(f"Successfully cleaned up concept {masked_concept_id} after variations storage failure")
+                        else:
+                            self.logger.error(f"Failed to clean up concept {masked_concept_id} after variations storage failure")
+                        
+                        # Raise an error indicating the transaction failed but cleanup was attempted
+                        cleanup_status = "successful" if cleanup_successful else "failed"
+                        raise DatabaseTransactionError(
+                            message=f"Failed to store color variations. Concept cleanup was {cleanup_status}.",
+                            operation="insert",
+                            table="color_variations",
+                            details={"concept_id": masked_concept_id, "cleanup_successful": cleanup_successful}
+                        )
+                    
+                    self.logger.info(f"Stored {len(variations_result)} color variations")
+                except Exception as e:
+                    # Error during variations storage, attempt to clean up the concept
+                    self.logger.error(f"Error storing color variations for concept {masked_concept_id}: {str(e)}. Cleaning up...")
+                    
+                    # Attempt to delete the concept
+                    cleanup_successful = await self._delete_concept(concept_id)
+                    
+                    # Log cleanup result and re-raise with cleanup information
+                    cleanup_msg = "Cleanup " + ("successful" if cleanup_successful else "failed")
+                    self.logger.info(f"Color variations error cleanup: {cleanup_msg}")
+                    
+                    # Raise a transaction error that includes original error and cleanup status
+                    raise DatabaseTransactionError(
+                        message=f"Error storing color variations: {str(e)}. {cleanup_msg}.",
+                        operation="insert",
+                        table="color_variations",
+                        details={"concept_id": masked_concept_id, "cleanup_successful": cleanup_successful, "original_error": str(e)}
+                    )
             
-            return concept["id"]
+            return concept_id
             
+        except DatabaseTransactionError:
+            # Re-raise transaction errors
+            raise
         except Exception as e:
             self.logger.error(f"Error in store_concept: {e}")
             raise PersistenceError(f"Failed to store concept: {str(e)}")
+    
+    async def _delete_concept(self, concept_id: str) -> bool:
+        """
+        Helper method to delete a concept as part of transaction cleanup.
+        
+        Args:
+            concept_id: ID of the concept to delete
+        
+        Returns:
+            True if deletion was successful, False otherwise
+        """
+        try:
+            self.logger.info(f"Attempting to delete concept {mask_id(concept_id)} during transaction cleanup")
+            
+            # Call a database function to delete the concept
+            # This could be a direct SQL query or using the Supabase client
+            # For this example, we'll assume we need to implement a simple deletion
+            
+            # Create a direct PostgreSQL query to delete the concept by ID
+            import requests
+            
+            # Get the service role key for elevated permissions
+            service_role_key = self.supabase.settings.SUPABASE_SERVICE_ROLE
+            if not service_role_key:
+                self.logger.error("No service role key available for cleanup operation")
+                return False
+            
+            # Use the service role key to delete directly (bypassing RLS)
+            api_url = self.supabase.settings.SUPABASE_URL
+            endpoint = f"{api_url}/rest/v1/concepts?id=eq.{concept_id}"
+            
+            response = requests.delete(
+                endpoint,
+                headers={
+                    "apikey": service_role_key,
+                    "Authorization": f"Bearer {service_role_key}",
+                    "Content-Type": "application/json"
+                }
+            )
+            
+            if response.status_code in (200, 204):
+                self.logger.info(f"Successfully deleted concept {mask_id(concept_id)} during cleanup")
+                return True
+            else:
+                self.logger.error(f"Failed to delete concept during cleanup: {response.status_code}, {response.text}")
+                return False
+            
+        except Exception as e:
+            self.logger.error(f"Error deleting concept during cleanup: {e}")
+            return False
     
     async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, Any]:
         """

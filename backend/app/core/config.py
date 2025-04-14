@@ -124,7 +124,51 @@ class Settings(BaseSettings):
                 variable_name="CONCEPT_SUPABASE_KEY"
             )
         
-        # Redis is optional, so we don't validate it here
+        # Check for essential JWT and service role settings
+        if not self.SUPABASE_JWT_SECRET:
+            logger.error("Missing required environment variable: CONCEPT_SUPABASE_JWT_SECRET")
+            raise EnvironmentVariableError(
+                message="Supabase JWT secret is required for token generation",
+                variable_name="CONCEPT_SUPABASE_JWT_SECRET"
+            )
+        
+        if not self.SUPABASE_SERVICE_ROLE:
+            logger.error("Missing required environment variable: CONCEPT_SUPABASE_SERVICE_ROLE")
+            raise EnvironmentVariableError(
+                message="Supabase service role key is required for administrative operations",
+                variable_name="CONCEPT_SUPABASE_SERVICE_ROLE"
+            )
+        
+        # Check for storage bucket settings
+        if not self.STORAGE_BUCKET_CONCEPT:
+            logger.error("Missing required environment variable: CONCEPT_STORAGE_BUCKET_CONCEPT")
+            raise EnvironmentVariableError(
+                message="Storage bucket name for concepts is required",
+                variable_name="CONCEPT_STORAGE_BUCKET_CONCEPT"
+            )
+        
+        if not self.STORAGE_BUCKET_PALETTE:
+            logger.error("Missing required environment variable: CONCEPT_STORAGE_BUCKET_PALETTE")
+            raise EnvironmentVariableError(
+                message="Storage bucket name for palettes is required",
+                variable_name="CONCEPT_STORAGE_BUCKET_PALETTE"
+            )
+        
+        # Redis is required for rate limiting if enabled
+        if self.RATE_LIMITING_ENABLED:
+            if not self.UPSTASH_REDIS_ENDPOINT:
+                logger.error("Missing required environment variable: CONCEPT_UPSTASH_REDIS_ENDPOINT")
+                raise EnvironmentVariableError(
+                    message="Redis endpoint is required when rate limiting is enabled",
+                    variable_name="CONCEPT_UPSTASH_REDIS_ENDPOINT"
+                )
+            
+            if not self.UPSTASH_REDIS_PASSWORD:
+                logger.error("Missing required environment variable: CONCEPT_UPSTASH_REDIS_PASSWORD")
+                raise EnvironmentVariableError(
+                    message="Redis password is required when rate limiting is enabled",
+                    variable_name="CONCEPT_UPSTASH_REDIS_PASSWORD"
+                )
 
     def __init__(self, **kwargs):
         """Initialize settings and validate in non-development environments."""
