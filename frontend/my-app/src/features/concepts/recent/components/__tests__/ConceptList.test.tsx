@@ -1,36 +1,30 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { ConceptList } from '../ConceptList';
 import { vi } from 'vitest';
 
-// Mock the ConceptContext
-vi.mock('../../../../../contexts/ConceptContext', () => ({
-  useConceptContext: vi.fn()
+// Mock the hooks
+vi.mock('../../../../../hooks/useConceptQueries', () => ({
+  useRecentConcepts: vi.fn(),
+  useFreshRecentConcepts: vi.fn()
 }));
 
-// Mock the ConceptCard component
-vi.mock('../ConceptCard', () => ({
-  ConceptCard: ({ concept }) => (
-    <div data-testid={`concept-card-${concept.id}`}>
-      {concept.logo_description}
-    </div>
-  )
+vi.mock('../../../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user-id' }
+  })
 }));
 
-// Mock useNavigate
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-    Link: ({ children, to }) => <a href={to}>{children}</a>
-  };
-});
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: vi.fn().mockReturnValue({
+    invalidateQueries: vi.fn(),
+  })
+}));
 
-// Import the mocked context
-import { useConceptContext } from '../../../../../contexts/ConceptContext';
+// Import the mocked hooks
+import { useRecentConcepts } from '../../../../../hooks/useConceptQueries';
 
 describe('ConceptList Component', () => {
   beforeEach(() => {
@@ -38,12 +32,12 @@ describe('ConceptList Component', () => {
   });
 
   test('renders loading state', () => {
-    // Mock the context to return loading state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: true,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
+    // Mock the hook to return loading state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: true,
+      error: null,
+      refetch: vi.fn()
     });
 
     render(
@@ -58,12 +52,12 @@ describe('ConceptList Component', () => {
   });
 
   test('renders empty state', () => {
-    // Mock the context to return empty state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: false,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
+    // Mock the hook to return empty state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
     });
 
     render(
@@ -79,12 +73,12 @@ describe('ConceptList Component', () => {
   });
 
   test('renders error state', () => {
-    // Mock the context to return error state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: false,
-      errorLoadingConcepts: 'Failed to load concepts',
-      refreshConcepts: vi.fn()
+    // Mock the hook to return error state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new Error('Failed to load concepts'),
+      refetch: vi.fn()
     });
 
     render(
@@ -119,12 +113,12 @@ describe('ConceptList Component', () => {
       }
     ];
 
-    // Mock the context to return concepts
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: mockConcepts,
-      loadingConcepts: false,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
+    // Mock the hook to return concepts
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: mockConcepts,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
     });
 
     render(
@@ -143,14 +137,14 @@ describe('ConceptList Component', () => {
 
   test('triggers refresh when trying again after error', () => {
     // Mock refresh function
-    const mockRefresh = vi.fn();
+    const mockRefetch = vi.fn();
     
-    // Mock the context to return error state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: false,
-      errorLoadingConcepts: 'Failed to load concepts',
-      refreshConcepts: mockRefresh
+    // Mock the hook to return error state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new Error('Failed to load concepts'),
+      refetch: mockRefetch
     });
 
     render(
@@ -163,6 +157,6 @@ describe('ConceptList Component', () => {
     fireEvent.click(screen.getByText('Try Again'));
 
     // Check that the refresh function was called
-    expect(mockRefresh).toHaveBeenCalled();
+    expect(mockRefetch).toHaveBeenCalled();
   });
 }); 
