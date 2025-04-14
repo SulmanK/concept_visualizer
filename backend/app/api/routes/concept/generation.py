@@ -24,7 +24,17 @@ from app.services.image.interface import ImageServiceInterface
 from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface
 from app.services.task.interface import TaskServiceInterface
 from app.api.dependencies import CommonDependencies
-from app.api.errors import ResourceNotFoundError, ServiceUnavailableError, ValidationError, TaskNotFoundError
+# Import specific API errors
+from app.api.errors import (
+    BadRequestError, UnauthorizedError, ValidationError, 
+    ServiceUnavailableError, InternalServerError
+)
+# Import domain/application error types for catching
+from app.core.exceptions import (
+    ApplicationError, ValidationError as AppValidationError,
+    JigsawStackError, ConceptCreationError, RateLimitError, 
+    ImageProcessingError, AuthenticationError
+)
 from app.core.config import settings
 from app.core.constants import (
     TASK_STATUS_PENDING, 
@@ -66,73 +76,75 @@ async def generate_concept(
         GenerationResponse: The generated concept data
     
     Raises:
-        ServiceUnavailableError: If there was an error generating the concept
         ValidationError: If the request validation fails
-        HTTPException: If rate limit is exceeded (429) or user is not authenticated (401)
+        UnauthorizedError: If user is not authenticated
+        ServiceUnavailableError: If there was an error generating the concept
+        BadRequestError: If the request parameters are invalid
+        InternalServerError: If there was an unexpected error
     """
     # Process the request to extract user information
     commons.process_request(req)
     
-    # Apply both generation and storage rate limits - this will raise an HTTPException if limit is exceeded
-    await apply_multiple_rate_limits(req, [
-        {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
-        {"endpoint": "/concepts/store", "rate_limit": "10/month"}
-    ])
-    
-    # Store rate limit info after the actual rate limiting
     try:
-        user_id = None
-        if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
-            user_id = req.state.user.get("id")
+        # Apply both generation and storage rate limits
+        await apply_multiple_rate_limits(req, [
+            {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
+            {"endpoint": "/concepts/store", "rate_limit": "10/month"}
+        ])
         
-        if user_id:
-            from app.core.limiter import check_rate_limit
+        # Store rate limit info after the actual rate limiting
+        try:
+            user_id = None
+            if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
+                user_id = req.state.user.get("id")
             
-            # Get full user_id format
-            full_user_id = f"user:{user_id}"
-            
-            # Use the lower of the two limits for the headers
-            generation_status = check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/generate",
-                limit="10/month",
-                check_only=True
-            )
-            
-            storage_status = check_rate_limit(
-                user_id=full_user_id, 
-                endpoint="/concepts/store",
-                limit="10/month",
-                check_only=True
-            )
-            
-            # Use the status with fewer remaining calls
-            if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
-                limit_status = generation_status
-                endpoint = "/concepts/generate"
-            else:
-                limit_status = storage_status
-                endpoint = "/concepts/store"
-            
-            # Store in request.state for the middleware to use
-            req.state.limiter_info = {
-                "limit": limit_status.get("limit", 0),
-                "remaining": limit_status.get("remaining", 0),
-                "reset": limit_status.get("reset_at", 0)
-            }
-            
-            logger.debug(
-                f"Stored rate limit info for {endpoint} after increment: "
-                f"remaining={limit_status.get('remaining', 0)}"
-            )
-    except Exception as e:
-        logger.error(f"Error storing post-increment rate limit info: {str(e)}")
-    
-    try:
+            if user_id:
+                from app.core.limiter import check_rate_limit
+                
+                # Get full user_id format
+                full_user_id = f"user:{user_id}"
+                
+                # Use the lower of the two limits for the headers
+                generation_status = check_rate_limit(
+                    user_id=full_user_id, 
+                    endpoint="/concepts/generate",
+                    limit="10/month",
+                    check_only=True
+                )
+                
+                storage_status = check_rate_limit(
+                    user_id=full_user_id, 
+                    endpoint="/concepts/store",
+                    limit="10/month",
+                    check_only=True
+                )
+                
+                # Use the status with fewer remaining calls
+                if generation_status.get("remaining", 0) <= storage_status.get("remaining", 0):
+                    limit_status = generation_status
+                    endpoint = "/concepts/generate"
+                else:
+                    limit_status = storage_status
+                    endpoint = "/concepts/store"
+                
+                # Store in request.state for the middleware to use
+                req.state.limiter_info = {
+                    "limit": limit_status.get("limit", 0),
+                    "remaining": limit_status.get("remaining", 0),
+                    "reset": limit_status.get("reset_at", 0)
+                }
+                
+                logger.debug(
+                    f"Stored rate limit info for {endpoint} after increment: "
+                    f"remaining={limit_status.get('remaining', 0)}"
+                )
+        except Exception as e:
+            logger.error(f"Error storing post-increment rate limit info: {str(e)}")
+        
         # Validate inputs
         if not request.logo_description or not request.theme_description:
-            raise ValidationError(
-                detail="Logo and theme descriptions are required",
+            raise AppValidationError(
+                message="Logo and theme descriptions are required",
                 field_errors={
                     "logo_description": ["Field is required"] if not request.logo_description else [],
                     "theme_description": ["Field is required"] if not request.theme_description else []
@@ -142,7 +154,7 @@ async def generate_concept(
         # Get user ID from commons (which gets it from auth middleware)
         user_id = commons.user_id
         if not user_id:
-            raise HTTPException(status_code=401, detail="Authentication required")
+            raise AuthenticationError(message="Authentication required")
         
         # Generate base image and store it in Supabase Storage
         # Use ConceptService to generate the concept instead of ImageService
@@ -158,7 +170,7 @@ async def generate_concept(
         image_data = concept_response.get("image_data")
         
         if not image_url:
-            raise ServiceUnavailableError(detail="Failed to generate base concept")
+            raise JigsawStackError(message="Failed to generate base concept")
         
         logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
         
@@ -176,7 +188,7 @@ async def generate_concept(
                     # Check if the file exists
                     if not os.path.exists(file_path):
                         logger.error(f"Local file not found: {mask_id(file_path)}")
-                        raise ServiceUnavailableError(detail="Image file not found")
+                        raise JigsawStackError(message="Image file not found")
                     
                     # Read the file
                     with open(file_path, "rb") as f:
@@ -195,86 +207,111 @@ async def generate_concept(
                     
                 if not image_data:
                     logger.error(f"No image data obtained from: {mask_id(image_url)}")
-                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
+                    raise JigsawStackError(message="Failed to get image data for palette variations")
             except Exception as e:
                 error_msg = f"Error getting image data: {str(e)}"
                 logger.error(error_msg)
-                raise ServiceUnavailableError(detail=error_msg)
-        else:
-            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
+                logger.debug(traceback.format_exc())
+                raise JigsawStackError(message=error_msg)
         
-        # Generate color palettes
-        raw_palettes = await commons.concept_service.generate_color_palettes(
-            theme_description=request.theme_description,
-            logo_description=request.logo_description
-        )
-        
-        # Apply color palettes to create variations and store in Supabase Storage
-        # First get the image data if image_path is available
-        base_image_data = None
-        if "image_path" in concept_response:
-            try:
-                # Get image data from persistence service
-                base_image_data = await commons.image_persistence_service.get_image_async(
-                    concept_response["image_path"]
-                )
-            except Exception as e:
-                logger.error(f"Error fetching image data: {str(e)}")
-                # Continue with palette variations even if we can't fetch the image data
-                # as create_palette_variations might handle this case
-                
-        # Apply color palettes to create variations
-        palette_variations = await commons.image_service.create_palette_variations(
-            base_image_data=base_image_data,
-            palettes=raw_palettes,
-            user_id=user_id
-        )
-        
-        # Store concept in Supabase database
-        stored_concept = await commons.concept_persistence_service.store_concept({
-            "user_id": user_id,
-            "logo_description": request.logo_description,
-            "theme_description": request.theme_description,
-            "image_url": image_url,
-            "color_palettes": palette_variations,
-            "is_anonymous": True
-        })
-        
-        if not stored_concept:
-            raise ServiceUnavailableError(detail="Failed to store concept")
-        
-        # Handle case where storage service returns just the ID string
-        concept_id = stored_concept
-        created_at = datetime.now().isoformat()
-        if isinstance(stored_concept, dict):
-            concept_id = stored_concept.get("id", stored_concept)
-            created_at = stored_concept.get("created_at", created_at)
+        # Store the base image - we've separated this from concept generation
+        try:
+            # Generate a unique ID for the concept
+            concept_id = str(uuid.uuid4())
             
-        # Return the combined response
-        # The response model now has validators that handle URL conversion
-        return GenerationResponse(
-            prompt_id=concept_id,
-            logo_description=request.logo_description,
-            theme_description=request.theme_description,
-            created_at=created_at,
-            image_url=image_url,
-            variations=[
-                PaletteVariation(
-                    name=p["name"],
-                    colors=p["colors"],
-                    description=p.get("description", ""),
-                    image_url=p["image_url"]
-                ) 
-                for p in palette_variations
-            ]
-        )
-    except (ValidationError, ServiceUnavailableError):
-        # Re-raise our custom errors directly
+            # Store the image
+            image_path = f"concepts/{user_id}/{concept_id}.png"
+            
+            # Use ImagePersistenceService to store the image
+            image_url = await commons.image_persistence_service.store_image(
+                image_data=image_data,
+                path=image_path,
+                content_type="image/png",
+                user_id=user_id
+            )
+            
+            logger.info(f"Stored base concept image at: {mask_path(image_path)}")
+            
+            # Extract colors from the image using ImageService
+            colors = await commons.image_service.extract_colors_from_image(
+                image_data=image_data,
+                num_colors=8
+            )
+            
+            logger.info(f"Extracted {len(colors)} colors from base concept image")
+            
+            # Generate palette from colors
+            from app.services.concept.helpers.palette_generator import get_palette_from_colors
+            palette = get_palette_from_colors(colors)
+            
+            # Store concept metadata
+            concept_data = {
+                "id": concept_id,
+                "user_id": user_id,
+                "prompt": {
+                    "logo_description": request.logo_description,
+                    "theme_description": request.theme_description
+                },
+                "base_image_path": image_path,
+                "colors": colors,
+                "palette": palette,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Use ConceptPersistenceService to store the concept
+            await commons.concept_persistence_service.store_concept(concept_data)
+            
+            logger.info(f"Stored concept metadata with ID: {mask_id(concept_id)}")
+            
+            # Construct and return the response
+            return {
+                "concept_id": concept_id,
+                "image_url": image_url,
+                "colors": colors,
+                "palette": palette,
+                "request": {
+                    "logo_description": request.logo_description,
+                    "theme_description": request.theme_description
+                }
+            }
+            
+        except Exception as e:
+            error_msg = f"Error storing concept: {str(e)}"
+            logger.error(error_msg)
+            logger.debug(traceback.format_exc())
+            raise ConceptCreationError(message=error_msg)
+    
+    except RateLimitError as e:
+        # Rate limit errors will be translated to appropriate API errors
+        # by the application_error_handler
+        logger.warning(f"Rate limit exceeded: {e.message}")
         raise
+        
+    except AppValidationError as e:
+        # Validation errors will be translated
+        logger.warning(f"Validation error: {e.message}")
+        raise
+        
+    except AuthenticationError as e:
+        # Auth errors will be translated
+        logger.warning(f"Authentication error: {e.message}")
+        raise
+        
+    except (JigsawStackError, ConceptCreationError, ImageProcessingError) as e:
+        # Domain-specific errors will be translated
+        logger.error(f"Service error: {e.message}", exc_info=True)
+        raise
+        
+    except ApplicationError as e:
+        # Catch all other application errors to ensure proper translation
+        logger.error(f"Application error: {e.message}", exc_info=True)
+        raise
+        
     except Exception as e:
-        logger.error(f"Error generating concept: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
-        raise ServiceUnavailableError(detail=f"Error generating concept: {str(e)}")
+        # Catch unexpected errors
+        error_msg = f"Unexpected error generating concept: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise InternalServerError(detail=error_msg)
 
 
 @router.post("/generate-with-palettes", response_model=TaskResponse)

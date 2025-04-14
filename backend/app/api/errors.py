@@ -6,8 +6,17 @@ to appropriate HTTP responses.
 """
 
 from typing import Optional, Dict, Any, List, Type, Union
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import http_exception_handler as fastapi_http_exception_handler
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+import logging
 from app.core.exceptions import ApplicationError
+
+# Configure logging
+logger = logging.getLogger("api.errors")
 
 
 class APIError(HTTPException):
@@ -80,6 +89,58 @@ class NotFoundError(APIError):
         super().__init__(status_code=status.HTTP_404_NOT_FOUND, detail=detail, headers=headers)
 
 
+class MethodNotAllowedError(APIError):
+    """Exception for 405 Method Not Allowed errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Method not allowed",
+        allowed_methods: Optional[List[str]] = None,
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize method not allowed error."""
+        headers = headers or {}
+        if allowed_methods:
+            headers["Allow"] = ", ".join(allowed_methods)
+        super().__init__(status_code=status.HTTP_405_METHOD_NOT_ALLOWED, detail=detail, headers=headers)
+
+
+class NotAcceptableError(APIError):
+    """Exception for 406 Not Acceptable errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Cannot satisfy the request Accept header",
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize not acceptable error."""
+        super().__init__(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=detail, headers=headers)
+
+
+class ConflictError(APIError):
+    """Exception for 409 Conflict errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Resource conflict",
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize conflict error."""
+        super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail, headers=headers)
+
+
+class GoneError(APIError):
+    """Exception for 410 Gone errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Resource no longer available",
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize gone error."""
+        super().__init__(status_code=status.HTTP_410_GONE, detail=detail, headers=headers)
+
+
 class UnprocessableEntityError(APIError):
     """Exception for 422 Unprocessable Entity errors."""
     
@@ -135,6 +196,22 @@ class InternalServerError(APIError):
         )
 
 
+class BadGatewayError(APIError):
+    """Exception for 502 Bad Gateway errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Invalid response from upstream server", 
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize bad gateway error."""
+        super().__init__(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail,
+            headers=headers
+        )
+
+
 class ServiceUnavailableError(APIError):
     """Exception for 503 Service Unavailable errors."""
     
@@ -162,6 +239,22 @@ class ServiceUnavailableError(APIError):
         )
 
 
+class GatewayTimeoutError(APIError):
+    """Exception for 504 Gateway Timeout errors."""
+    
+    def __init__(
+        self, 
+        detail: str = "Gateway timeout", 
+        headers: Optional[Dict[str, str]] = None
+    ):
+        """Initialize gateway timeout error."""
+        super().__init__(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=detail,
+            headers=headers
+        )
+
+
 # Error mapping from application errors to API errors
 def map_application_error_to_api_error(error: ApplicationError) -> APIError:
     """
@@ -174,36 +267,110 @@ def map_application_error_to_api_error(error: ApplicationError) -> APIError:
         An API-level error with appropriate status code and detail
     """
     from app.core.exceptions import (
-        AuthenticationError, ResourceNotFoundError, ValidationError,
-        RateLimitError, ServiceUnavailableError as AppServiceUnavailableError,
-        ConceptNotFoundError, ImageNotFoundError, SessionNotFoundError,
-        TaskNotFoundError
+        # Authentication and authorization errors
+        AuthenticationError,
+        
+        # Resource errors
+        ResourceNotFoundError, ConceptNotFoundError, ImageNotFoundError, 
+        SessionNotFoundError, TaskNotFoundError,
+        
+        # Validation errors
+        ValidationError,
+        
+        # Rate limiting
+        RateLimitError,
+        
+        # Service availability
+        ServiceUnavailableError as AppServiceUnavailableError,
+        
+        # Database errors
+        DatabaseError, StorageError, 
+        
+        # Integration errors
+        JigsawStackError, JigsawStackConnectionError, JigsawStackAuthenticationError,
+        
+        # Processing errors
+        ImageProcessingError, ExportError, ColorPaletteApplicationError,
+        
+        # Concept errors
+        ConceptError, ConceptCreationError, ConceptStorageError, ConceptRefinementError,
+        
+        # Configuration errors
+        ConfigurationError, EnvironmentVariableError
     )
     
     # Convert the error message
     detail = error.message
     
     # Map specific error types to API errors
+    # Authentication and authorization
     if isinstance(error, AuthenticationError):
         return UnauthorizedError(detail=detail)
     
+    # Not found errors
     if isinstance(error, (ResourceNotFoundError, ConceptNotFoundError, 
                           ImageNotFoundError, SessionNotFoundError,
                           TaskNotFoundError)):
         return NotFoundError(detail=detail)
     
+    # Validation errors
     if isinstance(error, ValidationError):
+        field_errors = error.details.get("field_errors")
+        if field_errors:
+            return UnprocessableEntityError(detail={"detail": detail, "field_errors": field_errors})
         return UnprocessableEntityError(detail=detail)
     
+    # Rate limit errors
     if isinstance(error, RateLimitError):
         retry_after = error.details.get("reset_after")
         return TooManyRequestsError(detail=detail, retry_after=retry_after)
     
+    # Service unavailable errors
     if isinstance(error, AppServiceUnavailableError):
         retry_after = error.details.get("retry_after")
         return ServiceUnavailableError(detail=detail, retry_after=retry_after)
     
+    # Database errors (generally 500 unless more specific)
+    if isinstance(error, (DatabaseError, StorageError)):
+        return InternalServerError(detail=detail)
+    
+    # JigsawStack integration errors
+    if isinstance(error, JigsawStackConnectionError):
+        return ServiceUnavailableError(detail=detail)
+    
+    if isinstance(error, JigsawStackAuthenticationError):
+        # This is an internal auth error, not a user auth error
+        return InternalServerError(detail="Error authenticating with external service")
+    
+    if isinstance(error, JigsawStackError):
+        status_code = error.details.get("status_code")
+        if status_code:
+            if status_code == 400:
+                return BadRequestError(detail=detail)
+            elif status_code == 429:
+                return TooManyRequestsError(detail=detail)
+            elif status_code == 503:
+                return ServiceUnavailableError(detail=detail)
+            else:
+                return BadGatewayError(detail=detail)
+        return ServiceUnavailableError(detail=detail)
+    
+    # Processing errors
+    if isinstance(error, (ImageProcessingError, ExportError, ColorPaletteApplicationError)):
+        return UnprocessableEntityError(detail=detail)
+    
+    # Concept errors
+    if isinstance(error, (ConceptCreationError, ConceptStorageError, ConceptRefinementError)):
+        return UnprocessableEntityError(detail=detail)
+    
+    # Configuration errors (generally 500)
+    if isinstance(error, (ConfigurationError, EnvironmentVariableError)):
+        # Log these as they're typically serious server issues
+        logger.error(f"Configuration error: {detail}")
+        return InternalServerError(detail="Server configuration error")
+    
     # Default to internal server error
+    logger.warning(f"Unmapped application error type: {type(error).__name__}")
     return InternalServerError(detail=detail)
 
 
@@ -250,15 +417,17 @@ class ValidationError(UnprocessableEntityError):
         field_errors: Optional[Dict[str, List[str]]] = None
     ):
         """
-        Initialize with validation error details.
+        Initialize with 422 status code and validation details.
         
         Args:
             detail: Error message
-            field_errors: Optional field-specific errors
+            field_errors: Map of field names to error messages
         """
-        # Store field errors for backward compatibility
-        self.field_errors = field_errors
-        super().__init__(detail=detail)
+        if field_errors:
+            detail_dict = {"detail": detail, "field_errors": field_errors}
+            super().__init__(detail=detail_dict)
+        else:
+            super().__init__(detail=detail)
 
 
 class RateLimitExceededError(TooManyRequestsError):
@@ -271,18 +440,41 @@ class RateLimitExceededError(TooManyRequestsError):
         reset_at: Optional[str] = None
     ):
         """
-        Initialize with rate limit details.
+        Initialize with 429 status code and rate limit details.
         
         Args:
             detail: Error message
-            limit: Optional rate limit descriptor
-            reset_at: Optional reset timestamp
+            limit: The rate limit that was exceeded (e.g., "100/hour")
+            reset_at: When the rate limit will reset
         """
         headers = {}
-        if limit:
-            headers["X-RateLimit-Limit"] = limit
+        
+        # Convert reset_at to Retry-After if possible
         if reset_at:
-            headers["X-RateLimit-Reset"] = reset_at
+            try:
+                # Attempt to convert to integer seconds
+                import datetime
+                from dateutil import parser
+                
+                reset_dt = parser.parse(reset_at)
+                now = datetime.datetime.now(tz=reset_dt.tzinfo)
+                seconds_until_reset = int((reset_dt - now).total_seconds())
+                
+                # Only set if positive
+                if seconds_until_reset > 0:
+                    headers["Retry-After"] = str(seconds_until_reset)
+            except Exception:
+                # If parsing fails, don't set the header
+                pass
+        
+        # Include rate limit info in the detail if provided
+        if limit or reset_at:
+            detail_msg = detail
+            if limit:
+                detail_msg += f" (limit: {limit})"
+            if reset_at:
+                detail_msg += f" (resets at: {reset_at})"
+            detail = detail_msg
             
         super().__init__(detail=detail, headers=headers)
 
@@ -291,7 +483,7 @@ class AuthorizationError(ForbiddenError):
     """Legacy exception for authorization errors."""
     
     def __init__(self, detail: str = "Not authorized"):
-        """Initialize with 403 status code."""
+        """Initialize with 403 status code and authorization error message."""
         super().__init__(detail=detail)
 
 
@@ -299,151 +491,176 @@ class AuthenticationError(UnauthorizedError):
     """Legacy exception for authentication errors."""
     
     def __init__(self, detail: str = "Authentication required"):
-        """Initialize with 401 status code."""
+        """Initialize with 401 status code and authentication error message."""
         super().__init__(detail=detail)
 
 
-# Function to configure error handlers in FastAPI app
 def configure_error_handlers(app):
     """
-    Configure exception handlers for the FastAPI application.
+    Configure exception handlers for consistent error responses.
     
     Args:
         app: The FastAPI application instance
     """
-    # Import FastAPI types inside the function to avoid circular imports
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
-    from fastapi.exceptions import RequestValidationError
-    from starlette.exceptions import HTTPException as StarletteHTTPException
-    import logging
-    
-    logger = logging.getLogger("api_errors")
-    
-    # Handler for APIError
     @app.exception_handler(APIError)
     async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
-        """Handle APIError exceptions."""
-        logger.error(
-            f"API error: {exc.detail}", 
-            extra={
-                "status_code": exc.status_code,
-                "path": request.url.path,
-                "method": request.method,
-            }
-        )
+        """
+        Handle all API-specific errors with a consistent response format.
         
-        response = {
-            "error": True,
-            "detail": exc.detail,
-            "status_code": exc.status_code,
-        }
-        
+        Args:
+            request: The FastAPI request
+            exc: The exception that was raised
+            
+        Returns:
+            JSONResponse with appropriate status code and content
+        """
+        # Log server errors (500+)
+        if exc.status_code >= 500:
+            logger.error(
+                f"API error: {exc.detail}",
+                exc_info=True
+            )
+        # Log client errors with warning level
+        elif exc.status_code >= 400:
+            logger.warning(
+                f"Client error: {exc.status_code} - {exc.detail}"
+            )
+            
+        # Construct the response
+        content = {"detail": exc.detail}
         return JSONResponse(
             status_code=exc.status_code,
-            content=response,
-            headers=exc.headers or {}
+            content=content,
+            headers=exc.headers
         )
-    
-    # Handler for standard HTTPException
+        
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        """Handle standard HTTP exceptions."""
-        logger.error(
-            f"HTTP exception: {exc.detail}", 
-            extra={
-                "status_code": exc.status_code,
-                "path": request.url.path,
-                "method": request.method,
-            }
-        )
+        """
+        Handle regular HTTP exceptions using the same format as APIError.
         
-        response = {
-            "error": True,
-            "detail": exc.detail,
-            "status_code": exc.status_code,
-        }
-        
+        Args:
+            request: The FastAPI request
+            exc: The exception that was raised
+            
+        Returns:
+            JSONResponse with appropriate status code and content
+        """
+        # Log server errors (500+)
+        if exc.status_code >= 500:
+            logger.error(
+                f"HTTP error: {exc.detail}",
+                exc_info=True
+            )
+        # Log client errors with warning level
+        elif exc.status_code >= 400:
+            logger.warning(
+                f"Client HTTP error: {exc.status_code} - {exc.detail}"
+            )
+            
+        # For regular Starlette HTTP exceptions, we use the basic format
         return JSONResponse(
             status_code=exc.status_code,
-            content=response,
-            headers=exc.headers or {}
+            content={"detail": exc.detail},
+            headers=exc.headers
         )
-    
-    # Handler for validation errors
+        
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        """Handle validation errors with field details."""
-        # Convert validation errors to a more usable format
-        field_errors = {}
-        for error in exc.errors():
-            # Extract field location and name
-            location = error.get("loc", [])
-            if len(location) > 1:  # First item is usually 'body', 'query', etc.
-                field_name = ".".join(str(loc) for loc in location[1:])
-                # Add error to the field errors dict
-                if field_name not in field_errors:
-                    field_errors[field_name] = []
-                field_errors[field_name].append(error.get("msg", "Invalid value"))
+        """
+        Handle request validation errors (422 Unprocessable Entity).
         
-        logger.error(
-            "Validation error", 
-            extra={
-                "path": request.url.path,
-                "method": request.method,
-                "errors": field_errors
-            }
+        Args:
+            request: The FastAPI request
+            exc: The validation exception that was raised
+            
+        Returns:
+            JSONResponse with field-specific error details
+        """
+        # Log the validation error
+        logger.warning(
+            f"Request validation error: {exc.errors()}"
         )
         
+        # Convert validation errors to a more user-friendly format
+        field_errors = {}
+        error_messages = []
+        
+        for error in exc.errors():
+            # Get the field location (typically 'body', 'query', 'path', etc.)
+            loc = error.get('loc', [])
+            
+            # Skip the first item which is typically 'body', 'query', etc.
+            if len(loc) > 1:
+                field_path = '.'.join(str(x) for x in loc[1:])
+                
+                # Add to field-specific errors
+                if field_path not in field_errors:
+                    field_errors[field_path] = []
+                field_errors[field_path].append(error.get('msg', 'Invalid value'))
+                
+                # Add a readable message
+                error_messages.append(f"{field_path}: {error.get('msg', 'Invalid value')}")
+            else:
+                # Handle errors without a specific field
+                error_messages.append(error.get('msg', 'Validation error'))
+                
+        # Construct the response
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
-                "error": True,
-                "detail": "Validation error",
-                "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
-                "error_code": "VALIDATION_ERROR",
-                "field_errors": field_errors
+                "detail": "Request validation error",
+                "field_errors": field_errors,
+                "errors": error_messages
             }
         )
-    
-    # Handler for domain-specific application errors
+        
     @app.exception_handler(ApplicationError)
     async def application_error_handler(request: Request, exc: ApplicationError) -> JSONResponse:
-        """Map application errors to API errors."""
-        logger.error(
-            f"Application error: {exc.message}", 
-            extra={
-                "error_type": exc.__class__.__name__,
-                "details": exc.details,
-                "path": request.url.path,
-                "method": request.method,
-            }
-        )
+        """
+        Handle application domain exceptions by mapping them to API errors.
         
-        # Use our mapping function to convert ApplicationError to APIError
+        Args:
+            request: The FastAPI request
+            exc: The domain exception that was raised
+            
+        Returns:
+            JSONResponse with mapped API error details
+        """
+        # Convert the application error to an API error
         api_error = map_application_error_to_api_error(exc)
         
-        response = {
-            "error": True,
-            "detail": api_error.detail,
-            "status_code": api_error.status_code,
-        }
-        
+        # Log based on error severity
+        if api_error.status_code >= 500:
+            logger.error(
+                f"Application error mapped to {api_error.status_code}: {exc.message}",
+                exc_info=True
+            )
+        else:
+            logger.warning(
+                f"Application error mapped to {api_error.status_code}: {exc.message}"
+            )
+            
+        # Include error details if available
+        content = {"detail": api_error.detail}
+        if hasattr(exc, "details") and exc.details:
+            # Filter out sensitive information
+            safe_details = {k: v for k, v in exc.details.items() 
+                           if k not in ["token", "api_key", "password", "secret"]}
+            if safe_details:
+                content["details"] = safe_details
+                
         return JSONResponse(
             status_code=api_error.status_code,
-            content=response,
+            content=content,
             headers=api_error.headers or {}
         )
-    
-    # Handler specifically for TaskNotFoundError
+
+    # Legacy handler for TaskNotFoundError (can be removed once all routes are updated)
     @app.exception_handler(TaskNotFoundError)
     async def task_not_found_handler(request: Request, exc: TaskNotFoundError) -> JSONResponse:
-        """Handle TaskNotFoundError specifically."""
+        """Legacy handler for task not found errors."""
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "error": True,
-                "detail": str(exc),
-                "code": "task_not_found"
-            }
+            content={"detail": str(exc)}
         ) 
