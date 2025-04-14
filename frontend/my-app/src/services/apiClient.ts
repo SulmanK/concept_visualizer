@@ -11,6 +11,7 @@ import {
 } from './rateLimitService';
 import useToast from '../hooks/useToast';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import { queryClient } from '../main';
 
 // Use the full backend URL instead of a relative path
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
@@ -135,13 +136,11 @@ axiosInstance.interceptors.request.use(
       
       // If we have a valid token
       if (session?.access_token) {
-        console.log('[AUTH INTERCEPTOR] Adding auth token to request');
         // Add the auth header
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${session.access_token}`;
       } else {
         // If no valid token, remove any existing auth header
-        console.log('[AUTH INTERCEPTOR] No auth token available, removing auth header');
         if (config.headers) {
           delete config.headers.Authorization;
         }
@@ -166,7 +165,7 @@ axiosInstance.interceptors.response.use(
     // Skip rate limit header extraction for the rate-limits endpoints to avoid circular updates
     if (!response.config.url?.includes('/health/rate-limits')) {
       try {
-        // Call the updated extractRateLimitHeaders with the Axios response
+        // Extract and process rate limit headers
         extractRateLimitHeaders(response, response.config.url);
       } catch (error) {
         // Ensure errors in header processing don't break the request flow
@@ -248,68 +247,60 @@ axiosInstance.interceptors.response.use(
       if (resetHeader) {
         // If it's a timestamp
         if (!isNaN(Number(resetHeader))) {
-          resetAfterSeconds = Math.max(0, Math.ceil((Number(resetHeader) * 1000 - Date.now()) / 1000));
+          const resetTime = new Date(Number(resetHeader) * 1000);
+          resetAfterSeconds = Math.max(0, Math.floor((resetTime.getTime() - Date.now()) / 1000));
+        } else {
+          // If it's a relative time in seconds
+          resetAfterSeconds = parseInt(resetHeader, 10);
         }
+      } else if (retryAfter) {
+        // Use Retry-After header if available
+        resetAfterSeconds = parseInt(retryAfter, 10);
       }
       
-      // Parse Retry-After header as fallback
-      if (resetAfterSeconds === 0 && retryAfter) {
-        // Try to parse retry-after (could be a number in seconds or a date)
-        if (!isNaN(Number(retryAfter))) {
-          resetAfterSeconds = Number(retryAfter);
-        } 
-        // If it's a HTTP date format
-        else if (new Date(retryAfter).getTime() > 0) {
-          resetAfterSeconds = Math.ceil((new Date(retryAfter).getTime() - Date.now()) / 1000);
-        }
-      }
-      
-      // Get error data from response
-      const errorData: RateLimitErrorResponse = response.data || {
-        message: 'Rate limit exceeded',
-        reset_after_seconds: resetAfterSeconds
+      // Create a consistent error response object
+      const errorResponse: RateLimitErrorResponse = {
+        message: response.data?.message || 'Rate limit exceeded',
+        reset_after_seconds: resetAfterSeconds,
+        limit: limit,
+        current: current,
+        period: 'unknown' // Default, could be updated if we had a period header
       };
       
-      // If reset seconds wasn't in the header, try to get it from the response body
-      if (resetAfterSeconds === 0 && errorData.reset_after_seconds) {
-        resetAfterSeconds = errorData.reset_after_seconds;
-      }
-      
-      // Ensure reset_after_seconds is included in the error data
-      if (!errorData.reset_after_seconds && resetAfterSeconds > 0) {
-        errorData.reset_after_seconds = resetAfterSeconds;
-      }
-      
-      // Create specialized error with endpoint context
+      // Create RateLimitError with context
       const rateLimitError = new RateLimitError(
-        errorData.message || 'You have reached your usage limit',
-        errorData,
+        errorResponse.message,
+        errorResponse,
         url
       );
       
-      // Dispatch a custom event for rate limit toast notification
-      document.dispatchEvent(
-        new CustomEvent('show-api-toast', { 
-          detail: {
-            title: 'Rate Limit Reached',
-            message: rateLimitError.getUserFriendlyMessage(),
-            type: 'error',
-            duration: 6000, // Show longer than normal toasts
-            action: {
-              label: 'View Limits',
-              onClick: () => {
-                // Trigger the RateLimitsPanel to open
-                document.dispatchEvent(new CustomEvent('show-rate-limits'));
-              }
+      // Display a toast notification about the rate limit
+      if (originalRequest?.showToastOnRateLimit !== false) {
+        const userMessage = originalRequest?.rateLimitToastMessage || rateLimitError.getUserFriendlyMessage();
+        
+        toast({
+          title: 'Rate Limit Reached',
+          message: userMessage,
+          type: 'warning',
+          duration: 8000,
+          action: resetAfterSeconds > 0 ? {
+            label: 'View Limits',
+            onClick: () => {
+              // Create a custom event to trigger opening the rate limits panel
+              document.dispatchEvent(new CustomEvent('open-rate-limits-panel'));
             }
-          }
-        })
-      );
+          } : undefined
+        });
+      }
       
-      throw rateLimitError;
+      // Update React Query's rate limits cache
+      queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+      
+      // Reject with the RateLimitError
+      return Promise.reject(rateLimitError);
     }
     
-    // For all other errors, reject with the original error
+    // For other errors, just reject with the original error
     return Promise.reject(error);
   }
 );

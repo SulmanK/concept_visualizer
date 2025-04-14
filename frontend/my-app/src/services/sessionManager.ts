@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { v4 as uuidv4 } from 'uuid';
 // Import the rate limit service to force refresh when session changes
 import { fetchRateLimits } from './rateLimitService';
+import { apiClient } from './apiClient';
 
 const SESSION_COOKIE_NAME = 'concept_session';
 // Use the API base URL from environment variables
@@ -100,23 +101,10 @@ export const ensureSession = async (): Promise<boolean> => {
   
   // Sync the new session ID with the backend
   try {
-    const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify({ 
-        client_session_id: newSessionId
-      })
+    const { data } = await apiClient.post('/sessions/sync', { 
+      client_session_id: newSessionId
     });
     
-    if (!response.ok) {
-      console.error('Failed to sync new session:', await response.text());
-      return true; // We still created a session locally
-    }
-    
-    const data = await response.json();
     console.log('Session sync response:', data);
     
     // If the server returned a different session ID, update our cookie
@@ -180,25 +168,11 @@ export const syncSession = async (): Promise<boolean> => {
   try {
     console.log(`Attempting to sync session (masked: ${maskValue(currentSessionId)})`);
     
-    // Call the special endpoint to sync the session, using the API base URL
-    const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include', // Include cookies in the request
-      body: JSON.stringify({ 
-        client_session_id: currentSessionId 
-      })
+    // Call the special endpoint to sync the session using apiClient
+    const { data } = await apiClient.post('/sessions/sync', { 
+      client_session_id: currentSessionId 
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Failed to sync session: ${errorText}`);
-      return false;
-    }
-    
-    const data = await response.json();
     console.log(`Session sync response:`, data);
     
     // If the server returned a different session ID, update our cookie
