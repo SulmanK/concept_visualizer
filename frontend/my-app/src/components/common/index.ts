@@ -1,0 +1,1 @@
+export { QueryResultHandler } from './QueryResultHandler'; 
