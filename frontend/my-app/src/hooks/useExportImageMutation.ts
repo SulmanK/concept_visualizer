@@ -2,6 +2,7 @@ import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-
 import { apiClient, ExportFormat, ExportSize, RateLimitError } from '../services/apiClient';
 import { useOptimisticRateLimitUpdate } from './useRateLimitsQuery';
 import { createQueryErrorHandler } from '../utils/errorUtils';
+import { useErrorHandling } from './useErrorHandling';
 
 export interface ExportImageParams {
   /**
@@ -53,9 +54,9 @@ type ExportImageMutationResult = UseMutationResult<Blob, Error, ExportImageParam
 export function useExportImageMutation(): ExportImageMutationResult {
   const queryClient = useQueryClient();
   const { decrementLimit } = useOptimisticRateLimitUpdate();
-  const errorHandler = createQueryErrorHandler({
-    title: 'Export Failed',
-    defaultMessage: 'Failed to export image. Please try again.',
+  const errorHandler = useErrorHandling();
+  const { onQueryError } = createQueryErrorHandler(errorHandler, {
+    defaultErrorMessage: 'Failed to export image. Please try again.'
   });
 
   // Get the mutation result object which includes 'reset'
@@ -91,7 +92,7 @@ export function useExportImageMutation(): ExportImageMutationResult {
     
     onError: (error) => {
       // Use the error handler to display appropriate error messages
-      errorHandler(error);
+      onQueryError(error);
     },
     
     onSettled: async () => {
