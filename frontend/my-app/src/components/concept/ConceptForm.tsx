@@ -155,7 +155,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   };
   
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       {error && !error.includes('rate limit') && (
         <ErrorMessage 
           message={error} 
@@ -176,7 +176,7 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
         />
       )}
       
-      <Card variant="default" className="p-6">
+      <Card variant="default" className="p-6 shadow-lg bg-white border border-indigo-100 rounded-xl">
         {showProcessing ? (
           <div className="py-8 flex flex-col items-center">
             <LoadingIndicator size="large" className="mb-4" />

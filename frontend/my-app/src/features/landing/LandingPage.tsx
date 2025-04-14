@@ -5,7 +5,6 @@ import { useRecentConcepts, useConceptDetail } from '../../hooks/useConceptQueri
 import { useAuth } from '../../contexts/AuthContext';
 import { ErrorBoundary } from '../../components/ui';
 import { ConceptHeader } from './components/ConceptHeader';
-import { HowItWorks } from './components/HowItWorks';
 import { ConceptFormSection } from './components/ConceptFormSection';
 import { ResultsSection } from './components/ResultsSection';
 import { RecentConceptsSection } from './components/RecentConceptsSection';
@@ -122,25 +121,6 @@ const LandingPageContent: React.FC = () => {
     return error instanceof Error ? error.message : String(error);
   };
   
-  // Steps for how it works section
-  const howItWorksSteps = [
-    {
-      number: 1,
-      title: 'Describe Your Vision',
-      description: 'Provide detailed descriptions of your logo concept and color preferences.',
-    },
-    {
-      number: 2,
-      title: 'AI Generation',
-      description: 'Our AI processes your description and creates unique visual concepts.',
-    },
-    {
-      number: 3,
-      title: 'Refine & Download',
-      description: 'Refine the generated concepts and download your final designs.',
-    },
-  ];
-  
   const handleReset = useCallback(() => {
     console.log('[LandingPage] Resetting concept generation state', {
       timestamp: new Date().toISOString()
@@ -250,12 +230,10 @@ const LandingPageContent: React.FC = () => {
   const shouldShowResults = isTaskCompleted && effectiveResultId;
   
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
       <ConceptHeader onGetStarted={handleGetStarted} />
       
       <main className="container mx-auto px-4 py-8 space-y-12">
-        <HowItWorks steps={howItWorksSteps} onGetStarted={handleGetStarted} />
-        
         <ConceptFormSection
           id="create-form"
           onSubmit={handleGenerateConcept}
