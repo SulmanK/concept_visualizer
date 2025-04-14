@@ -62,7 +62,7 @@ class JigsawStackService(JigsawStackServiceInterface):
             JigsawStackGenerationError: If generation fails
         """
         try:
-            # Log the request with any sensitive information masked
+            # Log only the length of the prompt to avoid exposing sensitive data
             self.logger.info(f"Generating image with prompt length: {len(prompt)}")
             
             # Use the client to generate the image
@@ -73,7 +73,6 @@ class JigsawStackService(JigsawStackServiceInterface):
                 model=model
             )
             
-            # Log success
             self.logger.info("Image generation successful")
             return result
             
@@ -113,7 +112,7 @@ class JigsawStackService(JigsawStackServiceInterface):
             JigsawStackGenerationError: If refinement fails
         """
         try:
-            # Log the request with any sensitive information masked
+            # Log only the length of the prompt to avoid exposing sensitive data
             self.logger.info(f"Refining image with prompt length: {len(prompt)}")
             
             # Use the client to refine the image
@@ -124,7 +123,6 @@ class JigsawStackService(JigsawStackServiceInterface):
                 model=model
             )
             
-            # Log success
             self.logger.info("Image refinement successful")
             return result
             
@@ -160,7 +158,7 @@ class JigsawStackService(JigsawStackServiceInterface):
             JigsawStackGenerationError: If palette generation fails
         """
         try:
-            # Log the request with any sensitive information masked
+            # Log only the length of the prompt to avoid exposing sensitive data
             self.logger.info(f"Generating color palettes with prompt length: {len(prompt)}")
             
             # Use the client to generate palettes
@@ -169,7 +167,6 @@ class JigsawStackService(JigsawStackServiceInterface):
                 num_palettes=num_palettes
             )
             
-            # Log success
             self.logger.info(f"Generated {len(result)} color palettes successfully")
             return result
             

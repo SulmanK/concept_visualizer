@@ -72,7 +72,7 @@ class TaskService(TaskServiceInterface):
             
             # Mask user ID for logging
             masked_user_id = mask_id(user_id)
-            self.logger.info(f"Creating task of type '{task_type}' for user {masked_user_id}")
+            self.logger.debug(f"Creating task of type '{task_type}' for user {masked_user_id}")
             
             # Prepare task data
             task_data = {
@@ -85,7 +85,7 @@ class TaskService(TaskServiceInterface):
                 "metadata": metadata or {}
             }
             
-            # Insert using service role to bypass RLS policies
+            # Insert using service role client to bypass RLS policies
             try:
                 service_client = self.client.get_service_role_client()
                 result = service_client.table("tasks").insert(task_data).execute()
@@ -199,7 +199,7 @@ class TaskService(TaskServiceInterface):
             # Mask IDs for logging
             masked_task_id = mask_id(task_id)
             masked_user_id = mask_id(user_id)
-            self.logger.info(f"Getting task {masked_task_id} for user {masked_user_id}")
+            self.logger.debug(f"Getting task {masked_task_id} for user {masked_user_id}")
             
             # Query database using service role client to bypass RLS if available
             try:
@@ -222,7 +222,7 @@ class TaskService(TaskServiceInterface):
                 raise TaskNotFoundError(task_id)
                 
             task = result.data[0]
-            self.logger.info(f"Successfully retrieved task {masked_task_id}")
+            self.logger.debug(f"Successfully retrieved task {masked_task_id}")
             
             return task
             
@@ -257,7 +257,7 @@ class TaskService(TaskServiceInterface):
             # Mask user ID for logging
             masked_user_id = mask_id(user_id)
             status_filter = f" with status '{status}'" if status else ""
-            self.logger.info(f"Getting tasks for user {masked_user_id}{status_filter}")
+            self.logger.debug(f"Getting tasks for user {masked_user_id}{status_filter}")
             
             # Start query - use service role client to bypass RLS if available
             try:
@@ -287,7 +287,7 @@ class TaskService(TaskServiceInterface):
                 return []
                 
             tasks = result.data
-            self.logger.info(f"Retrieved {len(tasks)} tasks for user {masked_user_id}")
+            self.logger.debug(f"Retrieved {len(tasks)} tasks for user {masked_user_id}")
             
             return tasks
             
@@ -372,7 +372,7 @@ class TaskService(TaskServiceInterface):
             # Mask IDs for logging
             masked_result_id = mask_id(result_id)
             masked_user_id = mask_id(user_id)
-            self.logger.info(f"Getting task for result {masked_result_id} and user {masked_user_id}")
+            self.logger.debug(f"Getting task for result {masked_result_id} and user {masked_user_id}")
             
             # Query database - use service role client to bypass RLS if available
             try:
@@ -392,12 +392,12 @@ class TaskService(TaskServiceInterface):
             
             # Check if task exists
             if not result.data or len(result.data) == 0:
-                self.logger.info(f"No task found for result {masked_result_id}")
+                self.logger.debug(f"No task found for result {masked_result_id}")
                 return None
                 
             task = result.data[0]
             masked_task_id = mask_id(task["id"])
-            self.logger.info(f"Successfully retrieved task {masked_task_id} for result {masked_result_id}")
+            self.logger.debug(f"Successfully retrieved task {masked_task_id} for result {masked_result_id}")
             
             return task
             
