@@ -242,9 +242,10 @@ export const decrementRateLimit = (
 };
 
 /**
+ * @deprecated Use useRateLimitsQuery hook instead for consistent React Query integration
  * Fetch rate limits from the API
- * @param forceRefresh Force a refresh from the API
- * @returns Rate limits response
+ * @param forceRefresh Whether to force a refresh from the server
+ * @returns Promise resolving to the rate limits response
  */
 export const fetchRateLimits = async (forceRefresh: boolean = false): Promise<RateLimitsResponse> => {
   // If we already have cached data and we're not forcing a refresh, use it
