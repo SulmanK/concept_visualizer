@@ -9,7 +9,6 @@ import {
   mapEndpointToCategory, 
   RateLimitCategory 
 } from './rateLimitService';
-import useToast from '../hooks/useToast';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { queryClient } from '../main';
 

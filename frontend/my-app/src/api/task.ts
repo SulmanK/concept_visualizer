@@ -1,5 +1,6 @@
 import { TaskResponse } from '../types/api.types';
 import { apiClient } from '../services/apiClient';
+import { API_ENDPOINTS } from '../config/apiEndpoints';
 
 /**
  * Fetches the status of a task from the API
@@ -12,7 +13,7 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
   }
   
   console.log(`[API] Fetching status for task ${taskId}`);
-  const response = await apiClient.get<TaskResponse>(`/tasks/${taskId}`);
+  const response = await apiClient.get<TaskResponse>(API_ENDPOINTS.TASK_STATUS(taskId));
   
   // Normalize the response by ensuring the id field is set properly
   if (response.data.task_id && !response.data.id) {
@@ -34,6 +35,6 @@ export async function cancelTask(taskId: string): Promise<TaskResponse> {
   }
   
   console.log(`[API] Cancelling task ${taskId}`);
-  const response = await apiClient.post<TaskResponse>(`/tasks/${taskId}/cancel`);
+  const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.TASK_CANCEL(taskId));
   return response.data;
 } 

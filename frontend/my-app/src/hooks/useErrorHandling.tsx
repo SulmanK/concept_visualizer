@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useToast } from './useToast';
-import { RateLimitError } from '../services/apiClient';
+import useToast from './useToast';
 import { formatTimeRemaining } from '../services/rateLimitService';
 
 export type ErrorCategory = 
@@ -63,86 +62,13 @@ export interface UseErrorHandlingResult {
 }
 
 /**
- * Creates a function to handle errors in React Query mutations
- * 
- * @param options Configuration options
- * @returns A function to handle errors from React Query
+ * Hook for centralizing error handling in the application
  */
-export const createQueryErrorHandler = (options: {
-  title?: string;
-  defaultMessage?: string;
-} = {}) => {
-  const { 
-    title = 'Error',
-    defaultMessage = 'An unexpected error occurred'
-  } = options;
-  
-  // Return the error handler function that uses the toast utility directly
-  return (error: unknown) => {
-    // Handle our custom RateLimitError
-    if (error instanceof RateLimitError) {
-      // Use document event to show toast
-      document.dispatchEvent(
-        new CustomEvent('show-api-toast', {
-          detail: {
-            type: 'warning',
-            message: `${title}: ${error.getUserFriendlyMessage()}`
-          }
-        })
-      );
-      return;
-    }
-    
-    // Extract a meaningful error message
-    let message = defaultMessage;
-    
-    if (typeof error === 'string') {
-      message = error;
-    } else if (error instanceof Error) {
-      message = error.message;
-    } else if (typeof error === 'object' && error !== null) {
-      const err = error as any;
-      
-      // Try to extract message from common error formats
-      if (err.message) {
-        message = err.message;
-      } else if (err.error?.message) {
-        message = err.error.message;
-      } else if (err.data?.message) {
-        message = err.data.message;
-      } else if (err.response?.data?.message) {
-        message = err.response.data.message;
-      }
-    }
-    
-    // Show the error message using document event
-    document.dispatchEvent(
-      new CustomEvent('show-api-toast', {
-        detail: {
-          type: 'error',
-          message: `${title}: ${message}`
-        }
-      })
-    );
-    
-    // Log the error for debugging
-    console.error(`${title} Error:`, error);
-  };
-};
-
-/**
- * Custom hook for centralized error handling with categorization
- */
-export const useErrorHandling = (options?: {
-  /** Show toast on error automatically */
-  showToastOnError?: boolean;
-  
-  /** Default error message when unable to parse error */
-  defaultErrorMessage?: string;
-}): UseErrorHandlingResult => {
+export const useErrorHandling = (options: {
+  showToasts?: boolean;
+} = {}): UseErrorHandlingResult => {
   const {
-    showToastOnError = false,
-    defaultErrorMessage = 'An unexpected error occurred',
+    showToasts = false,
   } = options || {};
   
   const [error, setErrorState] = useState<ErrorWithCategory | null>(null);
@@ -164,7 +90,7 @@ export const useErrorHandling = (options?: {
       
       setErrorState(newError);
       
-      if (showToastOnError) {
+      if (showToasts) {
         // Map error category to toast type
         const toastType = 
           category === 'server' || category === 'client' ? 'error' :
@@ -175,7 +101,7 @@ export const useErrorHandling = (options?: {
         toast.showToast(toastType, message);
       }
     },
-    [showToastOnError, toast]
+    [showToasts, toast]
   );
   
   /**
@@ -189,11 +115,6 @@ export const useErrorHandling = (options?: {
    * Categorize an error based on its properties or message
    */
   const categorizeError = useCallback((error: unknown): ErrorCategory => {
-    // Handle our custom RateLimitError
-    if (error instanceof RateLimitError) {
-      return 'rateLimit';
-    }
-    
     // Handle axios or fetch errors
     if (typeof error === 'object' && error !== null) {
       const err = error as any;
@@ -239,12 +160,6 @@ export const useErrorHandling = (options?: {
    */
   const extractErrorMessage = useCallback(
     (error: unknown): string => {
-      // Handle RateLimitError specifically
-      if (error instanceof RateLimitError) {
-        const formattedTime = formatTimeRemaining(error.resetAfterSeconds);
-        return `Rate limit exceeded: ${error.current}/${error.limit} requests per ${error.period}. Try again in ${formattedTime}.`;
-      }
-      
       if (typeof error === 'string') {
         return error;
       }
@@ -282,13 +197,13 @@ export const useErrorHandling = (options?: {
           return `Error: ${JSON.stringify(error)}`;
         } catch (e) {
           // Fallback if JSON serialization fails
-          return defaultErrorMessage;
+          return 'An unexpected error occurred';
         }
       }
       
-      return defaultErrorMessage;
+      return 'An unexpected error occurred';
     },
-    [defaultErrorMessage]
+    []
   );
   
   /**
@@ -328,21 +243,7 @@ export const useErrorHandling = (options?: {
       const message = extractErrorMessage(error);
       const details = extractErrorDetails(error);
       
-      // Add rate limit specific properties if applicable
-      if (category === 'rateLimit' && error instanceof RateLimitError) {
-        setErrorState({
-          message,
-          details,
-          category,
-          originalError: error,
-          limit: error.limit,
-          current: error.current,
-          period: error.period,
-          resetAfterSeconds: error.resetAfterSeconds
-        });
-      } else {
-        setError(message, category, details, error);
-      }
+      setError(message, category, details, error);
     },
     [categorizeError, extractErrorMessage, extractErrorDetails, setError]
   );

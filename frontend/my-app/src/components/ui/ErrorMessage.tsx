@@ -45,6 +45,11 @@ export interface ErrorMessageProps {
     period: string;
     resetAfterSeconds: number;
   };
+  
+  /**
+   * Error code from backend API
+   */
+  error_code?: string;
 }
 
 /**
@@ -58,6 +63,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   onRetry,
   onDismiss,
   rateLimitData,
+  error_code,
 }) => {
   // Map of error types to appropriate styling
   const typeStyles = {
@@ -115,6 +121,26 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   // If this is a rate limit error, show detailed information
   const isRateLimit = type === 'rateLimit' && rateLimitData;
 
+  // Get action advice based on error type
+  const getActionAdvice = () => {
+    switch (type) {
+      case 'network':
+        return "Please check your internet connection and try again.";
+      case 'validation':
+        return "Please review the form fields and correct any errors.";
+      case 'permission':
+        return "You may need to log in again or request access to this resource.";
+      case 'notFound':
+        return "The requested resource could not be found. It may have been moved or deleted.";
+      case 'server':
+        return "Our servers are experiencing issues. Please try again later.";
+      case 'rateLimit':
+        return "You've reached your usage limit. Please wait before trying again.";
+      default:
+        return "If this issue persists, please contact support.";
+    }
+  };
+
   return (
     <div 
       className={`flex items-start p-4 rounded-lg border ${typeStyles[type]} ${className}`}
@@ -127,8 +153,19 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
       </div>
       
       <div className="flex-1">
-        <h3 className="text-sm font-medium">{message}</h3>
+        <div className="flex justify-between items-start">
+          <h3 className="text-sm font-medium">{message}</h3>
+          {error_code && (
+            <span className="text-xs opacity-70 bg-white/30 px-1.5 py-0.5 rounded ml-2">
+              Code: {error_code}
+            </span>
+          )}
+        </div>
+        
         {details && <p className="mt-1 text-xs opacity-80">{details}</p>}
+        
+        {/* Action advice based on error type */}
+        <p className="mt-2 text-xs">{getActionAdvice()}</p>
         
         {isRateLimit && (
           <div className="mt-3 bg-white bg-opacity-50 p-3 rounded-md">
