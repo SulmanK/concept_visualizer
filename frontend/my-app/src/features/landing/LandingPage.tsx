@@ -77,7 +77,7 @@ const LandingPageContent: React.FC = () => {
     user?.id
   );
   
-  // Effect to debug concept fetching and cache invalidation
+  // Effect to debug concept fetching and cache behavior - removed invalidation
   useEffect(() => {
     if (effectiveResultId) {
       console.log(`[LandingPage] Concept fetch state:`, {
@@ -88,17 +88,10 @@ const LandingPageContent: React.FC = () => {
         timestamp: new Date().toISOString()
       });
       
-      // Force invalidate the cache for this concept to ensure fresh data
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'detail', effectiveResultId]
-      });
-      
-      // Also refresh recent concepts to ensure this appears there
-      queryClient.invalidateQueries({ 
-        queryKey: ['concepts', 'recent'] 
-      });
+      // We no longer need to force invalidate as our useConceptDetail hook 
+      // is properly configured to refetch when needed
     }
-  }, [effectiveResultId, conceptData, isLoadingConcept, queryClient]);
+  }, [effectiveResultId, conceptData, isLoadingConcept]);
   
   // Map task and mutation state to form status
   const getFormStatus = () => {

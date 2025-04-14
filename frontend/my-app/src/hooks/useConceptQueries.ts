@@ -120,12 +120,10 @@ export function useConceptDetail(
       return processedConcept;
     },
     enabled: !!conceptId && !!userId, // Only run if we have both IDs
-    // Force refetch when parameters change to avoid stale data problems
-    refetchOnMount: true,
-    // Use shorter stale time to ensure we get fresh data
-    staleTime: 1000, // Only consider data fresh for 1 second
-    // Force refetch on window focus
-    refetchOnWindowFocus: true,
+    // Use standard refetch behavior from global settings
+    refetchOnMount: 'always', // Always refetch on mount for this critical data
+    // We'll use the global staleTime from QueryClient config
+    refetchOnWindowFocus: true, // Always refetch on window focus
     onError: onQueryError, // Use standardized error handling
   });
 }
