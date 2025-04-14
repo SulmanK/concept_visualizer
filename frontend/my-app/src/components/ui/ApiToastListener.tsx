@@ -7,6 +7,8 @@ interface ToastDetail {
   message: string;
   type: ToastType;
   duration?: number;
+  isRateLimitError?: boolean;
+  rateLimitResetTime?: number;
   action?: {
     label: string;
     onClick: () => void;
@@ -32,6 +34,24 @@ const ApiToastListener: React.FC = () => {
       const message = detail.title 
         ? `${detail.title}: ${detail.message}` 
         : detail.message;
+
+      // For rate limit errors, use a longer duration and add "Rate Limit: " prefix if not already there
+      let formattedMessage = message;
+      let duration = detail.duration;
+      
+      if (detail.isRateLimitError) {
+        // Add rate limit specific prefix if not already there
+        if (!formattedMessage.toLowerCase().includes('rate limit')) {
+          formattedMessage = `Rate Limit: ${formattedMessage}`;
+        }
+        
+        // Use longer duration for rate limit errors
+        duration = detail.duration || 8000; // Use 8 seconds for rate limit errors by default
+        
+        // Handle specific type for rate limit errors
+        showWarning(formattedMessage, duration, detail.action);
+        return;
+      }
 
       // Use the appropriate toast function based on type
       switch (detail.type) {
