@@ -21,22 +21,8 @@ const RefinementSelectionPage = lazy(() => import('./features/refinement').then(
 
 // Loading fallback component
 const LoadingFallback = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100vh',
-    background: 'linear-gradient(135deg, #f5f7ff 0%, #c3cfe2 100%)'
-  }}>
-    <div style={{ 
-      padding: '20px', 
-      borderRadius: '8px', 
-      backgroundColor: 'white',
-      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
-    }}>
+  <div className="flex justify-center items-center h-screen bg-gradient-to-br from-[#f5f7ff] to-[#c3cfe2]">
+    <div className="p-5 rounded-lg bg-white shadow-md flex flex-col items-center">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
       <p className="mt-4 text-indigo-600 font-medium">Loading...</p>
     </div>
@@ -45,20 +31,6 @@ const LoadingFallback = () => (
 
 // Import animations CSS
 import './styles/animations.css';
-
-// Ensure no gaps and full width but allow MainLayout to control its content width
-const appStyle = {
-  margin: 0,
-  padding: 0,
-  width: '100%',
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column' as const,
-  position: 'relative' as const,
-  overflow: 'hidden',
-  background: 'linear-gradient(135deg, #f5f7ff 0%, #c3cfe2 100%)',
-  fontFamily: '"Inter", sans-serif',
-};
 
 /**
  * Routes component to handle the route transitions
@@ -106,7 +78,7 @@ const AppRoutes = () => {
         exit="out"
         variants={getVariants(location.pathname)}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        style={{ height: '100%', width: '100%' }}
+        className="h-full w-full"
       >
         <Suspense fallback={<LoadingFallback />}>
           <Routes location={location}>
@@ -155,7 +127,7 @@ export default function App() {
   }, []);
 
   return (
-    <div style={appStyle}>
+    <div className="m-0 p-0 w-full min-h-screen flex flex-col relative overflow-hidden bg-gradient-to-br from-[#f5f7ff] to-[#c3cfe2] font-inter">
       <ToastProvider position="bottom-right" defaultDuration={5000} maxToasts={5}>
         <ErrorBoundary errorMessage="Something went wrong in the application. Please try refreshing the page.">
           <ApiToastListener />
@@ -181,17 +153,7 @@ export default function App() {
       
       {/* Debugging overlay - only shown in development */}
       {debugInfo && process.env.NODE_ENV === 'development' && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          right: 0,
-          background: 'rgba(0,0,0,0.7)',
-          color: 'white',
-          padding: '10px',
-          fontSize: '12px',
-          zIndex: 9999,
-          maxWidth: '300px',
-        }}>
+        <div className="fixed bottom-0 right-0 bg-black/70 text-white p-2.5 text-xs z-[9999] max-w-[300px]">
           <strong>Debug Info:</strong>
           <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
         </div>
