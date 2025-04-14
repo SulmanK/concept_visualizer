@@ -168,7 +168,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**8. Legacy Code Cleanup (Backend)**
+**8. Legacy Code Cleanup (Backend)**[x]
 
 *   **Goal:** Remove specified obsolete backend files.
 *   **Pre-requisite:** Ensure functionality from these files has been migrated elsewhere (e.g., concept logic to `services/concept/`, storage logic to `services/storage/`, image processing to `services/image/`, API routing centralized via `api/router.py`).
