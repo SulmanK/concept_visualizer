@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContextSelector } from 'use-context-selector';
 import { TaskResponse } from '../types/api.types';
 import { useTaskPolling } from '../hooks/useTaskPolling';
 import { useQueryClient } from '@tanstack/react-query';
@@ -268,7 +269,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
  * Must be used within a TaskProvider component.
  */
 export const useTaskContext = (): TaskContextType => {
-  const context = useContext(TaskContext);
+  const context = useContextSelector(TaskContext, state => state);
   
   if (context === undefined) {
     throw new Error('useTaskContext must be used within a TaskProvider');
@@ -276,5 +277,15 @@ export const useTaskContext = (): TaskContextType => {
   
   return context;
 };
+
+// Add specific selector hooks for better performance
+export const useHasActiveTask = () => useContextSelector(TaskContext, state => state?.hasActiveTask);
+export const useIsTaskProcessing = () => useContextSelector(TaskContext, state => state?.isTaskProcessing);
+export const useIsTaskPending = () => useContextSelector(TaskContext, state => state?.isTaskPending);
+export const useIsTaskCompleted = () => useContextSelector(TaskContext, state => state?.isTaskCompleted);
+export const useIsTaskFailed = () => useContextSelector(TaskContext, state => state?.isTaskFailed);
+export const useLatestResultId = () => useContextSelector(TaskContext, state => state?.latestResultId);
+export const useTaskInitiating = () => useContextSelector(TaskContext, state => state?.isTaskInitiating);
+export const useActiveTaskId = () => useContextSelector(TaskContext, state => state?.activeTaskId);
 
 export default TaskContext; 
