@@ -1,8 +1,7 @@
 """
-Rate limit application middleware.
+Rate limit application middleware for the Concept Visualizer API.
 
-This middleware applies rate limits to API requests based on their paths.
-It centralizes rate limiting logic, removing it from individual route handlers.
+This middleware applies rate limits to API endpoints.
 """
 
 import logging
@@ -12,8 +11,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from app.core.config import settings
-from app.core.limiter import check_rate_limit, get_user_id
+from app.core.limiter import check_rate_limit
+from app.core.limiter.keys import get_user_id
 from app.core.limiter.keys import get_endpoint_key
+from datetime import datetime
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -37,18 +38,27 @@ MULTIPLE_RATE_LIMITS = {
     ],
 }
 
-# Public paths that should be excluded from rate limiting
+# Public paths that bypass authentication and rate limiting
 PUBLIC_PATHS = [
     "/api/health",
-    "/api/health/",
-    "/api/health/check",
-    "/api/health/rate-limits",
-    "/api/health/rate-limits-status",
-    "/api/auth/signin-anonymous",
     "/docs",
     "/redoc",
     "/openapi.json",
+    "/api/auth/session",
+    "/api/auth/login",
+    "/api/auth/signup",
+    "/api/auth/reset-password",
+    "/api/auth/magic-link",
 ]
+
+# Rate Limit Keys/Strings - moved from core/constants.py to here
+# since these are API-specific rate limit configurations
+RATE_LIMIT_ENDPOINT_GENERATE = "/concepts/generate-with-palettes"
+RATE_LIMIT_STRING_GENERATE = "10/month"
+RATE_LIMIT_ENDPOINT_REFINE = "/concepts/refine"
+RATE_LIMIT_STRING_REFINE = "10/month"
+RATE_LIMIT_ENDPOINT_STORE = "/concepts/store"
+RATE_LIMIT_STRING_STORE = "10/month"
 
 
 class RateLimitApplyMiddleware(BaseHTTPMiddleware):
