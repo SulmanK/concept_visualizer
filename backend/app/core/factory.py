@@ -88,8 +88,9 @@ def create_app() -> FastAPI:
     app.add_middleware(RateLimitHeadersMiddleware)
     logger.info("Added rate limit headers middleware")
     
-    # Configure API routes
+    # Configure API routes (this also sets up error handlers via configure_error_handlers)
     configure_api_routes(app)
+    logger.info("Configured API routes and error handlers")
     
     # Configure rate limiting
     setup_limiter_for_app(app)
