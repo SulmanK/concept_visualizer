@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TaskResponse } from '../types/api.types';
 import { fetchTaskStatus } from '../api/task';
+import { useNetworkStatus } from './useNetworkStatus';
+import { queryKeys } from '../config/queryKeys';
+import { DEFAULT_POLLING_INTERVAL, TASK_STATUS } from '../config/apiEndpoints';
 
 // In-memory cache to store task results and prevent polling completed tasks
 const completedTasksCache = new Map<string, TaskResponse>();
@@ -46,13 +49,14 @@ interface UseTaskPollingOptions {
 export function useTaskPolling({
   taskId,
   enabled = true,
-  pollingInterval = 2000,
+  pollingInterval = DEFAULT_POLLING_INTERVAL,
   onSuccess,
   onError,
   onComplete
 }: UseTaskPollingOptions) {
   const queryClient = useQueryClient();
   const [isTaskCompleted, setIsTaskCompleted] = useState(false);
+  const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
   
   // Check if the task is already in the completed tasks cache
   const cachedTask = useMemo(() => {
@@ -61,11 +65,12 @@ export function useTaskPolling({
   }, [taskId]);
   
   // If we have a cached completed task, use it instead of polling
-  const shouldPoll = Boolean(enabled && taskId && !cachedTask && !isTaskCompleted);
+  // Also check network status - don't poll when offline
+  const shouldPoll = Boolean(enabled && taskId && !cachedTask && !isTaskCompleted && networkStatus.isOnline);
   
   // Query for the task status
   const query = useQuery<TaskResponse, Error>({
-    queryKey: ['task', taskId],
+    queryKey: queryKeys.tasks.detail(taskId),
     queryFn: () => {
       if (!taskId) {
         return Promise.reject(new Error('No task ID provided'));
@@ -75,6 +80,7 @@ export function useTaskPolling({
     enabled: shouldPoll,
     staleTime: 0,
     retry: 3,
+    refetchOnReconnect: true, // Refetch when the connection is restored
   });
   
   // Set up polling with setInterval
@@ -83,12 +89,12 @@ export function useTaskPolling({
     
     if (shouldPoll) {
       // Initial fetch
-      queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       
       // Set up polling interval
       intervalId = setInterval(() => {
         if (!isTaskCompleted) {
-          queryClient.invalidateQueries({ queryKey: ['task', taskId] });
+          queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
         } else if (intervalId) {
           clearInterval(intervalId);
         }
@@ -111,7 +117,11 @@ export function useTaskPolling({
   useEffect(() => {
     if (!taskId || !data) return;
     
-    const isComplete = ['completed', 'failed', 'canceled'].includes(data.status);
+    const isComplete = [
+      TASK_STATUS.COMPLETED,
+      TASK_STATUS.FAILED,
+      TASK_STATUS.CANCELED
+    ].includes(data.status);
     
     if (isComplete && !isTaskCompleted) {
       console.log(`[TaskPolling] Task ${taskId} completed with status: ${data.status}`);
@@ -123,11 +133,11 @@ export function useTaskPolling({
       }
       
       // Call the appropriate callbacks
-      if (data.status === 'completed' && onSuccess) {
+      if (data.status === TASK_STATUS.COMPLETED && onSuccess) {
         onSuccess(data);
       }
       
-      if (data.status === 'failed' && onError) {
+      if (data.status === TASK_STATUS.FAILED && onError) {
         onError(new Error(data.error_message || 'Task failed'));
       }
       
@@ -141,7 +151,7 @@ export function useTaskPolling({
   useEffect(() => {
     return () => {
       if (taskId) {
-        queryClient.cancelQueries({ queryKey: ['task', taskId] });
+        queryClient.cancelQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       }
     };
   }, [taskId, queryClient]);
@@ -152,13 +162,13 @@ export function useTaskPolling({
     error,
     data,
     // Adapter properties for TaskContext
-    isPending: data?.status === 'pending',
-    isProcessing: data?.status === 'processing',
-    isCompleted: data?.status === 'completed',
-    isFailed: data?.status === 'failed',
+    isPending: data?.status === TASK_STATUS.PENDING,
+    isProcessing: data?.status === TASK_STATUS.PROCESSING,
+    isCompleted: data?.status === TASK_STATUS.COMPLETED,
+    isFailed: data?.status === TASK_STATUS.FAILED,
     refresh: () => {
       if (taskId) {
-        return queryClient.refetchQueries({ queryKey: ['task', taskId] });
+        return queryClient.refetchQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       }
     }
   };

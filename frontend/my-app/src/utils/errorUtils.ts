@@ -3,6 +3,8 @@
  */
 
 import { UseErrorHandlingResult } from '../hooks/useErrorHandling';
+import { RateLimitError } from '../services/apiClient';
+import { useErrorHandling } from '../hooks/useErrorHandling';
 
 /**
  * Creates a standardized error handler function for async operations
@@ -83,69 +85,68 @@ export const createAsyncErrorHandler = <T>(
 };
 
 /**
- * Helper to standardize React Query error handling
+ * Creates a function to handle errors in React Query mutations.
+ * This is separated from useErrorHandling to prevent circular dependencies.
  * 
- * @param errorHandler - The error handling hook result
- * @param options - Additional options
- * @returns An object with onError functions for React Query
+ * @param errorHandler The error handler instance from useErrorHandling
+ * @param options Configuration options
+ * @returns Functions for error handling
  */
 export const createQueryErrorHandler = (
-  errorHandler: UseErrorHandlingResult,
+  errorHandler: ReturnType<typeof useErrorHandling>,
   options: {
-    showToast?: boolean;
     defaultErrorMessage?: string;
-    context?: string;
+    showToast?: boolean;
   } = {}
 ) => {
-  const { handleError, showErrorToast } = errorHandler;
-  const { 
-    showToast = true,
-    defaultErrorMessage = 'An error occurred during the operation',
-    context = 'reactQuery'
+  const {
+    defaultErrorMessage = 'An unexpected error occurred',
+    showToast = false,
   } = options;
-  
-  return {
-    /**
-     * onError handler for React Query hooks
-     */
-    onQueryError: (error: unknown) => {
-      console.error(`[ERROR:${context}:query]`, error);
-      
-      if (error instanceof Error) {
-        console.error(`[ERROR:${context}:query] Stack trace:`, error.stack);
-        
-        // Check if this might be an auth-related error
-        if (
-          error.message.includes('auth') || 
-          error.message.includes('token') ||
-          error.message.includes('permission') ||
-          error.message.includes('unauthorized') ||
-          error.message.includes('401')
-        ) {
-          console.warn('[AUTH_ERROR] This error may be related to authentication issues:', error.message);
-        }
-      }
-      
-      handleError(error);
-      if (showToast) {
-        showErrorToast();
-      }
-    },
+
+  /**
+   * Handle query errors in a consistent way
+   */
+  const onQueryError = (error: unknown) => {
+    console.error('Query error:', error);
     
-    /**
-     * onError handler for React Query mutations
-     */
-    onMutationError: (error: unknown) => {
-      console.error(`[ERROR:${context}:mutation]`, error);
-      
-      if (error instanceof Error) {
-        console.error(`[ERROR:${context}:mutation] Stack trace:`, error.stack);
-      }
-      
-      handleError(error);
-      if (showToast) {
-        showErrorToast();
-      }
+    // Handle RateLimitError separately
+    if (error instanceof RateLimitError) {
+      errorHandler.setError(
+        error.getUserFriendlyMessage(),
+        'rateLimit',
+        'Please try again later or upgrade your plan.',
+        error
+      );
+      return;
+    }
+    
+    // Extract a usable error message
+    const errorMessage = typeof error === 'string' 
+      ? error 
+      : error instanceof Error 
+        ? error.message 
+        : defaultErrorMessage;
+    
+    // Handle other errors
+    errorHandler.handleError(error);
+    
+    // Show toast notification if enabled
+    if (showToast) {
+      document.dispatchEvent(
+        new CustomEvent('show-api-toast', {
+          detail: {
+            type: 'error',
+            message: errorMessage
+          }
+        })
+      );
     }
   };
-}; 
+
+  return {
+    onQueryError
+  };
+};
+
+export default createQueryErrorHandler; 

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { apiClient, ExportFormat, ExportSize, RateLimitError } from '../services/apiClient';
 import { useOptimisticRateLimitUpdate } from './useRateLimitsQuery';
-import { createQueryErrorHandler } from './useErrorHandling';
+import { createQueryErrorHandler } from '../utils/errorUtils';
 
 export interface ExportImageParams {
   /**
