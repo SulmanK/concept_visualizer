@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { TaskResponse } from '../types/api.types';
 import { useTaskPolling } from '../hooks/useTaskPolling';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TaskContextType {
   /**
@@ -99,6 +100,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const initiatingStartTimeRef = useRef<number | null>(null);
   // Track the latest result ID from completed tasks
   const [latestResultId, setLatestResultId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
   // Update initiatingStartTime when isTaskInitiating changes
   useEffect(() => {
@@ -156,6 +158,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
       if (taskData.result_id) {
         console.log(`[TaskContext] Setting latest result ID: ${taskData.result_id}`);
         setLatestResultId(taskData.result_id);
+        
+        // Invalidate concept queries to ensure fresh data is displayed
+        // This ensures that other components will see the updated data
+        queryClient.invalidateQueries({ 
+          queryKey: ['concepts', 'detail', taskData.result_id],
+          exact: false
+        });
+        
+        // Also invalidate recent concepts to ensure any lists get refreshed
+        queryClient.invalidateQueries({ 
+          queryKey: ['concepts', 'recent']
+        });
       } else {
         console.log(`[TaskContext] Task completed but no result_id was found`);
       }

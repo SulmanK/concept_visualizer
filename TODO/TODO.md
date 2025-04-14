@@ -207,7 +207,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**10. React Query Cache Review**
+**10. React Query Cache Review**[x]
 
 *   **Goal:** Optimize data fetching behavior and potentially remove unnecessary forced refetches.
 
@@ -669,7 +669,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Add `if not self.VARIABLE_NAME:` checks for essential variables like:
             *   `SUPABASE_JWT_SECRET`
             *   `SUPABASE_SERVICE_ROLE` (crucial if service role calls are used)
-            *   `STORAGE_BUCKET_CONCEPT`
+            *   `STORAGE_BUCKET_CONCEPTS`
             *   `STORAGE_BUCKET_PALETTE`
         *   Conditionally check Redis variables if rate limiting is enabled:
             ```python
