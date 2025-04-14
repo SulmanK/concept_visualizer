@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { TaskResponse } from '../types/api.types';
 import { useTaskPolling } from '../hooks/useTaskPolling';
 import { useQueryClient } from '@tanstack/react-query';
+import { TASK_STATUS } from '../config/apiEndpoints';
 
 interface TaskContextType {
   /**
@@ -151,7 +152,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   // Function to handle task success
   const handleTaskSuccess = (taskData: TaskResponse) => {
     // When the task completes successfully, store result ID if it exists
-    if (taskData.status === 'completed') {
+    if (taskData.status === TASK_STATUS.COMPLETED) {
       console.log(`[TaskContext] Task ${taskData.id} completed successfully`);
       
       // Store the result_id if it exists
@@ -211,7 +212,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   
   // Watch for result_id in task data even if onSuccess hasn't been called yet
   useEffect(() => {
-    if (activeTaskData?.status === 'completed' && activeTaskData.result_id) {
+    if (activeTaskData?.status === TASK_STATUS.COMPLETED && activeTaskData.result_id) {
       console.log(`[TaskContext] Detected result_id in task data: ${activeTaskData.result_id}`);
       setLatestResultId(activeTaskData.result_id);
     }
