@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, Depends, Request, Response, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+import httpx
 
 from app.api.dependencies import CommonDependencies
 from app.models.concept.request import RefinementRequest
@@ -19,7 +20,10 @@ from app.models.concept.response import RefinementResponse
 from app.models.task.response import TaskResponse
 from app.services.concept.interface import ConceptServiceInterface
 from app.services.image.interface import ImageServiceInterface
-from app.services.persistence.interface import ConceptPersistenceServiceInterface
+from app.services.persistence.interface import (
+    ConceptPersistenceServiceInterface, 
+    ImagePersistenceServiceInterface
+)
 from app.services.task.interface import TaskServiceInterface
 from app.core.exceptions import (
     ServiceUnavailableError,
@@ -148,6 +152,7 @@ async def refine_concept(
                 image_service=commons.image_service,
                 concept_service=commons.concept_service,
                 concept_persistence_service=commons.concept_persistence_service,
+                image_persistence_service=commons.image_persistence_service,
                 task_service=commons.task_service
             )
             
@@ -187,6 +192,7 @@ async def refine_concept_background_task(
     image_service: ImageServiceInterface,
     concept_service: ConceptServiceInterface,
     concept_persistence_service: ConceptPersistenceServiceInterface,
+    image_persistence_service: ImagePersistenceServiceInterface,
     task_service: TaskServiceInterface
 ):
     """
@@ -202,6 +208,7 @@ async def refine_concept_background_task(
         image_service: Service for image refinement and processing
         concept_service: Service for concept generation
         concept_persistence_service: Service for storing concepts
+        image_persistence_service: Service for storing images
         task_service: Service for updating task status
     """
     try:
@@ -215,22 +222,57 @@ async def refine_concept_background_task(
         
         # Refine and store the image
         try:
-            refined_image_path, refined_image_url = await image_service.refine_and_store_image(
-                prompt=(
-                    f"Refine this logo design: {logo_description}. Theme/style: {theme_description}. "
-                    f"Refinement instructions: {refinement_prompt}."
-                ),
-                original_image_url=original_image_url,
-                user_id=user_id,
+            # First, download the original image
+            async with httpx.AsyncClient() as client:
+                response = await client.get(original_image_url)
+                response.raise_for_status()
+                original_image_data = response.content
+            
+            # Use concept service to refine the image
+            refinement_result = await concept_service.refine_concept(
+                original_image_data=original_image_data,
+                refinement_prompt=refinement_prompt,
+                logo_description=logo_description,
+                theme_description=theme_description,
                 strength=0.7  # Control how much to preserve original image
             )
             
-            if not refined_image_path or not refined_image_url:
-                logger.error(f"Task {mask_id(task_id)}: Failed to refine or store image")
+            if not refinement_result or "image_data" not in refinement_result:
+                logger.error(f"Task {mask_id(task_id)}: Failed to refine image")
                 await task_service.update_task_status(
                     task_id=task_id,
                     status=TASK_STATUS_FAILED,
-                    error_message="Failed to refine or store image: No image data returned from service"
+                    error_message="Failed to refine image: No image data returned from service"
+                )
+                return
+                
+            # Store the refined image using image persistence service
+            # Create a new instance directly instead of using the Depends object
+            from app.services.persistence.image_persistence_service import ImagePersistenceService
+            from app.core.supabase.client import SupabaseClient
+            from app.core.config import settings
+            
+            # Create the necessary clients
+            supabase_client = SupabaseClient(url=settings.SUPABASE_URL, key=settings.SUPABASE_KEY)
+            image_storage_service = ImagePersistenceService(client=supabase_client)
+            
+            refined_image_data = refinement_result["image_data"]
+            refined_image_path, refined_image_url = image_storage_service.store_image(
+                image_data=refined_image_data,
+                user_id=user_id,
+                metadata={
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
+                    "refinement_prompt": refinement_prompt
+                }
+            )
+            
+            if not refined_image_path or not refined_image_url:
+                logger.error(f"Task {mask_id(task_id)}: Failed to store refined image")
+                await task_service.update_task_status(
+                    task_id=task_id,
+                    status=TASK_STATUS_FAILED,
+                    error_message="Failed to store refined image"
                 )
                 return
         except Exception as e:
@@ -261,10 +303,22 @@ async def refine_concept_background_task(
         
         # Apply color palettes to create variations
         try:
-            palette_variations = await image_service.create_palette_variations(
-                refined_image_path,
-                raw_palettes,
-                user_id
+            # Create a direct ImageService instance
+            from app.services.image.service import ImageService
+            from app.services.image.processing_service import ImageProcessingService
+            
+            # We already have the image_storage_service from above
+            image_processor = ImageProcessingService()
+            image_svc = ImageService(
+                persistence_service=image_storage_service,
+                processing_service=image_processor
+            )
+            
+            # Use our created service to process the variations
+            palette_variations = await image_svc.create_palette_variations(
+                base_image_data=refined_image_data,  # Use the already downloaded image data
+                palettes=raw_palettes,
+                user_id=user_id
             )
         except Exception as e:
             error_message = f"Failed to create palette variations: {str(e)}"

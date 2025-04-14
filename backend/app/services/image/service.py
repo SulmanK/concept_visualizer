@@ -121,84 +121,6 @@ class ImageService(ImageServiceInterface):
             # Re-raise as ImageError
             raise ImageError(f"Failed to store image: {str(e)}")
             
-    def get_image(self, image_url_or_path: str, is_palette: bool = False) -> bytes:
-        """
-        Retrieve an image by URL or storage path.
-        
-        Args:
-            image_url_or_path: URL or storage path of the image
-            is_palette: Whether this is a palette image
-            
-        Returns:
-            Image data as bytes
-            
-        Raises:
-            ImageError: If retrieval fails
-        """
-        try:
-            # Convert relative signed URLs to full URLs if needed
-            if image_url_or_path.startswith("/object/sign/"):
-                full_url = f"{settings.SUPABASE_URL}{image_url_or_path}"
-                self.logger.info(f"Converting relative signed URL to full URL: {full_url}")
-                image_url_or_path = full_url
-            
-            # Check if it's an external URL or a storage path
-            if image_url_or_path.startswith(("http://", "https://")):
-                # It's an external URL, fetch it
-                async_fetch = False
-                try:
-                    response = httpx.get(image_url_or_path)
-                    if response.status_code != 200:
-                        raise ImageError(f"Failed to fetch image from URL: {response.status_code}")
-                    return response.content
-                except Exception as e:
-                    if "Running in async context" in str(e):
-                        # Need to use async client
-                        async_fetch = True
-                    else:
-                        # Re-raise if it's not an async context error
-                        raise
-                
-                if async_fetch:
-                    # This will be executed inside an async function
-                    # We need to use AsyncClient but can't await here
-                    # Return a placeholder or throw an informative error
-                    raise ImageError("Unable to fetch image URL in synchronous context. Use async method.")
-            
-            # Check if it's a signed URL from our Supabase storage
-            elif '/object/sign/' in image_url_or_path:
-                # Extract the real path from signed URL
-                path_parts = image_url_or_path.split('/object/sign/')
-                if len(path_parts) > 1:
-                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
-                    bucket_parts = bucket_path.split('/', 1)
-                    if len(bucket_parts) > 1:
-                        bucket_name = bucket_parts[0]
-                        path = bucket_parts[1]
-                        
-                        # Determine if it's a palette image
-                        is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
-                        
-                        self.logger.info(f"Extracted path from signed URL: {path}")
-                        # Use persistence service directly with the path
-                        return self.persistence.get_image(path, is_palette=is_palette)
-                
-                # If we can't extract a path or it doesn't match expected format,
-                # try to use the URL directly
-                response = httpx.get(image_url_or_path)
-                if response.status_code != 200:
-                    raise ImageError(f"Failed to fetch image from signed URL: {response.status_code}")
-                return response.content
-            
-            # Otherwise it's a storage path
-            else:
-                return self.persistence.get_image(image_url_or_path, is_palette=is_palette)
-                
-        except Exception as e:
-            error_msg = f"Failed to get image {image_url_or_path}: {str(e)}"
-            self.logger.error(error_msg)
-            raise ImageError(error_msg)
-            
     def convert_to_format(
         self, 
         image_data: bytes, 
@@ -352,7 +274,7 @@ class ImageService(ImageServiceInterface):
                         validated_image_data,
                         operations=[{
                             "type": "apply_palette",
-                            "colors": palette_colors,
+                            "palette": palette_colors,
                             "blend_strength": blend_strength
                         }]
                     )
@@ -430,103 +352,13 @@ class ImageService(ImageServiceInterface):
                 image_data,
                 operations=[{
                     "type": "apply_palette",
-                "colors": palette_colors,
+                    "palette": palette_colors,
                     "blend_strength": blend_strength
                 }]
             )
         except Exception as e:
             self.logger.error(f"Error applying palette to image: {str(e)}")
             raise ImageError(f"Failed to apply palette to image: {str(e)}")
-
-    def get_image_url(self, image_path: str, is_palette: bool = False) -> str:
-        """
-        Get a signed URL for an image in storage.
-        
-        Args:
-            image_path: Path to the image in storage
-            is_palette: Whether this is a palette image
-            
-        Returns:
-            Signed URL for the image
-            
-        Raises:
-            ImageError: If URL generation fails
-        """
-        try:
-            # Use the persistence service to get the signed URL
-            return self.persistence.get_signed_url(image_path, is_palette=is_palette)
-            
-        except Exception as e:
-            self.logger.error(f"Error getting signed image URL: {str(e)}")
-            raise ImageError(f"Failed to get signed image URL: {str(e)}")
-
-    async def generate_and_store_image(
-        self,
-        prompt: str, 
-        user_id: str,
-        concept_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Tuple[str, str]:
-        """
-        Generate an image using an external API and store it.
-        
-        This method is a placeholder since we've refactored the architecture to move image 
-        generation responsibilities to the ConceptService. This implementation simply throws 
-        an appropriate error message to guide developers to use the correct service.
-        
-        Args:
-            prompt: Text prompt for image generation
-            user_id: User ID for storage
-            concept_id: Optional concept ID for association
-            metadata: Optional metadata to store with the image
-            
-        Returns:
-            Tuple of (image_path, image_url)
-            
-        Raises:
-            ImageError: Always raises this error since this method should not be called directly
-        """
-        error_msg = (
-            "The ImageService no longer handles image generation. "
-            "Please use ConceptService.generate_concept instead."
-        )
-        self.logger.error(error_msg)
-        raise ImageError(error_msg)
-        
-    async def refine_and_store_image(
-        self, 
-        original_image_path: str, 
-        refinement_prompt: str,
-        user_id: str,
-        concept_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
-    ) -> Tuple[str, str]:
-        """
-        Refine an existing image using an external API and store the result.
-        
-        This method is a placeholder since we've refactored the architecture to move image 
-        refinement responsibilities to the ConceptService. This implementation simply throws 
-        an appropriate error message to guide developers to use the correct service.
-        
-        Args:
-            original_image_path: Path of the original image to refine
-            refinement_prompt: Text instructions for refinement
-            user_id: User ID for storage
-            concept_id: Optional concept ID for association
-            metadata: Optional metadata to store with the image
-            
-        Returns:
-            Tuple of (image_path, image_url)
-            
-        Raises:
-            ImageError: Always raises this error since this method should not be called directly
-        """
-        error_msg = (
-            "The ImageService no longer handles image refinement. "
-            "Please use ConceptService.refine_concept instead."
-        )
-        self.logger.error(error_msg)
-        raise ImageError(error_msg)
 
     # Cache for storing recently downloaded images to avoid repeated downloads
     _image_cache = {}
@@ -568,9 +400,8 @@ class ImageService(ImageServiceInterface):
                     return image_data
             # Handle storage paths
             else:
-                # For now, we don't have an async version of the persistence.get_image method
-                # So we'll just call the synchronous version
-                image_data = self.persistence.get_image(image_url_or_path)
+                # Since we've removed get_image from ImageService, use the persistence service's async method
+                image_data = await self.persistence.get_image_async(image_url_or_path)
                 
                 # Add to cache
                 if len(self._image_cache) >= self._cache_size_limit:

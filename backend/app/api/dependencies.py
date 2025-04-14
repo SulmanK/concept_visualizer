@@ -12,13 +12,15 @@ from typing import Optional, Dict, Any
 from app.core.supabase.client import get_supabase_client, SupabaseClient
 from app.services.jigsawstack.client import get_jigsawstack_client, JigsawStackClient
 from app.services.concept import get_concept_service
-from app.services.image import get_image_service
+from app.services.image import get_image_service, get_image_processing_service
 from app.services.persistence import get_concept_persistence_service, get_image_persistence_service
 from app.services.task import get_task_service
+from app.services.export import get_export_service
 from app.services.concept.interface import ConceptServiceInterface
-from app.services.image.interface import ImageServiceInterface
-from app.services.persistence.interface import ConceptPersistenceServiceInterface, StorageServiceInterface, ImagePersistenceServiceInterface
+from app.services.image.interface import ImageServiceInterface, ImageProcessingServiceInterface
+from app.services.persistence.interface import ConceptPersistenceServiceInterface, ImagePersistenceServiceInterface
 from app.services.task.interface import TaskServiceInterface
+from app.services.export.interface import ExportServiceInterface
 from app.utils.security.mask import mask_id
 
 

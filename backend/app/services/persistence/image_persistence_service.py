@@ -15,9 +15,11 @@ from datetime import datetime
 from fastapi import UploadFile
 from supabase import Client, create_client
 from PIL import Image
+import httpx
 
 from app.core.exceptions import ImageNotFoundError, ImageStorageError
 from app.core.config import settings
+from app.core.supabase.image_storage import ImageStorage
 from app.utils.jwt_utils import create_supabase_jwt, create_supabase_jwt_for_storage
 from app.utils.security.mask import mask_id, mask_path
 
@@ -38,6 +40,7 @@ class ImagePersistenceService:
         self.concept_bucket = settings.STORAGE_BUCKET_CONCEPT
         self.palette_bucket = settings.STORAGE_BUCKET_PALETTE
         self.logger = logging.getLogger(__name__)
+        self.storage = ImageStorage(client)
     
     def store_image(
         self, 
@@ -66,9 +69,6 @@ class ImagePersistenceService:
             ImageStorageError: If image storage fails
         """
         try:
-            # Select the appropriate bucket
-            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-            
             # Process image data to get bytes
             if isinstance(image_data, UploadFile):
                 content = image_data.file.read()
@@ -115,42 +115,21 @@ class ImagePersistenceService:
             elif ext == "webp":
                 content_type = "image/webp"
             
-            # Create JWT token for authentication (for Supabase Storage RLS)
-            token = create_supabase_jwt(user_id)
-            
             # Prepare file metadata including user ID
             file_metadata = {"owner_user_id": user_id}
             if metadata:
                 file_metadata.update(metadata)
-                
-            # Use direct HTTP request with requests library for JWT authorization
-            # Get the API endpoint directly from settings instead of client objects
-            api_url = settings.SUPABASE_URL
-            api_key = settings.SUPABASE_KEY
-                
-            # Construct the storage upload URL
-            upload_url = f"{api_url}/storage/v1/object/{bucket_name}/{path}"
             
-            # Set headers with JWT token and other required headers
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "apikey": api_key,
-                "Content-Type": content_type,
-                "x-upsert": "true"  # Update if exists
-            }
-            
-            # Upload the file with requests
-            response = requests.post(
-                upload_url,
-                headers=headers,
-                data=content
+            # Use the ImageStorage component to store the image
+            self.storage.upload_image(
+                image_data=content,
+                path=path,
+                content_type=content_type,
+                user_id=user_id,
+                is_palette=is_palette,
+                metadata=file_metadata
             )
             
-            # Check if upload was successful
-            if response.status_code not in (200, 201):
-                self.logger.error(f"Upload failed with status {response.status_code}: {response.text}")
-                raise ImageStorageError(f"Failed to upload image: {response.text}")
-                
             # Generate signed URL with 3-day expiration
             image_url = self.get_signed_url(path, is_palette=is_palette)
             
@@ -182,17 +161,8 @@ class ImagePersistenceService:
             ImageStorageError: If image retrieval fails
         """
         try:
-            # Select the appropriate bucket
             bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-            
-            # Try storage access through client attribute first, then fall back to direct access
-            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                response = self.supabase.client.storage.from_(bucket_name).download(image_path)
-            else:
-                response = self.supabase.storage.from_(bucket_name).download(image_path)
-                
-            return response
-            
+            return self.storage.download_image(path=image_path, bucket_name=bucket_name)
         except Exception as e:
             error_msg = f"Failed to get image {image_path}: {str(e)}"
             self.logger.error(error_msg)
@@ -239,22 +209,137 @@ class ImagePersistenceService:
             ImageStorageError: If image deletion fails
         """
         try:
-            # Select the appropriate bucket
             bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-            
-            # Try storage access through client attribute first, then fall back to direct access
-            if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                self.supabase.client.storage.from_(bucket_name).remove([image_path])
-            else:
-                self.supabase.storage.from_(bucket_name).remove([image_path])
-            
+            self.storage.remove_image(path=image_path, bucket_name=bucket_name)
             return True
-            
         except Exception as e:
             error_msg = f"Failed to delete image {image_path}: {str(e)}"
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
-    
+            
+    def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 259200) -> str:
+        """
+        Get a signed URL for an image.
+        
+        Args:
+            path: Path of the image in storage
+            is_palette: Whether the image is a palette (uses palette-images bucket)
+            expiry_seconds: Expiry time in seconds (default: 3 days)
+            
+        Returns:
+            Signed URL for the image
+            
+        Raises:
+            ImageStorageError: If URL signing fails
+        """
+        try:
+            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
+            return self.storage.create_signed_url(path=path, bucket_name=bucket_name, expires_in=expiry_seconds)
+        except Exception as e:
+            error_msg = f"Failed to get signed URL for {path}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageStorageError(error_msg)
+            
+    def get_image_url(self, image_path: str, is_palette: bool = False) -> str:
+        """
+        Get a signed URL for an image in storage.
+        
+        Args:
+            image_path: Path to the image in storage
+            is_palette: Whether this is a palette image
+            
+        Returns:
+            Signed URL for the image
+            
+        Raises:
+            ImageStorageError: If URL generation fails
+        """
+        try:
+            # Check if it's already a URL
+            if image_path.startswith(("http://", "https://")):
+                return image_path
+                
+            # Check if it's a signed URL from our Supabase storage
+            if '/object/sign/' in image_path:
+                # It's already a signed URL, just return it
+                if not image_path.startswith("http"):
+                    # It's a relative URL, make it absolute
+                    return f"{settings.SUPABASE_URL}{image_path}"
+                return image_path
+                
+            # Otherwise get a signed URL
+            return self.get_signed_url(image_path, is_palette=is_palette)
+            
+        except Exception as e:
+            self.logger.error(f"Error getting signed image URL: {str(e)}")
+            raise ImageStorageError(f"Failed to get signed image URL: {str(e)}")
+            
+    async def get_image_async(self, image_path_or_url: str, is_palette: bool = False) -> bytes:
+        """
+        Asynchronously retrieve an image by URL or storage path.
+        
+        Args:
+            image_path_or_url: URL or storage path of the image
+            is_palette: Whether this is a palette image
+            
+        Returns:
+            Image data as bytes
+            
+        Raises:
+            ImageStorageError: If retrieval fails
+        """
+        try:
+            # Convert relative signed URLs to full URLs if needed
+            if image_path_or_url.startswith("/object/sign/"):
+                full_url = f"{settings.SUPABASE_URL}{image_path_or_url}"
+                self.logger.info(f"Converting relative signed URL to full URL: {full_url}")
+                image_path_or_url = full_url
+            
+            # Check if it's an external URL or a storage path
+            if image_path_or_url.startswith(("http://", "https://")):
+                # It's an external URL, fetch it asynchronously
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_path_or_url)
+                    if response.status_code != 200:
+                        raise ImageStorageError(f"Failed to fetch image from URL: {response.status_code}")
+                    return response.content
+            
+            # Check if it's a signed URL from our Supabase storage
+            elif '/object/sign/' in image_path_or_url:
+                # Extract the real path from signed URL
+                path_parts = image_path_or_url.split('/object/sign/')
+                if len(path_parts) > 1:
+                    bucket_path = path_parts[1].split('?')[0]  # Remove query params
+                    bucket_parts = bucket_path.split('/', 1)
+                    if len(bucket_parts) > 1:
+                        bucket_name = bucket_parts[0]
+                        path = bucket_parts[1]
+                        
+                        # Determine if it's a palette image
+                        is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
+                        
+                        self.logger.info(f"Extracted path from signed URL: {path}")
+                        # Get the image directly (this is synchronous but we're calling it from an async context)
+                        return self.get_image(path, is_palette=is_palette)
+                
+                # If we can't extract a path or it doesn't match expected format,
+                # try to use the URL directly
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(image_path_or_url)
+                    if response.status_code != 200:
+                        raise ImageStorageError(f"Failed to fetch image from signed URL: {response.status_code}")
+                    return response.content
+            
+            # Otherwise it's a storage path
+            else:
+                # This is synchronous but we're calling it from an async context
+                return self.get_image(image_path_or_url, is_palette=is_palette)
+                
+        except Exception as e:
+            error_msg = f"Failed to get image asynchronously {image_path_or_url}: {str(e)}"
+            self.logger.error(error_msg)
+            raise ImageStorageError(error_msg)
+
     def list_images(self, concept_id: Optional[str] = None, is_palette: bool = False) -> List[Dict[str, Any]]:
         """
         List images in storage.
@@ -301,77 +386,6 @@ class ImagePersistenceService:
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
 
-    def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 259200) -> str:
-        """
-        Get a signed URL for an image.
-        
-        Args:
-            path: Path of the image in storage
-            is_palette: Whether the image is a palette
-            expiry_seconds: URL expiration time in seconds (default: 3 days)
-            
-        Returns:
-            Signed URL for the image
-            
-        Raises:
-            ImageStorageError: If URL generation fails
-        """
-        if not path:
-            self.logger.error("Empty path provided to get_signed_url")
-            raise ImageStorageError("Cannot generate signed URL for empty path")
-            
-        try:
-            # Select the appropriate bucket
-            bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-            
-            # First, try using the Supabase SDK method if available
-            try:
-                if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
-                    response = self.supabase.client.storage.from_(bucket_name).create_signed_url(
-                        path=path,
-                        expires_in=expiry_seconds
-                    )
-                    
-                    if response and isinstance(response, dict):
-                        # Extract signed URL from response
-                        signed_url = response.get('signedURL') or response.get('signedUrl')
-                        if signed_url:
-                            # Ensure URL is absolute
-                            if signed_url.startswith('/'):
-                                signed_url = f"{settings.SUPABASE_URL}{signed_url}"
-                            return signed_url
-            except Exception as sdk_error:
-                # Log the SDK error but continue to fallback method
-                self.logger.warning(f"SDK signed URL creation failed, using fallback: {str(sdk_error)}")
-                
-            # Fallback to manual URL construction
-            # Generate signed URL with expiration
-            base_url = settings.SUPABASE_URL
-            storage_path = f"/storage/v1/object/sign/{bucket_name}/{path}"
-            expiry = int(datetime.now().timestamp()) + expiry_seconds
-            
-            # Create a special storage JWT that includes the signature parameters
-            token = create_supabase_jwt_for_storage(path=f"{bucket_name}/{path}", expiry_timestamp=expiry)
-            
-            # Add query parameters for expiry
-            query_params = f"?token={token}&expiry={expiry}"
-            
-            # Construct the final URL
-            signed_url = f"{base_url}{storage_path}{query_params}"
-            
-            # Log success with masked path
-            masked_path = mask_path(path)
-            self.logger.info(f"Generated signed URL for {masked_path} with {expiry_seconds}s expiry")
-            
-            return signed_url
-        
-        except Exception as e:
-            error_msg = f"Failed to generate signed URL for {path}: {str(e)}"
-            self.logger.error(error_msg)
-            raise ImageStorageError(error_msg)
-            
-    # Additional methods for the service would be placed here
-    
     async def authenticate_url(self, path: str, user_id: str, is_palette: bool = False) -> str:
         """
         Authenticate an image URL for a specific user.
