@@ -9,6 +9,8 @@ import { Card } from '../../components/ui/Card';
 import { fetchConceptDetail } from '../../services/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { TaskResponse } from '../../types';
+import { useErrorHandling } from '../../hooks/useErrorHandling';
+import { createAsyncErrorHandler } from '../../utils/errorUtils';
 
 /**
  * Main page component for the Concept Refinement feature
@@ -21,6 +23,11 @@ export const RefinementPage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get('colorId');
   const { user, isLoading: authLoading } = useAuth();
+  const errorHandler = useErrorHandling();
+  const handleAsyncError = createAsyncErrorHandler(errorHandler, {
+    defaultErrorMessage: 'Failed to load concept',
+    context: 'refinementPage'
+  });
   
   const [originalConcept, setOriginalConcept] = useState<any>(null);
   const [isLoadingConcept, setIsLoadingConcept] = useState<boolean>(true);
@@ -89,6 +96,12 @@ export const RefinementPage: React.FC = () => {
         
         setIsLoadingConcept(false);
       } catch (err) {
+        // Use standardized error handling
+        handleAsyncError(
+          () => Promise.reject(err), 
+          'load-concept'
+        );
+        
         setConceptLoadError('Error loading concept');
         setIsLoadingConcept(false);
         console.error('Error loading concept:', err);
@@ -96,7 +109,7 @@ export const RefinementPage: React.FC = () => {
     };
     
     loadConcept();
-  }, [conceptId, colorId, authLoading, user]);
+  }, [conceptId, colorId, authLoading, user, handleAsyncError]);
   
   // Use React Query mutation hook for refinement
   const {
