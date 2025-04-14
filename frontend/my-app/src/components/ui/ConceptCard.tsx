@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from './Card';
 import { getSignedImageUrl } from '../../services/supabaseClient';
+import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
+import { Link } from 'react-router-dom';
 
 /**
  * Helper function to determine if a color is light
@@ -76,22 +78,45 @@ const processImageUrl = (imageUrl: string | undefined | null): string => {
   return getSignedImageUrl(imageUrl, 'concept');
 }
 
+/**
+ * Concept initials generator
+ * 
+ * @param description The concept description
+ * @returns Two-letter initials extracted from the description
+ */
+const getConceptInitials = (description: string): string => {
+  const words = description.split(' ');
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
+  }
+  return (words[0][0] + words[1][0]).toUpperCase();
+};
+
 export interface ConceptCardProps {
+  /**
+   * Either provide a complete ConceptData object
+   */
+  concept?: ConceptData;
+
+  /**
+   * Or provide individual properties
+   */
+  
   /**
    * Concept title/name
    */
-  title: string;
+  title?: string;
   
   /**
    * Concept description
    */
-  description: string;
+  description?: string;
   
   /**
    * Colors to display in the palette
    * Each element represents a color variation with an array of colors
    */
-  colorVariations: string[][];
+  colorVariations?: string[][];
   
   /**
    * Images for each color variation, if available
@@ -116,18 +141,19 @@ export interface ConceptCardProps {
   /**
    * Initials to display in the centered circle
    */
-  initials: string;
+  initials?: string;
   
   /**
    * Handler for edit button click
+   * Either version can be provided: simple index or with concept/variation IDs
    */
-  onEdit?: (index: number) => void;
+  onEdit?: ((index: number) => void) | ((conceptId: string, variationId?: string | null) => void);
   
   /**
    * Handler for view details button click
-   * @param index The selected variation index
+   * Either version can be provided: simple index or with concept/variation IDs
    */
-  onViewDetails?: (index: number) => void;
+  onViewDetails?: ((index: number) => void) | ((conceptId: string, variationId?: string | null) => void);
   
   /**
    * Text to display on the edit button (default: "Edit")
@@ -148,12 +174,19 @@ export interface ConceptCardProps {
     id: string;
     colors: string[];
   }>;
+
+  /** Prevents default navigation on card click */
+  preventNavigation?: boolean;
+  
+  /** Callback when a specific color variation is clicked */
+  onColorClick?: (variationId: string) => void;
 }
 
 /**
  * Card component for displaying concept previews
  */
 export const ConceptCard: React.FC<ConceptCardProps> = ({
+  concept,
   title,
   description,
   colorVariations,
@@ -165,18 +198,74 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   onViewDetails,
   editButtonText = "Edit",
   sampleImageUrl,
-  colorData
+  colorData,
+  preventNavigation = false,
+  onColorClick
 }) => {
   // State to track the selected color variation
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(0);
 
+  // DERIVED PROPS: Set derived values based on whether we're using concept data or direct props
+  // These derived variables normalize the two input methods
+  
+  // Get the final title
+  const finalTitle = concept?.logo_description || title || "Concept";
+  
+  // Get the final description
+  const finalDescription = concept?.theme_description || description || "";
+  
+  // Get the final initials
+  const finalInitials = initials || (concept ? getConceptInitials(concept.logo_description || "") : "CV");
+  
+  // Get the final color variations
+  const finalColorVariations = useMemo(() => {
+    if (concept?.color_variations && concept.color_variations.length > 0) {
+      return concept.color_variations.map(variation => variation.colors);
+    }
+    return colorVariations || [];
+  }, [concept, colorVariations]);
+
+  // Get the final images array
+  const finalImages = useMemo(() => {
+    if (concept) {
+      if (concept.color_variations && concept.color_variations.length > 0) {
+        // If we have variations, collect all image URLs
+        const baseImage = concept.image_url || concept.base_image_url;
+        const variationImages = concept.color_variations.map(v => v.image_url).filter(Boolean);
+        
+        // If we have a base image, put it first
+        return baseImage ? [baseImage, ...variationImages] : variationImages;
+      } else if (concept.image_url) {
+        // Just the base image if no variations
+        return [concept.image_url];
+      }
+    }
+    return images || [];
+  }, [concept, images]);
+
   // Add debug useEffect to track variation changes
   useEffect(() => {
-    console.log(`ConceptCard ${title} - Selected variation changed to: ${selectedVariationIndex}`);
-    console.log(`ConceptCard ${title} - Available images:`, images);
+    console.log(`ConceptCard - Selected variation changed to: ${selectedVariationIndex}`);
+    console.log(`ConceptCard - Available images:`, finalImages);
+    
+    // Update image URL based on the new selection
+    // If includeOriginal is true, index 0 represents the original image
+    if (includeOriginal && selectedVariationIndex === 0) {
+      // Original image selected
+      console.log('ConceptCard - Original image selected');
+    } else if (concept?.color_variations) {
+      // Get the actual color variation index (accounting for the Original option)
+      const variationIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+      
+      // Log the selected variation details
+      if (variationIndex >= 0 && variationIndex < concept.color_variations.length) {
+        const variation = concept.color_variations[variationIndex];
+        console.log(`ConceptCard - Selected variation: ${variation.id}, palette: ${variation.palette_name}`);
+      }
+    }
     
     // If we have images, log which one would be selected
-    if (images && images.length > 0) {
+    if (finalImages && finalImages.length > 0) {
       // Calculate the actual image index based on selection and includeOriginal flag
       let actualImageIndex;
       
@@ -194,23 +283,27 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         actualImageIndex = selectedVariationIndex;
       }
       
-      if (actualImageIndex >= 0 && actualImageIndex < images.length) {
-        console.log(`ConceptCard ${title} - Selected image at index ${actualImageIndex}:`, 
-                   images[actualImageIndex].substring(0, 30) + '...');
+      if (actualImageIndex >= 0 && actualImageIndex < finalImages.length) {
+        console.log(`ConceptCard - Selected image at index ${actualImageIndex}:`, 
+                   finalImages[actualImageIndex].substring(0, 30) + '...');
       }
     }
-  }, [selectedVariationIndex, images, title, includeOriginal]);
+  }, [selectedVariationIndex, concept, finalImages, includeOriginal]);
   
   // Log props for debugging
-  console.log(`ConceptCard ${title} - Props:`, {
+  useEffect(() => {
+    console.log(`ConceptCard - Props:`, {
+      hasConceptObj: concept ? true : false,
+      title: finalTitle,
     includeOriginal,
-    hasImages: images ? true : false,
-    imagesCount: images?.length || 0,
-    variationsCount: colorVariations?.length || 0
+      hasImages: finalImages ? true : false,
+      imagesCount: finalImages?.length || 0,
+      variationsCount: finalColorVariations?.length || 0
   });
+  }, [concept, finalTitle, includeOriginal, finalImages, finalColorVariations]);
   
   // Ensure we have at least one variation
-  const hasVariations = colorVariations && Array.isArray(colorVariations) && colorVariations.length > 0;
+  const hasVariations = finalColorVariations && Array.isArray(finalColorVariations) && finalColorVariations.length > 0;
   
   // Get the color array for the currently selected variation
   // Adjust index if we're including original (where index 0 is original, 1+ are variations)
@@ -223,208 +316,341 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     colorIndex = 0; // Default to first variation if original is selected
   }
   
-  const colors = hasVariations && colorIndex >= 0 && colorIndex < colorVariations.length
-    ? colorVariations[colorIndex]
+  const colors = hasVariations && colorIndex >= 0 && colorIndex < finalColorVariations.length
+    ? finalColorVariations[colorIndex]
     : [];
   
   // Get the main color from the current variation
   const mainColor = colors && colors.length > 0 ? colors[0] : '#4F46E5';
   
   // Handle color variation selection
-  const handleVariationSelect = (index: number) => {
-    console.log(`ConceptCard ${title} - Selected variation index: ${index}`);
+  const handleVariationSelect = (index: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault(); // Prevent navigation when clicking on color circles
+      e.stopPropagation(); // Prevent the card click from triggering
+    }
+    
+    console.log(`ConceptCard - Selected variation index: ${index}`);
     setSelectedVariationIndex(index);
+    
+    // If onColorClick is provided and we have a concept object
+    if (onColorClick && concept?.color_variations && index >= 0 && index < concept.color_variations.length) {
+      const variationId = concept.color_variations[index].id;
+      if (variationId) {
+        console.log('Calling onColorClick with variation ID:', variationId);
+        onColorClick(variationId);
+      }
+    }
   };
   
   // Get the processed image URL for the current selected variation
-  const currentImageUrl = (() => {
+  const currentImageUrl = useMemo(() => {
     // If sample image URL is provided, use it directly
     if (sampleImageUrl) {
-      console.log(`ConceptCard: ${title} - Using sample image URL: ${sampleImageUrl}`);
+      console.log(`ConceptCard - Using sample image URL: ${sampleImageUrl}`);
       return sampleImageUrl;
     }
     
-    // Debug what images are available
-    console.log(`ConceptCard: ${title} - Selected variation: ${selectedVariationIndex}`);
-    console.log(`ConceptCard: ${title} - Has images array: ${images ? 'yes' : 'no'}, length: ${images?.length || 0}`);
-    console.log(`ConceptCard: ${title} - includeOriginal: ${includeOriginal}`);
-    
-    // Log each image URL for debugging
-    if (images && images.length > 0) {
-      console.log(`ConceptCard: ${title} - Available images:`, 
-        images.map((url, i) => `[${i}]: ${typeof url === 'string' ? url.substring(0, 30) + '...' : 'not a string'}`));
+    // If we have a concept, use its image logic
+    if (concept) {
+      // If includeOriginal is true and index is 0, or we're at index 0 without includeOriginal
+      // or we have no color variations, use the original image
+      if ((includeOriginal && selectedVariationIndex === 0) || 
+          selectedVariationIndex === 0 || 
+          !concept.color_variations || 
+          concept.color_variations.length === 0) {
+        const baseUrl = concept.image_url || concept.base_image_url;
+        console.log(`ConceptCard - Using concept original image: ${baseUrl?.substring(0, 50)}...`);
+        return baseUrl || '/placeholder-image.png';
+      }
+      
+      // For color variations, adjust the index if includeOriginal is true
+      const variationIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+      
+      // Otherwise, find the right variation image
+      if (concept.color_variations && variationIndex >= 0 && variationIndex < concept.color_variations.length) {
+        const variationImage = concept.color_variations[variationIndex].image_url;
+        console.log(`ConceptCard - Using variation image: ${variationImage?.substring(0, 50)}...`);
+        return variationImage || concept.image_url || '/placeholder-image.png';
+      }
     }
     
-    // If no images are available, return undefined
-    if (!images || images.length === 0) {
-      console.log(`ConceptCard: ${title} - No images available`);
-      return undefined;
+    // Otherwise use the original logic for direct props
+    console.log(`ConceptCard - Selected variation: ${selectedVariationIndex}`);
+    console.log(`ConceptCard - Has images array: ${finalImages ? 'yes' : 'no'}, length: ${finalImages?.length || 0}`);
+    console.log(`ConceptCard - includeOriginal: ${includeOriginal}`);
+    
+    // If we don't have images, return empty string
+    if (!finalImages || finalImages.length === 0) {
+      console.log('ConceptCard - No images available');
+      return '';
     }
     
-    // FIX: Calculate the actual image index based on selected variation index
-    // Simplified mapping to ensure consistent behavior
-    let imageIndex = selectedVariationIndex;
+    // Calculate which image to use based on the selected variation
+    // Selection logic depends on whether we're including original or not
+    let imageIndex = 0;
     
-    // Safety check to make sure index is valid
-    if (imageIndex < 0 || imageIndex >= images.length) {
-      console.log(`ConceptCard: ${title} - Invalid index ${imageIndex}, using first image`);
-      return processImageUrl(images[0]);
-    }
-    
-    // Get and process the URL for the selected variation
-    const rawUrl = images[imageIndex];
-    
-    // Check if rawUrl is a string before calling substring
-    if (typeof rawUrl === 'string') {
-      console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex}: ${rawUrl.substring(0, 30)}${rawUrl.length > 30 ? '...' : ''}`);
+    if (includeOriginal) {
+      // If includeOriginal is true, index 0 represents the original image
+      // and variation indices start at 1
+      imageIndex = selectedVariationIndex;
     } else {
-      console.log(`ConceptCard: ${title} - Raw URL for index ${imageIndex} is not a string:`, rawUrl);
-      // Return undefined if the URL is not a string (will show default initials instead)
-      return undefined;
+      // If includeOriginal is false, variations start at index 0
+      imageIndex = selectedVariationIndex;
     }
     
-    return processImageUrl(rawUrl);
-  })();
-  
-  return (
-    <div className="overflow-hidden rounded-lg shadow-modern border border-indigo-100 bg-white/90 backdrop-blur-sm hover-lift hover:shadow-modern-hover transition-all duration-300 scale-in h-full flex flex-col">
-      {/* Header with image or gradient + initials */}
+    // Ensure the index is within bounds
+    if (imageIndex >= 0 && imageIndex < finalImages.length) {
+      // Process the image URL to handle Supabase storage paths
+      const rawUrl = finalImages[imageIndex];
+      console.log(`ConceptCard - Using image at index ${imageIndex}:`, rawUrl?.substring(0, 50));
+      return processImageUrl(rawUrl);
+    }
+    
+    // Fallback to the first image if index is out of bounds
+    console.log('ConceptCard - Index out of bounds, using first image as fallback');
+    return processImageUrl(finalImages[0]);
+  }, [sampleImageUrl, concept, selectedVariationIndex, finalImages, includeOriginal]);
+
+  // Get the logo URL for the central small card - updating to use the current selected variation
+  const logoImageUrl = useMemo(() => {
+    // If we have a concept with color variations
+    if (concept?.color_variations && concept.color_variations.length > 0) {
+      // For the original/default variation
+      if ((includeOriginal && selectedVariationIndex === 0) || selectedVariationIndex === 0) {
+        // Use logo_url if available, otherwise the original image
+        return concept.logo_url || concept.image_url;
+      }
+      
+      // For other variations, calculate the proper index
+      const variationIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+      
+      // If we have a valid variation index
+      if (variationIndex >= 0 && variationIndex < concept.color_variations.length) {
+        // Use that variation's image
+        return concept.color_variations[variationIndex].image_url || concept.logo_url || concept.image_url;
+      }
+    }
+    
+    // Fallbacks for cases without variations
+    // If we have a logo_url directly on the concept, use that
+    if (concept?.logo_url) {
+      return concept.logo_url;
+    }
+    
+    // Check for icon_url
+    if (concept?.icon_url) {
+      return concept.icon_url;
+    }
+    
+    // For sample cards
+    if (sampleImageUrl) {
+      return sampleImageUrl; 
+    }
+    
+    // If we have a concept with just an image
+    if (concept?.image_url) {
+      return concept.image_url;
+    }
+    
+    // Use direct props - check for multiple images
+    if (finalImages && finalImages.length > 0) {
+      const imageIndex = includeOriginal 
+        ? selectedVariationIndex 
+        : selectedVariationIndex;
+      
+      if (imageIndex >= 0 && imageIndex < finalImages.length) {
+        return processImageUrl(finalImages[imageIndex]);
+      }
+      
+      // Fallback to first image
+      return processImageUrl(finalImages[0]);
+    }
+    
+    return null; // No image available, will show initials instead
+  }, [concept, sampleImageUrl, finalImages, includeOriginal, selectedVariationIndex]);
+
+  // Handle edit button click with proper typing for the callback
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!onEdit) return;
+
+    if (concept) {
+      // Get variation ID from selected index
+      const variationId = selectedVariationIndex >= 0 && 
+                        concept.color_variations && 
+                        selectedVariationIndex < concept.color_variations.length
+                            ? concept.color_variations[selectedVariationIndex].id
+                            : null;
+
+      console.log('[ConceptCard] Edit clicked:', { 
+        conceptId: concept.id, 
+        selectedIndex: selectedVariationIndex, 
+        variationId
+      });
+      
+      // Call with concept ID style params
+      (onEdit as (conceptId: string, variationId?: string | null) => void)(concept.id, variationId);
+    } else {
+      // Call with index style params
+      (onEdit as (index: number) => void)(selectedVariationIndex);
+    }
+  };
+
+  // Handle view details button click with proper typing for the callback
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!onViewDetails) return;
+
+    if (concept) {
+      // Get variation ID from selected index
+      const variationId = selectedVariationIndex >= 0 && 
+                        concept.color_variations && 
+                        selectedVariationIndex < concept.color_variations.length
+                            ? concept.color_variations[selectedVariationIndex].id
+                            : null;
+
+      console.log('[ConceptCard] View details clicked:', { 
+        conceptId: concept.id, 
+        selectedIndex: selectedVariationIndex, 
+        variationId
+      });
+      
+      // Call with concept ID style params
+      (onViewDetails as (conceptId: string, variationId?: string | null) => void)(concept.id, variationId);
+    } else {
+      // Call with index style params
+      (onViewDetails as (index: number) => void)(selectedVariationIndex);
+    }
+  };
+
+  // Handle card click
+  const handleCardClick = () => {
+    // If prevention is enabled, do nothing
+    if (preventNavigation) {
+      return;
+    }
+    
+    // Otherwise, trigger view details if handler exists
+    if (onViewDetails) {
+      handleViewDetails({
+        preventDefault: () => {},
+        stopPropagation: () => {}
+      } as React.MouseEvent);
+    }
+  };
+
+  // Create the card content
+  const cardContent = (
+    <div 
+      className="concept-card bg-white rounded-xl overflow-hidden shadow-md border border-indigo-100 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl"
+      style={
+        gradient 
+          ? { background: 'white' }
+          : {}
+      }
+    >
       <div 
-        className={`h-40 p-4 flex items-center justify-center`}
-        style={{ 
-          background: currentImageUrl 
-            ? 'transparent' 
-            : `linear-gradient(to right, var(--tw-gradient-from-${gradient.from}), var(--tw-gradient-to-${gradient.to}))`
-        }}
+        className="h-32 relative overflow-hidden flex items-center justify-center bg-blue-50"
       >
-        {currentImageUrl ? (
-          <img 
-            src={currentImageUrl} 
-            alt={title}
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <div 
-            className="w-20 h-20 bg-white rounded-full flex items-center justify-center font-bold text-xl shadow-lg"
-            style={{ color: mainColor }}
-          >
-            {initials}
-          </div>
-        )}
+        {/* Display the initials in the colored background for a cleaner look */}
+        <span className="text-5xl font-bold text-indigo-400 opacity-30">{finalInitials}</span>
       </div>
       
-      {/* Content area */}
-      <div className="p-4 flex-grow flex flex-col">
-        <h4 className="font-semibold text-indigo-900">{title}</h4>
-        <p className="text-sm text-gray-600 mt-1">{description}</p>
+      <div className="p-5">
+        <div className="-mt-16 mb-4 relative z-10 flex justify-center">
+          <div className="w-24 h-24 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center transition-transform duration-300">
+            {logoImageUrl ? (
+              <img 
+                src={logoImageUrl} 
+                alt={finalTitle + " logo"} 
+                className="object-contain w-full h-full p-1"
+                onError={(e) => {
+                  console.error('Logo image failed to load:', logoImageUrl);
+                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
+                }}
+          />
+        ) : (
+              <span className="text-3xl font-bold text-indigo-600">{finalInitials}</span>
+            )}
+          </div>
+      </div>
+      
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">{finalTitle}</h3>
+          <p className="text-gray-500 text-sm mb-4">{finalDescription}</p>
+        </div>
         
-        {/* Color palettes */}
-        <div className="mt-3 flex space-x-2">
-          {/* Original option if available */}
+        {/* Color variations */}
+        {hasVariations && (
+          <div className="flex justify-center items-center space-x-3 mb-4">
           {includeOriginal && (
-            <button 
-              onClick={() => handleVariationSelect(0)}
-              className={`inline-block w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center transition-all duration-300 ${
-                selectedVariationIndex === 0 ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
-              }`}
-              style={{ background: 'white' }}
-              title="Original"
-            >
-              <span className="text-xs">O</span>
-            </button>
-          )}
-          
-          {/* Color variations */}
-          {hasVariations && Array.isArray(colorVariations) && colorVariations.map((colorSet, variationIndex) => {
-            // Adjust the index to account for the original option
-            const displayIndex = includeOriginal ? variationIndex + 1 : variationIndex;
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs bg-indigo-50 border border-gray-200"
+                onClick={(e) => handleVariationSelect(0, e)}
+              >
+                O
+              </div>
+            )}
             
-            // Get the primary color (first color in the set)
-            const primaryColor = Array.isArray(colorSet) && colorSet.length > 0
-              ? colorSet[0] 
-              : '#4F46E5';
+            {finalColorVariations.map((colorSet, variationIndex) => {
+              // Adjust index if we include original variation
+              const actualIndex = includeOriginal ? variationIndex + 1 : variationIndex;
+              const isSelected = selectedVariationIndex === actualIndex;
+              const mainColor = colorSet[0] || '#4F46E5';
+              const needsBorder = isLightColor(mainColor);
             
             return (
-              <button 
-                key={`variation-${variationIndex}`}
-                onClick={() => handleVariationSelect(displayIndex)}
-                className={`inline-block w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-                  selectedVariationIndex === displayIndex ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover-scale'
-                }`}
-                style={{ backgroundColor: primaryColor, color: isLightColor(primaryColor) ? '#1E293B' : 'white' }}
-                title={`Color variation ${variationIndex + 1}`}
-              >
-                <span className="text-xs">{variationIndex + 1}</span>
-              </button>
+                <div 
+                  key={`${colorSet.join(',')}-${variationIndex}`}
+                  className={`w-6 h-6 rounded-full cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-md ${
+                    isSelected 
+                      ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' 
+                      : needsBorder 
+                        ? 'border border-gray-400'
+                        : 'border border-gray-200'
+                  }`}
+                  style={{ backgroundColor: mainColor }}
+                  onClick={(e) => handleVariationSelect(actualIndex, e)}
+                />
             );
           })}
         </div>
-
-        {/* Spacer to push buttons to bottom */}
-        <div className="flex-grow"></div>
+        )}
         
         {/* Action buttons */}
-        <div className="mt-4 flex justify-between">
+        <div className="grid grid-cols-2 gap-3">
           {onEdit && (
             <button 
-              onClick={() => {
-                // If colorData is available, use it to map indices to variation IDs
-                if (colorData && Array.isArray(colorData) && selectedVariationIndex > 0) {
-                  // Convert UI index to colorData index
-                  const colorIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
-                  
-                  // Get the variation ID if available
-                  if (colorIndex >= 0 && colorIndex < colorData.length) {
-                    const variationId = colorData[colorIndex]?.id;
-                    console.log(`ConceptCard edit: mapped variation index ${selectedVariationIndex} to ID ${variationId}`);
-                  } else {
-                    console.log(`ConceptCard edit: could not map variation index ${selectedVariationIndex} (color index ${colorIndex}) - out of range of colorData (length: ${colorData.length})`);
-                  }
-                }
-                
-                // Always call the original handler with the index for backwards compatibility
-                onEdit(selectedVariationIndex);
-              }}
-              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
+              onClick={handleEdit}
+              className="py-2 px-3 border border-gray-300 bg-white rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
               {editButtonText}
             </button>
           )}
           
           {onViewDetails && (
             <button 
-              onClick={() => {
-                // If colorData is available, use it to map indices to variation IDs
-                if (colorData && Array.isArray(colorData) && selectedVariationIndex > 0) {
-                  // Convert UI index to colorData index
-                  const colorIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
-                  
-                  // Get the variation ID if available
-                  if (colorIndex >= 0 && colorIndex < colorData.length) {
-                    const variationId = colorData[colorIndex]?.id;
-                    console.log(`ConceptCard view details: mapped variation index ${selectedVariationIndex} to ID ${variationId}`);
-                  } else {
-                    console.log(`ConceptCard view details: could not map variation index ${selectedVariationIndex} (color index ${colorIndex}) - out of range of colorData (length: ${colorData.length})`);
-                  }
-                }
-                
-                // Always call the original handler with the index for backwards compatibility
-                onViewDetails(selectedVariationIndex);
-              }}
-              className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
+              onClick={handleViewDetails}
+              className="py-2 px-3 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition shadow-sm"
             >
-              <span className="mr-1">View Details</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
+              View Details
             </button>
           )}
         </div>
       </div>
     </div>
+  );
+
+  // Wrap in Card component
+  return (
+    <Card onClick={handleCardClick} className="h-full">
+      {cardContent}
+    </Card>
   );
 };
 

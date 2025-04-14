@@ -26,7 +26,7 @@ export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
   processingMessage
 }) => {
   return (
-    <div id={id} className="mb-8 sm:mb-16">
+    <div id={id} className="mb-8 sm:mb-16 w-full">
       <ConceptForm 
         onSubmit={onSubmit}
         status={status}

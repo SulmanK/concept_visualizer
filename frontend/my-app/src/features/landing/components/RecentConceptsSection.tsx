@@ -141,11 +141,8 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
   
   return (
     <div className="mt-10 sm:mt-16 mb-8 sm:mb-12">
-      <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-4 sm:p-6 md:p-8 relative overflow-hidden">
-        {/* Enhanced gradient background accents */}
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-100/40 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-50/60 rounded-full blur-2xl"></div>
-        <div className="absolute top-1/4 left-1/3 w-40 h-40 bg-purple-50/30 rounded-full blur-xl"></div>
+      <div className="bg-white shadow-lg border border-indigo-100 p-4 sm:p-6 md:p-8 relative overflow-hidden rounded-xl">
+        {/* Enhanced gradient background accents - removed for consistency with form */}
         
         <div className="relative z-10">
           {/* Header with view all link */}
