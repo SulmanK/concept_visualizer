@@ -140,48 +140,8 @@ const AppRoutes = () => {
   );
 };
 
-// Set up a global fetch interceptor for rate limit headers
-import { extractRateLimitHeaders } from './services/rateLimitService';
-
-// Create a function to set up the global fetch interceptor
-const setupFetchInterceptor = () => {
-  const originalFetch = window.fetch;
-  
-  window.fetch = async function(input, init) {
-    // Call the original fetch
-    const response = await originalFetch.call(window, input, init);
-    
-    // Only process API requests (check both string URLs and Request objects)
-    if ((typeof input === 'string' && input.includes('/api/')) || 
-        (input instanceof Request && input.url.includes('/api/'))) {
-      try {
-        // Clone the response to avoid consuming the body
-        const responseClone = response.clone();
-        
-        // Extract the URL from either string or Request object
-        const url = typeof input === 'string' ? input : input.url;
-        
-        // Extract and process rate limit headers
-        if (!url.includes('/health/rate-limits')) {
-          extractRateLimitHeaders(responseClone, url);
-        }
-      } catch (error) {
-        console.error('Error in fetch interceptor:', error);
-      }
-    }
-    
-    return response;
-  };
-};
-
 export default function App() {
   const [debugInfo, setDebugInfo] = useState<any>(null);
-
-  // Set up the fetch interceptor only once on app initialization
-  useEffect(() => {
-    setupFetchInterceptor();
-    console.log('Global fetch interceptor for rate limits has been set up');
-  }, []);
 
   // Set basic debug info for development environment
   useEffect(() => {

@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { apiClient } from './apiClient';
 
 // Storage bucket configuration interface
 interface StorageBucketsConfig {
@@ -16,6 +17,17 @@ interface StorageBucketsConfig {
 // Complete configuration interface
 interface AppConfig {
   storage: StorageBucketsConfig;
+  maxUploadSize: number;
+  supportedFileTypes: string[];
+  features: {
+    refinement: boolean;
+    palette: boolean;
+    export: boolean;
+  };
+  limits: {
+    maxConcepts: number;
+    maxPalettes: number;
+  };
 }
 
 // Default configuration with placeholder values
@@ -23,6 +35,18 @@ const defaultConfig: AppConfig = {
   storage: {
     concept: 'concept-images', // Default/fallback value
     palette: 'palette-images', // Default/fallback value
+  },
+  maxUploadSize: 5 * 1024 * 1024, // 5MB
+  supportedFileTypes: ['png', 'jpg', 'jpeg'],
+  features: {
+    refinement: true,
+    palette: true,
+    export: true
+  },
+  limits: {
+    // Default limits
+    maxConcepts: 50,
+    maxPalettes: 5
   }
 };
 
@@ -36,22 +60,26 @@ let configInstance: AppConfig | null = null;
  */
 export const fetchConfig = async (): Promise<AppConfig> => {
   try {
-    const response = await fetch('/api/health/config');
-    
-    if (!response.ok) {
-      console.error('Failed to fetch configuration:', response.statusText);
-      return defaultConfig;
-    }
-    
-    const config = await response.json();
-    
-    // Store the config in the singleton instance
-    configInstance = config;
-    
-    return config;
+    const { data } = await apiClient.get<AppConfig>('/health/config');
+    return data;
   } catch (error) {
-    console.error('Error fetching configuration:', error);
-    return defaultConfig;
+    console.error('Failed to fetch app configuration:', error);
+    // Return default config
+    return {
+      // Default config values
+      maxUploadSize: 5 * 1024 * 1024, // 5MB
+      supportedFileTypes: ['png', 'jpg', 'jpeg'],
+      features: {
+        refinement: true,
+        palette: true,
+        export: true
+      },
+      limits: {
+        // Default limits
+        maxConcepts: 50,
+        maxPalettes: 5
+      }
+    };
   }
 };
 
