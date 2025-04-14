@@ -1,8 +1,12 @@
+// This file is kept for backward compatibility
+// New code should use the hooks in src/hooks/useTaskQueries.ts
+
 import { TaskResponse } from '../types/api.types';
 import { apiClient } from '../services/apiClient';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 
 /**
+ * @deprecated Use useTaskStatusQuery from src/hooks/useTaskQueries.ts instead
  * Fetches the status of a task from the API
  * @param taskId The ID of the task to fetch
  * @returns The task response object
@@ -25,6 +29,7 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
 }
 
 /**
+ * @deprecated Use useTaskCancelMutation from src/hooks/useTaskQueries.ts instead
  * Cancels a running task
  * @param taskId The ID of the task to cancel
  * @returns The updated task response
@@ -35,6 +40,6 @@ export async function cancelTask(taskId: string): Promise<TaskResponse> {
   }
   
   console.log(`[API] Cancelling task ${taskId}`);
-  const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.TASK_CANCEL(taskId));
+  const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.TASK_CANCEL(taskId), {});
   return response.data;
 } 

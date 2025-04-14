@@ -79,10 +79,11 @@ export const clearSessionId = (): void => {
 };
 
 /**
- * Ensure a session ID exists in cookies. If not, a new one will be created
- * as a UUID and synchronized with the backend.
+ * Ensure that a session exists
+ * If no session exists, creates one and syncs with the backend
  * 
- * @returns True if a new session was created, false if an existing one was found
+ * @deprecated Consider using the useSessionSyncMutation hook for better React Query integration
+ * @returns Promise resolving to a boolean indicating whether a new session was created
  */
 export const ensureSession = async (): Promise<boolean> => {
   const currentSessionId = getSessionId();
@@ -155,6 +156,7 @@ export const debugSessionStatus = (): {exists: boolean, value?: string, allCooki
  * Sync the session with the server to ensure consistency.
  * This can help resolve session mismatches between frontend and backend.
  * 
+ * @deprecated Consider using the useSessionSyncMutation hook for better React Query integration
  * @returns True if sync was successful, false otherwise
  */
 export const syncSession = async (): Promise<boolean> => {

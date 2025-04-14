@@ -31,7 +31,7 @@ interface AppConfig {
 }
 
 // Default configuration with placeholder values
-const defaultConfig: AppConfig = {
+export const defaultConfig: AppConfig = {
   storage: {
     concept: 'concept-images', // Default/fallback value
     palette: 'palette-images', // Default/fallback value
@@ -56,6 +56,7 @@ let configInstance: AppConfig | null = null;
 /**
  * Fetch configuration from the backend API without direct apiClient dependency
  * 
+ * @deprecated Use useConfigQuery hook from src/hooks/useConfigQuery.ts for React Query integration
  * @returns Promise resolving to the application configuration
  */
 export const fetchConfig = async (): Promise<AppConfig> => {
@@ -154,6 +155,8 @@ setTimeout(() => {
     console.error('Error initializing configuration:', err);
   });
 }, 0);
+
+export { AppConfig, StorageBucketsConfig };
 
 export default {
   fetchConfig,
