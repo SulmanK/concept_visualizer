@@ -278,22 +278,24 @@ def map_application_error_to_api_error(error: ApplicationError) -> APIError:
         ValidationError,
         
         # Rate limiting
-        RateLimitError,
+        RateLimitError, RateLimitRuleError,
         
         # Service availability
         ServiceUnavailableError as AppServiceUnavailableError,
         
         # Database errors
-        DatabaseError, StorageError, 
+        DatabaseError, StorageError, DatabaseTransactionError, StorageOperationError,
         
         # Integration errors
         JigsawStackError, JigsawStackConnectionError, JigsawStackAuthenticationError,
+        ExternalServiceError,
         
         # Processing errors
         ImageProcessingError, ExportError, ColorPaletteApplicationError,
         
         # Concept errors
         ConceptError, ConceptCreationError, ConceptStorageError, ConceptRefinementError,
+        ConceptGenerationError,
         
         # Configuration errors
         ConfigurationError, EnvironmentVariableError
@@ -325,10 +327,30 @@ def map_application_error_to_api_error(error: ApplicationError) -> APIError:
         retry_after = error.details.get("reset_after")
         return TooManyRequestsError(detail=detail, retry_after=retry_after)
     
+    # Rate limit rule configuration errors
+    if isinstance(error, RateLimitRuleError):
+        logger.error(f"Rate limit rule error: {detail}")
+        return InternalServerError(detail="Server configuration error")
+    
     # Service unavailable errors
     if isinstance(error, AppServiceUnavailableError):
         retry_after = error.details.get("retry_after")
         return ServiceUnavailableError(detail=detail, retry_after=retry_after)
+    
+    # External service errors
+    if isinstance(error, ExternalServiceError):
+        service_name = error.details.get("service_name", "unknown")
+        return ServiceUnavailableError(
+            detail=f"{service_name} service is currently unavailable: {detail}"
+        )
+    
+    # Database transaction errors (generally 500)
+    if isinstance(error, DatabaseTransactionError):
+        return InternalServerError(detail="Database operation failed")
+    
+    # Storage operation errors (generally 503)
+    if isinstance(error, StorageOperationError):
+        return ServiceUnavailableError(detail="Storage service unavailable")
     
     # Database errors (generally 500 unless more specific)
     if isinstance(error, (DatabaseError, StorageError)):
@@ -354,6 +376,10 @@ def map_application_error_to_api_error(error: ApplicationError) -> APIError:
             else:
                 return BadGatewayError(detail=detail)
         return ServiceUnavailableError(detail=detail)
+    
+    # Concept generation errors
+    if isinstance(error, ConceptGenerationError):
+        return ServiceUnavailableError(detail="Failed to generate concept. Please try again later.")
     
     # Processing errors
     if isinstance(error, (ImageProcessingError, ExportError, ColorPaletteApplicationError)):

@@ -1,6 +1,3 @@
-
-
-
 Okay, let's break down your existing TODO list into more granular, step-by-step plans.
 
 ---
@@ -470,7 +467,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**23. Implementation Plan Steps**
+**23. Implementation Plan Steps** [x]
 
 *   **Goal:** Organize the execution of the refactoring.
 
@@ -480,7 +477,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**24. Refine Backend Error Types**
+**24. Refine Backend Error Types** [x]
 
 *   **Goal:** More specific error handling in the service layer.
 
@@ -551,13 +548,13 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
     3.  **Update API Error Handlers (`backend/app/api/errors.py`):**
         *   Open the `application_error_handler` function.
-        *   Add `elif isinstance(exc, NewSpecificError):` blocks for each new specific exception type created in step 1.
+        *   Add `elif isinstance(exc, NewSpecificError):` blocks for each new exception type created in step 1.
         *   Map each new exception to an appropriate HTTP status code (e.g., `DatabaseTransactionError` -> 500, `ConceptGenerationError` -> 503, `StorageOperationError` -> 503, `RateLimitRuleError` -> 500) and a distinct `error_code` string (e.g., `"DB_TRANSACTION_FAILED"`, `"CONCEPT_GEN_FAILED"`).
         *   Ensure the logging within the handler captures the specific exception type (`exc.__class__.__name__`) and any relevant details from `exc.details`.
 
 ---
 
-**25. Transaction Management**
+**25. Transaction Management** [x]
 
 *   **Goal:** Ensure atomicity for multi-step DB/Storage operations.
 
@@ -625,7 +622,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**27. Configuration Validation**
+**27. Configuration Validation** [x]
 
 *   **Goal:** Fail fast on missing critical configuration.
 
