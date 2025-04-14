@@ -1,6 +1,7 @@
 /**
  * URL utility functions
  */
+import { logger } from './logger';
 
 /**
  * Extract the storage path from a URL
@@ -12,7 +13,7 @@
 export function extractStoragePathFromUrl(url: string | undefined): string | null {
   if (!url) return null;
   
-  console.log('Extracting storage path from URL:', url);
+  logger.debug('Extracting storage path from URL:', url);
   
   try {
     // Format: https://[project-id].supabase.co/storage/v1/object/public/concept-images/[user-id]/[image-id].png
@@ -28,14 +29,14 @@ export function extractStoragePathFromUrl(url: string | undefined): string | nul
       // Try to get the path after 'concept-images/'
       let parts = urlObj.pathname.split('concept-images/');
       if (parts.length > 1) {
-        console.log('Extracted storage path (concept-images):', parts[1]);
+        logger.debug('Extracted storage path (concept-images):', parts[1]);
         return parts[1]; // This should be user-id/image-id.png
       }
       
       // Try to get the path after 'palette-images/'
       parts = urlObj.pathname.split('palette-images/');
       if (parts.length > 1) {
-        console.log('Extracted storage path (palette-images):', parts[1]);
+        logger.debug('Extracted storage path (palette-images):', parts[1]);
         return parts[1]; // This should be user-id/image-id.png
       }
       
@@ -43,7 +44,7 @@ export function extractStoragePathFromUrl(url: string | undefined): string | nul
       if (urlObj.pathname.includes('/storage/v1/object/sign/')) {
         const urlParam = urlObj.searchParams.get('url');
         if (urlParam) {
-          console.log('Found URL parameter in signed URL:', urlParam);
+          logger.debug('Found URL parameter in signed URL:', urlParam);
           // The URL parameter contains the path within the bucket
           // Format is usually: bucket-name/user-id/image-id.png
           // We just need the user-id/image-id.png part
@@ -52,7 +53,7 @@ export function extractStoragePathFromUrl(url: string | undefined): string | nul
           const bucketParts = urlParam.split('/');
           if (bucketParts.length > 1) {
             const path = bucketParts.slice(1).join('/');
-            console.log('Extracted storage path from signed URL param:', path);
+            logger.debug('Extracted storage path from signed URL param:', path);
             return path;
           }
         }
@@ -64,16 +65,16 @@ export function extractStoragePathFromUrl(url: string | undefined): string | nul
       // Try to find a pattern like [user-id]/[image-id].png
       const matches = url.match(/([a-f0-9-]+\/[a-f0-9-]+\.[a-z]+)(\?.*)?$/i);
       if (matches && matches[1]) {
-        console.log('Extracted storage path (pattern match):', matches[1]);
+        logger.debug('Extracted storage path (pattern match):', matches[1]);
         return matches[1];
       }
     }
     
     // If we couldn't extract a path, return null
-    console.log('Could not extract storage path from URL');
+    logger.debug('Could not extract storage path from URL');
     return null;
   } catch (error) {
-    console.error('Error extracting storage path from URL:', error);
+    logger.error('Error extracting storage path from URL:', error);
     return null;
   }
 } 
