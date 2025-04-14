@@ -149,9 +149,9 @@ async def _get_rate_limits(request: Request, force_refresh: bool = False, check_
             return _rate_limits_cache[cache_key]["data"]
         
         if force_refresh:
-            logger.info(f"Force refreshing rate limits for {mask_id(cache_key)}")
+            logger.debug(f"Force refreshing rate limits for {mask_id(cache_key)}")
         else:
-            logger.info(f"Generating fresh rate limits data for {mask_id(cache_key)}")
+            logger.debug(f"Generating fresh rate limits data for {mask_id(cache_key)}")
         
         limiter = request.app.state.limiter
         

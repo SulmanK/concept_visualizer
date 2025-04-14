@@ -16,6 +16,7 @@ from app.api.dependencies import CommonDependencies
 from app.api.errors import ResourceNotFoundError, ServiceUnavailableError
 from app.services.task.service import TaskNotFoundError, TaskError
 from app.utils.security.mask import mask_id
+from app.core.config import settings
 
 # Configure logging
 logger = logging.getLogger("task_api")
@@ -76,7 +77,10 @@ async def get_tasks(
         ]
     except Exception as e:
         logger.error(f"Error retrieving tasks: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        if settings.DEBUG:
+            logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        else:
+            logger.debug("Enable DEBUG mode to see full traceback")
         raise ServiceUnavailableError(detail=f"Error retrieving tasks: {str(e)}")
 
 
@@ -133,7 +137,10 @@ async def get_task(
         raise
     except Exception as e:
         logger.error(f"Error retrieving task: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        if settings.DEBUG:
+            logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        else:
+            logger.debug("Enable DEBUG mode to see full traceback")
         raise ServiceUnavailableError(detail=f"Error retrieving task: {str(e)}")
 
 
@@ -178,5 +185,8 @@ async def delete_task(
         raise
     except Exception as e:
         logger.error(f"Error deleting task: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        if settings.DEBUG:
+            logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        else:
+            logger.debug("Enable DEBUG mode to see full traceback")
         raise ServiceUnavailableError(detail=f"Error deleting task: {str(e)}") 

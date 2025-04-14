@@ -57,7 +57,7 @@ def create_app() -> FastAPI:
             "http://127.0.0.1:5173",
         ]
         
-    logger.info(f"CORS configured with allowed origins: {cors_origins}")
+    logger.debug(f"CORS configured with allowed origins: {cors_origins}")
     
     app.add_middleware(
         CORSMiddleware,
@@ -82,15 +82,15 @@ def create_app() -> FastAPI:
     # 3. Then AuthMiddleware (authenticates the user)
     # This ensures that user authentication happens before rate limiting is applied.
     app.add_middleware(RateLimitApplyMiddleware)
-    logger.info("Added rate limit apply middleware")
+    logger.debug("Added rate limit apply middleware")
     
     # Add rate limit headers middleware
     app.add_middleware(RateLimitHeadersMiddleware)
-    logger.info("Added rate limit headers middleware")
+    logger.debug("Added rate limit headers middleware")
     
     # Configure API routes (this also sets up error handlers via configure_error_handlers)
     configure_api_routes(app)
-    logger.info("Configured API routes and error handlers")
+    logger.debug("Configured API routes and error handlers")
     
     # Configure rate limiting
     setup_limiter_for_app(app)

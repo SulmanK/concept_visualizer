@@ -151,7 +151,13 @@ try:
     # Safely log configuration with masked sensitive information
     logger.info(f"Application running in {settings.ENVIRONMENT} environment")
     logger.info(f"API configured with prefix: {settings.API_PREFIX}")
-    logger.info(f"CORS origins: {settings.CORS_ORIGINS}")
+
+    # Move detailed CORS config to debug, make sure origins are properly masked if they contain sensitive data
+    if isinstance(settings.CORS_ORIGINS, list) and len(settings.CORS_ORIGINS) > 5:
+        # If there are many origins, just log the count to avoid verbose logs
+        logger.debug(f"CORS configured with {len(settings.CORS_ORIGINS)} origins")
+    else:
+        logger.debug(f"CORS origins: {settings.CORS_ORIGINS}")
 except Exception as e:
     logger.critical(f"Failed to load configuration: {str(e)}")
     # In a production environment, we might want to exit the application here
