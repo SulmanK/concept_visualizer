@@ -13,7 +13,7 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
   }
   
   console.log(`[API] Fetching status for task ${taskId}`);
-  const response = await apiClient.get<TaskResponse>(API_ENDPOINTS.TASK_STATUS(taskId));
+  const response = await apiClient.get<TaskResponse>(API_ENDPOINTS.TASK_STATUS_BY_ID(taskId));
   
   // Normalize the response by ensuring the id field is set properly
   if (response.data.task_id && !response.data.id) {
