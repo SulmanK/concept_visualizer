@@ -386,7 +386,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**18. Frontend Console Logging Cleanup**
+**18. Frontend Console Logging Cleanup** [x]
 
 *   **Goal:** Remove development noise from the browser console in production.
 
@@ -400,7 +400,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**19. DRY Code Refactoring**
+**19. DRY Code Refactoring** [x]
 
 *   **Steps:**
     1.  **Create `QueryResultHandler`:**
@@ -419,7 +419,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**20. UI Consistency**
+**20. UI Consistency** [x]
 
 *   **Goal:** Standardize styling using Tailwind utility classes.
 
@@ -560,6 +560,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 **25. Transaction Management**
 
 *   **Goal:** Ensure atomicity for multi-step DB/Storage operations.
+
 *   **Target:** `ConceptStorageService.store_concept` (handles concept + variations).
 
 *   **Steps:**

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GenerationResponse, ColorPalette } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ColorPalette as ColorPaletteComponent } from '../ui/ColorPalette';
+import { logger } from '../../utils/logger';
+import { devLog, devWarn, logError } from '../../utils/dev-logging';
 
 // Define styles using JavaScript objects like in ConceptForm.tsx
 const containerStyle = {
@@ -253,21 +255,21 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   
   // Debug the concept and variations data
   React.useEffect(() => {
-    console.log('ConceptResult - concept data:', concept);
-    console.log('ConceptResult - variations data:', variations);
+    devLog('ConceptResult - concept data:', concept);
+    devLog('ConceptResult - variations data:', variations);
     
     // Check for the original image URL using the correct field name
     const originalImageUrl = concept?.image_url;
-    console.log('Original image URL:', originalImageUrl);
+    devLog('Original image URL:', originalImageUrl);
     
     // Add more detailed logging specifically for debugging image display issues
     if (originalImageUrl) {
-      console.log('Original image URL found:', originalImageUrl);
+      devLog('Original image URL found:', originalImageUrl);
       const formattedUrl = getFormattedUrl(originalImageUrl, 'concept');
-      console.log('Formatted original image URL:', formattedUrl);
+      devLog('Formatted original image URL:', formattedUrl);
     } else {
-      console.warn('⚠️ Original image URL is missing from concept data!');
-      console.warn('Concept data structure:', concept);
+      devWarn('⚠️ Original image URL is missing from concept data!');
+      devWarn('Concept data structure:', concept);
     }
   }, [concept, variations]);
   
@@ -277,7 +279,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     const imgElement = event.currentTarget;
     const imgSrc = imgElement.src;
     
-    console.error(`Image failed to load: ${imgSrc}`, event);
+    logError(`Image failed to load: ${imgSrc}`, event);
     
     // Mark this image URL as failed in our state
     setImageLoadErrors(prev => ({
@@ -291,12 +293,12 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     
     // If the URL is already a signed URL, use it directly
     if (url.includes('/object/sign/') && url.includes('token=')) {
-      console.log('URL is already a signed URL, using directly');
+      devLog('URL is already a signed URL, using directly');
       
       // Check if this is a double-signed URL (a URL within a URL)
       if (url.includes('/object/sign/') && 
           url.indexOf('/object/sign/') !== url.lastIndexOf('/object/sign/')) {
-        console.log('Detected doubly-signed URL, extracting the inner URL');
+        devLog('Detected doubly-signed URL, extracting the inner URL');
         
         // Extract the path part after the second "palette-images/" or "concept-images/"
         const bucketName = bucketType === 'concept' ? 'concept-images' : 'palette-images';
@@ -305,7 +307,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         if (partAfterFirstBucket && partAfterFirstBucket.includes(`${bucketName}/`)) {
           // Find the second bucket occurrence and extract the real path
           const realPath = partAfterFirstBucket.split(`${bucketName}/`)[1].split('?')[0];
-          console.log('Extracted real path:', realPath);
+          devLog('Extracted real path:', realPath);
           
           // Create a proper signed URL with the extracted path
           return formatImageUrl?.(realPath, bucketType as 'concept' | 'palette') || '';
@@ -331,7 +333,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         // Extract the correct portion of the URL
         const dupeIndex = url.indexOf(supabaseUrl, url.indexOf('/storage/v1/object/public/') + 20);
         if (dupeIndex > 0) {
-          console.log('Fixed malformed URL with duplicated base URL');
+          devLog('Fixed malformed URL with duplicated base URL');
           return url.substring(dupeIndex);
         }
       }
@@ -344,7 +346,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         const pathParts = url.split(`/storage/v1/object/public/${bucketName}/`);
         if (pathParts.length > 1) {
           const cleanPath = pathParts[1].split('?')[0];
-          console.log('Extracted clean path from URL:', cleanPath);
+          devLog('Extracted clean path from URL:', cleanPath);
           return formatImageUrl?.(cleanPath, bucketType as 'concept' | 'palette') || '';
         }
       }
@@ -358,7 +360,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
       // Assume the URL is a path in the Supabase bucket
       return formatImageUrl?.(url, bucketType as 'concept' | 'palette') || '';
     } catch (error) {
-      console.error('Error formatting URL:', error);
+      logError('Error formatting URL:', error);
       return '';
     }
   };
@@ -408,7 +410,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   
   const getOriginalImageUrl = (): string => {
     if (!concept || !concept.image_url) {
-      console.warn('Original image URL is missing in concept data', concept);
+      devWarn('Original image URL is missing in concept data', concept);
       return '';
     }
     
@@ -600,28 +602,27 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   };
   
   const handleExport = () => {
-    // Log the concept ID data to debug the issue
-    console.log('Export button clicked, concept data:', {
-      hasId: concept && 'id' in concept,
-      id: concept?.id,
-      hasGenerationId: concept && 'generation_id' in concept,
-      generationId: concept?.generation_id,
-      promptId: concept?.prompt_id
-    });
-    
-    // Try to get a valid ID from either id, generation_id, or prompt_id
-    const conceptId = concept?.id || concept?.generation_id || concept?.prompt_id;
-    
-    // Check if onExport is provided and if we have a valid conceptId
-    if (onExport && conceptId && typeof conceptId === 'string') {
-      console.log('Calling onExport with conceptId:', conceptId);
-      onExport(conceptId);
+    if (!concept?.id) {
+      devWarn('Cannot export: concept ID is missing');
       return;
     }
     
-    console.log('Falling back to download function');
-    // If onExport is not provided or concept.id is missing, fall back to download
-    handleDownload();
+    devLog('Export button clicked, concept data:', {
+      conceptId: concept.id,
+      variationIndex: selectedVariation,
+      hasExportHandler: !!onExport
+    });
+    
+    // If there's a refinement handler, use it
+    if (onExport) {
+      const conceptId = concept.id;
+      devLog('Calling onExport with conceptId:', conceptId);
+      onExport(conceptId);
+    } else {
+      // Otherwise fall back to direct download
+      devLog('Falling back to download function');
+      handleDownload();
+    }
   };
   
   if (!concept) {
