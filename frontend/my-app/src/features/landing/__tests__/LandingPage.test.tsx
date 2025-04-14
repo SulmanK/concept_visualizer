@@ -21,16 +21,6 @@ vi.mock('react-router-dom', async (importOriginal) => {
 const originalConsoleLog = console.log;
 console.log = vi.fn();
 
-// Mock the ConceptContext
-vi.mock('../../../contexts/ConceptContext', () => ({
-  useConceptContext: () => ({
-    recentConcepts: [],
-    loadingConcepts: false,
-    refreshConcepts: vi.fn(),
-    errorLoadingConcepts: null
-  })
-}));
-
 // Clean up after tests
 afterAll(() => {
   console.log = originalConsoleLog;

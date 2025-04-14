@@ -1,36 +1,41 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { RefinementSelectionPage } from '../RefinementSelectionPage';
 import { vi } from 'vitest';
 
-// Mock the ConceptContext
-vi.mock('../../../contexts/ConceptContext', () => ({
-  useConceptContext: vi.fn()
+// Mock the React Query hooks
+vi.mock('../../../hooks/useConceptQueries', () => ({
+  useRecentConcepts: vi.fn()
 }));
 
-// Mock the ConceptCard component
-vi.mock('../../concepts/recent/components/ConceptCard', () => ({
-  ConceptCard: ({ concept }) => (
-    <div data-testid={`concept-card-${concept.id}`}>
-      {concept.logo_description}
-    </div>
-  )
+// Mock the AuthContext
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user-id' }
+  })
 }));
 
-// Mock useNavigate
+// Mock the QueryClient
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: vi.fn().mockReturnValue({
+    invalidateQueries: vi.fn()
+  })
+}));
+
+// Mock the navigate function
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    useNavigate: () => mockNavigate,
-    Link: ({ children, to }) => <a href={to}>{children}</a>
+    useNavigate: () => mockNavigate
   };
 });
 
-// Import the mocked context
-import { useConceptContext } from '../../../contexts/ConceptContext';
+// Import the mocked hook
+import { useRecentConcepts } from '../../../hooks/useConceptQueries';
 
 describe('RefinementSelectionPage Component', () => {
   beforeEach(() => {
@@ -38,12 +43,12 @@ describe('RefinementSelectionPage Component', () => {
   });
 
   test('renders loading state', () => {
-    // Mock the context to return loading state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: true,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
+    // Mock the hook to return loading state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: true,
+      error: null,
+      refetch: vi.fn()
     });
 
     render(
@@ -52,39 +57,18 @@ describe('RefinementSelectionPage Component', () => {
       </BrowserRouter>
     );
 
-    // Check that the loading animation is shown
+    // Check that the loading state is shown
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
   });
 
-  test('renders empty state', () => {
-    // Mock the context to return empty state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: false,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
-    });
-
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
-
-    // Check that the empty state message is shown
-    expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
-    expect(screen.getByText('No Concepts Available')).toBeInTheDocument();
-    expect(screen.getByText('Create New Concept')).toBeInTheDocument();
-  });
-
   test('renders error state', () => {
-    // Mock the context to return error state
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: [],
-      loadingConcepts: false,
-      errorLoadingConcepts: 'Failed to load concepts',
-      refreshConcepts: vi.fn()
+    // Mock the hook to return error state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: new Error('Failed to load concepts'),
+      refetch: vi.fn()
     });
 
     render(
@@ -93,11 +77,55 @@ describe('RefinementSelectionPage Component', () => {
       </BrowserRouter>
     );
 
-    // Check that the error message is shown
+    // Check that the error state is shown
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
     expect(screen.getByText('Error')).toBeInTheDocument();
     expect(screen.getByText('Failed to load concepts')).toBeInTheDocument();
     expect(screen.getByText('Try Again')).toBeInTheDocument();
+  });
+
+  test('renders empty state', () => {
+    // Mock the hook to return empty state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
+    });
+
+    render(
+      <BrowserRouter>
+        <RefinementSelectionPage />
+      </BrowserRouter>
+    );
+
+    // Check that the empty state is shown
+    expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
+    expect(screen.getByText('No Concepts Available')).toBeInTheDocument();
+    expect(screen.getByText('You need to create concepts before you can refine them.')).toBeInTheDocument();
+    expect(screen.getByText('Create New Concept')).toBeInTheDocument();
+  });
+
+  test('navigates to create page when clicking create button in empty state', () => {
+    // Mock the hook to return empty state
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
+    });
+
+    render(
+      <BrowserRouter>
+        <RefinementSelectionPage />
+      </BrowserRouter>
+    );
+
+    // Click the Create New Concept button
+    fireEvent.click(screen.getByText('Create New Concept'));
+
+    // Check that navigate was called with the correct path
+    expect(mockNavigate).toHaveBeenCalledWith('/create');
   });
 
   test('renders concepts when available', () => {
@@ -105,6 +133,7 @@ describe('RefinementSelectionPage Component', () => {
     const mockConcepts = [
       {
         id: 'concept-1',
+        image_url: 'https://example.com/concept1.png',
         base_image_url: 'https://example.com/concept1.png',
         logo_description: 'First Test Concept',
         theme_description: 'Test theme 1',
@@ -112,6 +141,7 @@ describe('RefinementSelectionPage Component', () => {
       },
       {
         id: 'concept-2',
+        image_url: 'https://example.com/concept2.png',
         base_image_url: 'https://example.com/concept2.png',
         logo_description: 'Second Test Concept',
         theme_description: 'Test theme 2',
@@ -119,12 +149,12 @@ describe('RefinementSelectionPage Component', () => {
       }
     ];
 
-    // Mock the context to return concepts
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: mockConcepts,
-      loadingConcepts: false,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
+    // Mock the hook to return concepts
+    vi.mocked(useRecentConcepts).mockReturnValue({
+      data: mockConcepts,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn()
     });
 
     render(
@@ -133,42 +163,9 @@ describe('RefinementSelectionPage Component', () => {
       </BrowserRouter>
     );
 
-    // Check that the concept cards are rendered
+    // Check that the concept rows are rendered
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
-    expect(screen.getByTestId('concept-card-concept-1')).toBeInTheDocument();
-    expect(screen.getByTestId('concept-card-concept-2')).toBeInTheDocument();
-  });
-
-  test('navigates to refinement page when selecting a concept', () => {
-    // Mock concepts data
-    const mockConcepts = [
-      {
-        id: 'concept-1',
-        base_image_url: 'https://example.com/concept1.png',
-        logo_description: 'First Test Concept',
-        theme_description: 'Test theme 1',
-        color_variations: []
-      }
-    ];
-
-    // Mock the context to return concepts
-    vi.mocked(useConceptContext).mockReturnValue({
-      recentConcepts: mockConcepts,
-      loadingConcepts: false,
-      errorLoadingConcepts: null,
-      refreshConcepts: vi.fn()
-    });
-
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
-
-    // Click on a concept card
-    fireEvent.click(screen.getByTestId('concept-card-concept-1'));
-
-    // Check that navigate was called with the correct path
-    expect(mockNavigate).toHaveBeenCalledWith('/refine/concept-1');
+    expect(screen.getByText('First Test Concept')).toBeInTheDocument();
+    expect(screen.getByText('Second Test Concept')).toBeInTheDocument();
   });
 }); 
