@@ -3,6 +3,7 @@ import { Card } from './Card';
 import { formatImageUrl } from '../../services/supabaseClient';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 import { Link } from 'react-router-dom';
+import styles from './ConceptCard.module.css';
 
 /**
  * Helper function to determine if a color is light
@@ -511,51 +512,42 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
 
   // Create the card content
   const cardContent = (
-    <div 
-      className="concept-card bg-white rounded-xl overflow-hidden shadow-md border border-indigo-100 transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl"
-      style={
-        gradient 
-          ? { background: 'white' }
-          : {}
-      }
-    >
-      <div 
-        className="h-32 relative overflow-hidden flex items-center justify-center bg-blue-50"
-      >
+    <div className={styles.card}>
+      <div className={styles.headerImage}>
         {/* Display the initials in the colored background for a cleaner look */}
-        <span className="text-5xl font-bold text-indigo-400 opacity-30">{finalInitials}</span>
+        <span className={styles.headerInitials}>{finalInitials}</span>
       </div>
       
-      <div className="p-5">
-        <div className="-mt-16 mb-4 relative z-10 flex justify-center">
-          <div className="w-24 h-24 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center transition-transform duration-300">
+      <div className={styles.content}>
+        <div className={styles.logoContainer}>
+          <div className={styles.logo}>
             {logoImageUrl ? (
               <img 
                 src={logoImageUrl} 
                 alt={finalTitle + " logo"} 
-                className="object-contain w-full h-full p-1"
+                className={styles.logoImage}
                 onError={(e) => {
                   console.error('Logo image failed to load:', logoImageUrl);
                   (e.target as HTMLImageElement).src = '/placeholder-image.png';
                 }}
-          />
-        ) : (
-              <span className="text-3xl font-bold text-indigo-600">{finalInitials}</span>
+              />
+            ) : (
+              <span className={styles.logoInitials}>{finalInitials}</span>
             )}
           </div>
-      </div>
+        </div>
       
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">{finalTitle}</h3>
-          <p className="text-gray-500 text-sm mb-4">{finalDescription}</p>
+        <div className={styles.textContent}>
+          <h3 className={styles.title}>{finalTitle}</h3>
+          <p className={styles.description}>{finalDescription}</p>
         </div>
         
         {/* Color variations */}
         {hasVariations && (
-          <div className="flex justify-center items-center space-x-3 mb-4">
-          {includeOriginal && (
+          <div className={styles.colorVariations}>
+            {includeOriginal && (
               <div 
-                className="w-6 h-6 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs bg-indigo-50 border border-gray-200"
+                className={styles.originalVariation}
                 onClick={(e) => handleVariationSelect(0, e)}
               >
                 O
@@ -569,30 +561,24 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
               const mainColor = colorSet[0] || '#4F46E5';
               const needsBorder = isLightColor(mainColor);
             
-            return (
+              return (
                 <div 
                   key={`${colorSet.join(',')}-${variationIndex}`}
-                  className={`w-6 h-6 rounded-full cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-md ${
-                    isSelected 
-                      ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' 
-                      : needsBorder 
-                        ? 'border border-gray-400'
-                        : 'border border-gray-200'
-                  }`}
+                  className={`${styles.colorDot} ${isSelected ? styles.colorDotSelected : ''} ${needsBorder ? styles.colorDotLight : ''}`}
                   style={{ backgroundColor: mainColor }}
                   onClick={(e) => handleVariationSelect(actualIndex, e)}
                 />
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
         )}
         
         {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className={styles.actions}>
           {onEdit && (
             <button 
               onClick={handleEdit}
-              className="py-2 px-3 border border-gray-300 bg-white rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm"
+              className={styles.editButton}
             >
               {editButtonText}
             </button>
@@ -601,7 +587,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
           {onViewDetails && (
             <button 
               onClick={handleViewDetails}
-              className="py-2 px-3 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition shadow-sm"
+              className={styles.viewButton}
             >
               View Details
             </button>
