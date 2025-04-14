@@ -204,21 +204,12 @@ export function useGenerateConceptMutation() {
         timestamp: new Date().toISOString()
       });
       
-      // If we have a result_id, invalidate the concept detail query
-      // This ensures that when navigating to the concept detail page, 
-      // the data will be properly refetched
-      if (response.result_id) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.concepts.detail(response.result_id),
-          exact: false
-        });
-        
-        // Also invalidate recent concepts to ensure the concept list is refreshed
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.concepts.recent(),
-          exact: false
-        });
-      }
+      // Only invalidate recent concepts to ensure the concept list is refreshed
+      // The TaskContext will handle invalidating the detail query when the task completes
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concepts.recent(),
+        exact: false
+      });
     },
     onSettled: () => {
       console.log('[useGenerateConceptMutation] Generation settled', {
@@ -364,19 +355,12 @@ export function useRefineConceptMutation() {
         timestamp: new Date().toISOString()
       });
       
-      // If we have a result_id, invalidate the concept detail query
-      if (response.result_id) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.concepts.detail(response.result_id),
-          exact: false
-        });
-        
-        // Also invalidate recent concepts to ensure the concept list is refreshed
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.concepts.recent(),
-          exact: false
-        });
-      }
+      // Only invalidate recent concepts to ensure the concept list is refreshed
+      // The TaskContext will handle invalidating the detail query when the task completes
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.concepts.recent(),
+        exact: false
+      });
     },
     onSettled: () => {
       console.log('[useRefineConceptMutation] Refinement settled', {

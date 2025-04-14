@@ -4,6 +4,8 @@ import { Button } from '../../../components/ui/Button';
 interface RefinementActionsProps {
   onReset: () => void;
   onCreateNew: () => void;
+  refinedConceptId?: string;
+  selectedColor?: string | null;
 }
 
 /**
@@ -12,6 +14,8 @@ interface RefinementActionsProps {
 export const RefinementActions: React.FC<RefinementActionsProps> = ({
   onReset,
   onCreateNew,
+  refinedConceptId,
+  selectedColor
 }) => {
   return (
     <div className="flex justify-between mb-4">
