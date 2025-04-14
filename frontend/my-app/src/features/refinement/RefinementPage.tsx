@@ -222,7 +222,7 @@ export const RefinementPage: React.FC = () => {
   const showComparisonView = taskData?.status === 'completed' && taskData.result_id;
   
   return (
-    <div className="space-y-8 relative">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
       {/* Under Construction Watermark */}
       <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-10">
         <div className="transform rotate-[-30deg] bg-red-600/10 text-red-800 font-bold text-6xl p-10 rounded-lg border-4 border-red-600/30 backdrop-blur-sm">
@@ -235,48 +235,52 @@ export const RefinementPage: React.FC = () => {
         variationName={originalConcept.colorVariation?.palette_name} 
       />
       
-      {!showComparisonView && (
-        <div className="relative">
-          <RefinementForm
-            originalImageUrl={originalConcept.imageUrl}
-            onSubmit={handleRefineConcept}
-            status={getFormStatus()}
-            error={getErrorMessage()}
-            onCancel={handleCancel}
-            initialLogoDescription={originalConcept.logoDescription}
-            initialThemeDescription={originalConcept.themeDescription}
-            colorVariation={originalConcept.colorVariation}
-            isProcessing={taskData?.status === 'processing'}
-            processingMessage={taskData?.status === 'processing' ? 'Processing your refinement request...' : undefined}
-          />
-          
-          {/* Informational banner */}
-          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800 text-center max-w-xl mx-auto">
-            <p className="font-medium">
-              📝 This feature is currently under development
-            </p>
-            <p className="text-sm mt-1">
-              The refinement functionality is coming soon! You can explore the interface, but submissions are disabled.
-            </p>
+      <main className="container mx-auto px-4 py-8 space-y-12">
+        {!showComparisonView && (
+          <div className="relative">
+            <RefinementForm
+              originalImageUrl={originalConcept.imageUrl}
+              onSubmit={handleRefineConcept}
+              status={getFormStatus()}
+              error={getErrorMessage()}
+              onCancel={handleCancel}
+              initialLogoDescription={originalConcept.logoDescription}
+              initialThemeDescription={originalConcept.themeDescription}
+              colorVariation={originalConcept.colorVariation}
+              isProcessing={taskData?.status === 'processing'}
+              processingMessage={taskData?.status === 'processing' ? 'Processing your refinement request...' : undefined}
+            />
+            
+            {/* Informational banner */}
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-lg text-yellow-800 text-center max-w-xl mx-auto">
+              <p className="font-medium">
+                📝 This feature is currently under development
+              </p>
+              <p className="text-sm mt-1">
+                The refinement functionality is coming soon! You can explore the interface, but submissions are disabled.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {showComparisonView && taskData.result_id && (
-        <div className="mt-8 pt-8 border-t border-dark-200">
-          <RefinementActions 
-            onReset={handleReset} 
-            onCreateNew={() => navigate('/')} 
-          />
-          
-          <ComparisonView
-            originalImageUrl={originalConcept.imageUrl}
-            refinedConceptId={taskData.result_id}
-            onColorSelect={handleColorSelect}
-            selectedColor={selectedColor}
-          />
-        </div>
-      )}
+        )}
+        
+        {showComparisonView && taskData?.result_id && (
+          <div className="mt-8 pt-8 border-t border-dark-200">
+            <RefinementActions 
+              onReset={handleReset} 
+              onCreateNew={() => navigate('/')}
+              refinedConceptId={taskData.result_id} 
+              selectedColor={selectedColor}
+            />
+            
+            <ComparisonView
+              originalImageUrl={originalConcept.imageUrl}
+              refinedConceptId={taskData.result_id}
+              onColorSelect={handleColorSelect}
+              selectedColor={selectedColor}
+            />
+          </div>
+        )}
+      </main>
     </div>
   );
 }; 

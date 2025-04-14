@@ -10,7 +10,7 @@ interface ConceptHeaderProps {
  */
 export const ConceptHeader: React.FC<ConceptHeaderProps> = ({ onGetStarted }) => {
   return (
-    <div className="bg-gradient-to-b from-indigo-50 to-white py-12 sm:py-16 mb-8">
+    <div className="py-12 sm:py-16 mb-8">
       <div className="container mx-auto px-4 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold text-indigo-900 mb-4">
           Create Visual Concepts
