@@ -298,7 +298,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**14. Page Transitions**
+**14. Page Transitions** [x]
 
 *   **Goal:** Implement smooth page transitions using a standard library.
 
@@ -316,39 +316,6 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
         *   Assign a `key={location.pathname}` to the `motion.div`.
         *   Define animation variants (e.g., `pageVariants`) for fade/slide effects.
         *   Add props to `motion.div`: `initial="initial"`, `animate="in"`, `exit="out"`, `variants={pageVariants}`, `transition={{ duration: 0.3 }}`.
-            ```tsx
-            import { AnimatePresence, motion } from 'framer-motion';
-            // ... other imports
-
-            const pageVariants = {
-              initial: { opacity: 0, y: 20 },
-              in: { opacity: 1, y: 0 },
-              out: { opacity: 0, y: -20 },
-            };
-
-            const AppRoutes = () => {
-              const location = useLocation();
-              return (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={location.pathname} // Key triggers animation on path change
-                    initial="initial"
-                    animate="in"
-                    exit="out"
-                    variants={pageVariants}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    style={{ height: '100%', width: '100%' }} // Ensure motion div takes space
-                  >
-                    <Suspense fallback={<LoadingFallback />}>
-                      <Routes location={location}> // Pass location to Routes
-                        {/* ... routes ... */}
-                      </Routes>
-                    </Suspense>
-                  </motion.div>
-                </AnimatePresence>
-              );
-            };
-            ```
     4.  **Adjust Styling/Layout:** Ensure the `motion.div` and its parent containers have appropriate styling (e.g., `position: relative`, `height`, `width`) to allow the animation to work correctly without layout shifts. Remove the old `PageTransition` wrapper from `AppRoutes`.
     5.  **Test:** Navigate between different pages and verify the transition animation plays smoothly. [SKIP FOR NOW]
 

@@ -20,5 +20,4 @@ export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as OfflineStatus } from './OfflineStatus';
 
 // Animation Components
-export { default as AnimatedTransition } from './AnimatedTransition';
 export { OptimizedImage } from './OptimizedImage'; 
