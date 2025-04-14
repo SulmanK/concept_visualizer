@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
+import { createContext, useContextSelector } from 'use-context-selector';
 import { Session, User } from '@supabase/supabase-js';
 import { 
   supabase, 
@@ -163,9 +164,14 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = useContextSelector(AuthContext, (state) => state);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
+
+export const useAuthUser = () => useContextSelector(AuthContext, state => state.user);
+export const useUserId = () => useContextSelector(AuthContext, state => state.user?.id);
+export const useIsAnonymous = () => useContextSelector(AuthContext, state => state.isAnonymous);
+export const useAuthIsLoading = () => useContextSelector(AuthContext, state => state.isLoading); 
