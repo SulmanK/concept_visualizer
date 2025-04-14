@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Card } from '../../../components/ui/Card';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
+import { getSignedImageUrl } from '../../../services/supabaseClient';
 
 interface ComparisonViewProps {
   originalImageUrl: string;
@@ -42,6 +43,12 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
     if (refinedConcept?.id) {
       navigate(`/concepts/${refinedConcept.id}`);
     }
+  };
+
+  // Format image URLs for the ConceptResult component
+  const formatImageUrl = (url: string | undefined, bucketType?: string) => {
+    if (!url) return '';
+    return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
   };
 
   if (isLoading) {
@@ -111,6 +118,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
           variations={refinedConcept.variations || []}
           onViewDetails={handleViewDetails}
           onExport={handleExport}
+          formatImageUrl={formatImageUrl}
         />
       </div>
       
