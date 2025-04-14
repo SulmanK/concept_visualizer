@@ -49,7 +49,7 @@ export const Card: React.FC<CardProps> = ({
   footer,
   padded = true,
   isLoading = false,
-  interactive = false,
+  interactive = true,
   hoverEffect = 'lift',
   className = '',
   children,

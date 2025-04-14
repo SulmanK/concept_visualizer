@@ -115,26 +115,28 @@ export const RefinementSelectionPage: React.FC = () => {
   // Handle loading state
   if (loadingConcepts) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-900 mb-2">
-            Select a Concept to Refine
-          </h1>
-          <p className="text-indigo-600 max-w-2xl mx-auto">
-            Choose one of your concepts to refine and improve.
-          </p>
-        </div>
-        
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-8 text-center" data-testid="loading-skeleton">
-          <div className="animate-pulse">
-            <div className="h-8 bg-indigo-200 rounded w-1/3 mb-8 mx-auto"></div>
-            <div className="grid grid-cols-1 gap-8">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-32 bg-indigo-100 rounded-lg"></div>
-              ))}
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+        <main className="container mx-auto px-4 py-8 space-y-12">
+          <div className="text-center py-8">
+            <h1 className="text-4xl sm:text-5xl font-bold text-indigo-900 mb-4">
+              Select a Concept to Refine
+            </h1>
+            <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
+              Choose one of your concepts to refine and improve.
+            </p>
+          </div>
+          
+          <div className="bg-white shadow-md p-8 text-center rounded-xl" data-testid="loading-skeleton">
+            <div className="animate-pulse">
+              <div className="h-8 bg-indigo-200 rounded w-1/3 mb-8 mx-auto"></div>
+              <div className="grid grid-cols-1 gap-8">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 bg-indigo-100 rounded-lg"></div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -142,23 +144,28 @@ export const RefinementSelectionPage: React.FC = () => {
   // Handle error state
   if (errorLoadingConcepts) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-900 mb-2">
-            Select a Concept to Refine
-          </h1>
-        </div>
-        
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-8 text-center">
-          <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
-          <p className="text-indigo-600 mb-6">{String(errorLoadingConcepts)}</p>
-          <button 
-            onClick={() => refreshConcepts()}
-            className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-full"
-          >
-            Try Again
-          </button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+        <main className="container mx-auto px-4 py-8 space-y-12">
+          <div className="text-center py-8">
+            <h1 className="text-4xl sm:text-5xl font-bold text-indigo-900 mb-4">
+              Select a Concept to Refine
+            </h1>
+            <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
+              Choose one of your concepts to refine and improve.
+            </p>
+          </div>
+          
+          <div className="bg-white shadow-md p-8 text-center rounded-xl">
+            <h2 className="text-xl font-semibold text-red-600 mb-4">Error</h2>
+            <p className="text-indigo-600 mb-6">{String(errorLoadingConcepts)}</p>
+            <button 
+              onClick={() => refreshConcepts()}
+              className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-full"
+            >
+              Try Again
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -166,25 +173,30 @@ export const RefinementSelectionPage: React.FC = () => {
   // Handle empty state
   if (!recentConcepts || recentConcepts.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-900 mb-2">
-            Select a Concept to Refine
-          </h1>
-        </div>
-        
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-md p-8 text-center">
-          <h2 className="text-xl font-semibold text-indigo-800 mb-4">No Concepts Available</h2>
-          <p className="text-indigo-600 mb-6">
-            You need to create concepts before you can refine them.
-          </p>
-          <button
-            onClick={() => navigate('/create')}
-            className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-full"
-          >
-            Create New Concept
-          </button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+        <main className="container mx-auto px-4 py-8 space-y-12">
+          <div className="text-center py-8">
+            <h1 className="text-4xl sm:text-5xl font-bold text-indigo-900 mb-4">
+              Select a Concept to Refine
+            </h1>
+            <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
+              Choose one of your concepts to refine and improve.
+            </p>
+          </div>
+          
+          <div className="bg-white shadow-md p-8 text-center rounded-xl">
+            <h2 className="text-xl font-semibold text-indigo-800 mb-4">No Concepts Available</h2>
+            <p className="text-indigo-600 mb-6">
+              You need to create concepts before you can refine them.
+            </p>
+            <button
+              onClick={() => navigate('/create')}
+              className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-full"
+            >
+              Create New Concept
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -350,26 +362,67 @@ export const RefinementSelectionPage: React.FC = () => {
   };
   
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-indigo-900 mb-2">
-          Select a Concept to Refine
-        </h1>
-        <p className="text-indigo-600 max-w-2xl mx-auto">
-          Choose one of your concepts to refine and improve. Click on a concept to see all available options.
-        </p>
-      </div>
-      
-      <div className="bg-gradient-to-b from-indigo-50 to-white rounded-xl shadow-md p-6 mb-8">
-        <div className="mb-6 pb-4 border-b border-indigo-100 flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-          </svg>
-          <span className="font-medium text-indigo-900">Click on a concept to see its color variations and select one to refine</span>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white">
+      <main className="container mx-auto px-4 py-8 space-y-12">
+        <div className="text-center py-8">
+          <h1 className="text-4xl sm:text-5xl font-bold text-indigo-900 mb-4">
+            Select a Concept to Refine
+          </h1>
+          <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed max-w-3xl mx-auto">
+            Choose one of your concepts to refine and improve.
+          </p>
         </div>
         
-        {recentConcepts.map(renderConceptRow)}
-      </div>
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="mb-6 pb-4 border-b border-indigo-100 flex items-center">
+            <h2 className="font-semibold text-xl text-indigo-900 flex-grow">Your Recent Concepts</h2>
+            <div className="flex space-x-2">
+              <button
+                onClick={refreshConcepts}
+                className="px-3 py-1 text-indigo-600 border border-indigo-300 rounded-full text-sm hover:bg-indigo-50 transition-colors"
+                title="Refresh concepts"
+              >
+                Refresh
+              </button>
+              <button
+                onClick={() => navigate('/create')}
+                className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-700 transition-colors"
+                title="Create new concept"
+              >
+                Create New
+              </button>
+            </div>
+          </div>
+          
+          {selectedVariation && (
+            <div className="mb-6 p-4 bg-indigo-50 rounded-lg flex flex-col sm:flex-row items-center sm:items-start">
+              <div className="w-32 h-32 rounded-md overflow-hidden border border-indigo-200 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0">
+                <img 
+                  src={selectedVariation.imageUrl} 
+                  alt="Selected concept" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-grow text-center sm:text-left">
+                <h3 className="font-semibold text-lg text-indigo-900 mb-2">
+                  Selected Concept
+                </h3>
+                <p className="text-indigo-700 mb-4">
+                  {selectedVariation.isOriginal ? 'Original Design' : 'Color Variation'}
+                </p>
+                <button
+                  onClick={handleRefineSelected}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-full text-sm hover:bg-indigo-700 transition-colors"
+                >
+                  Start Refining This Concept
+                </button>
+              </div>
+            </div>
+          )}
+          
+          {recentConcepts.map(renderConceptRow)}
+        </div>
+      </main>
     </div>
   );
 };
