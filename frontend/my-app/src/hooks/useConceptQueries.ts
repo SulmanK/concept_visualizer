@@ -130,12 +130,25 @@ export function useConceptDetail(
 
 /**
  * Process all concepts and their variations to get signed URLs in batch operations
- * This is more efficient than processing them one by one
+ * Only creates URLs for images that don't already have them
  */
 async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<ConceptData[]> {
   if (!concepts.length) return [];
   
   console.log(`[batchProcessUrls] Batch processing ${concepts.length} concepts`);
+  
+  // Check if all concepts already have complete image URLs
+  const needsProcessing = concepts.some(concept => {
+    const imageUrlMissing = !concept.image_url;
+    const variationUrlsMissing = concept.color_variations?.some(v => !v.image_url);
+    return imageUrlMissing || variationUrlsMissing;
+  });
+  
+  // If all concepts already have URLs, return directly
+  if (!needsProcessing) {
+    console.log('[batchProcessUrls] All concepts already have valid URLs, skipping processing');
+    return concepts;
+  }
   
   // Step 1: Collect all paths that need signed URLs
   const conceptPaths: { path: string, type: 'concept' | 'palette', conceptIndex: number, variationIndex?: number }[] = [];
@@ -143,7 +156,7 @@ async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<Concep
   // Collect all image paths first
   concepts.forEach((concept, conceptIndex) => {
     // Add concept image if needed
-    if (concept.image_path && (!concept.image_url || !concept.image_url.includes('token='))) {
+    if (concept.image_path && !concept.image_url) {
       conceptPaths.push({ 
         path: concept.image_path, 
         type: 'concept', 
@@ -153,7 +166,7 @@ async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<Concep
     
     // Add variation images if needed
     concept.color_variations?.forEach((variation, variationIndex) => {
-      if (variation.image_path && (!variation.image_url || !variation.image_url.includes('token='))) {
+      if (variation.image_path && !variation.image_url) {
         conceptPaths.push({ 
           path: variation.image_path, 
           type: 'palette', 
@@ -165,6 +178,11 @@ async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<Concep
   });
   
   console.log(`[batchProcessUrls] Found ${conceptPaths.length} images needing signed URLs`);
+  
+  // If no paths need processing, return original concepts
+  if (conceptPaths.length === 0) {
+    return concepts;
+  }
   
   // Step 2: Get signed URLs in batch operations
   const conceptBucket = getBucketName('concept');
@@ -197,14 +215,13 @@ async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<Concep
       }
     } catch (error) {
       console.error('[batchProcessUrls] Error getting batch signed URLs for concepts:', error);
-      // Fall back to individual URL generation
+      // Fall back to individual URL generation for paths that failed
       conceptImages.forEach(({ path, conceptIndex }) => {
-        try {
-          const url = getSignedImageUrl(path, 'concept');
+        // Only process if still missing after batch operation
+        if (!concepts[conceptIndex].image_url) {
+          const url = `${supabase.supabaseUrl}/storage/v1/object/public/${conceptBucket}/${path}`;
           concepts[conceptIndex].image_url = url;
           concepts[conceptIndex].base_image_url = url;
-        } catch (e) {
-          console.error(`[batchProcessUrls] Error generating fallback URL for ${path}:`, e);
         }
       });
     }
@@ -235,15 +252,14 @@ async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<Concep
       }
     } catch (error) {
       console.error('[batchProcessUrls] Error getting batch signed URLs for palettes:', error);
-      // Fall back to individual URL generation
+      // Fall back to individual URL generation for paths that failed
       paletteImages.forEach(({ path, conceptIndex, variationIndex }) => {
-        try {
-          if (typeof variationIndex === 'number' && concepts[conceptIndex].color_variations) {
-            const url = getSignedImageUrl(path, 'palette');
-            concepts[conceptIndex].color_variations![variationIndex].image_url = url;
-          }
-        } catch (e) {
-          console.error(`[batchProcessUrls] Error generating fallback URL for ${path}:`, e);
+        // Only process if still missing after batch operation
+        if (typeof variationIndex === 'number' && 
+            concepts[conceptIndex].color_variations && 
+            !concepts[conceptIndex].color_variations[variationIndex].image_url) {
+          const url = `${supabase.supabaseUrl}/storage/v1/object/public/${paletteBucket}/${path}`;
+          concepts[conceptIndex].color_variations![variationIndex].image_url = url;
         }
       });
     }

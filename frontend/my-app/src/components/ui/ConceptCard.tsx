@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from './Card';
-import { getSignedImageUrl } from '../../services/supabaseClient';
+import { formatImageUrl } from '../../services/supabaseClient';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 import { Link } from 'react-router-dom';
 
@@ -32,50 +32,15 @@ const isLightColor = (hexColor: string): boolean => {
   return yiq >= 200; // Higher threshold to catch very light colors
 }
 
-// Helper function to process image URLs and handle signed URLs
+// Helper function to process image URLs and handle edge cases
 const processImageUrl = (imageUrl: string | undefined | null): string => {
   if (!imageUrl || typeof imageUrl !== 'string') {
     console.log('ConceptCard: Image URL is empty, undefined, or not a string', imageUrl);
     return '';
   }
   
-  // Log the original image URL for debugging
-  console.log(`ConceptCard: Processing image URL: ${imageUrl.substring(0, 50)}${imageUrl.length > 50 ? '...' : ''}`);
-  
-  // If it's already a signed URL or a complete URL, return it directly
-  if (imageUrl.includes('/object/sign/') && imageUrl.includes('token=')) {
-    // Check for double signing
-    if (imageUrl.indexOf('/object/sign/') !== imageUrl.lastIndexOf('/object/sign/')) {
-      console.log('ConceptCard: Found doubly-signed URL, using original format');
-      // For double-signed URLs, just return the URL as is since getSignedImageUrl will handle this
-    }
-    console.log('ConceptCard: URL is already signed, using as-is');
-    return imageUrl;
-  }
-  
-  // If it's a full URL but not signed yet
-  if (imageUrl.startsWith('http')) {
-    // Try to extract the path
-    if (imageUrl.includes('/storage/v1/object/public/')) {
-      const bucketTypes = ['concept-images', 'palette-images'];
-      for (const bucket of bucketTypes) {
-        if (imageUrl.includes(`/${bucket}/`)) {
-          const pathParts = imageUrl.split(`/${bucket}/`);
-          if (pathParts.length > 1) {
-            const path = pathParts[1].split('?')[0];
-            console.log(`ConceptCard: Extracted path from URL: ${path}, using ${bucket.includes('palette') ? 'palette' : 'concept'} bucket`);
-            return getSignedImageUrl(path, bucket.includes('palette') ? 'palette' : 'concept');
-          }
-        }
-      }
-    }
-    console.log('ConceptCard: Using full URL directly');
-    return imageUrl;
-  }
-  
-  // For simple paths, assume it's a concept image path
-  console.log(`ConceptCard: Treating as simple path, getting signed URL`);
-  return getSignedImageUrl(imageUrl, 'concept');
+  // Simply use the formatImageUrl function to handle URL formatting
+  return formatImageUrl(imageUrl);
 }
 
 /**
