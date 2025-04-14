@@ -3,7 +3,6 @@ import { GenerationResponse, ColorPalette } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { ColorPalette as ColorPaletteComponent } from '../ui/ColorPalette';
-import { supabase, getSignedImageUrl } from '../../services/supabaseClient';
 
 // Define styles using JavaScript objects like in ConceptForm.tsx
 const containerStyle = {
@@ -218,6 +217,21 @@ export interface ConceptResultProps {
    * Handler for navigating to concept detail page
    */
   onExport?: (conceptId: string) => void;
+  
+  /**
+   * Handler for formatting URLs (replaces direct dependency on supabaseClient)
+   */
+  formatImageUrl?: (url: string | undefined, bucketType?: string) => string;
+  
+  /**
+   * The currently selected color
+   */
+  selectedColor?: string | null;
+  
+  /**
+   * Handler for viewing concept details
+   */
+  onViewDetails?: () => void;
 }
 
 /**
@@ -230,6 +244,9 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   onColorSelect,
   variations = [],
   onExport,
+  formatImageUrl,
+  selectedColor = null,
+  onViewDetails
 }) => {
   const [selectedVariation, setSelectedVariation] = useState<number | null>(null);
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<string, boolean>>({});
@@ -291,7 +308,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
           console.log('Extracted real path:', realPath);
           
           // Create a proper signed URL with the extracted path
-          return getSignedImageUrl(realPath, bucketType as 'concept' | 'palette');
+          return formatImageUrl?.(realPath, bucketType as 'concept' | 'palette') || '';
         }
       }
       
@@ -328,7 +345,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
         if (pathParts.length > 1) {
           const cleanPath = pathParts[1].split('?')[0];
           console.log('Extracted clean path from URL:', cleanPath);
-          return getSignedImageUrl(cleanPath, bucketType as 'concept' | 'palette');
+          return formatImageUrl?.(cleanPath, bucketType as 'concept' | 'palette') || '';
         }
       }
       
@@ -339,7 +356,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     // Otherwise, assume it's a path/key and format it appropriately for Supabase
     try {
       // Assume the URL is a path in the Supabase bucket
-      return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
+      return formatImageUrl?.(url, bucketType as 'concept' | 'palette') || '';
     } catch (error) {
       console.error('Error formatting URL:', error);
       return '';
