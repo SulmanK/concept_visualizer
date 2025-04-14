@@ -58,7 +58,7 @@ async def apply_rate_limit(
     # Create a key for the rate limit (e.g., "user:123abc" or "ip:127.0.0.1")
     key = f"{key_prefix}:{user_id}"
     
-    logger.info(f"Checking rate limit '{rate_limit}' for {key_prefix}")
+    logger.debug(f"Checking rate limit '{rate_limit}' for {key_prefix}")
     
     # Apply rate limiting - use check_request instead of sliding_window_check_rate
     limiter = req.app.state.limiter
@@ -168,7 +168,7 @@ async def apply_multiple_rate_limits(
         # Passing it to check_rate_limit is not necessary as it's parsed from rate_limit
         _ = limit_config.get("period")
         
-        logger.info(f"Checking rate limit '{rate_limit}' for {key_prefix} on {endpoint}")
+        logger.debug(f"Checking rate limit '{rate_limit}' for {key_prefix} on {endpoint}")
         
         # Check rate limit directly using our core function
         limit_info = check_rate_limit(key, endpoint, rate_limit)

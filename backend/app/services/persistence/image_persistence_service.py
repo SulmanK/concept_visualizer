@@ -185,7 +185,7 @@ class ImagePersistenceService:
         try:
             # We don't have an image_metadata table, so just log that we would store metadata
             # Instead of trying to use self.supabase.table() which doesn't exist
-            self.logger.info(f"Metadata for image {image_path} in bucket {bucket_name} would be stored: {metadata}")
+            self.logger.debug(f"Metadata for image {image_path} in bucket {bucket_name} would be stored: {metadata}")
             
             # If concept_id looks like a UUID, we could try to update the concepts table
             # but this is safer for now to avoid further errors
@@ -292,7 +292,7 @@ class ImagePersistenceService:
             # Convert relative signed URLs to full URLs if needed
             if image_path_or_url.startswith("/object/sign/"):
                 full_url = f"{settings.SUPABASE_URL}{image_path_or_url}"
-                self.logger.info(f"Converting relative signed URL to full URL: {full_url}")
+                self.logger.debug(f"Converting relative signed URL to full URL: {full_url}")
                 image_path_or_url = full_url
             
             # Check if it's an external URL or a storage path
@@ -318,7 +318,7 @@ class ImagePersistenceService:
                         # Determine if it's a palette image
                         is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
                         
-                        self.logger.info(f"Extracted path from signed URL: {path}")
+                        self.logger.debug(f"Extracted path from signed URL: {path}")
                         # Get the image directly (this is synchronous but we're calling it from an async context)
                         return self.get_image(path, is_palette=is_palette)
                 

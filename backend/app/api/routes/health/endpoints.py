@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 @router.get("/ping")
 async def ping():
     """Simple endpoint for checking if the server is alive."""
-    logger.info("Health check ping received")
+    logger.debug("Health check ping received")
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
 

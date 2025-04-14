@@ -97,7 +97,8 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
             if color_palettes:
                 variations = []
                 for palette in color_palettes:
-                    masked_palette_path = mask_path(palette.get("image_path", ""))
+                    palette_path = palette.get("image_path")
+                    masked_palette_path = mask_path(palette_path) if palette_path else None
                     self.logger.debug(f"Adding palette variation: {palette.get('name')}, path: {masked_palette_path}")
                     
                     variation = {

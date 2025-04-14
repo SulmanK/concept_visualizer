@@ -172,12 +172,12 @@ async def generate_concept(
         if not image_url:
             raise JigsawStackError(message="Failed to generate base concept")
         
-        logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
+        logger.debug(f"Generated base concept with image URL: {mask_id(image_url)}")
         
         # Check if we have image_data directly from the concept service
         if not image_data:
             # If not, we need to download it - this is a fallback for backward compatibility
-            logger.info("Image data not provided in concept response, downloading from URL")
+            logger.debug("Image data not provided in concept response, downloading from URL")
             try:
                 # Check if the image_url is a file path
                 if image_url.startswith("file://"):
@@ -194,7 +194,7 @@ async def generate_concept(
                     with open(file_path, "rb") as f:
                         image_data = f.read()
                         
-                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                    logger.debug(f"Read image data from local file: {mask_id(file_path)}")
                 else:
                     # For remote URLs, use httpx to download
                     import httpx
@@ -203,7 +203,7 @@ async def generate_concept(
                         response.raise_for_status()
                         image_data = response.content
                         
-                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    logger.debug(f"Downloaded image data from remote URL: {mask_id(image_url)}")
                     
                 if not image_data:
                     logger.error(f"No image data obtained from: {mask_id(image_url)}")
@@ -238,7 +238,7 @@ async def generate_concept(
                 num_colors=8
             )
             
-            logger.info(f"Extracted {len(colors)} colors from base concept image")
+            logger.debug(f"Extracted {len(colors)} colors from base concept image")
             
             # Generate palette from colors
             from app.services.concept.helpers.palette_generator import get_palette_from_colors
@@ -483,7 +483,7 @@ async def generate_concept_background_task(
             status="processing"
         )
         
-        logger.info(f"Generating concept for task {mask_id(task_id)}")
+        logger.debug(f"Generating concept for task {mask_id(task_id)}")
         
         # Generate base concept with an image
         concept_response = await concept_service.generate_concept(
@@ -500,12 +500,12 @@ async def generate_concept_background_task(
         if not image_url:
             raise ServiceUnavailableError(detail="Failed to generate base concept")
         
-        logger.info(f"Generated base concept with image URL: {mask_id(image_url)}")
+        logger.debug(f"Generated base concept with image URL: {mask_id(image_url)}")
         
         # Check if we have image_data directly from the concept service
         if not image_data:
             # If not, we need to download it - this is a fallback for backward compatibility
-            logger.info("Image data not provided in concept response, downloading from URL")
+            logger.debug("Image data not provided in concept response, downloading from URL")
             try:
                 # Check if the image_url is a file path
                 if image_url.startswith("file://"):
@@ -522,7 +522,7 @@ async def generate_concept_background_task(
                     with open(file_path, "rb") as f:
                         image_data = f.read()
                         
-                    logger.info(f"Read image data from local file: {mask_id(file_path)}")
+                    logger.debug(f"Read image data from local file: {mask_id(file_path)}")
                 else:
                     # For remote URLs, use httpx to download
                     import httpx
@@ -531,7 +531,7 @@ async def generate_concept_background_task(
                         response.raise_for_status()
                         image_data = response.content
                         
-                    logger.info(f"Downloaded image data from remote URL: {mask_id(image_url)}")
+                    logger.debug(f"Downloaded image data from remote URL: {mask_id(image_url)}")
                     
                 if not image_data:
                     logger.error(f"No image data obtained from: {mask_id(image_url)}")
