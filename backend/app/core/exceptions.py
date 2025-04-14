@@ -690,4 +690,72 @@ class TaskNotFoundError(TaskError):
         details: Optional[Dict[str, Any]] = None
     ):
         """Initialize with task not found details."""
-        super().__init__(message, task_id=task_id, details=details) 
+        super().__init__(message, task_id=task_id, details=details)
+
+
+class ConceptGenerationError(ApplicationError):
+    """Error during the concept generation process."""
+    
+    def __init__(
+        self, 
+        message: str = "Concept generation failed", 
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with concept generation error details."""
+        super().__init__(message, details)
+
+
+class DatabaseTransactionError(DatabaseError):
+    """Error during a multi-step database operation."""
+    
+    def __init__(
+        self, 
+        message: str = "Database transaction failed", 
+        operation: Optional[str] = None,
+        table: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with database transaction error details."""
+        super().__init__(message, operation=operation, table=table, details=details)
+
+
+class RateLimitRuleError(ApplicationError):
+    """Error related to rate limit configuration or application."""
+    
+    def __init__(
+        self, 
+        message: str = "Rate limit rule error", 
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with rate limit rule error details."""
+        super().__init__(message, details)
+
+
+class ExternalServiceError(ApplicationError):
+    """Error communicating with an external service."""
+    
+    def __init__(
+        self, 
+        service_name: str, 
+        message: str = "External service error", 
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with external service error details."""
+        error_details = details or {}
+        error_details["service_name"] = service_name
+        super().__init__(message, error_details)
+
+
+class StorageOperationError(StorageError):
+    """Specific error during a storage operation."""
+    
+    def __init__(
+        self, 
+        message: str = "Storage operation failed", 
+        operation: Optional[str] = None, 
+        bucket: Optional[str] = None, 
+        path: Optional[str] = None, 
+        details: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize with storage operation error details."""
+        super().__init__(message, operation=operation, bucket=bucket, path=path, details=details) 
