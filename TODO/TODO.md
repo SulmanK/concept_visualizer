@@ -321,7 +321,7 @@ Okay, let's break down your existing TODO list into more granular, step-by-step 
 
 ---
 
-**15. API Client & Fetch Interceptor**
+**15. API Client & Fetch Interceptor** [x]
 
 *   **Goal:** Centralize request/response handling in the Axios client.
 

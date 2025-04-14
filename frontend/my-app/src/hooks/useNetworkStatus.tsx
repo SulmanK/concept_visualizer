@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from './useToast';
+import { apiClient } from '../services/apiClient';
 
 export interface NetworkStatus {
   /**
@@ -48,7 +49,7 @@ export const useNetworkStatus = (options?: {
 }): NetworkStatus => {
   const {
     notifyOnStatusChange = true,
-    checkEndpoint = '/api/health',
+    checkEndpoint = '/health',
     checkInterval = 120000, // 2 minutes
   } = options || {};
   
@@ -65,30 +66,27 @@ export const useNetworkStatus = (options?: {
   // Check connection by fetching a small resource
   const checkConnection = useCallback(async (): Promise<boolean> => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-      
       // Try the main endpoint, but if it fails, we'll consider the app online anyway
       // as long as the browser reports we're online
       try {
-        const response = await fetch(checkEndpoint, {
-          method: 'HEAD',
-          cache: 'no-store',
-          signal: controller.signal,
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        await apiClient.get(checkEndpoint, {
           headers: { 'Cache-Control': 'no-cache' },
+          signal: controller.signal,
+          showToastOnRateLimit: false // Don't show rate limit toasts for health checks
         });
         
         clearTimeout(timeoutId);
         setLastCheckedAt(new Date());
         
-        const online = response.ok;
-        updateOnlineStatus(online);
-        return online;
+        updateOnlineStatus(true);
+        return true;
       } catch (error) {
         console.warn('Health check endpoint error:', error);
         // If the health check endpoint fails but the browser says we're online,
         // we'll consider ourselves online
-        clearTimeout(timeoutId);
         setLastCheckedAt(new Date());
         
         // Use the browser's online status as a fallback
