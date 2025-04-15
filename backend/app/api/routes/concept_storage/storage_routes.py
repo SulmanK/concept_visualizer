@@ -129,7 +129,7 @@ async def generate_and_store_concept(
 async def get_recent_concepts(
     response: Response,
     req: Request,
-    limit: int = Query(10, ge=1, le=50),  # Add Query parameter with validation
+    limit: int = Query(10, ge=1, le=50),
     commons: CommonDependencies = Depends()
 ):
     """
@@ -153,10 +153,10 @@ async def get_recent_concepts(
         # Get recent concepts with paths from persistence service
         concepts = await commons.concept_persistence_service.get_recent_concepts(user_id, limit)
         
-        # Process each concept to add signed URLs
+        # Process each concept to add signed URLs only if needed
         for concept in concepts:
-            # Get signed URL for the concept image
-            if concept.get("image_path"):
+            # Only generate a new URL if one doesn't already exist
+            if concept.get("image_path") and not concept.get("image_url"):
                 concept["image_url"] = commons.image_persistence_service.get_signed_url(
                     concept["image_path"], 
                     is_palette=False
@@ -165,7 +165,8 @@ async def get_recent_concepts(
             # Process color variations if they exist
             if "color_variations" in concept and concept["color_variations"]:
                 for variation in concept["color_variations"]:
-                    if variation.get("image_path"):
+                    # Only generate a new URL if one doesn't already exist
+                    if variation.get("image_path") and not variation.get("image_url"):
                         variation["image_url"] = commons.image_persistence_service.get_signed_url(
                             variation["image_path"],
                             is_palette=True
@@ -212,8 +213,8 @@ async def get_concept_detail(
                 resource_id=concept_id
             )
         
-        # Add signed URL for the concept image
-        if concept.get("image_path"):
+        # Only generate a new URL if one doesn't already exist
+        if concept.get("image_path") and not concept.get("image_url"):
             concept["image_url"] = commons.image_persistence_service.get_signed_url(
                 concept["image_path"], 
                 is_palette=False
@@ -222,7 +223,8 @@ async def get_concept_detail(
         # Process color variations if they exist
         if "color_variations" in concept and concept["color_variations"]:
             for variation in concept["color_variations"]:
-                if variation.get("image_path"):
+                # Only generate a new URL if one doesn't already exist
+                if variation.get("image_path") and not variation.get("image_url"):
                     variation["image_url"] = commons.image_persistence_service.get_signed_url(
                         variation["image_path"],
                         is_palette=True

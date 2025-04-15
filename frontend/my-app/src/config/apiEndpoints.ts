@@ -34,7 +34,7 @@ export const API_ENDPOINTS = {
   TASK_STATUS_BY_ID: (taskId: string) => `${TASK_STATUS.BASE_PATH}/${taskId}`,
   TASK_CANCEL: (taskId: string) => `${TASK_STATUS.BASE_PATH}/${taskId}/cancel`,
   EXPORT_IMAGE: 'export/process',
-  RECENT_CONCEPTS: 'concept-storage/recent',
-  CONCEPT_DETAIL: (id: string) => `concept-storage/concept/${id}`,
+  RECENT_CONCEPTS: 'storage/recent',
+  CONCEPT_DETAIL: (id: string) => `storage/concept/${id}`,
   RATE_LIMITS: 'health/rate-limits-status'
 }; 
