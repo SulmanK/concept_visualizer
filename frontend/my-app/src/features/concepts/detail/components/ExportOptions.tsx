@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { ErrorMessage } from '../../../../components/ui';
 import { RateLimitError, ExportFormat, ExportSize } from '../../../../services/apiClient';
 import { useExportImageMutation, downloadBlob } from '../../../../hooks/useExportImageMutation';
@@ -600,12 +600,23 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
       </div>
       
       {/* Modal for preview */}
-      <EnhancedImagePreview 
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        imageUrl={modalPreviewUrl || ''}
-        format={selectedFormat}
-      />
+      {isModalOpen && (
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-5 rounded-lg animate-pulse">
+              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="mt-3 text-center text-indigo-600">Loading preview...</p>
+            </div>
+          </div>
+        }>
+          <EnhancedImagePreview 
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            imageUrl={modalPreviewUrl || ''}
+            format={selectedFormat}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }; 

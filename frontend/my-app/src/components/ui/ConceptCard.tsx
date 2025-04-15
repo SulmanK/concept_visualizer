@@ -4,6 +4,7 @@ import { formatImageUrl } from '../../services/supabaseClient';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 import { Link } from 'react-router-dom';
 import styles from './ConceptCard.module.css';
+import { OptimizedImage } from './OptimizedImage';
 
 /**
  * Helper function to determine if a color is light
@@ -522,14 +523,15 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         <div className={styles.logoContainer}>
           <div className={styles.logo}>
             {logoImageUrl ? (
-              <img 
-                src={logoImageUrl} 
+              <OptimizedImage 
+                src={logoImageUrl || '/placeholder-image.png'} 
                 alt={finalTitle + " logo"} 
                 className={styles.logoImage}
-                onError={(e) => {
-                  console.error('Logo image failed to load:', logoImageUrl);
-                  (e.target as HTMLImageElement).src = '/placeholder-image.png';
-                }}
+                lazy={true}
+                width="80"
+                height="80"
+                backgroundColor="#ffffff"
+                placeholder="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
               />
             ) : (
               <span className={styles.logoInitials}>{finalInitials}</span>
@@ -605,4 +607,5 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   );
 };
 
-export default ConceptCard; 
+// Wrap with React.memo for performance optimization
+export default React.memo(ConceptCard); 
