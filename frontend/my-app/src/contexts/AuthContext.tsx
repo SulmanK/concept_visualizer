@@ -31,6 +31,64 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
   // We're removing the refreshAuth function and the refresh timer logic
   // since the Axios interceptors will now handle token refreshing
   
+  // Add window focus/blur event listeners to track session state
+  useEffect(() => {
+    // Function to check session validity on window focus
+    const handleWindowFocus = async () => {
+      console.log('[AUTH:Context] Window focused, checking session validity');
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('[AUTH:Context] Session on window focus:', {
+          exists: !!currentSession,
+          userId: currentSession?.user?.id,
+          expiresAt: currentSession?.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'N/A',
+          tokenExpiry: currentSession?.expires_at 
+            ? Math.floor((currentSession.expires_at * 1000 - Date.now()) / 1000) + ' seconds' 
+            : 'N/A',
+          tokenValid: currentSession?.expires_at ? Date.now() < currentSession.expires_at * 1000 : false
+        });
+
+        // If session exists but might be nearing expiry, preemptively refresh
+        if (currentSession && currentSession.expires_at) {
+          const expiryTime = currentSession.expires_at * 1000;
+          const timeToExpiry = expiryTime - Date.now();
+          
+          // If token expires in less than 5 minutes, refresh it proactively
+          if (timeToExpiry < 300000 && timeToExpiry > 0) {
+            console.log('[AUTH:Context] Token expires soon, proactively refreshing on window focus');
+            const { data, error: refreshError } = await supabase.auth.refreshSession();
+            if (data.session) {
+              console.log('[AUTH:Context] Proactive token refresh successful');
+              setSession(data.session);
+              setUser(data.session.user);
+            } else if (refreshError) {
+              console.error('[AUTH:Context] Proactive token refresh failed:', refreshError);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[AUTH:Context] Error checking session on window focus:', err);
+      }
+    };
+
+    const handleWindowBlur = () => {
+      console.log('[AUTH:Context] Window blurred, tab inactive');
+    };
+
+    // Add event listeners
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('blur', handleWindowBlur);
+
+    // Initial check on mount
+    handleWindowFocus();
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, []);
+  
   // Set up auth-error-needs-logout event listener
   useEffect(() => {
     const handleAuthError = () => {
@@ -77,19 +135,70 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }
           async (event, newSession) => {
             console.log('[AUTH:Context] Auth state changed:', event, {
               userId: newSession?.user?.id,
-              expiresAt: newSession?.expires_at ? new Date(newSession.expires_at * 1000).toISOString() : null
+              expiresAt: newSession?.expires_at ? new Date(newSession.expires_at * 1000).toISOString() : null,
+              reason: 'AuthStateChange event'
             });
-            setSession(newSession);
-            setUser(newSession?.user || null);
             
-            // Check if user is anonymous when session changes
+            // If we get a SIGNED_OUT event but the app expects to be signed in, try to recover
+            if (event === 'SIGNED_OUT' && session !== null) {
+              console.warn('[AUTH:Context] Unexpected SIGNED_OUT event when session should exist, attempting recovery');
+              
+              try {
+                // Try to recover the session
+                const recoveredSession = await initializeAnonymousAuth();
+                if (recoveredSession) {
+                  console.log('[AUTH:Context] Successfully recovered session after unexpected sign-out');
+                  setSession(recoveredSession);
+                  setUser(recoveredSession.user);
+                  
+                  // Check if user is anonymous
+                  const anonymous = await isAnonymousUser();
+                  setIsAnonymous(anonymous);
+                  
+                  // Return early to avoid setting null session
+                  return;
+                }
+              } catch (recoveryError) {
+                console.error('[AUTH:Context] Failed to recover from unexpected sign-out:', recoveryError);
+              }
+            }
+            
+            // For TOKEN_REFRESHED events, update our state with the new session
+            if (event === 'TOKEN_REFRESHED' && newSession) {
+              console.log('[AUTH:Context] Token refreshed, updating session state');
+              setSession(newSession);
+              setUser(newSession.user);
+              // No need to check anonymous status on token refresh
+              return;
+            }
+            
+            // For other events with a valid session
             if (newSession) {
+              setSession(newSession);
+              setUser(newSession.user);
+              
+              // Check if user is anonymous when session changes
               const anonymous = await isAnonymousUser();
               setIsAnonymous(anonymous);
               console.log('[AUTH:Context] Updated user anonymous status:', anonymous);
             } else {
+              // No session, reset state and try to create anonymous session
+              setSession(null);
+              setUser(null);
               setIsAnonymous(true);
-              console.log('[AUTH:Context] No session, setting anonymous status to true');
+              console.log('[AUTH:Context] No session after auth state change, setting anonymous status to true');
+              
+              // If we unexpectedly lost the session, try to re-establish an anonymous session
+              if (event !== 'SIGNED_OUT') {
+                console.log('[AUTH:Context] Attempting to re-establish anonymous session after unexpected session loss');
+                const newAnonymousSession = await initializeAnonymousAuth();
+                if (newAnonymousSession) {
+                  console.log('[AUTH:Context] Successfully re-established anonymous session');
+                  setSession(newAnonymousSession);
+                  setUser(newAnonymousSession.user);
+                  setIsAnonymous(true);
+                }
+              }
             }
           }
         );

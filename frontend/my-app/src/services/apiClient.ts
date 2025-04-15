@@ -126,22 +126,89 @@ const axiosInstance: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+// Add tracking for visibility state changes
+let lastVisibilityChangeTime = 0;
+let wasHidden = false;
+
+// Track document visibility changes
+document.addEventListener('visibilitychange', () => {
+  lastVisibilityChangeTime = Date.now();
+  wasHidden = document.visibilityState === 'hidden';
+  
+  if (document.visibilityState === 'visible') {
+    console.log('[API:Client] Document became visible, marking for forced token refresh on next request');
+  }
+});
+
 // Add a request interceptor for authentication
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      // Fetch the current session
+      console.log('[AUTH INTERCEPTOR] Starting request interceptor for URL:', config.url);
+      
+      // Check if this request is shortly after a tab visibility change
+      const timeSinceVisibilityChange = Date.now() - lastVisibilityChangeTime;
+      const isAfterTabReturn = wasHidden && document.visibilityState === 'visible' && timeSinceVisibilityChange < 5000;
+      
+      if (isAfterTabReturn) {
+        console.log('[AUTH INTERCEPTOR] Request after tab return detected, forcing token refresh');
+        wasHidden = false; // Reset the flag
+        
+        // Force a token refresh before proceeding
+        const { data, error } = await supabase.auth.refreshSession();
+        
+        if (error) {
+          console.error('[AUTH INTERCEPTOR] Force token refresh failed:', error);
+        } else if (data.session) {
+          console.log('[AUTH INTERCEPTOR] Force token refresh successful, new expiry:', 
+            new Date(data.session.expires_at! * 1000).toISOString());
+          
+          // Use the refreshed session
+          const session = data.session;
+          
+          // Log detailed session information
+          console.log('[AUTH INTERCEPTOR] Refreshed session details:', {
+            userId: session.user?.id,
+            expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+            tokenExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
+            tokenValid: Date.now() < session.expires_at! * 1000
+          });
+          
+          // Add the auth header with the fresh token
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${session.access_token}`;
+          console.log('[AUTH INTERCEPTOR] Added fresh authorization header after tab return');
+          
+          return config;
+        }
+      }
+      
+      // Continue with normal flow - fetch the current session
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // Log detailed session information for debugging tab focus issues
+      if (session) {
+        console.log('[AUTH INTERCEPTOR] Session found:', {
+          userId: session.user?.id,
+          expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+          tokenExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
+          tokenValid: Date.now() < session.expires_at! * 1000
+        });
+      } else {
+        console.warn('[AUTH INTERCEPTOR] No valid session found, request may fail authentication');
+      }
       
       // If we have a valid token
       if (session?.access_token) {
         // Add the auth header
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${session.access_token}`;
+        console.log('[AUTH INTERCEPTOR] Authorization header added successfully');
       } else {
         // If no valid token, remove any existing auth header
         if (config.headers) {
           delete config.headers.Authorization;
+          console.warn('[AUTH INTERCEPTOR] No token available, removed Authorization header');
         }
       }
       
@@ -185,6 +252,15 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
     
+    // Log all API errors with detailed info for debugging tab focus issues
+    console.error('[RESPONSE INTERCEPTOR] API error:', {
+      status: error.response?.status,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      hasAuthHeader: !!originalRequest?.headers?.Authorization,
+      retryAttempted: !!originalRequest?._retry
+    });
+    
     // Check if it's a 401 (Unauthorized) error and we haven't already tried to refresh
     if (
       error.response?.status === 401 && 
@@ -197,12 +273,21 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
+        // Log the current session state before refresh attempt
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('[AUTH INTERCEPTOR] Current session before refresh:', {
+          exists: !!currentSession,
+          userId: currentSession?.user?.id,
+          expiresAt: currentSession?.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'N/A',
+          tokenValid: currentSession?.expires_at ? Date.now() < currentSession.expires_at * 1000 : false
+        });
+        
         // Attempt to refresh the session
         const { data, error: refreshError } = await supabase.auth.refreshSession();
         
         // If refresh was successful and we have a new token
         if (data.session?.access_token && !refreshError) {
-          console.log('[AUTH INTERCEPTOR] Token refresh successful, retrying request');
+          console.log('[AUTH INTERCEPTOR] Token refresh successful, new expiry:', new Date(data.session.expires_at! * 1000).toISOString());
           
           // Update the Authorization header with the new token
           originalRequest.headers.Authorization = `Bearer ${data.session.access_token}`;

@@ -104,6 +104,69 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const [latestResultId, setLatestResultId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
+  // Add visibility change handler
+  useEffect(() => {
+    if (!activeTaskId) return;
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && activeTaskId) {
+        console.log(`[TaskContext] Document became visible with active task ${activeTaskId}, forcing refresh`);
+        // Short delay to ensure all systems are ready
+        setTimeout(() => {
+          // Force invalidate the task query
+          queryClient.invalidateQueries({ 
+            queryKey: ['tasks', 'detail', activeTaskId],
+            exact: false 
+          });
+        }, 200);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeTaskId, queryClient]);
+  
+  // Add a time tracking effect for active tasks
+  useEffect(() => {
+    if (!activeTaskId) return;
+    
+    let lastActiveTime = Date.now();
+    let checkIntervalId: NodeJS.Timeout | null = null;
+    
+    const checkTaskActivity = () => {
+      const currentTime = Date.now();
+      const timeSinceLastActivity = currentTime - lastActiveTime;
+      
+      // If more than 10 seconds have passed without activity, force a refresh
+      if (timeSinceLastActivity > 10000) {
+        console.log(`[TaskContext] No task activity for ${Math.round(timeSinceLastActivity/1000)}s with active task ${activeTaskId}, forcing refresh`);
+        queryClient.invalidateQueries({ 
+          queryKey: ['tasks', 'detail', activeTaskId],
+          exact: false 
+        });
+        lastActiveTime = currentTime;
+      }
+    };
+    
+    // Set up an interval to check for inactivity
+    checkIntervalId = setInterval(checkTaskActivity, 10000);
+    
+    // Reset last active time when we get task data updates
+    const handleDataUpdated = () => {
+      lastActiveTime = Date.now();
+    };
+    
+    // Subscribe to query cache changes for the active task
+    const unsubscribe = queryClient.getQueryCache().subscribe(handleDataUpdated);
+    
+    return () => {
+      if (checkIntervalId) clearInterval(checkIntervalId);
+      unsubscribe();
+    };
+  }, [activeTaskId, queryClient]);
+  
   // Update initiatingStartTime when isTaskInitiating changes
   useEffect(() => {
     if (isTaskInitiating && initiatingStartTimeRef.current === null) {

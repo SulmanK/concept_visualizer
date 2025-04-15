@@ -31,30 +31,49 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
  */
 export const validateAndRefreshToken = async (): Promise<Session | null> => {
   try {
+    console.log('[AUTH:Client] Validating and potentially refreshing token');
+    
     // Get current session
     const { data: { session } } = await supabase.auth.getSession();
     
     // If no session, create one
     if (!session) {
-      console.log('No active session found, creating new anonymous session');
+      console.log('[AUTH:Client] No active session found, creating new anonymous session');
       return initializeAnonymousAuth();
     }
+    
+    // Log detailed session information
+    console.log('[AUTH:Client] Current session details:', {
+      userId: session.user?.id,
+      expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+      timeToExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
+      tokenValid: Date.now() < session.expires_at! * 1000
+    });
     
     // Check if token is about to expire (within 5 minutes)
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = session.expires_at || 0;
     
     if (expiresAt - now < 300) {
-      console.log(`Token expires in ${expiresAt - now} seconds, refreshing now`);
+      console.log(`[AUTH:Client] Token expires in ${expiresAt - now} seconds, refreshing now`);
       // Refresh the session
-      const { data } = await supabase.auth.refreshSession();
+      const { data, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('[AUTH:Client] Token refresh failed:', refreshError);
+        return session; // Return existing session as fallback
+      }
+      
+      console.log('[AUTH:Client] Token refresh successful, new expiry:', 
+        new Date(data.session!.expires_at! * 1000).toISOString());
       return data.session;
     }
     
     // Token is still valid
+    console.log('[AUTH:Client] Token is still valid, no refresh needed');
     return session;
   } catch (error) {
-    console.error('Error validating/refreshing token:', error);
+    console.error('[AUTH:Client] Error validating/refreshing token:', error);
     return null;
   }
 };
@@ -65,25 +84,31 @@ export const validateAndRefreshToken = async (): Promise<Session | null> => {
  */
 export const initializeAnonymousAuth = async (): Promise<Session | null> => {
   try {
+    console.log('[AUTH:Client] Initializing anonymous authentication');
+    
     // Check if we have an existing session
     const { data: { session } } = await supabase.auth.getSession();
     
     // If no session exists, sign in anonymously
     if (!session) {
-      console.log('No session found, signing in anonymously');
+      console.log('[AUTH:Client] No session found, signing in anonymously');
       const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) {
-        console.error('Error signing in anonymously:', error);
+        console.error('[AUTH:Client] Error signing in anonymously:', error);
         throw error;
       }
       
-      console.log('Anonymous sign-in successful');
+      console.log('[AUTH:Client] Anonymous sign-in successful, session details:', {
+        userId: data.session?.user?.id,
+        expiresAt: data.session?.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'N/A',
+        tokenValid: data.session?.expires_at ? Date.now() < data.session.expires_at * 1000 : false
+      });
       
       // Force refresh rate limits after creating a new session
-      console.log('Refreshing rate limits after anonymous sign-in');
+      console.log('[AUTH:Client] Refreshing rate limits after anonymous sign-in');
       fetchRateLimits(true).catch(err => 
-        console.error('Failed to refresh rate limits after anonymous sign-in:', err)
+        console.error('[AUTH:Client] Failed to refresh rate limits after anonymous sign-in:', err)
       );
       
       return data.session;
@@ -92,18 +117,38 @@ export const initializeAnonymousAuth = async (): Promise<Session | null> => {
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = session.expires_at || 0;
       
+      console.log('[AUTH:Client] Existing session found, details:', {
+        userId: session.user?.id,
+        expiresAt: new Date(session.expires_at! * 1000).toISOString(),
+        timeToExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
+        tokenValid: Date.now() < session.expires_at! * 1000
+      });
+      
       if (expiresAt - now < 300) {
-        console.log(`Existing session expires soon (${expiresAt - now}s), refreshing`);
-        const { data } = await supabase.auth.refreshSession();
-        console.log('Session refreshed successfully');
+        console.log(`[AUTH:Client] Existing session expires soon (${expiresAt - now}s), refreshing`);
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        
+        if (refreshError) {
+          console.error('[AUTH:Client] Session refresh failed:', refreshError);
+          // If refresh fails, try anonymous sign-in as fallback
+          return supabase.auth.signInAnonymously().then(result => {
+            if (result.error) {
+              console.error('[AUTH:Client] Fallback anonymous sign-in failed:', result.error);
+              return null;
+            }
+            return result.data.session;
+          });
+        }
+        
+        console.log('[AUTH:Client] Session refreshed successfully');
         return data.session;
       }
       
-      console.log('Using existing valid session');
+      console.log('[AUTH:Client] Using existing valid session');
       return session;
     }
   } catch (error) {
-    console.error('Error initializing anonymous auth:', error);
+    console.error('[AUTH:Client] Error initializing anonymous auth:', error);
     return null;
   }
 };

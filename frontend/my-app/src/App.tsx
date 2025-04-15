@@ -11,6 +11,8 @@ import { TaskProvider } from './contexts/TaskContext';
 import TaskStatusBar from './components/TaskStatusBar';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import { useErrorHandling } from './hooks/useErrorHandling';
+import { validateAndRefreshToken } from './services/supabaseClient';
+import { queryClient } from './main';
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() => import('./features/landing').then(module => ({ default: module.LandingPage })));
@@ -131,6 +133,44 @@ const AppContent = () => {
         supabaseUrl: import.meta.env.VITE_SUPABASE_URL || 'Not configured',
       });
     }
+  }, []);
+
+  // Add document visibility state monitoring
+  useEffect(() => {
+    // Function to handle visibility change
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[APP] Document became visible, forcing session check and query refresh');
+        
+        try {
+          // Force session validation
+          const session = await validateAndRefreshToken();
+          console.log('[APP] Visibility change session check:', {
+            sessionExists: !!session,
+            userId: session?.user?.id,
+            expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A',
+          });
+          
+          // Invalidate queries to force refresh
+          setTimeout(() => {
+            queryClient.invalidateQueries();
+            console.log('[APP] Invalidated queries after visibility change');
+          }, 100);
+        } catch (err) {
+          console.error('[APP] Error checking session on visibility change:', err);
+        }
+      } else if (document.visibilityState === 'hidden') {
+        console.log('[APP] Document hidden, tab inactive via visibilityState');
+      }
+    };
+    
+    // Add event listener
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   return (

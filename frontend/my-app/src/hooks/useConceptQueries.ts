@@ -10,6 +10,7 @@ import {
 import { getBucketName } from '../services/configService';
 import { useErrorHandling } from './useErrorHandling';
 import { createQueryErrorHandler } from '../utils/errorUtils';
+import { useState, useEffect } from 'react';
 
 /**
  * Custom hook to fetch and cache recent concepts with standardized error handling
@@ -26,12 +27,46 @@ export function useRecentConcepts(
   const queryClient = useQueryClient();
   const queryKey = ['concepts', 'recent', userId, limit];
   
+  // Track last fetched time for debugging
+  const [lastFetchTime, setLastFetchTime] = useState<string | null>(null);
+  
+  // Track document visibility state
+  const [isVisible, setIsVisible] = useState(() => 
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
+  
+  // Update visibility state and force refetch on tab focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsVisible(visible);
+      
+      if (visible && userId) {
+        console.log(`[useRecentConcepts] Document became visible, manually invalidating concepts query`, {
+          timestamp: new Date().toISOString(),
+          userId
+        });
+        
+        // Use a small delay to allow all systems to stabilize
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey });
+        }, 250);
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userId, queryClient, queryKey]);
+  
   // Log existing cache data for debugging
   const existingData = queryClient.getQueryData(queryKey);
   console.log(`[useRecentConcepts] Query key: ${JSON.stringify(queryKey)}`);
   console.log(`[useRecentConcepts] Cache exists: ${!!existingData}`, { 
     timestamp: new Date().toISOString(),
-    dataCount: existingData ? (existingData as ConceptData[]).length : 0 
+    dataCount: existingData ? (existingData as ConceptData[]).length : 0,
+    lastFetchTime
   });
   
   return useQuery<ConceptData[], Error>({
@@ -42,24 +77,43 @@ export function useRecentConcepts(
       const fetchStartTime = new Date().toISOString();
       console.log(`[useRecentConcepts] Fetching concepts for user: ${userId}`, {
         timestamp: fetchStartTime,
-        queryKey: JSON.stringify(queryKey)
+        queryKey: JSON.stringify(queryKey),
+        isDocumentVisible: document.visibilityState === 'visible'
       });
       
-      const concepts = await fetchRecentConcepts(userId, limit);
-      
-      const fetchEndTime = new Date().toISOString();
-      console.log(`[useRecentConcepts] Fetched ${concepts.length} concepts`, {
-        timestamp: fetchEndTime,
-        conceptIds: concepts.map(c => c.id).join(', '),
-        fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
-      });
-      
-      // Optimize by batch processing instead of one by one
-      return batchProcessConceptsUrls(concepts);
+      try {
+        console.log(`Attempting to fetch concepts with user ID: ${userId}`);
+        const concepts = await fetchRecentConcepts(userId, limit);
+        
+        const fetchEndTime = new Date().toISOString();
+        console.log(`[useRecentConcepts] Fetched ${concepts.length} concepts`, {
+          timestamp: fetchEndTime,
+          conceptIds: concepts.map(c => c.id).join(', '),
+          fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
+        });
+        
+        setLastFetchTime(fetchEndTime);
+        
+        // Optimize by batch processing instead of one by one
+        return batchProcessConceptsUrls(concepts);
+      } catch (error) {
+        console.error(`[useRecentConcepts] Error fetching concepts for user ${userId}:`, error);
+        
+        // If existing data is available, return it as a fallback
+        if (existingData) {
+          console.log(`[useRecentConcepts] Returning cached data as fallback after error`);
+          return existingData as ConceptData[];
+        }
+        
+        throw error;
+      }
     },
-    enabled: !!userId, // Only run the query if we have a userId
+    enabled: !!userId && isVisible, // Only run the query if we have a userId and tab is visible
     // Removed overriding staleTime to use the global configuration
-    onError: onQueryError, // Use standardized error handling
+    retry: 3,
+    retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10000),
+    // Use onError in query client's setDefaultOptions instead of here
+    refetchOnReconnect: true,
   });
 }
 

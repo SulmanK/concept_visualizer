@@ -58,20 +58,74 @@ export function useTaskPolling({
   const [isTaskCompleted, setIsTaskCompleted] = useState(false);
   const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
   
+  // Track document visibility for debugging
+  const [isDocumentVisible, setIsDocumentVisible] = useState(() => 
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
+  
+  // Monitor visibility state changes
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    
+    const handleVisibilityChange = () => {
+      const isVisible = document.visibilityState === 'visible';
+      setIsDocumentVisible(isVisible);
+      
+      console.log(`[TaskPolling] Document visibility changed to ${isVisible ? 'visible' : 'hidden'}`);
+      
+      // Force refetch when document becomes visible again
+      if (isVisible && taskId && !isTaskCompleted && enabled) {
+        console.log(`[TaskPolling] Document visible, forcing task status refetch for ${taskId}`);
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [taskId, isTaskCompleted, enabled, queryClient]);
+  
   // Check if the task is already in the completed tasks cache
   const cachedTask = useMemo(() => {
     if (!taskId) return null;
     return completedTasksCache.get(taskId) || null;
   }, [taskId]);
   
+  // Log state for debugging
+  useEffect(() => {
+    if (taskId) {
+      console.log(`[TaskPolling] Poll state for task ${taskId}:`, {
+        enabled,
+        isTaskCompleted,
+        hasCachedTask: !!cachedTask,
+        isOnline: networkStatus.isOnline,
+        isDocumentVisible,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }, [taskId, enabled, isTaskCompleted, cachedTask, networkStatus.isOnline, isDocumentVisible]);
+  
   // If we have a cached completed task, use it instead of polling
   // Also check network status - don't poll when offline
-  const shouldPoll = Boolean(enabled && taskId && !cachedTask && !isTaskCompleted && networkStatus.isOnline);
+  const shouldPoll = Boolean(
+    enabled && 
+    taskId && 
+    !cachedTask && 
+    !isTaskCompleted && 
+    networkStatus.isOnline && 
+    isDocumentVisible
+  );
   
   // Use our standardized query hook instead of direct implementation
   const query = useTaskStatusQuery(taskId, {
     enabled: shouldPoll,
     refetchInterval: shouldPoll ? pollingInterval : false,
+    refetchIntervalInBackground: false, // Disable background polling to avoid browser throttling
+    refetchOnWindowFocus: true, // Ensure we refetch when window gets focus
+    onSuccess: (data) => {
+      console.log(`[TaskPolling] Successfully fetched status for task ${taskId}: ${data.status}`);
+    }
   });
   
   // Set up polling with setInterval - we can keep this for additional control
@@ -79,21 +133,28 @@ export function useTaskPolling({
     let intervalId: NodeJS.Timeout | null = null;
     
     if (shouldPoll) {
+      console.log(`[TaskPolling] Starting polling for task ${taskId} with interval ${pollingInterval}ms`);
+      
       // Initial fetch
       queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       
       // Set up polling interval for additional invalidation control
       intervalId = setInterval(() => {
-        if (!isTaskCompleted) {
+        if (!isTaskCompleted && document.visibilityState === 'visible') {
+          console.log(`[TaskPolling] Interval triggered for task ${taskId}`);
           queryClient.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
-        } else if (intervalId) {
+        } else if (isTaskCompleted && intervalId) {
+          console.log(`[TaskPolling] Task completed, clearing interval for ${taskId}`);
           clearInterval(intervalId);
+        } else if (document.visibilityState !== 'visible') {
+          console.log(`[TaskPolling] Document not visible, skipping interval for ${taskId}`);
         }
       }, pollingInterval);
     }
     
     return () => {
       if (intervalId) {
+        console.log(`[TaskPolling] Cleaning up interval for task ${taskId}`);
         clearInterval(intervalId);
       }
     };
@@ -159,6 +220,7 @@ export function useTaskPolling({
     isFailed: data?.status === TASK_STATUS.FAILED,
     refresh: () => {
       if (taskId) {
+        console.log(`[TaskPolling] Manual refresh triggered for task ${taskId}`);
         return queryClient.refetchQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       }
     }

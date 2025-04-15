@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRateLimits, RateLimitsResponse, RateLimitCategory } from '../services/rateLimitService';
 import { useErrorHandling } from './useErrorHandling';
 import { createQueryErrorHandler } from '../utils/errorUtils';
+import { useState, useEffect } from 'react';
 
 /**
  * Hook that provides rate limit information using React Query
@@ -13,15 +14,43 @@ export function useRateLimitsQuery() {
   const { onQueryError } = createQueryErrorHandler(errorHandler, { 
     showToast: false // Don't show toast for background refresh errors
   });
+  
+  // Track document visibility state
+  const [isVisible, setIsVisible] = useState(() => 
+    typeof document !== 'undefined' ? document.visibilityState === 'visible' : true
+  );
+  
+  // Update visibility state
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsVisible(visible);
+      console.log(`[RateLimitsQuery] Document visibility changed to ${visible ? 'visible' : 'hidden'}`);
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const query = useQuery({
     queryKey: ['rateLimits'],
-    queryFn: () => fetchRateLimits(false),
+    queryFn: () => {
+      console.log(`[RateLimitsQuery] Fetching rate limits at ${new Date().toISOString()}`);
+      return fetchRateLimits(false);
+    },
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 60,
     refetchOnWindowFocus: true,
-    refetchIntervalInBackground: true,
-    onError: onQueryError
+    refetchIntervalInBackground: false, // Changed to false to avoid browser throttling
+    onError: (error) => {
+      console.error('[RateLimitsQuery] Error fetching rate limits:', error);
+      onQueryError(error);
+    },
+    onSuccess: (data) => {
+      console.log('[RateLimitsQuery] Successfully fetched rate limits');
+    }
   });
 
   /**
@@ -38,9 +67,12 @@ export function useRateLimitsQuery() {
 
       // Update the specific category if it exists
       if (newData.limits && newData.limits[category]) {
+        const newRemaining = Math.max(0, newData.limits[category].remaining - amount);
+        console.log(`[RateLimitsQuery] Optimistically decremented ${category} from ${newData.limits[category].remaining} to ${newRemaining}`);
+        
         newData.limits[category] = {
           ...newData.limits[category],
-          remaining: Math.max(0, newData.limits[category].remaining - amount),
+          remaining: newRemaining,
         };
       }
       
@@ -53,7 +85,7 @@ export function useRateLimitsQuery() {
    * This overrides the standard refetch to force a true refresh
    */
   const enhancedRefetch = async () => {
-    console.log('Performing enhanced rate limits refetch with force=true');
+    console.log('[RateLimitsQuery] Performing enhanced rate limits refetch with force=true');
     
     try {
       // Force true refresh from server
@@ -62,6 +94,8 @@ export function useRateLimitsQuery() {
       // Update query cache with the fresh data
       queryClient.setQueryData(['rateLimits'], freshData);
       
+      console.log('[RateLimitsQuery] Enhanced refetch completed successfully');
+      
       return {
         data: freshData,
         error: null,
@@ -69,7 +103,9 @@ export function useRateLimitsQuery() {
         isError: false
       };
     } catch (error) {
-      console.error('Enhanced refetch failed:', error);
+      console.error('[RateLimitsQuery] Enhanced refetch failed:', error);
+      
+      // Try to use existing data as fallback
       return {
         data: query.data,
         error,
