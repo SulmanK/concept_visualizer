@@ -266,7 +266,7 @@ class ConceptStorage:
             limit: Maximum number of concepts to return
             
         Returns:
-            List of concepts with their variations
+            List of concepts WITHOUT their variations (variations should be fetched separately)
         """
         try:
             # First try with service role key for maximum reliability
@@ -278,8 +278,9 @@ class ConceptStorage:
             self.logger.info(f"Querying recent concepts with user_id: {mask_id(user_id)}")
             
             # Security: Always filter by user_id to ensure users only see their own data
+            # IMPORTANT: Do NOT fetch color_variations here - we will batch fetch them separately
             result = self.client.client.table("concepts").select(
-                "*, color_variations(*)"
+                "*"  # NOT "*, color_variations(*)" - we'll fetch variations separately
             ).eq("user_id", user_id).order(
                 "created_at", desc=True
             ).limit(limit).execute()
@@ -289,6 +290,10 @@ class ConceptStorage:
                 self.logger.info(f"Found {len(result.data)} concepts for user ID {mask_id(user_id)}")
             else:
                 self.logger.warning(f"No concepts found for user ID {mask_id(user_id)}")
+            
+            # Initialize empty color_variations array for each concept
+            for concept in result.data:
+                concept["color_variations"] = []
             
             return result.data
         except Exception as e:
@@ -303,7 +308,7 @@ class ConceptStorage:
             limit: Maximum number of concepts to return
             
         Returns:
-            List of concepts with their variations or None on error
+            List of concepts WITHOUT their variations or None on error
         """
         try:
             # Get the service role key
@@ -321,7 +326,7 @@ class ConceptStorage:
             
             api_url = settings.SUPABASE_URL
             
-            # First get the concepts
+            # Get the concepts WITHOUT their variations
             concepts_endpoint = (
                 f"{api_url}/rest/v1/concepts"
                 f"?select=*"
@@ -342,32 +347,9 @@ class ConceptStorage:
             if response.status_code == 200:
                 concepts = response.json()
                 
-                # If we have concepts, get their color variations
-                if concepts:
-                    # For each concept, get its color variations
-                    for concept in concepts:
-                        concept_id = concept.get("id")
-                        if concept_id:
-                            variations_endpoint = (
-                                f"{api_url}/rest/v1/color_variations"
-                                f"?select=*"
-                                f"&concept_id=eq.{concept_id}"
-                            )
-                            
-                            variations_response = requests.get(
-                                variations_endpoint,
-                                headers={
-                                    "apikey": service_role_key,
-                                    "Authorization": f"Bearer {service_role_key}",
-                                    "Content-Type": "application/json"
-                                }
-                            )
-                            
-                            if variations_response.status_code == 200:
-                                concept["color_variations"] = variations_response.json()
-                            else:
-                                self.logger.warning(f"Failed to get color variations for concept {concept_id}: {variations_response.status_code}")
-                                concept["color_variations"] = []
+                # Initialize empty color_variations array for each concept
+                for concept in concepts:
+                    concept["color_variations"] = []
                 
                 self.logger.info(f"Successfully retrieved {len(concepts)} concepts with service role key")
                 return concepts
@@ -635,4 +617,115 @@ class ConceptStorage:
                 
         except Exception as e:
             self.logger.error(f"Error getting concept by task ID with service role: {e}")
+            return None
+    
+    def get_variations_by_concept_ids(self, concept_ids: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Batch fetch color variations for multiple concepts at once.
+        
+        Args:
+            concept_ids: List of concept IDs to fetch variations for
+            
+        Returns:
+            Dictionary mapping concept_id to a list of its variations
+        """
+        if not concept_ids:
+            return {}
+        
+        try:
+            # Try with service role first for reliability
+            result = self._get_variations_by_concept_ids_with_service_role(concept_ids)
+            if result is not None:
+                return result
+            
+            # Fall back to regular client if service role fails
+            self.logger.warning("Service role fetch failed, trying regular client")
+            
+            from supabase.postgrest.base_request_builder import BaseFilterRequestBuilder
+            
+            # We need to create an "in" filter for the concept_ids
+            # Using .or_ to build a query like "concept_id.eq(id1),concept_id.eq(id2),..."
+            builder: BaseFilterRequestBuilder = self.client.client.table("color_variations").select("*")
+            for i, concept_id in enumerate(concept_ids):
+                if i == 0:
+                    builder = builder.eq("concept_id", concept_id)
+                else:
+                    builder = builder.or_(f"concept_id.eq.{concept_id}")
+            
+            result = builder.execute()
+            
+            if not result.data:
+                # No variations found for these concepts
+                return {}
+            
+            # Group variations by concept_id
+            variations_by_concept = {}
+            for variation in result.data:
+                concept_id = variation.get("concept_id")
+                if concept_id:
+                    if concept_id not in variations_by_concept:
+                        variations_by_concept[concept_id] = []
+                    variations_by_concept[concept_id].append(variation)
+            
+            return variations_by_concept
+            
+        except Exception as e:
+            self.logger.error(f"Error fetching variations by concept IDs: {e}")
+            return {}
+        
+    def _get_variations_by_concept_ids_with_service_role(self, concept_ids: List[str]) -> Optional[Dict[str, List[Dict[str, Any]]]]:
+        """
+        Batch fetch color variations for multiple concepts using service role key.
+        
+        Args:
+            concept_ids: List of concept IDs to fetch variations for
+            
+        Returns:
+            Dictionary mapping concept_id to a list of its variations, or None on error
+        """
+        try:
+            # Get the service role key
+            service_role_key = settings.SUPABASE_SERVICE_ROLE
+            if not service_role_key:
+                self.logger.warning("No service role key available, cannot use service role")
+                return None
+            
+            # Build the query - this will be a series of requests, one for each concept ID
+            # This is more efficient than multiple individual requests due to connection reuse
+            import requests
+            
+            api_url = settings.SUPABASE_URL
+            
+            # We'll collect all variations in one go to minimize round trips
+            concept_filter = f"concept_id=in.({','.join(concept_ids)})"
+            table_endpoint = f"{api_url}/rest/v1/color_variations?select=*&{concept_filter}"
+            
+            response = requests.get(
+                table_endpoint,
+                headers={
+                    "apikey": service_role_key,
+                    "Authorization": f"Bearer {service_role_key}"
+                }
+            )
+            
+            if response.status_code == 200:
+                self.logger.info(f"Successfully fetched variations with service role key: {response.status_code}")
+                variations = response.json()
+                
+                # Group variations by concept_id
+                variations_by_concept = {}
+                for variation in variations:
+                    concept_id = variation.get("concept_id")
+                    if concept_id:
+                        if concept_id not in variations_by_concept:
+                            variations_by_concept[concept_id] = []
+                        variations_by_concept[concept_id].append(variation)
+                
+                return variations_by_concept
+            else:
+                self.logger.warning(f"Service role fetch failed: {response.status_code}, {response.text}")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching variations with service role: {e}")
             return None 
