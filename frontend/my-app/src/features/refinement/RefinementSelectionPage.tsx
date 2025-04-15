@@ -4,6 +4,7 @@ import { useRecentConcepts } from '../../hooks/useConceptQueries';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { OptimizedImage } from '../../components/ui/OptimizedImage';
 
 /**
  * Helper function to determine if a color is light
@@ -221,10 +222,15 @@ export const RefinementSelectionPage: React.FC = () => {
           {/* Main concept row */}
           <div className="flex items-center cursor-pointer" onClick={() => toggleExpandConcept(concept.id)}>
             <div className="w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-indigo-100">
-              <img 
-                src={concept.image_url || concept.base_image_url} 
+              <OptimizedImage 
+                src={(concept.image_url || concept.base_image_url) || '/placeholder-image.png'} 
                 alt={concept.logo_description || 'Concept'} 
                 className="w-full h-full object-cover"
+                lazy={true}
+                width="100%"
+                height="100%"
+                objectFit="cover"
+                backgroundColor="#f3f4f6"
               />
             </div>
             <div className="ml-6 flex-grow">
@@ -292,10 +298,15 @@ export const RefinementSelectionPage: React.FC = () => {
                   onClick={() => handleSelectVariation(concept.id, concept.image_url || concept.base_image_url, true)}
                 >
                   <div className="h-full relative">
-                    <img 
-                      src={concept.image_url || concept.base_image_url} 
+                    <OptimizedImage 
+                      src={(concept.image_url || concept.base_image_url) || '/placeholder-image.png'} 
                       alt="Original concept" 
                       className="w-full h-full object-cover"
+                      lazy={true}
+                      width="100%"
+                      height="100%"
+                      objectFit="cover"
+                      backgroundColor="#f3f4f6"
                     />
                     <div className="absolute bottom-0 left-0 right-0 px-2 py-1 bg-indigo-900/70">
                       <div className="text-white text-xs font-medium truncate">Original</div>
@@ -321,10 +332,15 @@ export const RefinementSelectionPage: React.FC = () => {
                       )}
                     >
                       <div className="h-full relative">
-                        <img 
-                          src={variation.image_url} 
+                        <OptimizedImage 
+                          src={variation.image_url || '/placeholder-image.png'} 
                           alt={`Color variation ${idx + 1}`} 
                           className="w-full h-full object-cover"
+                          lazy={true}
+                          width="100%"
+                          height="100%"
+                          objectFit="cover"
+                          backgroundColor="#f3f4f6"
                         />
                         <div 
                           className="absolute bottom-0 left-0 right-0 px-2 py-1" 
@@ -397,10 +413,15 @@ export const RefinementSelectionPage: React.FC = () => {
           {selectedVariation && (
             <div className="mb-6 p-4 bg-indigo-50 rounded-lg flex flex-col sm:flex-row items-center sm:items-start">
               <div className="w-32 h-32 rounded-md overflow-hidden border border-indigo-200 mb-4 sm:mb-0 sm:mr-6 flex-shrink-0">
-                <img 
-                  src={selectedVariation.imageUrl} 
-                  alt="Selected concept" 
+                <OptimizedImage 
+                  src={selectedVariation?.imageUrl || '/placeholder-image.png'}
+                  alt="Selected concept"
                   className="w-full h-full object-cover"
+                  lazy={true}
+                  width="100%"
+                  height="100%"
+                  objectFit="cover"
+                  backgroundColor="#f3f4f6"
                 />
               </div>
               <div className="flex-grow text-center sm:text-left">

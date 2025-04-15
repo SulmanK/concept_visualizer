@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ConceptResult } from '../../../components/concept/ConceptResult';
 import { useConceptDetail } from '../../../hooks/useConceptQueries';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { Card } from '../../../components/ui/Card';
 import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
 import { getSignedImageUrl } from '../../../services/supabaseClient';
+import { OptimizedImage } from '../../../components/ui/OptimizedImage';
 
 interface ComparisonViewProps {
   originalImageUrl: string;
@@ -34,22 +35,22 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   } = useConceptDetail(refinedConceptId, user?.id);
   
   // Handler to navigate to the concept details page
-  const handleExport = (conceptId: string) => {
+  const handleExport = useCallback((conceptId: string) => {
     navigate(`/concepts/${conceptId}?showExport=true`);
-  };
+  }, [navigate]);
 
   // Handler to view details
-  const handleViewDetails = () => {
+  const handleViewDetails = useCallback(() => {
     if (refinedConcept?.id) {
       navigate(`/concepts/${refinedConcept.id}`);
     }
-  };
+  }, [navigate, refinedConcept?.id]);
 
   // Format image URLs for the ConceptResult component
-  const formatImageUrl = (url: string | undefined, bucketType?: string) => {
+  const formatImageUrl = useCallback((url: string | undefined, bucketType?: string) => {
     if (!url) return '';
     return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -88,10 +89,14 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
         <div>
           <h2 className="text-xl font-semibold text-indigo-900 mb-4">Original</h2>
           <div className="border border-indigo-100 rounded-lg overflow-hidden shadow-md">
-            <img 
+            <OptimizedImage 
               src={originalImageUrl} 
               alt="Original concept" 
               className="w-full h-auto"
+              lazy={true}
+              width="100%"
+              height="auto"
+              backgroundColor="#f3f4f6"
             />
           </div>
         </div>
@@ -100,10 +105,14 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
         <div>
           <h2 className="text-xl font-semibold text-indigo-900 mb-4">Refined</h2>
           <div className="border border-indigo-100 rounded-lg overflow-hidden shadow-md">
-            <img 
+            <OptimizedImage 
               src={refinedConcept.image_url} 
               alt="Refined concept" 
               className="w-full h-auto"
+              lazy={true}
+              width="100%"
+              height="auto"
+              backgroundColor="#f3f4f6"
             />
           </div>
         </div>

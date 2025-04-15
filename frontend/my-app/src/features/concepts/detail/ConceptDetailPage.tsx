@@ -2,7 +2,7 @@
  * Component for displaying detailed concept information
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { ColorPalette } from '../../../components/ui/ColorPalette';
 import { ErrorBoundary, OptimizedImage } from '../../../components/ui';
@@ -12,6 +12,9 @@ import { ExportOptions } from './components/ExportOptions';
 import { useConceptDetail } from '../../../hooks/useConceptQueries';
 import { useQueryClient } from '@tanstack/react-query';
 import { eventService, AppEvent } from '../../../services/eventService';
+
+// Replace static import with lazy loaded import
+const EnhancedImagePreview = lazy(() => import('./components/EnhancedImagePreview'));
 
 /**
  * Custom hook to fetch concept detail data
@@ -88,6 +91,31 @@ const ConceptDetailContent: React.FC = () => {
     }
   }, [concept, colorId]);
   
+  // Convert event handlers to useCallback
+  
+  const handleRefineClick = useCallback(() => {
+    if (selectedVariation) {
+      navigate(`/refine/${conceptId}?colorId=${selectedVariation.id}`);
+    } else {
+      navigate(`/refine/${conceptId}`);
+    }
+  }, [selectedVariation, navigate, conceptId]);
+
+  const handleColorVariationSelect = useCallback((variation: ColorVariationData) => {
+    setSelectedVariation(variation);
+    
+    // Update URL to reflect the selected variation
+    const newUrl = `/concepts/${conceptId}?colorId=${variation.id}`;
+    navigate(newUrl, { replace: true });
+  }, [conceptId, navigate]);
+  
+  const handleOriginalSelect = useCallback(() => {
+    setSelectedVariation(null);
+    
+    // Update URL to remove colorId
+    navigate(`/concepts/${conceptId}`, { replace: true });
+  }, [conceptId, navigate]);
+  
   // Handle loading state
   if (loading) {
     return (
@@ -160,13 +188,7 @@ const ConceptDetailContent: React.FC = () => {
           </Link>
           
           <button
-            onClick={() => {
-              if (selectedVariation) {
-                navigate(`/refine/${conceptId}?colorId=${selectedVariation.id}`);
-              } else {
-                navigate(`/refine/${conceptId}`);
-              }
-            }}
+            onClick={handleRefineClick}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-400 text-white rounded-full"
           >
             Refine This Concept
@@ -213,7 +235,7 @@ const ConceptDetailContent: React.FC = () => {
                     className={`flex flex-col items-center cursor-pointer rounded-lg overflow-hidden transition-all ${
                       selectedVariation === null ? 'ring-2 ring-indigo-500 shadow-md transform scale-[1.02]' : 'shadow hover:shadow-md'
                     }`}
-                    onClick={() => setSelectedVariation(null)}
+                    onClick={handleOriginalSelect}
                   >
                     <div className="w-full aspect-square bg-indigo-50 overflow-hidden flex items-center justify-center p-3">
                       <OptimizedImage
@@ -235,7 +257,7 @@ const ConceptDetailContent: React.FC = () => {
                       className={`flex flex-col items-center cursor-pointer rounded-lg overflow-hidden transition-all ${
                         selectedVariation?.id === variation.id ? 'ring-2 ring-indigo-500 shadow-md transform scale-[1.02]' : 'shadow hover:shadow-md'
                       }`}
-                      onClick={() => setSelectedVariation(variation)}
+                      onClick={() => handleColorVariationSelect(variation)}
                     >
                       <div className="w-full aspect-square bg-indigo-50 overflow-hidden flex items-center justify-center p-3">
                         <OptimizedImage
