@@ -118,6 +118,8 @@ export class RateLimitError extends Error {
 }
 
 // Create an Axios instance with base configuration
+const instanceId = Math.random().toString(16).slice(2);
+console.log(`[apiClient] Creating Axios instance ID: ${instanceId}`);
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -126,76 +128,102 @@ const axiosInstance: AxiosInstance = axios.create({
   withCredentials: true,
 });
 
+// Session locking mechanism to prevent concurrent getSession calls
+let isGettingSession = false;
+const sessionPromiseQueue: Function[] = [];
+let currentSessionData: { session: any | null } | null = null;
+let lastSessionFetchTime = 0;
+
+/**
+ * Get Supabase session with locking to prevent concurrent calls
+ * This is for diagnostic purposes only
+ */
+async function getSessionSafely(): Promise<{ data: { session: any | null } }> {
+  // Basic caching for 1 second to reduce calls
+  if (currentSessionData && Date.now() - lastSessionFetchTime < 1000) {
+    console.log('[getSessionSafely] Using cached session data from', new Date(lastSessionFetchTime).toISOString());
+    return { data: currentSessionData };
+  }
+
+  if (isGettingSession) {
+    console.log('[getSessionSafely] Session call already in progress, queuing request at', new Date().toISOString());
+    return new Promise(resolve => {
+      sessionPromiseQueue.push(() => resolve({ data: currentSessionData! }));
+    });
+  }
+
+  isGettingSession = true;
+  console.log('[getSessionSafely] No active call, fetching session at', new Date().toISOString());
+  try {
+    const result = await supabase.auth.getSession();
+    currentSessionData = result.data; // Cache the result
+    lastSessionFetchTime = Date.now();
+    console.log('[getSessionSafely] Fetched session, resolving current and queued calls. Queue size:', sessionPromiseQueue.length);
+    // Resolve queued promises
+    while (sessionPromiseQueue.length > 0) {
+      const resolver = sessionPromiseQueue.shift();
+      if (resolver) resolver();
+    }
+    return { data: currentSessionData };
+  } catch (error) {
+    console.error('[getSessionSafely] Error fetching session:', error);
+    currentSessionData = { session: null }; // Cache error state briefly
+    lastSessionFetchTime = Date.now();
+    // Resolve queued promises with error state
+    while (sessionPromiseQueue.length > 0) {
+      const resolver = sessionPromiseQueue.shift();
+      if (resolver) resolver();
+    }
+    return { data: currentSessionData };
+  } finally {
+    isGettingSession = false;
+  }
+}
+
 // Add tracking for visibility state changes
 let lastVisibilityChangeTime = 0;
 let wasHidden = false;
 
 // Track document visibility changes
 document.addEventListener('visibilitychange', () => {
+  // Simply track visibility state changes without triggering token refresh
   lastVisibilityChangeTime = Date.now();
   wasHidden = document.visibilityState === 'hidden';
   
+  // Log visibility change but don't trigger any token refresh
   if (document.visibilityState === 'visible') {
-    console.log('[API:Client] Document became visible, marking for forced token refresh on next request');
+    console.log('[API:Client] Document became visible');
   }
 });
 
 // Add a request interceptor for authentication
 axiosInstance.interceptors.request.use(
   async (config) => {
+    // Add a very early log to ensure this interceptor is being called
+    console.log(`[INTERCEPTOR START ${instanceId}:${config.url}] ${new Date().toISOString()}`);
+    
     try {
-      console.log('[AUTH INTERCEPTOR] Starting request interceptor for URL:', config.url);
+      console.log(`[INTERCEPTOR AWAIT ${instanceId}:${config.url}] Calling getSession...`);
       
-      // Check if this request is shortly after a tab visibility change
-      const timeSinceVisibilityChange = Date.now() - lastVisibilityChangeTime;
-      const isAfterTabReturn = wasHidden && document.visibilityState === 'visible' && timeSinceVisibilityChange < 5000;
+      // Use performance timing to measure how long getSession takes
+      const getSessionStart = performance.now();
       
-      if (isAfterTabReturn) {
-        console.log('[AUTH INTERCEPTOR] Request after tab return detected, forcing token refresh');
-        wasHidden = false; // Reset the flag
-        
-        // Force a token refresh before proceeding
-        const { data, error } = await supabase.auth.refreshSession();
-        
-        if (error) {
-          console.error('[AUTH INTERCEPTOR] Force token refresh failed:', error);
-        } else if (data.session) {
-          console.log('[AUTH INTERCEPTOR] Force token refresh successful, new expiry:', 
-            new Date(data.session.expires_at! * 1000).toISOString());
-          
-          // Use the refreshed session
-          const session = data.session;
-          
-          // Log detailed session information
-          console.log('[AUTH INTERCEPTOR] Refreshed session details:', {
-            userId: session.user?.id,
-            expiresAt: new Date(session.expires_at! * 1000).toISOString(),
-            tokenExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
-            tokenValid: Date.now() < session.expires_at! * 1000
-          });
-          
-          // Add the auth header with the fresh token
-          config.headers = config.headers || {};
-          config.headers.Authorization = `Bearer ${session.access_token}`;
-          console.log('[AUTH INTERCEPTOR] Added fresh authorization header after tab return');
-          
-          return config;
-        }
-      }
+      // Use the safe wrapper to get session instead of direct call
+      const { data: { session } } = await getSessionSafely();
       
-      // Continue with normal flow - fetch the current session
-      const { data: { session } } = await supabase.auth.getSession();
+      const getSessionEnd = performance.now();
+      console.log(`[INTERCEPTOR AWAIT ${instanceId}:${config.url}] getSession returned in ${Math.round(getSessionEnd - getSessionStart)}ms. Session exists: ${!!session}`);
       
       // Log detailed session information for debugging tab focus issues
       if (session) {
-        console.log('[AUTH INTERCEPTOR] Session found:', {
+        console.log(`[INTERCEPTOR ${instanceId}:${config.url}] Session found:`, {
           userId: session.user?.id,
           expiresAt: new Date(session.expires_at! * 1000).toISOString(),
           tokenExpiry: Math.floor((session.expires_at! * 1000 - Date.now()) / 1000) + ' seconds',
           tokenValid: Date.now() < session.expires_at! * 1000
         });
       } else {
-        console.warn('[AUTH INTERCEPTOR] No valid session found, request may fail authentication');
+        console.warn(`[INTERCEPTOR ${instanceId}:${config.url}] No valid session found, request may fail authentication`);
       }
       
       // If we have a valid token
@@ -203,23 +231,24 @@ axiosInstance.interceptors.request.use(
         // Add the auth header
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log('[AUTH INTERCEPTOR] Authorization header added successfully');
+        console.log(`[INTERCEPTOR ${instanceId}:${config.url}] Authorization header added successfully`);
       } else {
         // If no valid token, remove any existing auth header
         if (config.headers) {
           delete config.headers.Authorization;
-          console.warn('[AUTH INTERCEPTOR] No token available, removed Authorization header');
+          console.warn(`[INTERCEPTOR ${instanceId}:${config.url}] No token available, removed Authorization header`);
         }
       }
       
+      console.log(`[INTERCEPTOR END ${instanceId}:${config.url}] ${new Date().toISOString()}`);
       return config;
     } catch (error) {
-      console.error('[AUTH INTERCEPTOR] Error in request interceptor:', error);
+      console.error(`[INTERCEPTOR ERROR ${instanceId}:${config.url}] Error:`, error);
       return config; // Return the config even if there's an error to not block the request
     }
   },
   (error) => {
-    console.error('[AUTH INTERCEPTOR] Request interceptor error:', error);
+    console.error(`[AUTH INTERCEPTOR ${instanceId}] Request interceptor error:`, error);
     return Promise.reject(error);
   }
 );
@@ -267,7 +296,7 @@ axiosInstance.interceptors.response.use(
       !originalRequest._retry && 
       originalRequest // Ensure we have a request to retry
     ) {
-      console.log('[AUTH INTERCEPTOR] 401 error detected, attempting to refresh token');
+      console.log(`[AUTH INTERCEPTOR ${instanceId}] 401 error detected, attempting to refresh token`);
       
       // Mark that we're retrying this request
       originalRequest._retry = true;
@@ -275,7 +304,7 @@ axiosInstance.interceptors.response.use(
       try {
         // Log the current session state before refresh attempt
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log('[AUTH INTERCEPTOR] Current session before refresh:', {
+        console.log(`[AUTH INTERCEPTOR ${instanceId}] Current session before refresh:`, {
           exists: !!currentSession,
           userId: currentSession?.user?.id,
           expiresAt: currentSession?.expires_at ? new Date(currentSession.expires_at * 1000).toISOString() : 'N/A',
@@ -287,7 +316,7 @@ axiosInstance.interceptors.response.use(
         
         // If refresh was successful and we have a new token
         if (data.session?.access_token && !refreshError) {
-          console.log('[AUTH INTERCEPTOR] Token refresh successful, new expiry:', new Date(data.session.expires_at! * 1000).toISOString());
+          console.log(`[AUTH INTERCEPTOR ${instanceId}] Token refresh successful, new expiry:`, new Date(data.session.expires_at! * 1000).toISOString());
           
           // Update the Authorization header with the new token
           originalRequest.headers.Authorization = `Bearer ${data.session.access_token}`;
@@ -295,7 +324,7 @@ axiosInstance.interceptors.response.use(
           // Retry the original request with the new token
           return axiosInstance(originalRequest);
         } else {
-          console.error('[AUTH INTERCEPTOR] Token refresh failed:', refreshError);
+          console.error(`[AUTH INTERCEPTOR ${instanceId}] Token refresh failed:`, refreshError);
           
           // Dispatch an event to signal that we need to log out
           document.dispatchEvent(new CustomEvent('auth-error-needs-logout'));
@@ -303,7 +332,7 @@ axiosInstance.interceptors.response.use(
           return Promise.reject(error);
         }
       } catch (refreshError) {
-        console.error('[AUTH INTERCEPTOR] Error during token refresh:', refreshError);
+        console.error(`[AUTH INTERCEPTOR ${instanceId}] Error during token refresh:`, refreshError);
         
         // Dispatch an event to signal that we need to log out
         document.dispatchEvent(new CustomEvent('auth-error-needs-logout'));
@@ -353,7 +382,7 @@ axiosInstance.interceptors.response.use(
       
       // Create RateLimitError with context
       const rateLimitError = new RateLimitError(
-        errorResponse.message,
+        errorResponse.message || 'Rate limit exceeded',
         errorResponse,
         url
       );

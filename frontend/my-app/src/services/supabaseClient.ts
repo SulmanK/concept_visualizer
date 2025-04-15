@@ -2,6 +2,9 @@
  * Supabase client configuration for Concept Visualizer
  */
 
+// Add diagnostic logging to track module initialization
+console.log('[SupabaseClient] Module executing / Client instance creation at', new Date().toISOString());
+
 import { createClient, Session, User } from '@supabase/supabase-js';
 import { getBucketName } from './configService';
 import { fetchRateLimits } from './rateLimitService';
@@ -24,6 +27,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
     },
   }
 });
+
+// Log when the client is created
+console.log('[SupabaseClient] Supabase client created successfully');
 
 /**
  * Validate and refresh token if needed

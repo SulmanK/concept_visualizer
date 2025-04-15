@@ -137,6 +137,8 @@ const AppContent = () => {
 
   // Add document visibility state monitoring
   useEffect(() => {
+    // Temporarily commented out for testing focus-based refetch issues
+    /*
     // Function to handle visibility change
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
@@ -151,11 +153,15 @@ const AppContent = () => {
             expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A',
           });
           
-          // Invalidate queries to force refresh
+          // Invalidate queries to force refresh with a longer delay to avoid race conditions
           setTimeout(() => {
-            queryClient.invalidateQueries();
-            console.log('[APP] Invalidated queries after visibility change');
-          }, 100);
+            console.log('[APP] Delay complete, now invalidating specific queries after visibility change');
+            queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+            queryClient.invalidateQueries({ queryKey: ['concepts', 'recent'] });
+            // Note: We're no longer invalidating all queries to prevent potential conflicts
+            // queryClient.invalidateQueries();
+            console.log('[APP] Invalidated specific queries after visibility change');
+          }, 500); // Increased from 100ms to 500ms
         } catch (err) {
           console.error('[APP] Error checking session on visibility change:', err);
         }
@@ -171,6 +177,11 @@ const AppContent = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+    */
+    
+    // Empty effect for testing - no visibility change handling
+    console.log('[APP] Visibility change handler disabled for testing');
+    
   }, []);
 
   return (

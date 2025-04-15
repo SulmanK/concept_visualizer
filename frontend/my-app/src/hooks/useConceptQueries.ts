@@ -128,6 +128,12 @@ export function useConceptDetail(
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
+  // Calculate enabled flag explicitly to help debug
+  const isEnabled = !!conceptId && !!userId;
+  console.log(`[useConceptDetail Render] conceptId: ${conceptId}, userId: ${userId}, enabled: ${isEnabled}`, {
+    timestamp: new Date().toISOString()
+  });
+  
   const queryClient = useQueryClient();
   const queryKey = ['concepts', 'detail', conceptId, userId];
   
@@ -143,6 +149,16 @@ export function useConceptDetail(
   return useQuery<ConceptData | null, Error>({
     queryKey,
     queryFn: async () => {
+      // Double-check enabled state in query function
+      if (!isEnabled) {
+        console.log('[useConceptDetail queryFn] SKIPPING fetch because enabled is false', {
+          conceptId,
+          userId,
+          timestamp: new Date().toISOString()
+        });
+        return null;
+      }
+      
       if (!conceptId || !userId) return null;
       
       const fetchStartTime = new Date().toISOString();
@@ -150,6 +166,9 @@ export function useConceptDetail(
         timestamp: fetchStartTime,
         queryKey: JSON.stringify(queryKey)
       });
+      
+      // Add logging right before API call
+      console.log(`[useConceptDetail queryFn] EXECUTING for ${conceptId}`);
       
       const concept = await fetchConceptDetail(conceptId, userId);
       
@@ -173,7 +192,7 @@ export function useConceptDetail(
       const [processedConcept] = await batchProcessConceptsUrls([concept]);
       return processedConcept;
     },
-    enabled: !!conceptId && !!userId, // Only run if we have both IDs
+    enabled: isEnabled, // Use the explicit variable instead of inline calculation
     // Use standard refetch behavior from global settings
     refetchOnMount: 'always', // Always refetch on mount for this critical data
     // We'll use the global staleTime from QueryClient config

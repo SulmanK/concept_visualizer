@@ -13,6 +13,8 @@ let tabInactiveTime = 0;
 // Get API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
+// DISABLED: Comment out the entire window focus event handler for testing focus-related issues
+/*
 // Handle window focus events
 window.addEventListener('focus', () => {
   if (tabHasBeenActive) {
@@ -105,14 +107,21 @@ window.addEventListener('blur', () => {
     tabInactiveTime = Date.now();
   }
 });
+*/
+
+// Add a debug log to show the focus handler is disabled
+console.log('[QUERY] Tab focus handler disabled for testing authentication issues');
 
 // Create a client with improved focus handling
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30, // 30 seconds (increased from 10 seconds)
+      staleTime: 1000 * 60 * 5, // 5 minutes (increased from 30 seconds)
       gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
-      refetchOnWindowFocus: false, // Enable refetching on window focus for better data freshness
+      // IMPORTANT: Completely disabled automatic refetching for testing
+      refetchOnWindowFocus: false, // Disabled globally to prevent focus-based refetches
+      refetchOnMount: false, // Disabled refetch on mount for testing
+      refetchOnReconnect: false, // Disabled refetch on reconnect for testing
       retry: (failureCount, error: Error & { status?: number }) => {
         // Log retry attempts
         console.log(`[QUERY] Retry attempt ${failureCount}:`, error);
