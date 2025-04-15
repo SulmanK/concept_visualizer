@@ -9,7 +9,7 @@ import { ErrorBoundary, OfflineStatus, ErrorMessage } from './components/ui';
 import ApiToastListener from './components/ui/ApiToastListener';
 import { TaskProvider } from './contexts/TaskContext';
 import TaskStatusBar from './components/TaskStatusBar';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import { useErrorHandling } from './hooks/useErrorHandling';
 
 // Lazy load pages instead of importing them directly
@@ -71,45 +71,47 @@ const AppRoutes = () => {
   };
   
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={getVariants(location.pathname)}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="h-full w-full"
-      >
-        <Suspense fallback={<LoadingFallback />}>
-          <Routes location={location}>
-            {/* Main application routes */}
-            <Route path="/" element={<MainLayout />}>
-              {/* Make LandingPage the default homepage */}
-              <Route index element={<LandingPage />} />
-              
-              {/* Create page */}
-              <Route path="create" element={<CreateConceptPage />} />
-              
-              {/* Concept detail page */}
-              <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-              
-              {/* Recent concepts page */}
-              <Route path="recent" element={<RecentConceptsPage />} />
-              
-              {/* Refinement selection page */}
-              <Route path="refine" element={<RefinementSelectionPage />} />
-              
-              {/* Refinement page with concept ID */}
-              <Route path="refine/:conceptId" element={<RefinementPage />} />
-              
-              {/* Fallback for unknown routes */}
-              <Route path="*" element={<div>Page not found</div>} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+    <LazyMotion features={domAnimation} strict>
+      <AnimatePresence mode="wait">
+        <m.div
+          key={location.pathname}
+          initial="initial"
+          animate="in"
+          exit="out"
+          variants={getVariants(location.pathname)}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="h-full w-full"
+        >
+          <Suspense fallback={<LoadingFallback />}>
+            <Routes location={location}>
+              {/* Main application routes */}
+              <Route path="/" element={<MainLayout />}>
+                {/* Make LandingPage the default homepage */}
+                <Route index element={<LandingPage />} />
+                
+                {/* Create page */}
+                <Route path="create" element={<CreateConceptPage />} />
+                
+                {/* Concept detail page */}
+                <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
+                
+                {/* Recent concepts page */}
+                <Route path="recent" element={<RecentConceptsPage />} />
+                
+                {/* Refinement selection page */}
+                <Route path="refine" element={<RefinementSelectionPage />} />
+                
+                {/* Refinement page with concept ID */}
+                <Route path="refine/:conceptId" element={<RefinementPage />} />
+                
+                {/* Fallback for unknown routes */}
+                <Route path="*" element={<div>Page not found</div>} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </m.div>
+      </AnimatePresence>
+    </LazyMotion>
   );
 };
 

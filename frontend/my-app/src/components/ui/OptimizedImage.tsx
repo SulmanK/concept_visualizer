@@ -4,7 +4,7 @@ interface OptimizedImageProps {
   /**
    * Source URL of the image
    */
-  src: string;
+  src: string | undefined;
   
   /**
    * Alternative text for the image
@@ -58,7 +58,7 @@ interface OptimizedImageProps {
  * OptimizedImage component that handles lazy loading, placeholders, and error states
  */
 export const OptimizedImage: React.FC<OptimizedImageProps> = ({
-  src,
+  src = '/placeholder-image.png',
   alt,
   lazy = true,
   width,
@@ -73,7 +73,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const [error, setError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const [currentSrc, setCurrentSrc] = useState<string | null>(lazy ? null : src);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(lazy ? null : (src || '/placeholder-image.png'));
   
   // Set up intersection observer for lazy loading
   useEffect(() => {
@@ -81,7 +81,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     
     observerRef.current = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
-        setCurrentSrc(src);
+        setCurrentSrc(src || '/placeholder-image.png');
         observerRef.current?.disconnect();
       }
     }, {
@@ -99,7 +99,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   // Update current source if src prop changes
   useEffect(() => {
     if (!lazy || isLoaded) {
-      setCurrentSrc(src);
+      setCurrentSrc(src || '/placeholder-image.png');
     }
   }, [src, lazy, isLoaded]);
   
