@@ -4,7 +4,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
 
 **Phase 1: Backend API Endpoint Creation**
 
-**Task 1: Create `GET /api/storage/concepts/recent` Endpoint**
+**[x] Task 1: Create `GET /api/storage/concepts/recent` Endpoint**
 
 *   **File:** `backend/app/api/routes/concept_storage/storage_routes.py`
 *   **Action:** Define a new FastAPI route function (e.g., `get_recent_concepts_api`).
@@ -23,7 +23,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
 *   **Response Model:** Ensure the Pydantic response model used (e.g., `ConceptSummary` or a similar `ConceptData` adaptation) includes `image_url` for the base concept and nested `image_url` for variations.
 *   **Authentication:** Ensure the route is protected by the existing auth setup for the `/storage` router.
 
-**Task 2: Create `GET /api/storage/concept/{concept_id}` Endpoint**
+**[x] Task 2: Create `GET /api/storage/concept/{concept_id}` Endpoint**
 
 *   **File:** `backend/app/api/routes/concept_storage/storage_routes.py`
 *   **Action:** Define a new FastAPI route function (e.g., `get_concept_detail_api`).
@@ -42,7 +42,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
 *   **Response Model:** Ensure the Pydantic response model includes `image_url` for the base concept and variations.
 *   **Authentication:** Ensure the route is protected.
 
-**Task 3: Verify/Update Backend Persistence Services**
+**[x] Task 3: Verify/Update Backend Persistence Services**
 
 *   **Files:**
     *   `backend/app/services/persistence/concept_persistence_service.py`
@@ -55,7 +55,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
 
 **Phase 2: Frontend Refactoring**
 
-**Task 4: Create Frontend Service Functions**
+**[x] Task 4: Create Frontend Service Functions**
 
 *   **File:** Create `src/services/conceptService.ts` (or modify `src/services/supabaseClient.ts`).
 *   **Action:**
@@ -70,7 +70,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
     *   `RECENT_CONCEPTS: '/storage/recent'` (Adjust path if different in backend)
     *   `CONCEPT_DETAIL: (id: string) => \`/storage/concept/${id}\`` (Adjust path if different)
 
-**Task 5: Refactor `supabaseClient.ts` Functions**
+**[x] Task 5: Refactor `supabaseClient.ts` Functions**
 
 *   **File:** `src/services/supabaseClient.ts`
 *   **Action:**
@@ -79,7 +79,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
     3.  **Crucially:** Remove the `batchProcessConceptsUrls` function entirely.
     4.  Remove any imports or direct `supabase.from(...)` calls related to the `concepts` or `color_variations` tables within these modified functions.
 
-**Task 6: Update React Query Hooks**
+**[x] Task 6: Update React Query Hooks**
 
 *   **File:** `src/hooks/useConceptQueries.ts`
 *   **Action:**
@@ -87,7 +87,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
     2.  **`useConceptDetail`:** Verify its `queryFn` now correctly calls the refactored `fetchConceptDetail` from `supabaseClient.ts`. Keep `userId` in the `queryKey` (`['concepts', 'detail', conceptId, userId]`).
     3.  Remove any post-fetch logic within these hooks that manually processes URLs (like calling `getSignedImageUrl` or similar). Trust the data coming from the (refactored) fetch functions.
 
-**Task 7: Update Frontend Components**
+**[x] Task 7: Update Frontend Components**
 
 *   **Files:** Review components like `ConceptCard.tsx`, `ConceptDetailPage.tsx`, `RecentConceptsSection.tsx`, `ResultsSection.tsx`, `OptimizedImage.tsx`, etc.
 *   **Action:**
@@ -99,7 +99,7 @@ Okay, here are the implementation steps from the refactoring plan, broken down i
 
 **Phase 3: Cleanup (To be done after testing)**
 
-**Task 8: Code Cleanup**
+**[x] Task 8: Code Cleanup**
 
 *   **File:** `src/services/supabaseClient.ts`
 *   **Action:** Once the new approach is verified and stable, completely remove the implementation of `batchProcessConceptsUrls` and any orphaned helper functions related to the old direct Supabase fetching logic for concepts.

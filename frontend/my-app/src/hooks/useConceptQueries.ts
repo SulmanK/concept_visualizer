@@ -1,15 +1,10 @@
-import { useQuery, useMutation, useQueryClient, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, UseQueryResult, UseQueryOptions } from '@tanstack/react-query';
 import { 
-  fetchRecentConcepts, 
-  fetchConceptDetail, 
-  fetchConceptById, 
-  ConceptData, 
-  supabase,
-  getSignedImageUrl
+  ConceptData
 } from '../services/supabaseClient';
-import { getBucketName } from '../services/configService';
 import { useErrorHandling } from './useErrorHandling';
 import { createQueryErrorHandler } from '../utils/errorUtils';
+import { fetchRecentConceptsFromApi, fetchConceptDetailFromApi } from '../services/conceptService';
 
 /**
  * Custom hook to fetch and cache recent concepts with standardized error handling
@@ -23,16 +18,7 @@ export function useRecentConcepts(
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
-  const queryClient = useQueryClient();
   const queryKey = ['concepts', 'recent', userId, limit];
-  
-  // Log existing cache data for debugging
-  const existingData = queryClient.getQueryData(queryKey);
-  console.log(`[useRecentConcepts] Query key: ${JSON.stringify(queryKey)}`);
-  console.log(`[useRecentConcepts] Cache exists: ${!!existingData}`, { 
-    timestamp: new Date().toISOString(),
-    dataCount: existingData ? (existingData as ConceptData[]).length : 0 
-  });
   
   return useQuery<ConceptData[], Error>({
     queryKey,
@@ -40,12 +26,13 @@ export function useRecentConcepts(
       if (!userId) return [];
       
       const fetchStartTime = new Date().toISOString();
-      console.log(`[useRecentConcepts] Fetching concepts for user: ${userId}`, {
+      console.log(`[useRecentConcepts] Fetching concepts for user: ${userId.substring(0, 6)}...`, {
         timestamp: fetchStartTime,
         queryKey: JSON.stringify(queryKey)
       });
       
-      const concepts = await fetchRecentConcepts(userId, limit);
+      // Use the new API service instead of direct Supabase calls
+      const concepts = await fetchRecentConceptsFromApi(userId, limit);
       
       const fetchEndTime = new Date().toISOString();
       console.log(`[useRecentConcepts] Fetched ${concepts.length} concepts`, {
@@ -54,13 +41,16 @@ export function useRecentConcepts(
         fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
       });
       
-      // Optimize by batch processing instead of one by one
-      return batchProcessConceptsUrls(concepts);
+      return concepts;
     },
     enabled: !!userId, // Only run the query if we have a userId
-    // Removed overriding staleTime to use the global configuration
-    onError: onQueryError, // Use standardized error handling
-  });
+    // Use onError in a type-safe way
+    ...onQueryError ? { 
+      meta: {
+        onError: onQueryError
+      }
+    } : {}
+  } as UseQueryOptions<ConceptData[], Error>);
 }
 
 /**
@@ -74,17 +64,7 @@ export function useConceptDetail(
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler);
   
-  const queryClient = useQueryClient();
   const queryKey = ['concepts', 'detail', conceptId, userId];
-  
-  // Log existing cache data for debugging
-  const existingData = queryClient.getQueryData(queryKey);
-  console.log(`[useConceptDetail] Query key: ${JSON.stringify(queryKey)}`);
-  console.log(`[useConceptDetail] Cache exists: ${!!existingData}`, {
-    timestamp: new Date().toISOString(),
-    conceptId: existingData ? (existingData as ConceptData).id : null,
-    lastUpdated: existingData ? (existingData as ConceptData).updated_at : null
-  });
   
   return useQuery<ConceptData | null, Error>({
     queryKey,
@@ -97,7 +77,8 @@ export function useConceptDetail(
         queryKey: JSON.stringify(queryKey)
       });
       
-      const concept = await fetchConceptDetail(conceptId, userId);
+      // Use the new API service instead of direct Supabase calls
+      const concept = await fetchConceptDetailFromApi(conceptId);
       
       const fetchEndTime = new Date().toISOString();
       if (!concept) {
@@ -110,161 +91,20 @@ export function useConceptDetail(
       console.log(`[useConceptDetail] Fetched concept:`, {
         timestamp: fetchEndTime,
         conceptId: concept.id,
-        lastUpdated: concept.updated_at,
         variationsCount: concept.color_variations?.length || 0,
         fetchTime: new Date(fetchEndTime).getTime() - new Date(fetchStartTime).getTime() + 'ms'
       });
       
-      // Process URLs in batch
-      const [processedConcept] = await batchProcessConceptsUrls([concept]);
-      return processedConcept;
+      return concept;
     },
     enabled: !!conceptId && !!userId, // Only run if we have both IDs
-    // Use standard refetch behavior from global settings
     refetchOnMount: 'always', // Always refetch on mount for this critical data
-    // We'll use the global staleTime from QueryClient config
     refetchOnWindowFocus: true, // Always refetch on window focus
-    onError: onQueryError, // Use standardized error handling
-  });
-}
-
-/**
- * Process all concepts and their variations to get signed URLs in batch operations
- * Only creates URLs for images that don't already have them
- */
-async function batchProcessConceptsUrls(concepts: ConceptData[]): Promise<ConceptData[]> {
-  if (!concepts.length) return [];
-  
-  console.log(`[batchProcessUrls] Batch processing ${concepts.length} concepts`);
-  
-  // Check if all concepts already have complete image URLs
-  const needsProcessing = concepts.some(concept => {
-    const imageUrlMissing = !concept.image_url;
-    const variationUrlsMissing = concept.color_variations?.some(v => !v.image_url);
-    return imageUrlMissing || variationUrlsMissing;
-  });
-  
-  // If all concepts already have URLs, return directly
-  if (!needsProcessing) {
-    console.log('[batchProcessUrls] All concepts already have valid URLs, skipping processing');
-    return concepts;
-  }
-  
-  // Step 1: Collect all paths that need signed URLs
-  const conceptPaths: { path: string, type: 'concept' | 'palette', conceptIndex: number, variationIndex?: number }[] = [];
-  
-  // Collect all image paths first
-  concepts.forEach((concept, conceptIndex) => {
-    // Add concept image if needed
-    if (concept.image_path && !concept.image_url) {
-      conceptPaths.push({ 
-        path: concept.image_path, 
-        type: 'concept', 
-        conceptIndex 
-      });
-    }
-    
-    // Add variation images if needed
-    concept.color_variations?.forEach((variation, variationIndex) => {
-      if (variation.image_path && !variation.image_url) {
-        conceptPaths.push({ 
-          path: variation.image_path, 
-          type: 'palette', 
-          conceptIndex,
-          variationIndex 
-        });
+    // Use onError in a type-safe way
+    ...onQueryError ? { 
+      meta: {
+        onError: onQueryError
       }
-    });
-  });
-  
-  console.log(`[batchProcessUrls] Found ${conceptPaths.length} images needing signed URLs`);
-  
-  // If no paths need processing, return original concepts
-  if (conceptPaths.length === 0) {
-    return concepts;
-  }
-  
-  // Step 2: Get signed URLs in batch operations
-  const conceptBucket = getBucketName('concept');
-  const paletteBucket = getBucketName('palette');
-  
-  // Process concept images
-  const conceptImages = conceptPaths.filter(p => p.type === 'concept');
-  if (conceptImages.length) {
-    console.log(`[batchProcessUrls] Requesting ${conceptImages.length} signed concept URLs`);
-    try {
-      // Batch request signed URLs for concept images
-      const { data: conceptUrlsData } = await supabase.storage
-        .from(conceptBucket)
-        .createSignedUrls(
-          conceptImages.map(p => p.path),
-          3600 // 1 hour expiration
-        );
-      
-      // Apply the signed URLs
-      if (conceptUrlsData) {
-        console.log(`[batchProcessUrls] Successfully got ${conceptUrlsData.length} concept signed URLs`);
-        conceptUrlsData.forEach((signedUrl, i) => {
-          const { conceptIndex } = conceptImages[i];
-          if (signedUrl.signedUrl) {
-            concepts[conceptIndex].image_url = signedUrl.signedUrl;
-            // For backward compatibility
-            concepts[conceptIndex].base_image_url = signedUrl.signedUrl;
-          }
-        });
-      }
-    } catch (error) {
-      console.error('[batchProcessUrls] Error getting batch signed URLs for concepts:', error);
-      // Fall back to individual URL generation for paths that failed
-      conceptImages.forEach(({ path, conceptIndex }) => {
-        // Only process if still missing after batch operation
-        if (!concepts[conceptIndex].image_url) {
-          const url = `${supabase.supabaseUrl}/storage/v1/object/public/${conceptBucket}/${path}`;
-          concepts[conceptIndex].image_url = url;
-          concepts[conceptIndex].base_image_url = url;
-        }
-      });
-    }
-  }
-  
-  // Process palette variation images
-  const paletteImages = conceptPaths.filter(p => p.type === 'palette');
-  if (paletteImages.length) {
-    console.log(`[batchProcessUrls] Requesting ${paletteImages.length} signed palette URLs`);
-    try {
-      // Batch request signed URLs for palette images
-      const { data: paletteUrlsData } = await supabase.storage
-        .from(paletteBucket)
-        .createSignedUrls(
-          paletteImages.map(p => p.path),
-          3600 // 1 hour expiration
-        );
-      
-      // Apply the signed URLs
-      if (paletteUrlsData) {
-        console.log(`[batchProcessUrls] Successfully got ${paletteUrlsData.length} palette signed URLs`);
-        paletteUrlsData.forEach((signedUrl, i) => {
-          const { conceptIndex, variationIndex } = paletteImages[i];
-          if (signedUrl.signedUrl && typeof variationIndex === 'number' && concepts[conceptIndex].color_variations) {
-            concepts[conceptIndex].color_variations![variationIndex].image_url = signedUrl.signedUrl;
-          }
-        });
-      }
-    } catch (error) {
-      console.error('[batchProcessUrls] Error getting batch signed URLs for palettes:', error);
-      // Fall back to individual URL generation for paths that failed
-      paletteImages.forEach(({ path, conceptIndex, variationIndex }) => {
-        // Only process if still missing after batch operation
-        if (typeof variationIndex === 'number' && 
-            concepts[conceptIndex].color_variations && 
-            !concepts[conceptIndex].color_variations[variationIndex].image_url) {
-          const url = `${supabase.supabaseUrl}/storage/v1/object/public/${paletteBucket}/${path}`;
-          concepts[conceptIndex].color_variations![variationIndex].image_url = url;
-        }
-      });
-    }
-  }
-  
-  console.log(`[batchProcessUrls] Completed batch processing ${concepts.length} concepts`);
-  return concepts;
+    } : {}
+  } as UseQueryOptions<ConceptData | null, Error>);
 } 
