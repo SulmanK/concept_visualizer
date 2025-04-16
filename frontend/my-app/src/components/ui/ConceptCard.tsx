@@ -225,76 +225,52 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     return images || [];
   }, [concept, images]);
 
-  // Log the configuration
+  // Log the configuration - OPTIMIZED: only log when necessary data changes
   useEffect(() => {
-    // We'll use the existing hasVariations declaration later in the component
-    const hasColorVariations = finalColorVariations.length > 0;
-    console.log(`[ConceptCard] Configuration:`, {
-      hasColorVariations,
-      colorVariationsCount: finalColorVariations.length,
-      imagesCount: finalImages.length,
-      includeOriginal,
-      selectedVariationIndex
-    });
+    if (process.env.NODE_ENV === 'development') {
+      // We'll use the existing hasVariations declaration later in the component
+      const hasColorVariations = finalColorVariations.length > 0;
+      console.log(`[ConceptCard] Configuration:`, {
+        hasColorVariations,
+        colorVariationsCount: finalColorVariations.length,
+        imagesCount: finalImages.length,
+        includeOriginal,
+        selectedVariationIndex
+      });
+    }
   }, [finalColorVariations, finalImages, includeOriginal, selectedVariationIndex]);
   
-  // Add debug useEffect to track variation changes
+  // Add debug useEffect to track variation changes - OPTIMIZED: only log when necessary
   useEffect(() => {
-    console.log(`ConceptCard - Selected variation changed to: ${selectedVariationIndex}`);
-    console.log(`ConceptCard - Available images:`, finalImages);
-    
-    // Update image URL based on the new selection
-    // If includeOriginal is true, index 0 represents the original image
-    if (includeOriginal && selectedVariationIndex === 0) {
-      // Original image selected
-      console.log('ConceptCard - Original image selected');
-    } else if (concept?.color_variations) {
-      // Get the actual color variation index (accounting for the Original option)
-      const variationIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
-      
-      // Log the selected variation details
-      if (variationIndex >= 0 && variationIndex < concept.color_variations.length) {
-        const variation = concept.color_variations[variationIndex];
-        console.log(`ConceptCard - Selected variation: ${variation.id}, palette: ${variation.palette_name}`);
-      }
-    }
-    
-    // If we have images, log which one would be selected
-    if (finalImages && finalImages.length > 0) {
-      // Calculate the actual image index based on selection and includeOriginal flag
-      let actualImageIndex;
-      
-      if (includeOriginal) {
-        if (selectedVariationIndex === 0) {
-          actualImageIndex = 0; // Original image
-        } else {
-          // For non-original selections, adjust the index to get the correct image
-          // If includeOriginal is true, colorVariation index 0 maps to image index 1, 
-          // colorVariation index 1 maps to image index 2, etc.
-          actualImageIndex = selectedVariationIndex;
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`ConceptCard - Selected variation changed to: ${selectedVariationIndex}`);
+
+      // If we have a concept, log selected variation details
+      if (concept?.color_variations) {
+        // Get the actual color variation index (accounting for the Original option)
+        const variationIndex = includeOriginal ? selectedVariationIndex - 1 : selectedVariationIndex;
+        
+        // Log the selected variation details
+        if (variationIndex >= 0 && variationIndex < concept.color_variations.length) {
+          const variation = concept.color_variations[variationIndex];
+          console.log(`ConceptCard - Selected variation: ${variation.id}, palette: ${variation.palette_name}`);
         }
-      } else {
-        // If we don't include original, the mapping is direct
-        actualImageIndex = selectedVariationIndex;
-      }
-      
-      if (actualImageIndex >= 0 && actualImageIndex < finalImages.length) {
-        console.log(`ConceptCard - Selected image at index ${actualImageIndex}:`, 
-                   finalImages[actualImageIndex].substring(0, 30) + '...');
       }
     }
-  }, [selectedVariationIndex, concept, finalImages, includeOriginal]);
+  }, [selectedVariationIndex, concept, includeOriginal]);
   
-  // Log props for debugging
+  // Log props for debugging - OPTIMIZED: only log in development and when props change
   useEffect(() => {
-    console.log(`ConceptCard - Props:`, {
-      hasConceptObj: concept ? true : false,
-      title: finalTitle,
-    includeOriginal,
-      hasImages: finalImages ? true : false,
-      imagesCount: finalImages?.length || 0,
-      variationsCount: finalColorVariations?.length || 0
-  });
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`ConceptCard - Props:`, {
+        hasConceptObj: concept ? true : false,
+        title: finalTitle,
+        includeOriginal,
+        hasImages: finalImages ? true : false,
+        imagesCount: finalImages?.length || 0,
+        variationsCount: finalColorVariations?.length || 0
+      });
+    }
   }, [concept, finalTitle, includeOriginal, finalImages, finalColorVariations]);
   
   // Get the color array for the currently selected variation

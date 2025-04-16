@@ -1,124 +1,137 @@
-Okay, let's create a step-by-step design plan to complete the refactoring and address the identified issues, focusing on simplifying the frontend state management around image URLs.
+Okay, excellent! The fact that the static `AuthProvider` resolves the freeze is a **huge** breakthrough. It definitively points the finger at the dynamic behavior of the original `AuthProvider` and its interaction with Supabase's auth state management (`onAuthStateChange`, token refreshes, etc.).
 
-**Goal Recap:**
+The problem isn't the *data fetching* of concepts/rate limits *itself* (as those hooks still ran their `refetchOnWindowFocus` even with the static provider), but rather how the application **reacts to authentication state changes** that likely also happen upon returning to the tab (especially if the Axios interceptor triggers a token refresh).
 
-1.  Ensure frontend components *directly* use the pre-signed `image_url` provided by the refactored backend API and hooks.
-2.  Remove legacy client-side URL processing logic.
-3.  Clean up unused utility functions related to old URL handling.
-4.  Verify this fixes state inconsistencies, particularly potential bugs related to tab switching and data refetching.
+Here’s a breakdown of *why* the original `AuthProvider` likely caused the freeze and a step-by-step plan to fix it:
+
+**Likely Causes in the Original `AuthProvider`:**
+
+1.  **Frequent `onAuthStateChange` Triggers:** The Supabase listener might fire frequently, not just for sign-in/out, but also for events like `TOKEN_REFRESHED` or `USER_UPDATED`. When you tab back, the Axios interceptor might detect an impending expiry or receive a 401, trigger a token refresh, which then fires `onAuthStateChange`.
+2.  **Unnecessary State Updates:** The original `onAuthStateChange` handler likely called `setSession(newSession)` and `setUser(newSession?.user)` *every time* it fired. Even if only the `access_token` within the `session` object changed, creating a new `session` object reference forces a state update.
+3.  **Cascading Re-renders:** When `session` or `user` state updates in `AuthProvider`, the `value` prop passed to `AuthContext.Provider` changes. This triggers re-renders in *all* components consuming the context, especially those using the generic `useAuth()` hook instead of specific selectors. If many components re-render, or some key components (like `MainLayout` or `AppRoutes`) re-render large trees, this can block the main thread, causing the freeze.
+4.  **Selector Hook Usage (or lack thereof):** While you use `use-context-selector`, if crucial components high up the tree were still using the main `useAuth()` hook, they would re-render even if only the `session` (with its new token) changed, while the `user` object remained the same.
+
+**Design Plan to Fix the Original `AuthProvider`:**
+
+This plan focuses on making the original provider smarter about *when* to update state and ensuring consumers are efficient.
+
+**Phase 1: Optimize State Updates within `AuthProvider`**
+
+
+**Step 2: Implement More Selective State Updates**
+
+*   **Objective:** Modify the `onAuthStateChange` listener and potentially the initial `getSession` logic to only update state when *meaningful* authentication data changes (like user ID, anonymous status, or actual sign-in/out), not just on token refreshes if the user identity remains the same.
+*   **Target File:** `src/contexts/AuthContext.tsx`
+*   **Actions:**
+    1.  **Store Previous State:** Inside the `AuthProvider` component, use `useRef` to keep track of the *previous* relevant user state (e.g., previous user ID, previous anonymous status).
+    2.  **Modify `onAuthStateChange` Callback:**
+        *   Inside the listener callback `(event, newSession) => { ... }`, compare the incoming `newSession?.user?.id` with the `previousUserIdRef.current`.
+        *   Compare the `newIsAnonymous` status (derived from `newSession`) with `previousIsAnonymousRef.current`.
+        *   **Conditionally Update:** Only call `setSession`, `setUser`, and `setIsAnonymous` if:
+            *   The `event` is `SIGNED_IN` or `SIGNED_OUT`.
+            *   OR the `newSession?.user?.id` is different from the previous ID.
+            *   OR the calculated `newIsAnonymous` status is different from the previous status.
+        *   **Always Update Session for Interceptor:** Even if user details don't change, we *might* still need to update the `session` state so the Axios interceptor can pick up the *latest* `access_token` for subsequent requests. Let's try updating *only* the session state if only the token changed, and see if that's enough. *Correction:* It's safer to always update the `session` state object reference when `onAuthStateChange` fires with a new session, as the interceptor relies on `getSession` which reads from Supabase's internal state reflected by this listener. The key is ensuring *consumers* don't overreact.
+    3.  **Refine Initial Load:** Apply similar comparison logic after the initial `initializeAnonymousAuth()` or `supabase.auth.getSession()` call in the main `useEffect`.
+    4.  **Add Logging:** Add detailed logs within the listener to see *when* state updates are actually being triggered vs. skipped.
+*   **Code Snippet Idea (Inside `onAuthStateChange`):**
+    ```typescript
+    const prevUserId = previousUserIdRef.current;
+    const prevIsAnonymous = previousIsAnonymousRef.current;
+
+    const currentUserId = newSession?.user?.id || null;
+    // Recalculate isAnonymous based on newSession (you need this logic)
+    const currentIsAnonymous = determineIsAnonymous(newSession); // Replace with your logic
+
+    // Always update session if it exists, for token refresh interceptor
+    if (newSession) {
+        setSession(newSession);
+        // Log if only token changed
+        if (currentUserId === prevUserId && currentIsAnonymous === prevIsAnonymous) {
+            console.log('[AUTH LISTENER] Session updated (token likely refreshed), user identity unchanged.');
+        }
+    } else {
+        setSession(null);
+    }
+
+    // Update user/anonymous state only if they actually changed
+    if (currentUserId !== prevUserId || currentIsAnonymous !== prevIsAnonymous || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        console.log(`[AUTH LISTENER] Significant auth change detected (Event: ${event}, User Change: ${currentUserId !== prevUserId}, Anon Change: ${currentIsAnonymous !== prevIsAnonymous}). Updating user state.`);
+        setUser(newSession?.user || null);
+        setIsAnonymous(currentIsAnonymous);
+
+        // Update refs
+        previousUserIdRef.current = currentUserId;
+        previousIsAnonymousRef.current = currentIsAnonymous;
+    }
+    ```
+
+**Phase 2: Ensure Efficient Context Consumption**
+
+**Step 3: Audit and Enforce Selector Hook Usage**
+
+*   **Objective:** Guarantee that components only re-render when the specific piece of auth state they care about actually changes.
+*   **Target Files:** All components using `useAuth`, `useUserId`, `useIsAnonymous`, `useAuthIsLoading`, etc.
+*   **Actions:**
+    1.  **Search Project:** Find all instances where the main `useAuth()` hook is called.
+    2.  **Refactor:** For each instance, determine if the component *really* needs the entire `session` or `user` object. If it only needs `userId`, `isAnonymous`, or `isLoading`, replace `useAuth()` with the specific selector hook (e.g., `useUserId()`).
+    3.  **Pay Attention To:**
+        *   `MainLayout.tsx`
+        *   `Header.tsx`
+        *   `AppRoutes` or components rendered directly by routes.
+        *   Any other component that might wrap large parts of the UI tree.
+*   **Verification:** Minimize the usage of the main `useAuth()` hook, favouring specific selectors.
+
+**Step 4: Verify Context Value Memoization**
+
+*   **Objective:** Ensure the `value` object provided to `AuthContext.Provider` doesn't change reference unnecessarily.
+*   **Target File:** `src/contexts/AuthContext.tsx` (The *original*, restored version)
+*   **Actions:**
+    1.  Find the `value` object created before the `return` statement.
+    2.  Ensure it's wrapped in `useMemo`.
+    3.  Critically review the dependency array of that `useMemo`. It *must* include all variables used inside the `value` object: `session`, `user`, `isAnonymous`, `isLoading`, `error`, and the memoized versions of `handleSignOut` and `handleLinkEmail` (which should be wrapped in `useCallback`).
+*   **Code Snippet Check:**
+    ```typescript
+     const handleSignOut = useCallback(async () => { /* ... */ }, []);
+     const handleLinkEmail = useCallback(async (email) => { /* ... */ }, [user]); // depends on user if it modifies it
+
+     const value = useMemo(() => ({
+       session,
+       user,
+       isAnonymous,
+       isLoading,
+       error,
+       signOut: handleSignOut, // Use the memoized version
+       linkEmail: handleLinkEmail // Use the memoized version
+     }), [session, user, isAnonymous, isLoading, error, handleSignOut, handleLinkEmail]); // Ensure all deps are listed
+
+     return (
+       <AuthContext.Provider value={value}>
+         {children}
+       </AuthContext.Provider>
+     );
+    ```
+
+**Phase 3: Testing and Verification**
+
+**Step 5: Test the Refactored `AuthProvider`**
+
+*   **Objective:** Confirm that the optimizations prevent the UI freeze during tab switching.
+*   **Actions:**
+    1.  Run the app with the modified *original* `AuthProvider`.
+    2.  Perform the tab-switching test on multiple pages.
+    3.  Monitor the console logs added in Step 2 to understand when auth state changes are happening and whether state updates are being skipped correctly.
+    4.  Use the React DevTools Profiler again, focusing on the commit triggered *after* tabbing back. Verify that fewer components re-render compared to before, especially if only a token refresh occurred. Check the "What caused this update?" section.
+*   **Verification:**
+    *   The UI freeze during/after tab switching is eliminated or significantly reduced.
+    *   Console logs show that `setUser` and `setIsAnonymous` are called less frequently (ideally only on actual user/status changes), while `setSession` might still update on token refresh.
+    *   Profiler shows shorter render times or fewer component renders triggered by `AuthProvider` updates.
+
+**Step 6: Final Cleanup**
+
+*   **Objective:** Remove temporary debugging logs.
+*   **Action:** Remove the detailed `console.log` statements added during debugging steps.
 
 ---
 
-**Refactoring Action Plan**
-
-**Phase 1: Component-Level Refactoring (Task 7 Continuation)**
-
-**Step 1: Simplify `ConceptCard.tsx` URL Handling** [x]
-
-*   **Objective:** Modify `ConceptCard` to trust and directly use the `image_url` fields provided in the `concept` prop (which comes from the API via `useRecentConcepts`). Remove internal URL processing.
-*   **Target File:** `src/components/ui/ConceptCard.tsx`
-*   **Actions:**
-    1.  **Remove Imports:** Delete the import and usage of `formatImageUrl` from `../../services/supabaseClient`. [x]
-    2.  **Remove Helper:** Delete the internal `processImageUrl` helper function. [x]
-    3.  **Simplify `logoImageUrl`:** Modify the `useMemo` hook for `logoImageUrl`. [x]
-        *   It should *directly* return the appropriate URL based on `selectedVariationIndex`:
-            *   If `selectedVariationIndex` points to the original (index 0 if `includeOriginal` is true, or always index 0 if no variations), use `concept.image_url` (or `concept.base_image_url` as fallback).
-            *   If `selectedVariationIndex` points to a specific variation, use `concept.color_variations[index].image_url`.
-            *   Handle cases where URLs might be missing (return a placeholder or empty string).
-        *   Remove any calls to `formatImageUrl` or `processImageUrl`.
-    4.  **Verify `OptimizedImage` Props:** Ensure the simplified `logoImageUrl` is correctly passed to the `<OptimizedImage>` component's `src` prop. [x]
-    5.  **Remove `sampleImageUrl` Logic (if feasible):** If sample concepts can also provide a direct `image_url`, simplify the logic further by removing the special handling for `sampleImageUrl`. If needed, ensure it's just passed directly. [x]
-*   **Verification:**
-    *   The `ConceptCard` component renders correctly using data from `useRecentConcepts`.
-    *   Both the main "logo" image and the header background/initials display correctly.
-    *   Selecting different color variation dots updates the main logo image correctly using the `image_url` from the selected variation.
-    *   No console errors related to URL processing within `ConceptCard`.
-
-**Step 2: Refactor `RecentConceptsSection.tsx`** [x]
-
-*   **Objective:** Simplify the data adaptation logic now that `ConceptCard` handles URLs directly.
-*   **Target File:** `src/features/landing/components/RecentConceptsSection.tsx`
-*   **Actions:**
-    1.  **Review `adaptConceptForUiCard`:** Analyze if this function is still necessary or can be significantly simplified. [x]
-        *   Ideally, the `concept` object fetched by `useRecentConcepts` should be passable directly (or with minimal transformation like generating initials) to `ConceptCard`.
-        *   Remove any logic within the adapter that processes or selects URLs (e.g., generating the `images` array if `ConceptCard` no longer needs it).
-    2.  **Update Prop Passing:** Ensure the necessary props (like `concept`, `onEdit`, `onViewDetails`) are passed correctly to the simplified `ConceptCard`. [x]
-*   **Verification:**
-    *   The recent concepts section renders correctly.
-    *   `ConceptCard` components within the section display the correct images and variations.
-    *   `onEdit` and `onViewDetails` handlers still function correctly.
-
-**Step 3: Review `ConceptResult.tsx` URL Handling** [x]
-
-*   **Objective:** Ensure `ConceptResult` also trusts the API-provided `image_url` and doesn't perform unnecessary client-side processing.
-*   **Target File:** `src/components/concept/ConceptResult.tsx`
-*   **Actions:**
-    1.  **Analyze `getFormattedUrl`:** Determine if this internal helper is still needed. If the `concept.image_url` (and variation URLs) from the API/hooks are always ready-to-use signed URLs, this function might just need to return the input URL or handle null/undefined cases. [x]
-    2.  **Review `formatImageUrl` Prop:** Check where this prop is passed *from*. Ensure the calling component (likely `ResultsSection` or similar) provides a reliable URL or remove the prop dependency if the internal `concept.image_url` is sufficient. [x]
-    3.  **Simplify `getCurrentImageUrl`:** Ensure this function correctly selects the `image_url` from the `concept` or the selected `variation` without extra processing. [x]
-*   **Verification:**
-    *   The `ConceptResult` component displays the correct image (original or selected variation).
-    *   The download button (`handleDownload`) uses the correct, final image URL.
-
-**Step 4: Verify `OptimizedImage.tsx`** [x]
-
-*   **Objective:** Confirm the `OptimizedImage` component functions correctly with potentially long, signed URLs containing tokens.
-*   **Target File:** `src/components/ui/OptimizedImage.tsx`
-*   **Actions:**
-    1.  **Test Rendering:** Manually test or add a specific story/test case where `OptimizedImage` is given a long, complex URL similar to a Supabase signed URL. [x]
-    2.  **Review Error Handling:** Ensure the `onError` handler provides useful feedback if a signed URL fails to load (e.g., expired token, invalid path). [x]
-*   **Verification:**
-    *   `OptimizedImage` renders images correctly when passed valid signed URLs.
-    *   Error states are handled gracefully.
-
----
-
-**Phase 2: Code Cleanup (Task 8 Continuation)**
-
-**Step 5: Remove Legacy URL Utilities** [x]
-
-*   **Objective:** Eliminate unused and potentially confusing URL helper functions from the Supabase client service.
-*   **Target File:** `src/services/supabaseClient.ts`
-*   **Actions:**
-    1.  **Delete Functions:** Remove the implementations of `formatImageUrl`, `getImageUrl`, and `getSignedImageUrl`. [x]
-    2.  **Update Imports:** Search the codebase for any remaining imports of these functions and remove them or refactor the calling code to no longer need them (should have been done in Phase 1). [x]
-*   **Verification:**
-    *   The application builds and runs without errors after removal.
-    *   All image displays and related functionality still work correctly, relying solely on the `image_url` provided by the API/hooks.
-
----
-
-**Phase 3: Verification and Testing**
-
-**Step 6: Focused Testing** [x]
-
-*   **Objective:** Verify the refactoring fixed the original state/tab-switching bug and didn't introduce regressions.
-*   **Actions:**
-    1.  **Tab Switching Test:**
-        *   Navigate to pages displaying concepts (`/`, `/recent`, `/concepts/:id`).
-        *   Switch to another browser tab and wait (e.g., 30-60 seconds to potentially allow query cache to go stale or trigger background refetch).
-        *   Switch back to the application tab.
-        *   Observe: Does the UI remain responsive? Are images displayed correctly? Does the state update consistently after the `refetchOnWindowFocus` trigger?
-    2.  **Navigation Test:** Navigate between the landing page, recent concepts, concept detail, and refinement pages. Ensure images load correctly and consistently on each page.
-    3.  **Interaction Test:** Interact with `ConceptCard` components (clicking variations) and verify the main image updates reliably.
-    4.  **Refetch Test:** Use React Query DevTools to manually trigger refetches for `useRecentConcepts` and `useConceptDetail` and ensure the UI updates correctly without breaking.
-*   **Verification:**
-    *   The UI remains responsive and functional after switching tabs and triggering data refetches.
-    *   Images load consistently across different views and interactions.
-    *   No console errors related to state updates or URL handling.
-
-**Step 7: Review DevTools and Logs** [x]
-
-*   **Objective:** Use debugging tools to confirm the intended data flow.
-*   **Actions:**
-    1.  **React Query DevTools:** Inspect the data cached for `concepts/recent` and `concepts/detail` queries. Confirm that the `image_url` fields contain complete, signed URLs. Observe query states during tab switching and refetches.
-    2.  **Console Logs:** Temporarily add specific logs (using `devLog`) in hooks and components to trace the `image_url` from the API response through the hooks and into the component props (`ConceptCard`, `OptimizedImage`). Remove before finalizing.
-*   **Verification:**
-    *   Data flow is as expected: API -> Hook -> Component -> `<img>` src attribute.
-    *   No unnecessary URL processing is happening in the frontend components.
-
-
-
----
-
-This plan provides a structured approach to completing the refactoring, focusing on the component layer where the issues likely reside, followed by cleanup and thorough verification. Remember to commit changes incrementally after each logical step.
+The key is to make the `AuthProvider` less "noisy" by being more selective about when it triggers full state updates, and to ensure consuming components are efficient by using selector hooks. This combination should prevent the widespread re-renders that are likely causing the freeze when the auth state is updated upon returning to the application.

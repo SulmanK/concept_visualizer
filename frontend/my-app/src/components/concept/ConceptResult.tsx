@@ -44,11 +44,6 @@ export interface ConceptResultProps {
   onExport?: (conceptId: string) => void;
   
   /**
-   * Handler for formatting URLs (replaces direct dependency on supabaseClient)
-   */
-  formatImageUrl?: (url: string | undefined, bucketType?: string) => string;
-  
-  /**
    * The currently selected color
    */
   selectedColor?: string | null;
@@ -69,7 +64,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   onColorSelect,
   variations = [],
   onExport,
-  formatImageUrl,
   selectedColor = null,
   onViewDetails
 }) => {
@@ -88,14 +82,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     // Set a placeholder or fallback image
     target.src = '/images/placeholder-image.png';
     target.alt = 'Image failed to load';
-  };
-  
-  // Utility function to format URLs using the provided formatter or a default
-  const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
-    if (!url) return '/images/placeholder-image.png';
-    
-    // Return the URL directly since it should be pre-signed from the API
-    return url;
   };
   
   if (!concept || !concept.image_url) {
@@ -317,7 +303,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
                 </div>
                 <div className={styles.variationContent}>
                   <img 
-                    src={getFormattedUrl(variation.image_url)} 
+                    src={variation.image_url} 
                     alt={`Variation: ${variation.name}`}
                     className={styles.variationImage}
                     onError={handleImageError}

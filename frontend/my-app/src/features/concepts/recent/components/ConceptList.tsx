@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRecentConcepts } from '../../../../hooks/useConceptQueries';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { useUserId } from '../../../../contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConceptCard } from '../../../../components/ui/ConceptCard';
 import { ConceptData } from '../../../../services/supabaseClient';
@@ -11,7 +11,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
  * Custom hook to fetch recent concepts with logging
  * We now rely on standard React Query cache behavior
  */
-function useRecentConceptsWithLogging(userId: string | undefined, limit: number = 10) {
+function useRecentConceptsWithLogging(userId: string | undefined | null, limit: number = 10) {
   // Get data using the standard hook
   const result = useRecentConcepts(userId, limit);
   
@@ -29,19 +29,19 @@ function useRecentConceptsWithLogging(userId: string | undefined, limit: number 
  * Displays a list of recently generated concepts
  */
 export const ConceptList: React.FC = () => {
-  const { user } = useAuth();
+  const userId = useUserId();
   const { 
     data: recentConcepts = [],
     isLoading: loadingConcepts,
     error,
     refetch: refreshConcepts
-  } = useRecentConceptsWithLogging(user?.id, 10);
+  } = useRecentConceptsWithLogging(userId, 10);
   
   const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
   
-  // Handle navigation to the edit/refine page
-  const handleEdit = (conceptId: string, variationId?: string | null) => {
+  // Handle navigation to the edit/refine page - memoized with useCallback
+  const handleEdit = useCallback((conceptId: string, variationId?: string | null) => {
     console.log('[ConceptList] Edit clicked:', { conceptId, variationId });
     
     // Check if this is a sample concept
@@ -59,10 +59,10 @@ export const ConceptList: React.FC = () => {
       console.log(`Navigating to refine original: /refine/${conceptId}`);
       navigate(`/refine/${conceptId}`);
     }
-  };
+  }, [navigate]);
   
-  // Handle navigation to the concept details page
-  const handleViewDetails = (conceptId: string, variationId?: string | null) => {
+  // Handle navigation to the concept details page - memoized with useCallback
+  const handleViewDetails = useCallback((conceptId: string, variationId?: string | null) => {
     console.log('[ConceptList] View details clicked:', { conceptId, variationId });
     
     // Check if this is a sample concept
@@ -80,7 +80,7 @@ export const ConceptList: React.FC = () => {
       console.log(`Navigating to details original: /concepts/${conceptId}`);
       navigate(`/concepts/${conceptId}`);
     }
-  };
+  }, [navigate]);
   
   // Log component state on each render for debugging
   console.log('ConceptList render state:', { 
@@ -228,6 +228,17 @@ export const ConceptList: React.FC = () => {
   // Render the grid of concepts
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
+        <Link 
+          to="/concepts" 
+          className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
+        >
+          View All
+          <ChevronRightIcon className="w-4 h-4 ml-1" />
+        </Link>
+      </div>
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {recentConcepts.map((concept: ConceptData) => {
           // Add a safety check for each concept before rendering
