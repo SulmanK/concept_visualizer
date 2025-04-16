@@ -187,8 +187,22 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   // Get the final color variations
   const finalColorVariations = useMemo(() => {
     if (concept?.color_variations && concept.color_variations.length > 0) {
+      // Log that we're using concept.color_variations
+      console.log(`[ConceptCard] Using color_variations from concept: ${concept.id}`);
+      console.log(`[ConceptCard] Found ${concept.color_variations.length} color variations`);
+      concept.color_variations.slice(0, 2).forEach((variation, i) => {
+        console.log(`[ConceptCard] - Variation ${i+1}: ID ${variation.id}, Colors: ${variation.colors.length}`);
+      });
       return concept.color_variations.map(variation => variation.colors);
     }
+    
+    // Log if we're using direct colorVariations prop
+    if (colorVariations && colorVariations.length > 0) {
+      console.log(`[ConceptCard] Using provided colorVariations prop: ${colorVariations.length} variations`);
+    } else {
+      console.log(`[ConceptCard] No color variations found, using empty array`);
+    }
+    
     return colorVariations || [];
   }, [concept, colorVariations]);
 
@@ -200,16 +214,42 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         const baseImage = concept.image_url || concept.base_image_url;
         const variationImages = concept.color_variations.map(v => v.image_url).filter(Boolean);
         
+        // Log the images we found
+        console.log(`[ConceptCard] Base image exists: ${!!baseImage}`);
+        console.log(`[ConceptCard] Found ${variationImages.length} variation images`);
+        
         // If we have a base image, put it first
         return baseImage ? [baseImage, ...variationImages] : variationImages;
       } else if (concept.image_url) {
         // Just the base image if no variations
+        console.log(`[ConceptCard] Only using base image, no variations`);
         return [concept.image_url];
       }
     }
+    
+    // Log if we're using direct images prop
+    if (images && images.length > 0) {
+      console.log(`[ConceptCard] Using provided images prop: ${images.length} images`);
+    } else {
+      console.log(`[ConceptCard] No images found, using empty array`);
+    }
+    
     return images || [];
   }, [concept, images]);
 
+  // Log the configuration
+  useEffect(() => {
+    // We'll use the existing hasVariations declaration later in the component
+    const hasColorVariations = finalColorVariations.length > 0;
+    console.log(`[ConceptCard] Configuration:`, {
+      hasColorVariations,
+      colorVariationsCount: finalColorVariations.length,
+      imagesCount: finalImages.length,
+      includeOriginal,
+      selectedVariationIndex
+    });
+  }, [finalColorVariations, finalImages, includeOriginal, selectedVariationIndex]);
+  
   // Add debug useEffect to track variation changes
   useEffect(() => {
     console.log(`ConceptCard - Selected variation changed to: ${selectedVariationIndex}`);
@@ -269,9 +309,6 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   });
   }, [concept, finalTitle, includeOriginal, finalImages, finalColorVariations]);
   
-  // Ensure we have at least one variation
-  const hasVariations = finalColorVariations && Array.isArray(finalColorVariations) && finalColorVariations.length > 0;
-  
   // Get the color array for the currently selected variation
   // Adjust index if we're including original (where index 0 is original, 1+ are variations)
   let colorIndex;
@@ -283,12 +320,10 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     colorIndex = 0; // Default to first variation if original is selected
   }
   
-  const colors = hasVariations && colorIndex >= 0 && colorIndex < finalColorVariations.length
-    ? finalColorVariations[colorIndex]
-    : [];
+  const colors = finalColorVariations[colorIndex] || [];
   
   // Get the main color from the current variation
-  const mainColor = colors && colors.length > 0 ? colors[0] : '#4F46E5';
+  const mainColor = colors.length > 0 ? colors[0] : '#4F46E5';
   
   // Handle color variation selection
   const handleVariationSelect = (index: number, e?: React.MouseEvent) => {
@@ -379,14 +414,13 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     return processImageUrl(finalImages[0]);
   }, [sampleImageUrl, concept, selectedVariationIndex, finalImages, includeOriginal]);
 
-  // Get the logo URL for the central small card - updating to use the current selected variation
+  // Determine the current image URL based on selected variation
   const logoImageUrl = useMemo(() => {
-    // If we have a concept with color variations
     if (concept?.color_variations && concept.color_variations.length > 0) {
       // For the original/default variation
       if ((includeOriginal && selectedVariationIndex === 0) || selectedVariationIndex === 0) {
-        // Use logo_url if available, otherwise the original image
-        return concept.logo_url || concept.image_url;
+        // Use image_url as the original image 
+        return concept.image_url;
       }
       
       // For other variations, calculate the proper index
@@ -395,29 +429,19 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       // If we have a valid variation index
       if (variationIndex >= 0 && variationIndex < concept.color_variations.length) {
         // Use that variation's image
-        return concept.color_variations[variationIndex].image_url || concept.logo_url || concept.image_url;
+        return concept.color_variations[variationIndex].image_url || concept.image_url;
       }
     }
     
     // Fallbacks for cases without variations
-    // If we have a logo_url directly on the concept, use that
-    if (concept?.logo_url) {
-      return concept.logo_url;
-    }
-    
-    // Check for icon_url
-    if (concept?.icon_url) {
-      return concept.icon_url;
+    // Just use the main image_url
+    if (concept?.image_url) {
+      return concept.image_url;
     }
     
     // For sample cards
     if (sampleImageUrl) {
       return sampleImageUrl; 
-    }
-    
-    // If we have a concept with just an image
-    if (concept?.image_url) {
-      return concept.image_url;
     }
     
     // Use direct props - check for multiple images
@@ -545,7 +569,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         </div>
         
         {/* Color variations */}
-        {hasVariations && (
+        {finalColorVariations.length > 0 && (
           <div className={styles.colorVariations}>
             {includeOriginal && (
               <div 

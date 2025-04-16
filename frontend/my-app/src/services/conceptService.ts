@@ -30,6 +30,22 @@ export const fetchRecentConceptsFromApi = async (
     const endTime = new Date().getTime();
     console.log(`[API] Fetched ${response.data.length} recent concepts in ${endTime - startTime}ms`);
     
+    // Add detailed logging for color variations
+    response.data.forEach((concept, index) => {
+      const variationsCount = concept.color_variations?.length || 0;
+      console.log(`[API] Concept ${index+1}/${response.data.length} (ID: ${concept.id}): ${variationsCount} color variations`);
+      
+      // If variations exist, log details of first few
+      if (variationsCount > 0 && concept.color_variations) {
+        concept.color_variations.slice(0, 2).forEach((variation, i) => {
+          console.log(`[API] - Variation ${i+1}: ID ${variation.id}, Colors: ${variation.colors.length}, Image URL exists: ${!!variation.image_url}`);
+        });
+        if (variationsCount > 2) {
+          console.log(`[API] - ... and ${variationsCount - 2} more variations`);
+        }
+      }
+    });
+    
     return response.data;
   } catch (error) {
     console.error('[API] Error fetching recent concepts:', error);
