@@ -154,7 +154,6 @@ async def get_recent_concepts(
         concepts = await commons.concept_persistence_service.get_recent_concepts(user_id, limit)
         
         # Process each concept to add signed URLs only if needed
-        processed_concepts = []
         for concept in concepts:
             # Only generate a new URL if one doesn't already exist
             if concept.get("image_path") and not concept.get("image_url"):
@@ -164,15 +163,7 @@ async def get_recent_concepts(
                 )
             
             # Process color variations if they exist
-            variations = []
-            variations_count = 0
-            has_variations = False
-            
             if "color_variations" in concept and concept["color_variations"]:
-                variations_count = len(concept["color_variations"])
-                has_variations = variations_count > 0
-                
-                # Transform color_variations into the expected format for the response
                 for variation in concept["color_variations"]:
                     # Only generate a new URL if one doesn't already exist
                     if variation.get("image_path") and not variation.get("image_url"):
@@ -180,32 +171,8 @@ async def get_recent_concepts(
                             variation["image_path"],
                             is_palette=True
                         )
-                    
-                    # Add to formatted variations list
-                    variations.append({
-                        "name": variation.get("palette_name", "Unnamed"),
-                        "colors": variation.get("colors", []),
-                        "description": variation.get("description"),
-                        "image_url": variation.get("image_url", "")
-                    })
-            
-            # Create properly structured concept with variations
-            processed_concept = {
-                "id": concept.get("id", ""),
-                "created_at": concept.get("created_at", ""),
-                "logo_description": concept.get("logo_description", ""),
-                "theme_description": concept.get("theme_description", ""),
-                "image_url": concept.get("image_url", ""),
-                "has_variations": has_variations,
-                "variations_count": variations_count,
-                "is_refinement": concept.get("is_refinement", False),
-                "original_concept_id": concept.get("original_concept_id"),
-                "variations": variations  # Include full variations data
-            }
-            
-            processed_concepts.append(processed_concept)
         
-        return processed_concepts
+        return concepts
     except Exception as e:
         logger.error(f"Error fetching recent concepts: {str(e)}")
         raise ServiceUnavailableError(f"Error fetching recent concepts: {str(e)}")
@@ -254,15 +221,7 @@ async def get_concept_detail(
             )
         
         # Process color variations if they exist
-        variations = []
-        variations_count = 0
-        has_variations = False
-        
         if "color_variations" in concept and concept["color_variations"]:
-            variations_count = len(concept["color_variations"])
-            has_variations = variations_count > 0
-            
-            # Transform color_variations into the expected format for the response
             for variation in concept["color_variations"]:
                 # Only generate a new URL if one doesn't already exist
                 if variation.get("image_path") and not variation.get("image_url"):
@@ -270,32 +229,8 @@ async def get_concept_detail(
                         variation["image_path"],
                         is_palette=True
                     )
-                
-                # Add to formatted variations list
-                variations.append({
-                    "name": variation.get("palette_name", "Unnamed"),
-                    "colors": variation.get("colors", []),
-                    "description": variation.get("description"),
-                    "image_url": variation.get("image_url", "")
-                })
         
-        # Create properly structured concept with variations
-        processed_concept = {
-            "id": concept.get("id", ""),
-            "created_at": concept.get("created_at", ""),
-            "logo_description": concept.get("logo_description", ""),
-            "theme_description": concept.get("theme_description", ""),
-            "image_url": concept.get("image_url", ""),
-            "has_variations": has_variations,
-            "variations_count": variations_count,
-            "is_refinement": concept.get("is_refinement", False),
-            "original_concept_id": concept.get("original_concept_id"),
-            "variations": variations,
-            "refinement_prompt": concept.get("refinement_prompt"),
-            "original_image_url": concept.get("original_image_url")
-        }
-        
-        return processed_concept
+        return concept
     except ResourceNotFoundError:
         # Re-raise our custom errors directly
         raise
