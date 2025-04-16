@@ -4,6 +4,7 @@ import { RecentConceptsHeader } from './components/RecentConceptsHeader';
 
 /**
  * Main page component for displaying recent concepts
+ * The view all button is not needed here as this is already the full list view
  */
 export const RecentConceptsPage: React.FC = () => {
   return (
@@ -11,7 +12,7 @@ export const RecentConceptsPage: React.FC = () => {
       <RecentConceptsHeader />
       
       <main className="container mx-auto px-4 pt-4 pb-8 space-y-8">
-        <ConceptList />
+        <ConceptList hideViewAllButton={true} />
       </main>
     </div>
   );
