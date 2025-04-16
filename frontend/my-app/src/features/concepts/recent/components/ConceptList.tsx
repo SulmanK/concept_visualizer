@@ -11,7 +11,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
  * Custom hook to fetch recent concepts with logging
  * We now rely on standard React Query cache behavior
  */
-function useRecentConceptsWithLogging(userId: string | undefined | null, limit: number = 10) {
+function useRecentConceptsWithLogging(userId: string | undefined, limit: number = 10) {
   // Get data using the standard hook
   const result = useRecentConcepts(userId, limit);
   
@@ -28,14 +28,14 @@ function useRecentConceptsWithLogging(userId: string | undefined | null, limit: 
 /**
  * Displays a list of recently generated concepts
  */
-export const ConceptList: React.FC = () => {
+export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideViewAllButton }) => {
   const userId = useUserId();
   const { 
     data: recentConcepts = [],
     isLoading: loadingConcepts,
     error,
     refetch: refreshConcepts
-  } = useRecentConceptsWithLogging(userId, 10);
+  } = useRecentConceptsWithLogging(userId || undefined, 10);
   
   const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
@@ -94,20 +94,27 @@ export const ConceptList: React.FC = () => {
     } : null
   });
   
+  // Helper function to render the header with conditional View All button
+  const renderHeader = () => (
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
+      {!hideViewAllButton && (
+        <Link 
+          to="/concepts" 
+          className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
+        >
+          View All
+          <ChevronRightIcon className="w-4 h-4 ml-1" />
+        </Link>
+      )}
+    </div>
+  );
+  
   // Handle empty state
   if (!loadingConcepts && (!recentConcepts || recentConcepts.length === 0)) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
-          <Link 
-            to="/create" 
-            className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
-          >
-            View All
-            <ChevronRightIcon className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
+        {renderHeader()}
 
         <div className="text-center py-10">
           <div className="text-gray-300 text-4xl mb-4">📁</div>
@@ -130,16 +137,7 @@ export const ConceptList: React.FC = () => {
   if (loadingConcepts) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
-          <Link 
-            to="/concepts" 
-            className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
-          >
-            View All
-            <ChevronRightIcon className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
+        {renderHeader()}
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -170,16 +168,7 @@ export const ConceptList: React.FC = () => {
   if (errorLoadingConcepts) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
-          <Link 
-            to="/concepts" 
-            className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
-          >
-            View All
-            <ChevronRightIcon className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
+        {renderHeader()}
         
         <div className="text-center">
           <h3 className="text-lg font-semibold text-red-600 mb-4">Error Loading Concepts</h3>
@@ -200,16 +189,7 @@ export const ConceptList: React.FC = () => {
     console.error('recentConcepts is not an array:', recentConcepts);
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
-          <Link 
-            to="/concepts" 
-            className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
-          >
-            View All
-            <ChevronRightIcon className="w-4 h-4 ml-1" />
-          </Link>
-        </div>
+        {renderHeader()}
         
         <div className="text-center">
           <h3 className="text-lg font-semibold text-red-600 mb-4">Something went wrong</h3>
@@ -228,16 +208,7 @@ export const ConceptList: React.FC = () => {
   // Render the grid of concepts
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
-        <Link 
-          to="/concepts" 
-          className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
-        >
-          View All
-          <ChevronRightIcon className="w-4 h-4 ml-1" />
-        </Link>
-      </div>
+      {renderHeader()}
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {recentConcepts.map((concept: ConceptData) => {
