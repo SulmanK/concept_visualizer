@@ -19,6 +19,8 @@ class APIBaseModel(BaseModel):
             # Add any custom encoders needed across models
         }
         from_attributes = True  # For compatibility with ORM models (formerly orm_mode)
+        populate_by_field_name = True  # Allow populating models by field name in addition to alias
+        validate_assignment = True  # Validate when assigning values to fields
 
 
 class ErrorResponse(APIBaseModel):

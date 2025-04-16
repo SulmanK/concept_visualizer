@@ -41,6 +41,16 @@ function adaptConceptForUiCard(concept: ConceptData) {
   }
 
   try {
+    // Log the raw concept data with color_variations
+    console.log(`[adaptConceptForUiCard] Processing concept ${concept.id}`);
+    console.log(`[adaptConceptForUiCard] Has color_variations: ${!!concept.color_variations}`);
+    if (concept.color_variations) {
+      console.log(`[adaptConceptForUiCard] Number of variations: ${concept.color_variations.length}`);
+      concept.color_variations.slice(0, 2).forEach((variation, i) => {
+        console.log(`[adaptConceptForUiCard] - Variation ${i+1}: ID ${variation.id}, Color count: ${variation.colors.length}, Image URL exists: ${!!variation.image_url}`);
+      });
+    }
+    
     // Get initials from the logo description (with safety checks)
     const logoDescription = concept.logo_description || "Untitled";
     const words = logoDescription.trim().split(/\s+/);
@@ -77,9 +87,11 @@ function adaptConceptForUiCard(concept: ConceptData) {
       colors: Array.isArray(variation.colors) ? variation.colors : ['#4F46E5']
     }));
     
+    // Log the adapted data
     console.log(`[adaptConceptForUiCard] Adapted concept ${concept.id}:`, {
       variationsCount: colorVariations.length, 
-      imagesCount: images.length
+      imagesCount: images.length,
+      colorDataCount: colorData.length
     });
     
     return {

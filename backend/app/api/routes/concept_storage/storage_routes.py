@@ -153,6 +153,11 @@ async def get_recent_concepts(
         # Get recent concepts with paths from persistence service
         concepts = await commons.concept_persistence_service.get_recent_concepts(user_id, limit)
         
+        # Log to verify color_variations are present
+        for i, concept in enumerate(concepts):
+            variations_count = len(concept.get("color_variations", []))
+            logger.info(f"Concept {i+1}/{len(concepts)} (ID: {concept['id']}): {variations_count} color variations")
+        
         # Process each concept to add signed URLs only if needed
         for concept in concepts:
             # Only generate a new URL if one doesn't already exist
@@ -171,6 +176,9 @@ async def get_recent_concepts(
                             variation["image_path"],
                             is_palette=True
                         )
+                
+                # Log after processing all variations
+                logger.info(f"Processed {len(concept['color_variations'])} variations for concept {concept['id']}")
         
         return concepts
     except Exception as e:
