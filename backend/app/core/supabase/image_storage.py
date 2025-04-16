@@ -580,6 +580,12 @@ class ImageStorage:
                     if signed_url.startswith('/'):
                         signed_url = f"{api_url}{signed_url}"
                     
+                    # CRITICAL FIX: Check if /storage/v1/ is missing from the URL
+                    if '/object/sign/' in signed_url and '/storage/v1/object/sign/' not in signed_url:
+                        self.logger.warning(f"Missing /storage/v1/ in signed URL from Supabase, adding it manually")
+                        # Add /storage/v1/ before /object/sign/
+                        signed_url = signed_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                    
                     # Log success with masked path
                     masked_path = self._mask_path(path)
                     self.logger.info(f"Generated signed URL for {masked_path} with {expires_in}s expiry")
