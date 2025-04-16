@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from './Card';
-import { formatImageUrl } from '../../services/supabaseClient';
 import { ConceptData, ColorVariationData } from '../../services/supabaseClient';
 import { Link } from 'react-router-dom';
 import styles from './ConceptCard.module.css';
@@ -32,17 +31,6 @@ const isLightColor = (hexColor: string): boolean => {
   // Calculate perceived brightness (YIQ formula)
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return yiq >= 200; // Higher threshold to catch very light colors
-}
-
-// Helper function to process image URLs and handle edge cases
-const processImageUrl = (imageUrl: string | undefined | null): string => {
-  if (!imageUrl || typeof imageUrl !== 'string') {
-    console.log('ConceptCard: Image URL is empty, undefined, or not a string', imageUrl);
-    return '';
-  }
-  
-  // Simply use the formatImageUrl function to handle URL formatting
-  return formatImageUrl(imageUrl);
 }
 
 /**
@@ -406,12 +394,12 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       // Process the image URL to handle Supabase storage paths
       const rawUrl = finalImages[imageIndex];
       console.log(`ConceptCard - Using image at index ${imageIndex}:`, rawUrl?.substring(0, 50));
-      return processImageUrl(rawUrl);
+      return rawUrl;
     }
     
     // Fallback to the first image if index is out of bounds
     console.log('ConceptCard - Index out of bounds, using first image as fallback');
-    return processImageUrl(finalImages[0]);
+    return finalImages[0];
   }, [sampleImageUrl, concept, selectedVariationIndex, finalImages, includeOriginal]);
 
   // Determine the current image URL based on selected variation
@@ -420,7 +408,7 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
       // For the original/default variation
       if ((includeOriginal && selectedVariationIndex === 0) || selectedVariationIndex === 0) {
         // Use image_url as the original image 
-        return concept.image_url;
+        return concept.image_url || concept.base_image_url;
       }
       
       // For other variations, calculate the proper index
@@ -451,11 +439,11 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
         : selectedVariationIndex;
       
       if (imageIndex >= 0 && imageIndex < finalImages.length) {
-        return processImageUrl(finalImages[imageIndex]);
+        return finalImages[imageIndex];
       }
       
       // Fallback to first image
-      return processImageUrl(finalImages[0]);
+      return finalImages[0];
     }
     
     return null; // No image available, will show initials instead

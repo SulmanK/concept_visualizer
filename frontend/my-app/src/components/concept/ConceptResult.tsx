@@ -94,19 +94,8 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
     if (!url) return '/images/placeholder-image.png';
     
-    // Use the provided formatter if available
-    if (formatImageUrl) {
-      return formatImageUrl(url, bucketType);
-    }
-    
-    // Default formatting logic as fallback
-    // This might not work in all cases, which is why formatImageUrl is expected to be provided
-    if (url.startsWith('http')) {
-      return url;
-    }
-    
-    // If no proper formatter and not a complete URL, use a placeholder
-    return '/images/placeholder-image.png';
+    // Return the URL directly since it should be pre-signed from the API
+    return url;
   };
   
   if (!concept || !concept.image_url) {
@@ -166,15 +155,17 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   };
   
   const getOriginalImageUrl = (): string => {
-    return getFormattedUrl(concept.image_url);
+    return concept.image_url || '/images/placeholder-image.png';
   };
   
   const getCurrentImageUrl = () => {
+    // If a variation is selected, use its image_url
     if (selectedVariation !== null && variations && variations[selectedVariation]) {
-      return getFormattedUrl(variations[selectedVariation].image_url);
+      return variations[selectedVariation].image_url || '/images/placeholder-image.png';
     }
     
-    return getOriginalImageUrl();
+    // Otherwise use the original concept image
+    return concept.image_url || '/images/placeholder-image.png';
   };
   
   const getCurrentVariationName = () => {
