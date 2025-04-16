@@ -31,7 +31,6 @@ function adaptConceptForUiCard(concept: ConceptData) {
       title: "Missing Concept",
       description: "No data available",
       colorVariations: [['#4F46E5', '#60A5FA', '#1E293B']],
-      images: [],
       initials: "NA",
       includeOriginal: false,
       gradient: { from: 'blue-400', to: 'indigo-500' },
@@ -58,50 +57,23 @@ function adaptConceptForUiCard(concept: ConceptData) {
       ? words[0].substring(0, 2).toUpperCase()
       : (words[0][0] + (words.length > 1 ? words[1][0] : '')).toUpperCase();
     
-    // Create color variations array - each variation has its own set of colors
-    const colorVariations = concept.color_variations?.map(variation => 
-      Array.isArray(variation.colors) && variation.colors.length > 0 
-        ? variation.colors 
-        : ['#4F46E5']
-    ) || [];
-    
-    // If no color variations, provide a fallback
-    if (!colorVariations || colorVariations.length === 0) {
-      colorVariations.push(['#4F46E5', '#60A5FA', '#1E293B']);
-    }
-    
-    // Get images from color variations (with safety checks)
-    const images = (concept.color_variations || [])
-      .map(variation => variation?.image_url)
-      .filter(Boolean) || [];
-    
-    // Add the original image as the first item if it exists
-    const originalImage = concept.image_url || concept.base_image_url;
-    if (originalImage) {
-      images.unshift(originalImage);
-    }
-    
     // Create colorData for mapping indices to variation IDs
     const colorData = (concept.color_variations || []).map(variation => ({
       id: variation.id,
       colors: Array.isArray(variation.colors) ? variation.colors : ['#4F46E5']
     }));
     
+    // Check if the concept has a valid image_url
+    const hasOriginalImage = !!concept.image_url || !!concept.base_image_url;
+    
     // Log the adapted data
     console.log(`[adaptConceptForUiCard] Adapted concept ${concept.id}:`, {
-      variationsCount: colorVariations.length, 
-      imagesCount: images.length,
-      colorDataCount: colorData.length
+      colorDataCount: colorData.length,
+      hasOriginalImage
     });
     
     return {
-      title: concept.logo_description || "Untitled Concept",
-      description: concept.theme_description || "No description available",
-      colorVariations,
-      images,
       initials,
-      includeOriginal: !!originalImage,
-      gradient: { from: 'blue-400', to: 'indigo-500' },
       colorData,
       id: concept.id
     };
@@ -116,7 +88,6 @@ function adaptConceptForUiCard(concept: ConceptData) {
       title: "Error Processing Concept",
       description: "An error occurred while processing this concept",
       colorVariations: [['#4F46E5', '#60A5FA', '#1E293B']],
-      images: [],
       initials: "ER",
       includeOriginal: false,
       gradient: { from: 'red-400', to: 'red-600' },
@@ -190,7 +161,7 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {isLoading ? renderSkeletonCards() : concepts.map((concept) => {
               // Adapt the concept for the UI card using our helper function
-              const adaptedConcept = adaptConceptForUiCard(concept);
+              const adaptedProps = adaptConceptForUiCard(concept);
               
               // Check if sample concept (using direct image) or normal concept
               const isSampleConcept = concept.id.startsWith('sample-');
@@ -199,22 +170,17 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
               return (
                 <div key={concept.id} className="h-full">
                   <ConceptCard 
-                    title={adaptedConcept.title}
-                    description={adaptedConcept.description}
-                    colorVariations={adaptedConcept.colorVariations}
-                    images={adaptedConcept.images}
-                    initials={adaptedConcept.initials}
-                    includeOriginal={adaptedConcept.includeOriginal}
-                    gradient={adaptedConcept.gradient}
-                    colorData={adaptedConcept.colorData}
+                    concept={concept}
+                    initials={adaptedProps.initials}
+                    colorData={adaptedProps.colorData}
                     sampleImageUrl={sampleImageUrl}
                     editButtonText="Refine"
                     onEdit={(index) => {
                       // Map the index to a variation ID
                       let variationId = null;
                       
-                      if (index > 0 && adaptedConcept.colorData && index - 1 < adaptedConcept.colorData.length) {
-                        variationId = adaptedConcept.colorData[index - 1].id;
+                      if (index > 0 && adaptedProps.colorData && index - 1 < adaptedProps.colorData.length) {
+                        variationId = adaptedProps.colorData[index - 1].id;
                       }
                       
                       handleEdit(concept.id, variationId);
@@ -223,8 +189,8 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
                       // Map the index to a variation ID
                       let variationId = null;
                       
-                      if (index > 0 && adaptedConcept.colorData && index - 1 < adaptedConcept.colorData.length) {
-                        variationId = adaptedConcept.colorData[index - 1].id;
+                      if (index > 0 && adaptedProps.colorData && index - 1 < adaptedProps.colorData.length) {
+                        variationId = adaptedProps.colorData[index - 1].id;
                       }
                       
                       handleViewDetails(concept.id, variationId);

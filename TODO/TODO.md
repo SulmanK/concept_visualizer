@@ -1,99 +1,124 @@
-Goal: Ensure that color variation data associated with concepts is correctly fetched, transmitted via the API, processed by the frontend, and displayed as interactive color dots on the ConceptCard component in the "Recent Concepts" view.
+Okay, let's create a step-by-step design plan to complete the refactoring and address the identified issues, focusing on simplifying the frontend state management around image URLs.
 
-Root Cause Hypothesis (from previous analysis): The backend API endpoint /storage/recent uses a response_model (ConceptSummary) that excludes the color_variations field, causing this data to be stripped during serialization, even though the service layer retrieves it.
+**Goal Recap:**
 
-Design Plan Tasks:
+1.  Ensure frontend components *directly* use the pre-signed `image_url` provided by the refactored backend API and hooks.
+2.  Remove legacy client-side URL processing logic.
+3.  Clean up unused utility functions related to old URL handling.
+4.  Verify this fixes state inconsistencies, particularly potential bugs related to tab switching and data refetching.
 
-Phase 1: Backend API & Data Flow Correction
+---
 
-    Update Backend Response Model:
+**Refactoring Action Plan**
 
-        [x] Task: Modify the Pydantic model used for the /storage/recent API response to include the color_variations field.
+**Phase 1: Component-Level Refactoring (Task 7 Continuation)**
 
-        [x] File: backend/app/models/concept/response.py
+**Step 1: Simplify `ConceptCard.tsx` URL Handling** [x]
 
-        [x] Action: Add color_variations: List[PaletteVariation] = Field(default=[]) to the ConceptSummary model (or create a new RecentConceptResponse model inheriting from it and adding the field). Ensure the PaletteVariation model definition here matches the data structure returned by the persistence service (including id, palette_name, colors, image_url, image_path etc.).
+*   **Objective:** Modify `ConceptCard` to trust and directly use the `image_url` fields provided in the `concept` prop (which comes from the API via `useRecentConcepts`). Remove internal URL processing.
+*   **Target File:** `src/components/ui/ConceptCard.tsx`
+*   **Actions:**
+    1.  **Remove Imports:** Delete the import and usage of `formatImageUrl` from `../../services/supabaseClient`. [x]
+    2.  **Remove Helper:** Delete the internal `processImageUrl` helper function. [x]
+    3.  **Simplify `logoImageUrl`:** Modify the `useMemo` hook for `logoImageUrl`. [x]
+        *   It should *directly* return the appropriate URL based on `selectedVariationIndex`:
+            *   If `selectedVariationIndex` points to the original (index 0 if `includeOriginal` is true, or always index 0 if no variations), use `concept.image_url` (or `concept.base_image_url` as fallback).
+            *   If `selectedVariationIndex` points to a specific variation, use `concept.color_variations[index].image_url`.
+            *   Handle cases where URLs might be missing (return a placeholder or empty string).
+        *   Remove any calls to `formatImageUrl` or `processImageUrl`.
+    4.  **Verify `OptimizedImage` Props:** Ensure the simplified `logoImageUrl` is correctly passed to the `<OptimizedImage>` component's `src` prop. [x]
+    5.  **Remove `sampleImageUrl` Logic (if feasible):** If sample concepts can also provide a direct `image_url`, simplify the logic further by removing the special handling for `sampleImageUrl`. If needed, ensure it's just passed directly. [x]
+*   **Verification:**
+    *   The `ConceptCard` component renders correctly using data from `useRecentConcepts`.
+    *   Both the main "logo" image and the header background/initials display correctly.
+    *   Selecting different color variation dots updates the main logo image correctly using the `image_url` from the selected variation.
+    *   No console errors related to URL processing within `ConceptCard`.
 
-        [x] Acceptance: The Pydantic model accurately reflects the data structure including variations that the API should return.
+**Step 2: Refactor `RecentConceptsSection.tsx`** [x]
 
-    Update API Route Definition:
+*   **Objective:** Simplify the data adaptation logic now that `ConceptCard` handles URLs directly.
+*   **Target File:** `src/features/landing/components/RecentConceptsSection.tsx`
+*   **Actions:**
+    1.  **Review `adaptConceptForUiCard`:** Analyze if this function is still necessary or can be significantly simplified. [x]
+        *   Ideally, the `concept` object fetched by `useRecentConcepts` should be passable directly (or with minimal transformation like generating initials) to `ConceptCard`.
+        *   Remove any logic within the adapter that processes or selects URLs (e.g., generating the `images` array if `ConceptCard` no longer needs it).
+    2.  **Update Prop Passing:** Ensure the necessary props (like `concept`, `onEdit`, `onViewDetails`) are passed correctly to the simplified `ConceptCard`. [x]
+*   **Verification:**
+    *   The recent concepts section renders correctly.
+    *   `ConceptCard` components within the section display the correct images and variations.
+    *   `onEdit` and `onViewDetails` handlers still function correctly.
 
-        [x] Task: Ensure the @router.get("/recent", ...) decorator in the storage routes uses the correctly updated response model from Step 1.
+**Step 3: Review `ConceptResult.tsx` URL Handling** [x]
 
-        [x] File: backend/app/api/routes/concept_storage/storage_routes.py
+*   **Objective:** Ensure `ConceptResult` also trusts the API-provided `image_url` and doesn't perform unnecessary client-side processing.
+*   **Target File:** `src/components/concept/ConceptResult.tsx`
+*   **Actions:**
+    1.  **Analyze `getFormattedUrl`:** Determine if this internal helper is still needed. If the `concept.image_url` (and variation URLs) from the API/hooks are always ready-to-use signed URLs, this function might just need to return the input URL or handle null/undefined cases. [x]
+    2.  **Review `formatImageUrl` Prop:** Check where this prop is passed *from*. Ensure the calling component (likely `ResultsSection` or similar) provides a reliable URL or remove the prop dependency if the internal `concept.image_url` is sufficient. [x]
+    3.  **Simplify `getCurrentImageUrl`:** Ensure this function correctly selects the `image_url` from the `concept` or the selected `variation` without extra processing. [x]
+*   **Verification:**
+    *   The `ConceptResult` component displays the correct image (original or selected variation).
+    *   The download button (`handleDownload`) uses the correct, final image URL.
 
-        [x] Action: Modify the response_model parameter in the decorator (e.g., response_model=List[YourUpdatedConceptSummaryModel]).
+**Step 4: Verify `OptimizedImage.tsx`** [x]
 
-        [x] Acceptance: The API route definition explicitly declares that it returns a list of concepts with their color variations.
+*   **Objective:** Confirm the `OptimizedImage` component functions correctly with potentially long, signed URLs containing tokens.
+*   **Target File:** `src/components/ui/OptimizedImage.tsx`
+*   **Actions:**
+    1.  **Test Rendering:** Manually test or add a specific story/test case where `OptimizedImage` is given a long, complex URL similar to a Supabase signed URL. [x]
+    2.  **Review Error Handling:** Ensure the `onError` handler provides useful feedback if a signed URL fails to load (e.g., expired token, invalid path). [x]
+*   **Verification:**
+    *   `OptimizedImage` renders images correctly when passed valid signed URLs.
+    *   Error states are handled gracefully.
 
-    Verify Service Layer Data Return:
+---
 
-        [x] Task: Review the ConceptPersistenceService.get_recent_concepts method to confirm it correctly fetches and attaches the color_variations data (fetched via get_variations_by_concept_ids) to each concept object before returning the list to the API route handler.
+**Phase 2: Code Cleanup (Task 8 Continuation)**
 
-        [x] File: backend/app/services/persistence/concept_persistence_service.py
+**Step 5: Remove Legacy URL Utilities** [x]
 
-        [x] Action: Add logging (if needed) or step through debugging to verify the structure of the concepts list being returned at the end of the method. Ensure the attached color_variations list is populated correctly.
+*   **Objective:** Eliminate unused and potentially confusing URL helper functions from the Supabase client service.
+*   **Target File:** `src/services/supabaseClient.ts`
+*   **Actions:**
+    1.  **Delete Functions:** Remove the implementations of `formatImageUrl`, `getImageUrl`, and `getSignedImageUrl`. [x]
+    2.  **Update Imports:** Search the codebase for any remaining imports of these functions and remove them or refactor the calling code to no longer need them (should have been done in Phase 1). [x]
+*   **Verification:**
+    *   The application builds and runs without errors after removal.
+    *   All image displays and related functionality still work correctly, relying solely on the `image_url` provided by the API/hooks.
 
-        [x] Acceptance: The service layer reliably returns a list of concept dictionaries, each containing a potentially populated color_variations key.
+---
 
-    Verify API Route Return Value:
+**Phase 3: Verification and Testing**
 
-        [x] Task: Double-check the get_recent_concepts route handler function ensures it returns the variable containing the combined concept and variation data prepared by the service layer.
+**Step 6: Focused Testing** [x]
 
-        [x] File: backend/app/api/routes/concept_storage/storage_routes.py
+*   **Objective:** Verify the refactoring fixed the original state/tab-switching bug and didn't introduce regressions.
+*   **Actions:**
+    1.  **Tab Switching Test:**
+        *   Navigate to pages displaying concepts (`/`, `/recent`, `/concepts/:id`).
+        *   Switch to another browser tab and wait (e.g., 30-60 seconds to potentially allow query cache to go stale or trigger background refetch).
+        *   Switch back to the application tab.
+        *   Observe: Does the UI remain responsive? Are images displayed correctly? Does the state update consistently after the `refetchOnWindowFocus` trigger?
+    2.  **Navigation Test:** Navigate between the landing page, recent concepts, concept detail, and refinement pages. Ensure images load correctly and consistently on each page.
+    3.  **Interaction Test:** Interact with `ConceptCard` components (clicking variations) and verify the main image updates reliably.
+    4.  **Refetch Test:** Use React Query DevTools to manually trigger refetches for `useRecentConcepts` and `useConceptDetail` and ensure the UI updates correctly without breaking.
+*   **Verification:**
+    *   The UI remains responsive and functional after switching tabs and triggering data refetches.
+    *   Images load consistently across different views and interactions.
+    *   No console errors related to state updates or URL handling.
 
-        [x] Action: Confirm the return statement uses the variable holding the final list of concepts with their variations attached (e.g., return concepts_with_variations). Ensure signed URLs are also generated for variation images if needed.
+**Step 7: Review DevTools and Logs** [x]
 
-        [x] Acceptance: The API route handler explicitly returns the data structure containing variations.
+*   **Objective:** Use debugging tools to confirm the intended data flow.
+*   **Actions:**
+    1.  **React Query DevTools:** Inspect the data cached for `concepts/recent` and `concepts/detail` queries. Confirm that the `image_url` fields contain complete, signed URLs. Observe query states during tab switching and refetches.
+    2.  **Console Logs:** Temporarily add specific logs (using `devLog`) in hooks and components to trace the `image_url` from the API response through the hooks and into the component props (`ConceptCard`, `OptimizedImage`). Remove before finalizing.
+*   **Verification:**
+    *   Data flow is as expected: API -> Hook -> Component -> `<img>` src attribute.
+    *   No unnecessary URL processing is happening in the frontend components.
 
-Phase 2: Frontend Data Handling & Rendering Verification
 
-    Verify Frontend Type Definitions:
 
-        [x] Task: Review the ConceptData and ColorVariationData TypeScript interfaces to ensure they accurately reflect the updated backend API response structure, including the color_variations field and its nested properties (id, palette_name, colors, image_url, etc.).
+---
 
-        [x] Files: frontend/my-app/src/services/supabaseClient.ts (or potentially frontend/my-app/src/types/concept.types.ts).
-
-        [x] Action: Ensure the types match the backend JSON structure. Add any missing fields.
-
-        [x] Acceptance: TypeScript types accurately represent the data received from the API.
-
-    Verify Frontend Data Fetching & Hook:
-
-        [x] Task: Review the fetchRecentConceptsFromApi function and the useRecentConcepts hook to ensure they correctly expect and handle the ConceptData[] type, including the color_variations.
-
-        [x] Files: frontend/my-app/src/services/conceptService.ts, frontend/my-app/src/hooks/useConceptQueries.ts.
-
-        [x] Action: Add console logging within the hook's queryFn after the API call returns to inspect the raw data received and confirm color_variations are present.
-
-        [x] Acceptance: The React Query hook receives and stores the concept data including variations.
-
-    Refactor/Verify Data Adaptation (If Applicable):
-
-        [x] Task: Examine how RecentConceptsSection passes data to ConceptCard. Currently, it seems to use adaptConceptForUiCard. Verify if this adaptation step is still necessary or if ConceptCard can directly consume the ConceptData object fetched by the hook. If adaptation is used, ensure it correctly processes concept.color_variations. If not needed, remove the adaptation step and pass the concept object directly.
-
-        [x] File: frontend/my-app/src/features/concepts/recent/components/RecentConceptsSection.tsx.
-
-        [x] Action: Simplify data passing if possible. If adaptConceptForUiCard remains, verify its logic for handling concept.color_variations correctly populates the necessary props for ConceptCard.
-
-        [x] Acceptance: ConceptCard receives the necessary variation data (either directly via the concept prop or through correctly adapted props).
-
-    Verify ConceptCard Rendering Logic:
-
-        [x] Task: Carefully review the rendering logic within the ConceptCard component related to color variations. Pay special attention to:
-
-            How finalColorVariations is derived when the concept prop is present.
-
-            The condition hasVariations.
-
-            The loop that renders the color dots.
-
-            The indexing logic when includeOriginal is true/false.
-
-            The logic determining currentImageUrl based on selectedVariationIndex.
-
-        [x] File: frontend/my-app/src/components/ui/ConceptCard.tsx
-
-        [x] Action: Add detailed console logs inside ConceptCard to trace the values of concept.color_variations, finalColorVariations, hasVariations, selectedVariationIndex, and the image URL being used. Ensure the loop iterates correctly over the received variations.
-
-        [x] Acceptance: The ConceptCard correctly identifies the presence of variations and renders the appropriate number of color dots based on the received concept.color_variations data. Clicking dots updates the displayed image correctly.
+This plan provides a structured approach to completing the refactoring, focusing on the component layer where the issues likely reside, followed by cleanup and thorough verification. Remember to commit changes incrementally after each logical step.
