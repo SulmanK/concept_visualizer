@@ -28,7 +28,7 @@ class ColorPalette(APIBaseModel):
 class PaletteVariation(APIBaseModel):
     """Model for a color palette variation with its own image."""
     
-    name: str = Field(..., description="Name of the palette variation")
+    name: str = Field(..., alias="palette_name", description="Name of the palette variation")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
     image_url: HttpUrl = Field(..., description="URL of the image with this palette")
@@ -86,6 +86,10 @@ class ConceptSummary(APIBaseModel):
     variations_count: int = Field(default=0, description="Number of available color variations")
     is_refinement: bool = Field(default=False, description="Whether this is a refinement of another concept")
     original_concept_id: Optional[str] = Field(None, description="ID of the original concept if this is a refinement")
+    color_variations: List[PaletteVariation] = Field(
+        default=[],
+        description="List of all color variations with their images"
+    )
 
 
 class ConceptDetail(ConceptSummary):

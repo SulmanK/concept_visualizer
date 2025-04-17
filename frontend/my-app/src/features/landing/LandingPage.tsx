@@ -25,7 +25,9 @@ const LandingPageContent: React.FC = () => {
     isTaskPending,
     isTaskProcessing,
     isTaskInitiating,
-    latestResultId
+    latestResultId,
+    clearActiveTask,
+    activeTaskData
   } = useTaskContext();
   
   // Use React Query mutation hook for generation
@@ -46,15 +48,11 @@ const LandingPageContent: React.FC = () => {
     refetch: refreshConcepts
   } = useRecentConcepts(user?.id, 10);
   
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  
   const queryClient = useQueryClient();
   
   // Fetch concepts on component mount
   useEffect(() => {
     refreshConcepts();
-    // We intentionally exclude refreshConcepts from the dependency array
-    // to prevent an infinite loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
@@ -76,22 +74,6 @@ const LandingPageContent: React.FC = () => {
     user?.id
   );
   
-  // Effect to debug concept fetching and cache behavior - removed invalidation
-  useEffect(() => {
-    if (effectiveResultId) {
-      console.log(`[LandingPage] Concept fetch state:`, {
-        resultId: effectiveResultId,
-        isLoading: isLoadingConcept,
-        hasData: !!conceptData,
-        conceptId: conceptData?.id,
-        timestamp: new Date().toISOString()
-      });
-      
-      // We no longer need to force invalidate as our useConceptDetail hook 
-      // is properly configured to refetch when needed
-    }
-  }, [effectiveResultId, conceptData, isLoadingConcept]);
-  
   // Map task and mutation state to form status
   const getFormStatus = () => {
     if (isSubmitting) return 'submitting';
@@ -99,7 +81,7 @@ const LandingPageContent: React.FC = () => {
     if (isTaskPending) return 'pending';
     if (isTaskProcessing) return 'processing';
     if (isTaskCompleted) return 'success';
-    if (taskData?.status === 'failed') return 'error';
+    if (activeTaskData?.status === 'failed') return 'error';
     if (isError) return 'error';
     return 'idle';
   };
@@ -107,48 +89,51 @@ const LandingPageContent: React.FC = () => {
   // Get the appropriate processing message based on task state
   const getProcessingMessage = (): string | undefined => {
     if (isTaskInitiating) return 'Preparing your request...';
-    if (isTaskPending) return 'Request queued...';
-    if (isTaskProcessing) return 'Generating your concept...';
+    if (isTaskPending) return 'Request queued, waiting to start...';
+    if (isTaskProcessing) return 'Generating your concept design...';
     return undefined;
   };
   
   // Extract error message from the error object or task
   const getErrorMessage = (): string | null => {
-    if (taskData?.status === 'failed') {
-      return taskData.error_message || 'Task failed';
+    if (activeTaskData?.status === 'failed') {
+      return activeTaskData.error_message || 'Task failed';
     }
     if (!error) return null;
     return error instanceof Error ? error.message : String(error);
   };
   
   const handleReset = useCallback(() => {
-    console.log('[LandingPage] Resetting concept generation state', {
-      timestamp: new Date().toISOString()
-    });
-    
     // First reset the query client state for the mutation
     queryClient.removeQueries({ queryKey: ['conceptGeneration'] });
     
     // Then reset the local React Query mutation state
     resetGeneration();
-    
-    // Reset UI state
-    setSelectedColor(null);
   }, [resetGeneration, queryClient]);
+  
+  // Handler for the "Start Over" button
+  const handleStartOver = useCallback(() => {
+    // Clear the active task from the context
+    if (clearActiveTask) {
+      clearActiveTask();
+    }
+    
+    // Reset the generation state
+    handleReset();
+    
+    // Optionally, scroll to the form
+    const formElement = document.getElementById('create-form');
+    if (formElement) {
+      formElement.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [clearActiveTask, handleReset]);
   
   // Make sure generation can only be triggered when not already pending
   const handleGenerateConcept = useCallback((logoDescription: string, themeDescription: string) => {
     // Safety check to prevent multiple submissions
     if (isSubmitting || isTaskPending || isTaskProcessing) {
-      console.warn('[LandingPage] Generation already in progress, ignoring duplicate submission');
       return;
     }
-    
-    console.log('[LandingPage] Starting concept generation', {
-      timestamp: new Date().toISOString(),
-      logoDescriptionLength: logoDescription.length,
-      themeDescriptionLength: themeDescription.length
-    });
     
     // Clear any previous state first
     resetGeneration();
@@ -158,32 +143,31 @@ const LandingPageContent: React.FC = () => {
       logo_description: logoDescription, 
       theme_description: themeDescription 
     });
-    
-    setSelectedColor(null);
   }, [isSubmitting, isTaskPending, isTaskProcessing, resetGeneration, generateConceptMutation]);
   
-  const handleColorSelect = (color: string) => {
-    setSelectedColor(color);
-    
-    // Copy color to clipboard
-    navigator.clipboard.writeText(color)
-      .then(() => {
-        // Could show a toast notification here
-        console.log(`Copied ${color} to clipboard`);
-      })
-      .catch(err => {
-        console.error('Could not copy text: ', err);
-      });
-  };
+  // New handler for exporting selected concept variation
+  const handleExportSelected = useCallback((conceptId: string, variationId?: string | null) => {
+    // Check if this is a sample concept
+    if (conceptId.startsWith('sample-')) {
+      alert('Cannot export sample concepts.');
+      return;
+    }
+
+    // Construct the path to the detail page, including the variationId if present
+    const path = variationId
+      ? `/concepts/${conceptId}?colorId=${variationId}&showExport=true`
+      : `/concepts/${conceptId}?showExport=true`;
+
+    navigate(path);
+  }, [navigate]);
   
+  // Keep existing handlers for the RecentConceptsSection
   const handleEdit = (conceptId: string, variationId?: string | null) => {
     // Check if this is a sample concept
     if (conceptId.startsWith('sample-')) {
       alert('This is a sample concept. Please generate a real concept to edit it.');
       return;
     }
-    
-    console.log('handleEdit in LandingPage:', { conceptId, variationId });
     
     // Navigate directly with concept ID and variationId (if available)
     if (variationId) {
@@ -199,8 +183,6 @@ const LandingPageContent: React.FC = () => {
       alert('This is a sample concept. Please generate a real concept to view details.');
       return;
     }
-    
-    console.log('handleViewDetails in LandingPage:', { conceptId, variationId });
     
     // Navigate directly with concept ID and variationId (if available)
     if (variationId) {
@@ -250,28 +232,21 @@ const LandingPageContent: React.FC = () => {
             conceptId={effectiveResultId!}
             conceptData={conceptData}
             isLoading={isLoadingConcept}
-            onEdit={handleEdit}
-            onViewDetails={handleViewDetails}
-            onColorSelect={handleColorSelect}
-            selectedColor={selectedColor}
+            onExportSelected={handleExportSelected}
+            onStartOver={handleStartOver}
           />
         )}
 
-        {/* Debug section to show task data details */}
-        {activeTaskId && (
-          <div className="p-4 mb-4 bg-blue-50 rounded-lg text-sm border border-blue-200">
-            <div>Task ID: {activeTaskId}</div>
-            <div>Task Status: {taskData?.status || (isTaskInitiating ? 'initiating' : 'unknown')}</div>
-            <div>Result ID: {taskData?.result_id || 'Not set'}</div>
-            <div>Latest Result ID from Context: {latestResultId || 'Not set'}</div>
-            <div>Effective Result ID: {effectiveResultId || 'Not available'}</div>
-            <div>Error: {taskData?.error_message || 'None'}</div>
-            <div>Should Show Results: {shouldShowResults ? 'Yes' : 'No'}</div>
-            <div>Concept Data Loaded: {conceptData ? 'Yes' : 'No'}</div>
-            <div>Loading Concept: {isLoadingConcept ? 'Yes' : 'No'}</div>
-          </div>
+        {/* Show loading skeleton for results section if task completed but concept still loading */}
+        {isTaskCompleted && effectiveResultId && isLoadingConcept && !conceptData && (
+          <ResultsSection 
+            conceptId={effectiveResultId} 
+            conceptData={null} 
+            isLoading={true}
+            onExportSelected={handleExportSelected} 
+          />
         )}
-        
+
         <RecentConceptsSection
           concepts={formatConceptsForDisplay()}
           isLoading={loadingConcepts}

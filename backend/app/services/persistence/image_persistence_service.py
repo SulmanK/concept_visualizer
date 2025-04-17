@@ -259,9 +259,19 @@ class ImagePersistenceService:
             if image_path.startswith(("http://", "https://")):
                 return image_path
                 
-            # Check if it's a signed URL from our Supabase storage
-            if '/object/sign/' in image_path:
-                # It's already a signed URL, just return it
+            # Check if it's a signed URL from our Supabase storage but missing the /storage/v1/ prefix
+            if '/object/sign/' in image_path and '/storage/v1/object/sign/' not in image_path:
+                # Add the missing /storage/v1 prefix
+                modified_path = image_path.replace('/object/sign/', '/storage/v1/object/sign/')
+                
+                # Make it absolute if it's a relative URL
+                if not modified_path.startswith("http"):
+                    return f"{settings.SUPABASE_URL}{modified_path}"
+                return modified_path
+                
+            # If it already has the correct format with /storage/v1/
+            if '/storage/v1/object/sign/' in image_path:
+                # It's already a signed URL with correct path, just return it
                 if not image_path.startswith("http"):
                     # It's a relative URL, make it absolute
                     return f"{settings.SUPABASE_URL}{image_path}"
@@ -291,7 +301,9 @@ class ImagePersistenceService:
         try:
             # Convert relative signed URLs to full URLs if needed
             if image_path_or_url.startswith("/object/sign/"):
-                full_url = f"{settings.SUPABASE_URL}{image_path_or_url}"
+                # Fix: Add the missing /storage/v1 prefix
+                fixed_path = f"/storage/v1/object/sign/{image_path_or_url.split('/object/sign/')[1]}"
+                full_url = f"{settings.SUPABASE_URL}{fixed_path}"
                 self.logger.debug(f"Converting relative signed URL to full URL: {full_url}")
                 image_path_or_url = full_url
             
@@ -306,8 +318,13 @@ class ImagePersistenceService:
             
             # Check if it's a signed URL from our Supabase storage
             elif '/object/sign/' in image_path_or_url:
+                # Fix: Ensure /storage/v1 is present
+                if '/storage/v1/object/sign/' not in image_path_or_url:
+                    image_path_or_url = image_path_or_url.replace('/object/sign/', '/storage/v1/object/sign/')
+                    self.logger.debug(f"Added /storage/v1 prefix to URL: {image_path_or_url}")
+                    
                 # Extract the real path from signed URL
-                path_parts = image_path_or_url.split('/object/sign/')
+                path_parts = image_path_or_url.split('/storage/v1/object/sign/')
                 if len(path_parts) > 1:
                     bucket_path = path_parts[1].split('?')[0]  # Remove query params
                     bucket_parts = bucket_path.split('/', 1)

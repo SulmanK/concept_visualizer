@@ -274,7 +274,19 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
             # Get recent concepts from storage - caller must use ImagePersistenceService for URLs
             concepts = self.concept_storage.get_recent_concepts(user_id, limit)
             
-            # Return the concepts as is - no URL generation
+            # Extract all concept IDs for batch fetching variations
+            if concepts:
+                concept_ids = [concept["id"] for concept in concepts]
+                
+                # Batch fetch all variations for these concepts at once
+                variations_by_concept = self.concept_storage.get_variations_by_concept_ids(concept_ids)
+                
+                # Attach variations to their respective concepts
+                for concept in concepts:
+                    concept_id = concept["id"]
+                    concept["color_variations"] = variations_by_concept.get(concept_id, [])
+            
+            # Return the concepts with their variations
             return concepts
             
         except Exception as e:

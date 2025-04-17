@@ -8,7 +8,7 @@ import { ErrorMessage, RateLimitErrorMessage } from '../ui/ErrorMessage';
 import { useToast } from '../../hooks/useToast';
 import { useErrorHandling, ErrorWithCategory, ErrorCategory } from '../../hooks/useErrorHandling';
 import { FormStatus } from '../../types';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext, useOnTaskCleared } from '../../contexts/TaskContext';
 
 export interface ConceptFormProps {
   /**
@@ -61,7 +61,15 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   const errorHandler = useErrorHandling();
   
   // Get global task status
-  const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } = useTaskContext();
+  const { 
+    hasActiveTask, 
+    isTaskPending, 
+    isTaskProcessing, 
+    activeTaskData
+  } = useTaskContext();
+  
+  // Use the dedicated selector hook for onTaskCleared
+  const onTaskCleared = useOnTaskCleared();
   
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -111,11 +119,36 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   
   // Handle rate limit errors - removed the direct call that was causing linter errors
   useEffect(() => {
-    // Just detect rate limit errors but don't try to call a method that doesn't exist
+    // This approach of string checking is not robust - we'll improve it with the new error handler
     if (error && error.includes('rate limit')) {
       // Note: we'd handle this with a rate limit handler if one was available
     }
   }, [error]);
+  
+  // Reset form when task is cleared
+  useEffect(() => {
+    if (!onTaskCleared) {
+      console.warn('[ConceptForm] onTaskCleared is not available');
+      return;
+    }
+    
+    try {
+      const unsubscribe = onTaskCleared(() => {
+        console.log('[ConceptForm] Task cleared event received, resetting form');
+        setLogoDescription('');
+        setThemeDescription('');
+        setValidationError(undefined);
+        if (formRef.current) {
+          formRef.current.reset();
+        }
+      });
+      
+      // Clean up subscription when component unmounts
+      return unsubscribe;
+    } catch (e) {
+      console.error('[ConceptForm] Error setting up task cleared listener:', e);
+    }
+  }, [onTaskCleared]);
   
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
@@ -141,8 +174,39 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     return "";
   };
   
+  // Better rate limit error detection for the error prop
+  const isRateLimitError = error && (
+    error.includes('rate limit') || 
+    error.includes('Rate limit') ||
+    error.toLowerCase().includes('limit reached') ||
+    error.toLowerCase().includes('try again') ||
+    error.toLowerCase().includes('busy') ||
+    error.toLowerCase().includes('temporarily unavailable') ||
+    error.toLowerCase().includes('too many requests')
+  );
+  
   // Create a mock error for the RateLimitErrorMessage when needed
   const createRateLimitError = (): ErrorWithCategory => {
+    // Extract a number from the error message if possible for resetAfterSeconds
+    let resetSeconds = 3600; // Default to 1 hour
+    if (error) {
+      const timeMatch = error.match(/(\d+)\s*(second|minute|hour|day)/i);
+      if (timeMatch) {
+        const value = parseInt(timeMatch[1], 10);
+        const unit = timeMatch[2].toLowerCase();
+        
+        if (unit.includes('second')) {
+          resetSeconds = value;
+        } else if (unit.includes('minute')) {
+          resetSeconds = value * 60;
+        } else if (unit.includes('hour')) {
+          resetSeconds = value * 60 * 60;
+        } else if (unit.includes('day')) {
+          resetSeconds = value * 24 * 60 * 60;
+        }
+      }
+    }
+    
     return {
       message: error || 'Rate limit exceeded',
       category: 'rateLimit' as ErrorCategory,
@@ -150,23 +214,24 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
       limit: 10,
       current: 10,
       period: 'hour',
-      resetAfterSeconds: 3600
+      resetAfterSeconds: resetSeconds
     };
   };
   
   return (
     <div className="max-w-4xl mx-auto">
-      {error && !error.includes('rate limit') && (
+      {error && !isRateLimitError && (
         <ErrorMessage 
           message={error} 
           className="mb-4"
+          type="generic"
           onDismiss={() => {
             if (onReset) onReset();
           }}
         />
       )}
       
-      {error && error.includes('rate limit') && (
+      {error && isRateLimitError && (
         <RateLimitErrorMessage 
           error={createRateLimitError()}
           className="mb-4" 

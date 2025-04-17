@@ -6,15 +6,12 @@ visual concepts from the database.
 """
 
 import logging
-from typing import List, Optional
+from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Request
-from pydantic import ValidationError
-
+from fastapi import APIRouter, Depends, HTTPException, Response, Request, Query
 from app.api.dependencies import CommonDependencies
 from app.models.concept.request import PromptRequest
 from app.models.concept.response import GenerationResponse, ConceptSummary, ConceptDetail
-from app.utils.api_limits import apply_rate_limit
 from app.core.exceptions import ResourceNotFoundError, ServiceUnavailableError
 
 # Utility function to get current user ID from request
@@ -67,14 +64,14 @@ async def generate_and_store_concept(
         )
         
         if not concept_response or "image_url" not in concept_response:
-            raise ServiceUnavailableError(detail="Failed to generate base concept")
+            raise ServiceUnavailableError("Failed to generate base concept")
             
         # Extract image URL and path
         image_url = concept_response["image_url"]
         image_path = concept_response.get("image_path")
         
         if not image_url or not image_path:
-            raise ServiceUnavailableError(detail="Failed to generate or store image")
+            raise ServiceUnavailableError("Failed to generate or store image")
         
         # Generate color palettes
         # First get color palettes from JigsawStack
@@ -104,7 +101,7 @@ async def generate_and_store_concept(
         })
         
         if not stored_concept:
-            raise ServiceUnavailableError(detail="Failed to store concept")
+            raise ServiceUnavailableError("Failed to store concept")
         
         # Return generation response
         return GenerationResponse(
@@ -125,13 +122,14 @@ async def generate_and_store_concept(
         raise
     except Exception as e:
         logger.error(f"Error generating concept: {str(e)}")
-        raise ServiceUnavailableError(detail=f"Error generating concept: {str(e)}")
+        raise ServiceUnavailableError(f"Error generating concept: {str(e)}")
 
 
 @router.get("/recent", response_model=List[ConceptSummary])
 async def get_recent_concepts(
     response: Response,
     req: Request,
+    limit: int = Query(10, ge=1, le=50),
     commons: CommonDependencies = Depends()
 ):
     """
@@ -140,6 +138,7 @@ async def get_recent_concepts(
     Args:
         response: FastAPI response object
         req: The FastAPI request object for rate limiting
+        limit: Maximum number of concepts to return (default: 10, max: 50)
         commons: Common dependencies including services
         
     Returns:
@@ -151,11 +150,40 @@ async def get_recent_concepts(
         if not user_id:
             raise HTTPException(status_code=401, detail="Authentication required")
         
-        # Get recent concepts with signed image URLs using user_id
-        return await commons.concept_persistence_service.get_recent_concepts(user_id)
+        # Get recent concepts with paths from persistence service
+        concepts = await commons.concept_persistence_service.get_recent_concepts(user_id, limit)
+        
+        # Log to verify color_variations are present
+        for i, concept in enumerate(concepts):
+            variations_count = len(concept.get("color_variations", []))
+            logger.info(f"Concept {i+1}/{len(concepts)} (ID: {concept['id']}): {variations_count} color variations")
+        
+        # Process each concept to add signed URLs only if needed
+        for concept in concepts:
+            # Only generate a new URL if one doesn't already exist
+            if concept.get("image_path") and not concept.get("image_url"):
+                concept["image_url"] = commons.image_persistence_service.get_signed_url(
+                    concept["image_path"], 
+                    is_palette=False
+                )
+            
+            # Process color variations if they exist
+            if "color_variations" in concept and concept["color_variations"]:
+                for variation in concept["color_variations"]:
+                    # Only generate a new URL if one doesn't already exist
+                    if variation.get("image_path") and not variation.get("image_url"):
+                        variation["image_url"] = commons.image_persistence_service.get_signed_url(
+                            variation["image_path"],
+                            is_palette=True
+                        )
+                
+                # Log after processing all variations
+                logger.info(f"Processed {len(concept['color_variations'])} variations for concept {concept['id']}")
+        
+        return concepts
     except Exception as e:
         logger.error(f"Error fetching recent concepts: {str(e)}")
-        raise ServiceUnavailableError(detail=f"Error fetching recent concepts: {str(e)}")
+        raise ServiceUnavailableError(f"Error fetching recent concepts: {str(e)}")
 
 
 @router.get("/concept/{concept_id}", response_model=ConceptDetail)
@@ -193,6 +221,23 @@ async def get_concept_detail(
                 resource_id=concept_id
             )
         
+        # Only generate a new URL if one doesn't already exist
+        if concept.get("image_path") and not concept.get("image_url"):
+            concept["image_url"] = commons.image_persistence_service.get_signed_url(
+                concept["image_path"], 
+                is_palette=False
+            )
+        
+        # Process color variations if they exist
+        if "color_variations" in concept and concept["color_variations"]:
+            for variation in concept["color_variations"]:
+                # Only generate a new URL if one doesn't already exist
+                if variation.get("image_path") and not variation.get("image_url"):
+                    variation["image_url"] = commons.image_persistence_service.get_signed_url(
+                        variation["image_path"],
+                        is_palette=True
+                    )
+        
         return concept
     except ResourceNotFoundError:
         # Re-raise our custom errors directly
@@ -200,4 +245,4 @@ async def get_concept_detail(
     except Exception as e:
         logger.error(f"Error retrieving concept: {str(e)}")
         # Use our custom error class for service errors
-        raise ServiceUnavailableError(detail=f"Error retrieving concept: {str(e)}") 
+        raise ServiceUnavailableError(f"Error retrieving concept: {str(e)}") 

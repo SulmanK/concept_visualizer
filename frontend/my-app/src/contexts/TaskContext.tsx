@@ -1,9 +1,12 @@
 import React, { useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { createContext, useContextSelector } from 'use-context-selector';
 import { TaskResponse } from '../types/api.types';
-import { useTaskPolling } from '../hooks/useTaskPolling';
+import { useTaskSubscription } from '../hooks/useTaskSubscription';
 import { useQueryClient } from '@tanstack/react-query';
 import { TASK_STATUS } from '../config/apiEndpoints';
+
+// Event bus for task-related events
+type TaskEventListener = () => void;
 
 interface TaskContextType {
   /**
@@ -75,6 +78,11 @@ interface TaskContextType {
    * Set the result ID manually (for cases where the result_id isn't coming from the task)
    */
   setLatestResultId: (resultId: string | null) => void;
+  
+  /**
+   * Subscribe to task cleared events
+   */
+  onTaskCleared: (listener: TaskEventListener) => () => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -94,7 +102,7 @@ interface TaskContextData {
  */
 export const TaskProvider: React.FC<TaskProviderProps> = ({ 
   children, 
-  pollingInterval = 2000 
+  pollingInterval = 2000 // Keep for backwards compatibility, but not used with Realtime
 }) => {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [isTaskInitiating, setIsTaskInitiating] = useState<boolean>(false);
@@ -102,6 +110,8 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const initiatingStartTimeRef = useRef<number | null>(null);
   // Track the latest result ID from completed tasks
   const [latestResultId, setLatestResultId] = useState<string | null>(null);
+  // Task event listeners
+  const taskClearedListenersRef = useRef<Set<TaskEventListener>>(new Set());
   const queryClient = useQueryClient();
   
   // Update initiatingStartTime when isTaskInitiating changes
@@ -138,11 +148,19 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   // Create a callback for setting the task ID that we can pass to useTaskPolling
   const setActiveTask = useCallback((taskId: string | null) => {
     console.log(`[TaskContext] Setting active task to: ${taskId}`);
+    
+    // If we're setting a new task (and there was a previous one), ensure clean state
+    if (taskId && taskId !== activeTaskId) {
+      console.log(`[TaskContext] New task ID detected, ensuring clean state`);
+      // No need to call clearActiveTask here as it would trigger listeners
+      // Just make sure all internal state is reset properly
+    }
+    
     setActiveTaskId(taskId);
     if (taskId) {
       setIsTaskInitiating(false); // Reset initiating state when task ID is set
     }
-  }, []);
+  }, [activeTaskId]);
   
   // Create task context data object to avoid circular dependency
   const taskContextData: TaskContextData = {
@@ -151,7 +169,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   };
   
   // Function to handle task success
-  const handleTaskSuccess = (taskData: TaskResponse) => {
+  const handleTaskSuccess = useCallback((taskData: TaskResponse) => {
     // When the task completes successfully, store result ID if it exists
     if (taskData.status === TASK_STATUS.COMPLETED) {
       console.log(`[TaskContext] Task ${taskData.id} completed successfully`);
@@ -176,40 +194,41 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         console.log(`[TaskContext] Task completed but no result_id was found`);
       }
       
-      // Note: We no longer auto-clear completed tasks
-      // Let the TaskStatusBar handle the temporary display of completed status
+      // DO NOT clear the active task here anymore. Let the status bar handle it.
     }
-  };
+  }, [setLatestResultId, queryClient]);
   
   // Function to handle task error
-  const handleTaskError = (error: Error) => {
+  const handleTaskError = useCallback((error: Error) => {
     console.error(`[TaskContext] Task failed:`, error);
-    // When the task fails, we might want to keep it in the state
-    // so the user can see the error, but auto-clear after a while
-    const timer = setTimeout(() => {
-      console.log(`[TaskContext] Auto-clearing failed task after timeout`);
-      setActiveTaskId(null);
-    }, 8000); // Auto-clear failed tasks after 8 seconds
-    
-    return () => clearTimeout(timer);
-  };
+    // DO NOT automatically clear the active task here.
+    // The TaskStatusBar will show the error and auto-dismiss or allow manual dismissal.
+  }, []);
   
-  // Pass taskContextData directly to useTaskPolling to avoid circular dependency
+  // Use the new useTaskSubscription hook to get real-time updates
   const { 
-    data: activeTaskData,
-    isPending,
-    isProcessing,
-    isCompleted,
-    isFailed,
-    isLoading: isPollingLoading,
-    refresh: refreshTaskStatus
-  } = useTaskPolling({
-    taskId: activeTaskId,
-    pollingInterval,
-    enabled: true,
-    onSuccess: handleTaskSuccess,
-    onError: handleTaskError
-  });
+    taskData: activeTaskData,
+    error: subscriptionError
+  } = useTaskSubscription(activeTaskId);
+  
+  // Set up derived state based on the task data
+  const isTaskPending = activeTaskData?.status === TASK_STATUS.PENDING;
+  const isTaskProcessing = activeTaskData?.status === TASK_STATUS.PROCESSING;
+  const isTaskCompleted = activeTaskData?.status === TASK_STATUS.COMPLETED;
+  const isTaskFailed = activeTaskData?.status === TASK_STATUS.FAILED || 
+                      activeTaskData?.status === TASK_STATUS.CANCELED;
+  const hasActiveTask = Boolean(activeTaskId) && (isTaskPending || isTaskProcessing);
+  
+  // Process task data changes to call appropriate handlers
+  useEffect(() => {
+    if (!activeTaskData) return;
+    
+    if (activeTaskData.status === TASK_STATUS.COMPLETED) {
+      handleTaskSuccess(activeTaskData);
+    } else if (activeTaskData.status === TASK_STATUS.FAILED) {
+      handleTaskError(new Error(activeTaskData.error_message || 'Task failed'));
+    }
+  }, [activeTaskData, handleTaskSuccess, handleTaskError]);
   
   // Watch for result_id in task data even if onSuccess hasn't been called yet
   useEffect(() => {
@@ -223,62 +242,97 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   useEffect(() => {
     if (activeTaskData) {
       console.log(`[TaskContext] Task status update - ID: ${activeTaskData.id}, Status: ${activeTaskData.status}, Result ID: ${activeTaskData.result_id || 'none'}`);
-      console.log(`[TaskContext] Status flags - isPending: ${isPending}, isProcessing: ${isProcessing}, isCompleted: ${isCompleted}, isFailed: ${isFailed}`);
+      console.log(`[TaskContext] Status flags - isPending: ${isTaskPending}, isProcessing: ${isTaskProcessing}, isCompleted: ${isTaskCompleted}, isFailed: ${isTaskFailed}`);
     }
-  }, [activeTaskData, isPending, isProcessing, isCompleted, isFailed]);
+  }, [activeTaskData, isTaskPending, isTaskProcessing, isTaskCompleted, isTaskFailed]);
+  
+  // Handle subscription errors
+  useEffect(() => {
+    if (subscriptionError) {
+      console.error('[TaskContext] Subscription error:', subscriptionError);
+      // Here we could implement fallback logic like fetching task data manually
+    }
+  }, [subscriptionError]);
   
   const clearActiveTask = useCallback(() => {
     console.log(`[TaskContext] Manually clearing active task: ${activeTaskId}`);
     setActiveTaskId(null);
     setIsTaskInitiating(false);
     // Note: we don't clear the latestResultId here as it should persist
+    
+    // Notify listeners that task was cleared
+    taskClearedListenersRef.current.forEach(listener => {
+      try {
+        listener();
+      } catch (e) {
+        console.error('[TaskContext] Error in task cleared listener:', e);
+      }
+    });
   }, [activeTaskId]);
   
-  // Simplified hasActiveTask logic
-  const hasActiveTask = Boolean(
-    activeTaskId && (isPending || isProcessing)
-  );
+  // Function to register a task cleared event listener
+  const onTaskCleared = useCallback((listener: TaskEventListener) => {
+    console.log('[TaskContext] Adding task cleared listener');
+    taskClearedListenersRef.current.add(listener);
+    
+    // Return an unsubscribe function
+    return () => {
+      console.log('[TaskContext] Removing task cleared listener');
+      taskClearedListenersRef.current.delete(listener);
+    };
+  }, []);
   
-  // Provide the task context
-  const value: TaskContextType = {
+  // Function to manually refresh task status (e.g. after the app comes back from background)
+  const refreshTaskStatus = useCallback(() => {
+    if (activeTaskId) {
+      console.log(`[TaskContext] Manually refreshing task status for ${activeTaskId}`);
+      queryClient.invalidateQueries({ 
+        queryKey: ['tasks', 'detail', activeTaskId]
+      });
+    }
+  }, [activeTaskId, queryClient]);
+  
+  // Create the context value object
+  const contextValue: TaskContextType = {
     activeTaskId,
-    activeTaskData: activeTaskData || null,
+    activeTaskData,
     setActiveTask,
     clearActiveTask,
     hasActiveTask,
-    isTaskPending: isPending || false,
-    isTaskProcessing: isProcessing || false,
-    isTaskCompleted: isCompleted || false,
-    isTaskFailed: isFailed || false,
+    isTaskPending,
+    isTaskProcessing,
+    isTaskCompleted,
+    isTaskFailed,
     isTaskInitiating,
     setIsTaskInitiating,
     refreshTaskStatus,
     latestResultId,
-    setLatestResultId
+    setLatestResultId,
+    onTaskCleared
   };
   
   return (
-    <TaskContext.Provider value={value}>
+    <TaskContext.Provider value={contextValue}>
       {children}
     </TaskContext.Provider>
   );
 };
 
 /**
- * Hook for accessing the task context.
- * Must be used within a TaskProvider component.
+ * Hook to access the task context
+ * @returns Task context value
+ * @throws Error if used outside of TaskProvider
  */
 export const useTaskContext = (): TaskContextType => {
+  // Use useContextSelector for consistency with other selector hooks
   const context = useContextSelector(TaskContext, state => state);
-  
   if (context === undefined) {
     throw new Error('useTaskContext must be used within a TaskProvider');
   }
-  
   return context;
 };
 
-// Add specific selector hooks for better performance
+// Selector hooks for optimized re-renders
 export const useHasActiveTask = () => useContextSelector(TaskContext, state => state?.hasActiveTask);
 export const useIsTaskProcessing = () => useContextSelector(TaskContext, state => state?.isTaskProcessing);
 export const useIsTaskPending = () => useContextSelector(TaskContext, state => state?.isTaskPending);
@@ -287,5 +341,6 @@ export const useIsTaskFailed = () => useContextSelector(TaskContext, state => st
 export const useLatestResultId = () => useContextSelector(TaskContext, state => state?.latestResultId);
 export const useTaskInitiating = () => useContextSelector(TaskContext, state => state?.isTaskInitiating);
 export const useActiveTaskId = () => useContextSelector(TaskContext, state => state?.activeTaskId);
+export const useOnTaskCleared = () => useContextSelector(TaskContext, state => state?.onTaskCleared);
 
 export default TaskContext; 

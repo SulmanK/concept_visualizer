@@ -120,7 +120,10 @@ const AppRoutes = () => {
  */
 const AppContent = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
-  const errorHandler = useErrorHandling();
+  const errorHandler = useErrorHandling({
+    // Don't show toasts for errors that will be displayed in the global error UI
+    showToasts: false
+  });
 
   // Set basic debug info for development environment
   useEffect(() => {
@@ -132,6 +135,44 @@ const AppContent = () => {
       });
     }
   }, []);
+  
+  // Listen for global error events that should be displayed in the UI
+  useEffect(() => {
+    // Listen for auth errors
+    const authErrorHandler = () => {
+      errorHandler.setError(
+        'Your session has expired',
+        'auth', 
+        'Please sign in again to continue.'
+      );
+    };
+    
+    // Listen for network status changes
+    const networkErrorHandler = (event: CustomEvent) => {
+      if (!event.detail.isOnline) {
+        errorHandler.setError(
+          'You are offline',
+          'network',
+          'Please check your internet connection and try again.'
+        );
+      } else {
+        // Clear network errors when back online
+        if (errorHandler.error?.category === 'network') {
+          errorHandler.clearError();
+        }
+      }
+    };
+    
+    // Add event listeners
+    document.addEventListener('auth-error-needs-logout', authErrorHandler);
+    document.addEventListener('network-status-change', networkErrorHandler as EventListener);
+    
+    // Clean up listeners
+    return () => {
+      document.removeEventListener('auth-error-needs-logout', authErrorHandler);
+      document.removeEventListener('network-status-change', networkErrorHandler as EventListener);
+    };
+  }, [errorHandler]);
 
   return (
     <>
@@ -142,29 +183,47 @@ const AppContent = () => {
             <Router>
               {/* Global Error Message */}
               {errorHandler.hasError && errorHandler.error && (
-                <div style={{ position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, width: '90%', maxWidth: '600px' }}>
-                  <ErrorMessage
-                    message={errorHandler.error.message}
-                    details={errorHandler.error.details}
-                    type={errorHandler.error.category as any}
-                    error_code={errorHandler.error.originalError && typeof errorHandler.error.originalError === 'object' ? 
-                      (errorHandler.error.originalError as any).error_code : undefined}
-                    onDismiss={errorHandler.clearError}
-                    onRetry={errorHandler.error.category !== 'rateLimit' ? () => {
-                      // Implement retry logic if needed
-                      errorHandler.clearError();
-                    } : undefined}
-                    rateLimitData={
-                      errorHandler.error.category === 'rateLimit' 
-                        ? {
-                            limit: errorHandler.error.limit || 0,
-                            current: errorHandler.error.current || 0,
-                            period: errorHandler.error.period || 'unknown',
-                            resetAfterSeconds: errorHandler.error.resetAfterSeconds || 0
-                          }
-                        : undefined
-                    }
-                  />
+                <div 
+                  className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 w-[90%] max-w-[600px] animate-slide-down shadow-xl"
+                  role="alert"
+                  aria-live="assertive"
+                >
+                  {errorHandler.error.category === 'rateLimit' ? (
+                    <ErrorMessage
+                      message={errorHandler.error.message}
+                      details={errorHandler.error.details}
+                      type="rateLimit"
+                      className="shadow-lg border-2"
+                      onDismiss={errorHandler.clearError}
+                      rateLimitData={{
+                        limit: errorHandler.error.limit || 0,
+                        current: errorHandler.error.current || 0,
+                        period: errorHandler.error.period || 'unknown',
+                        resetAfterSeconds: errorHandler.error.resetAfterSeconds || 0
+                      }}
+                    />
+                  ) : errorHandler.error.category === 'validation' && errorHandler.error.validationErrors ? (
+                    <ErrorMessage
+                      message={errorHandler.error.message}
+                      details={errorHandler.error.details}
+                      type="validation"
+                      className="shadow-lg border-2"
+                      onDismiss={errorHandler.clearError}
+                      validationErrors={errorHandler.error.validationErrors}
+                    />
+                  ) : (
+                    <ErrorMessage
+                      message={errorHandler.error.message}
+                      details={errorHandler.error.details}
+                      type={errorHandler.error.category as any}
+                      className="shadow-lg border-2"
+                      status={errorHandler.error.status}
+                      onDismiss={errorHandler.clearError}
+                      onRetry={errorHandler.error.category === 'network' ? () => {
+                        window.location.reload();
+                      } : undefined}
+                    />
+                  )}
                 </div>
               )}
             

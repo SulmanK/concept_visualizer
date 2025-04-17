@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useRefineConceptMutation } from '../../hooks/useConceptMutations';
 import { RefinementHeader } from './components/RefinementHeader';
 import { RefinementForm } from './components/RefinementForm';
 import { ComparisonView } from './components/ComparisonView';
 import { RefinementActions } from './components/RefinementActions';
 import { Card } from '../../components/ui/Card';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, useUserId, useAuthIsLoading } from '../../contexts/AuthContext';
 import { useConceptDetail } from '../../hooks/useConceptQueries';
 import { TaskResponse } from '../../types';
 import { useErrorHandling } from '../../hooks/useErrorHandling';
@@ -22,7 +22,8 @@ export const RefinementPage: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get('colorId');
-  const { user, isLoading: authLoading } = useAuth();
+  const userId = useUserId();
+  const isAuthLoading = useAuthIsLoading();
   const errorHandler = useErrorHandling();
   const handleAsyncError = createAsyncErrorHandler(errorHandler, {
     defaultErrorMessage: 'Failed to load concept',
@@ -34,7 +35,7 @@ export const RefinementPage: React.FC = () => {
     data: conceptData, 
     isLoading: isLoadingConcept, 
     error: conceptFetchError 
-  } = useConceptDetail(conceptId, user?.id);
+  } = useConceptDetail(conceptId, userId);
   const conceptLoadError = conceptFetchError ? 
     (conceptFetchError instanceof Error ? conceptFetchError.message : 'Error loading concept') : 
     null;

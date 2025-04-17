@@ -2,9 +2,9 @@
 export { useConceptDetail, useRecentConcepts } from './useConceptQueries';
 export { useGenerateConceptMutation, useRefineConceptMutation } from './useConceptMutations';
 export { useRateLimitsQuery, useOptimisticRateLimitUpdate } from './useRateLimitsQuery';
-export { useTaskPolling } from './useTaskPolling';
 export { useExportImageMutation, downloadBlob } from './useExportImageMutation';
 export { useTaskStatusQuery, useTaskCancelMutation } from './useTaskQueries';
+export { useTaskSubscription } from './useTaskSubscription';
 export { useSessionSyncMutation } from './useSessionQuery';
 export { useConfigQuery } from './useConfigQuery';
 
