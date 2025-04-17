@@ -5,6 +5,9 @@ import { useTaskPolling } from '../hooks/useTaskPolling';
 import { useQueryClient } from '@tanstack/react-query';
 import { TASK_STATUS } from '../config/apiEndpoints';
 
+// Event bus for task-related events
+type TaskEventListener = () => void;
+
 interface TaskContextType {
   /**
    * The current active task ID
@@ -75,6 +78,11 @@ interface TaskContextType {
    * Set the result ID manually (for cases where the result_id isn't coming from the task)
    */
   setLatestResultId: (resultId: string | null) => void;
+  
+  /**
+   * Subscribe to task cleared events
+   */
+  onTaskCleared: (listener: TaskEventListener) => () => void;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -102,6 +110,8 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   const initiatingStartTimeRef = useRef<number | null>(null);
   // Track the latest result ID from completed tasks
   const [latestResultId, setLatestResultId] = useState<string | null>(null);
+  // Task event listeners
+  const taskClearedListenersRef = useRef<Set<TaskEventListener>>(new Set());
   const queryClient = useQueryClient();
   
   // Update initiatingStartTime when isTaskInitiating changes
@@ -138,11 +148,19 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   // Create a callback for setting the task ID that we can pass to useTaskPolling
   const setActiveTask = useCallback((taskId: string | null) => {
     console.log(`[TaskContext] Setting active task to: ${taskId}`);
+    
+    // If we're setting a new task (and there was a previous one), ensure clean state
+    if (taskId && taskId !== activeTaskId) {
+      console.log(`[TaskContext] New task ID detected, ensuring clean state`);
+      // No need to call clearActiveTask here as it would trigger listeners
+      // Just make sure all internal state is reset properly
+    }
+    
     setActiveTaskId(taskId);
     if (taskId) {
       setIsTaskInitiating(false); // Reset initiating state when task ID is set
     }
-  }, []);
+  }, [activeTaskId]);
   
   // Create task context data object to avoid circular dependency
   const taskContextData: TaskContextData = {
@@ -151,7 +169,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   };
   
   // Function to handle task success
-  const handleTaskSuccess = (taskData: TaskResponse) => {
+  const handleTaskSuccess = useCallback((taskData: TaskResponse) => {
     // When the task completes successfully, store result ID if it exists
     if (taskData.status === TASK_STATUS.COMPLETED) {
       console.log(`[TaskContext] Task ${taskData.id} completed successfully`);
@@ -176,23 +194,16 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
         console.log(`[TaskContext] Task completed but no result_id was found`);
       }
       
-      // Note: We no longer auto-clear completed tasks
-      // Let the TaskStatusBar handle the temporary display of completed status
+      // DO NOT clear the active task here anymore. Let the status bar handle it.
     }
-  };
+  }, [setLatestResultId, queryClient]);
   
   // Function to handle task error
-  const handleTaskError = (error: Error) => {
+  const handleTaskError = useCallback((error: Error) => {
     console.error(`[TaskContext] Task failed:`, error);
-    // When the task fails, we might want to keep it in the state
-    // so the user can see the error, but auto-clear after a while
-    const timer = setTimeout(() => {
-      console.log(`[TaskContext] Auto-clearing failed task after timeout`);
-      setActiveTaskId(null);
-    }, 8000); // Auto-clear failed tasks after 8 seconds
-    
-    return () => clearTimeout(timer);
-  };
+    // DO NOT automatically clear the active task here.
+    // The TaskStatusBar will show the error and auto-dismiss or allow manual dismissal.
+  }, []);
   
   // Pass taskContextData directly to useTaskPolling to avoid circular dependency
   const { 
@@ -232,7 +243,28 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     setActiveTaskId(null);
     setIsTaskInitiating(false);
     // Note: we don't clear the latestResultId here as it should persist
+    
+    // Notify listeners that task was cleared
+    taskClearedListenersRef.current.forEach(listener => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('[TaskContext] Error in task cleared listener:', error);
+      }
+    });
   }, [activeTaskId]);
+  
+  /**
+   * Subscribe to task cleared events
+   */
+  const onTaskCleared = useCallback((listener: TaskEventListener) => {
+    taskClearedListenersRef.current.add(listener);
+    
+    // Return unsubscribe function
+    return () => {
+      taskClearedListenersRef.current.delete(listener);
+    };
+  }, []);
   
   // Simplified hasActiveTask logic
   const hasActiveTask = Boolean(
@@ -254,7 +286,8 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     setIsTaskInitiating,
     refreshTaskStatus,
     latestResultId,
-    setLatestResultId
+    setLatestResultId,
+    onTaskCleared
   };
   
   return (

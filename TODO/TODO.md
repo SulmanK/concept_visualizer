@@ -1,137 +1,322 @@
-Okay, excellent! The fact that the static `AuthProvider` resolves the freeze is a **huge** breakthrough. It definitively points the finger at the dynamic behavior of the original `AuthProvider` and its interaction with Supabase's auth state management (`onAuthStateChange`, token refreshes, etc.).
+Okay, let's break down the issues with the `TaskStatusBar` and refactor it step-by-step to behave more like a standard production status indicator.
 
-The problem isn't the *data fetching* of concepts/rate limits *itself* (as those hooks still ran their `refetchOnWindowFocus` even with the static provider), but rather how the application **reacts to authentication state changes** that likely also happen upon returning to the tab (especially if the Axios interceptor triggers a token refresh).
+The core problems you identified are:
+1.  **Stays Visible:** The "Completed" status doesn't disappear automatically after its timeout.
+2.  **Stale Status:** When a new task starts, the "Completed" status from the *previous* task might still be showing.
 
-Here’s a breakdown of *why* the original `AuthProvider` likely caused the freeze and a step-by-step plan to fix it:
+The root cause likely lies in how the visibility and state (`shouldShowCompleted`, `isDismissed`) interact with the global task context flags (`isTaskCompleted`, `activeTaskId`) and potentially flawed timer management.
 
-**Likely Causes in the Original `AuthProvider`:**
+Here’s a refactoring strategy focusing on making the `TaskStatusBar` react directly to the *current* `activeTaskData` and manage its own display lifecycle more reliably.
 
-1.  **Frequent `onAuthStateChange` Triggers:** The Supabase listener might fire frequently, not just for sign-in/out, but also for events like `TOKEN_REFRESHED` or `USER_UPDATED`. When you tab back, the Axios interceptor might detect an impending expiry or receive a 401, trigger a token refresh, which then fires `onAuthStateChange`.
-2.  **Unnecessary State Updates:** The original `onAuthStateChange` handler likely called `setSession(newSession)` and `setUser(newSession?.user)` *every time* it fired. Even if only the `access_token` within the `session` object changed, creating a new `session` object reference forces a state update.
-3.  **Cascading Re-renders:** When `session` or `user` state updates in `AuthProvider`, the `value` prop passed to `AuthContext.Provider` changes. This triggers re-renders in *all* components consuming the context, especially those using the generic `useAuth()` hook instead of specific selectors. If many components re-render, or some key components (like `MainLayout` or `AppRoutes`) re-render large trees, this can block the main thread, causing the freeze.
-4.  **Selector Hook Usage (or lack thereof):** While you use `use-context-selector`, if crucial components high up the tree were still using the main `useAuth()` hook, they would re-render even if only the `session` (with its new token) changed, while the `user` object remained the same.
+**Refactoring Plan:**
 
-**Design Plan to Fix the Original `AuthProvider`:**
-
-This plan focuses on making the original provider smarter about *when* to update state and ensuring consumers are efficient.
-
-**Phase 1: Optimize State Updates within `AuthProvider`**
-
-
-**Step 2: Implement More Selective State Updates**
-
-*   **Objective:** Modify the `onAuthStateChange` listener and potentially the initial `getSession` logic to only update state when *meaningful* authentication data changes (like user ID, anonymous status, or actual sign-in/out), not just on token refreshes if the user identity remains the same.
-*   **Target File:** `src/contexts/AuthContext.tsx`
-*   **Actions:**
-    1.  **Store Previous State:** Inside the `AuthProvider` component, use `useRef` to keep track of the *previous* relevant user state (e.g., previous user ID, previous anonymous status).
-    2.  **Modify `onAuthStateChange` Callback:**
-        *   Inside the listener callback `(event, newSession) => { ... }`, compare the incoming `newSession?.user?.id` with the `previousUserIdRef.current`.
-        *   Compare the `newIsAnonymous` status (derived from `newSession`) with `previousIsAnonymousRef.current`.
-        *   **Conditionally Update:** Only call `setSession`, `setUser`, and `setIsAnonymous` if:
-            *   The `event` is `SIGNED_IN` or `SIGNED_OUT`.
-            *   OR the `newSession?.user?.id` is different from the previous ID.
-            *   OR the calculated `newIsAnonymous` status is different from the previous status.
-        *   **Always Update Session for Interceptor:** Even if user details don't change, we *might* still need to update the `session` state so the Axios interceptor can pick up the *latest* `access_token` for subsequent requests. Let's try updating *only* the session state if only the token changed, and see if that's enough. *Correction:* It's safer to always update the `session` state object reference when `onAuthStateChange` fires with a new session, as the interceptor relies on `getSession` which reads from Supabase's internal state reflected by this listener. The key is ensuring *consumers* don't overreact.
-    3.  **Refine Initial Load:** Apply similar comparison logic after the initial `initializeAnonymousAuth()` or `supabase.auth.getSession()` call in the main `useEffect`.
-    4.  **Add Logging:** Add detailed logs within the listener to see *when* state updates are actually being triggered vs. skipped.
-*   **Code Snippet Idea (Inside `onAuthStateChange`):**
-    ```typescript
-    const prevUserId = previousUserIdRef.current;
-    const prevIsAnonymous = previousIsAnonymousRef.current;
-
-    const currentUserId = newSession?.user?.id || null;
-    // Recalculate isAnonymous based on newSession (you need this logic)
-    const currentIsAnonymous = determineIsAnonymous(newSession); // Replace with your logic
-
-    // Always update session if it exists, for token refresh interceptor
-    if (newSession) {
-        setSession(newSession);
-        // Log if only token changed
-        if (currentUserId === prevUserId && currentIsAnonymous === prevIsAnonymous) {
-            console.log('[AUTH LISTENER] Session updated (token likely refreshed), user identity unchanged.');
-        }
-    } else {
-        setSession(null);
-    }
-
-    // Update user/anonymous state only if they actually changed
-    if (currentUserId !== prevUserId || currentIsAnonymous !== prevIsAnonymous || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        console.log(`[AUTH LISTENER] Significant auth change detected (Event: ${event}, User Change: ${currentUserId !== prevUserId}, Anon Change: ${currentIsAnonymous !== prevIsAnonymous}). Updating user state.`);
-        setUser(newSession?.user || null);
-        setIsAnonymous(currentIsAnonymous);
-
-        // Update refs
-        previousUserIdRef.current = currentUserId;
-        previousIsAnonymousRef.current = currentIsAnonymous;
-    }
-    ```
-
-**Phase 2: Ensure Efficient Context Consumption**
-
-**Step 3: Audit and Enforce Selector Hook Usage**
-
-*   **Objective:** Guarantee that components only re-render when the specific piece of auth state they care about actually changes.
-*   **Target Files:** All components using `useAuth`, `useUserId`, `useIsAnonymous`, `useAuthIsLoading`, etc.
-*   **Actions:**
-    1.  **Search Project:** Find all instances where the main `useAuth()` hook is called.
-    2.  **Refactor:** For each instance, determine if the component *really* needs the entire `session` or `user` object. If it only needs `userId`, `isAnonymous`, or `isLoading`, replace `useAuth()` with the specific selector hook (e.g., `useUserId()`).
-    3.  **Pay Attention To:**
-        *   `MainLayout.tsx`
-        *   `Header.tsx`
-        *   `AppRoutes` or components rendered directly by routes.
-        *   Any other component that might wrap large parts of the UI tree.
-*   **Verification:** Minimize the usage of the main `useAuth()` hook, favouring specific selectors.
-
-**Step 4: Verify Context Value Memoization**
-
-*   **Objective:** Ensure the `value` object provided to `AuthContext.Provider` doesn't change reference unnecessarily.
-*   **Target File:** `src/contexts/AuthContext.tsx` (The *original*, restored version)
-*   **Actions:**
-    1.  Find the `value` object created before the `return` statement.
-    2.  Ensure it's wrapped in `useMemo`.
-    3.  Critically review the dependency array of that `useMemo`. It *must* include all variables used inside the `value` object: `session`, `user`, `isAnonymous`, `isLoading`, `error`, and the memoized versions of `handleSignOut` and `handleLinkEmail` (which should be wrapped in `useCallback`).
-*   **Code Snippet Check:**
-    ```typescript
-     const handleSignOut = useCallback(async () => { /* ... */ }, []);
-     const handleLinkEmail = useCallback(async (email) => { /* ... */ }, [user]); // depends on user if it modifies it
-
-     const value = useMemo(() => ({
-       session,
-       user,
-       isAnonymous,
-       isLoading,
-       error,
-       signOut: handleSignOut, // Use the memoized version
-       linkEmail: handleLinkEmail // Use the memoized version
-     }), [session, user, isAnonymous, isLoading, error, handleSignOut, handleLinkEmail]); // Ensure all deps are listed
-
-     return (
-       <AuthContext.Provider value={value}>
-         {children}
-       </AuthContext.Provider>
-     );
-    ```
-
-**Phase 3: Testing and Verification**
-
-**Step 5: Test the Refactored `AuthProvider`**
-
-*   **Objective:** Confirm that the optimizations prevent the UI freeze during tab switching.
-*   **Actions:**
-    1.  Run the app with the modified *original* `AuthProvider`.
-    2.  Perform the tab-switching test on multiple pages.
-    3.  Monitor the console logs added in Step 2 to understand when auth state changes are happening and whether state updates are being skipped correctly.
-    4.  Use the React DevTools Profiler again, focusing on the commit triggered *after* tabbing back. Verify that fewer components re-render compared to before, especially if only a token refresh occurred. Check the "What caused this update?" section.
-*   **Verification:**
-    *   The UI freeze during/after tab switching is eliminated or significantly reduced.
-    *   Console logs show that `setUser` and `setIsAnonymous` are called less frequently (ideally only on actual user/status changes), while `setSession` might still update on token refresh.
-    *   Profiler shows shorter render times or fewer component renders triggered by `AuthProvider` updates.
-
-**Step 6: Final Cleanup**
-
-*   **Objective:** Remove temporary debugging logs.
-*   **Action:** Remove the detailed `console.log` statements added during debugging steps.
+1.  **Simplify State Management:** Rely primarily on `activeTaskData` from `TaskContext` to determine the display status. Remove the local `shouldShowCompleted` state.
+2.  **Improve Visibility Logic:** The bar should be visible only when there's an active task (`pending` or `processing`) or when a task has *just* finished (`completed` or `failed`) for a short duration, and only if not manually dismissed *for that specific task completion/failure*.
+3.  **Reliable Auto-Dismiss:** Implement a robust `useEffect`-based timer that triggers when the status changes to `completed` or `failed`, and automatically hides the bar after a set duration.
+4.  **Reset on New Task:** Ensure the bar correctly resets its dismissed state and timers when a *new* `activeTaskId` is set in the context.
 
 ---
 
-The key is to make the `AuthProvider` less "noisy" by being more selective about when it triggers full state updates, and to ensure consuming components are efficient by using selector hooks. This combination should prevent the widespread re-renders that are likely causing the freeze when the auth state is updated upon returning to the application.
+**Step 1: Refactor `TaskStatusBar.tsx`**
+
+This is the main component to change. We'll simplify its state and logic.
+
+```tsx
+// frontend/my-app/src/components/TaskStatusBar.tsx
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useTaskContext } from '../contexts/TaskContext';
+import { LoadingIndicator } from './ui/LoadingIndicator';
+import { TASK_STATUS } from '../config/apiEndpoints'; // Import task statuses
+
+// How long to show success/failure messages before auto-dismissing (in milliseconds)
+const AUTO_DISMISS_DELAY = 5000; // 5 seconds
+
+/**
+ * Displays the current task status as a floating bar.
+ * Refactored for more reliable state management and auto-dismissal.
+ */
+const TaskStatusBar: React.FC = () => {
+  // Get task state from the global context
+  const {
+    activeTaskId,
+    activeTaskData,
+    refreshTaskStatus,
+    clearActiveTask, // Use clearActiveTask to dismiss permanently for a session
+  } = useTaskContext();
+
+  // Local state to track manual dismissal *for the current task ID*
+  const [isManuallyDismissed, setIsManuallyDismissed] = useState(false);
+  // Store the task ID for which the dismissal applies
+  const dismissedTaskIdRef = useRef<string | null>(null);
+  // Ref for the auto-dismiss timer
+  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const status = activeTaskData?.status;
+  const taskId = activeTaskData?.id || activeTaskData?.task_id || activeTaskId; // Use ID from data if available
+
+  // --- Auto-Dismiss Logic ---
+  useEffect(() => {
+    // Clear existing timer whenever status or task ID changes
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+
+    // If the task is completed or failed, set a timer to dismiss it
+    if (status === TASK_STATUS.COMPLETED || status === TASK_STATUS.FAILED) {
+      console.log(`[TaskStatusBar] Setting auto-dismiss timer for task ${taskId} (status: ${status})`);
+      dismissTimerRef.current = setTimeout(() => {
+        console.log(`[TaskStatusBar] Auto-dismissing task ${taskId}`);
+        // Instead of local dismiss, clear the task from the global context
+        // Only clear if it's still the same task shown
+        if (activeTaskId === taskId) {
+           clearActiveTask();
+        }
+      }, AUTO_DISMISS_DELAY);
+    }
+
+    // Cleanup function to clear timer on unmount or dependency change
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    };
+  }, [status, taskId, clearActiveTask, activeTaskId]); // Rerun when status or taskId changes
+
+  // --- Manual Dismiss Logic ---
+  const handleManualDismiss = useCallback(() => {
+    console.log(`[TaskStatusBar] Manually dismissing task ${taskId}`);
+    setIsManuallyDismissed(true);
+    dismissedTaskIdRef.current = taskId; // Remember which task was dismissed
+
+    // Clear any pending auto-dismiss timer
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    // Optionally, clear the task globally immediately on manual dismiss
+    // clearActiveTask();
+  }, [taskId]); // Dependency is taskId
+
+  // --- Reset Dismissal State for New Tasks ---
+  useEffect(() => {
+    // If the active Task ID changes (and is not null), reset the manual dismissal state
+    if (taskId && taskId !== dismissedTaskIdRef.current) {
+      console.log(`[TaskStatusBar] New task detected (${taskId}), resetting dismissal state.`);
+      setIsManuallyDismissed(false);
+      dismissedTaskIdRef.current = null; // Clear the remembered dismissed ID
+    }
+  }, [taskId]); // Rerun only when taskId changes
+
+  // --- Visibility Logic ---
+  // Show if there's active task data AND (it's pending/processing OR it's completed/failed AND not manually dismissed for *this specific task*)
+  const isVisible =
+    !!activeTaskData &&
+    (
+      status === TASK_STATUS.PENDING ||
+      status === TASK_STATUS.PROCESSING ||
+      ((status === TASK_STATUS.COMPLETED || status === TASK_STATUS.FAILED) && (!isManuallyDismissed || dismissedTaskIdRef.current !== taskId))
+    );
+
+  // --- Render Logic ---
+  if (!isVisible) {
+    // Optional: Log why it's not visible for debugging
+    // console.log(`[TaskStatusBar] Not visible. TaskData: ${!!activeTaskData}, Status: ${status}, Dismissed: ${isManuallyDismissed}, DismissedID: ${dismissedTaskIdRef.current}, CurrentID: ${taskId}`);
+    return null;
+  }
+
+  let statusMessage = "Task status unknown";
+  let statusColor = "bg-gray-100 border-gray-300";
+  let statusIcon = null;
+
+  switch (status) {
+    case TASK_STATUS.PENDING:
+      statusMessage = "Request queued...";
+      statusColor = "bg-yellow-100 border-yellow-300";
+      statusIcon = <LoadingIndicator size="small" />;
+      break;
+    case TASK_STATUS.PROCESSING:
+      statusMessage = "Processing your request...";
+      statusColor = "bg-blue-100 border-blue-300";
+      statusIcon = <LoadingIndicator size="small" />;
+      break;
+    case TASK_STATUS.COMPLETED:
+      statusMessage = "Task completed successfully!";
+      statusColor = "bg-green-100 border-green-300";
+      statusIcon = (
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+      );
+      break;
+    case TASK_STATUS.FAILED:
+      statusMessage = activeTaskData?.error_message || "Task failed";
+      statusColor = "bg-red-100 border-red-300";
+      statusIcon = (
+        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      );
+      break;
+  }
+
+  console.log(`[TaskStatusBar] Rendering. Visible: ${isVisible}, Status: ${status}, Message: ${statusMessage}`);
+
+  return (
+    <div className={`fixed top-6 right-6 min-w-[320px] z-50 p-3 rounded-lg shadow-2xl border-2 ${statusColor} transition-all duration-300 transform ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}`}>
+      <div className="flex items-center">
+        <div className="mr-3 flex-shrink-0">
+          {statusIcon}
+        </div>
+        <div className="flex-grow">
+          <p className="text-sm font-medium">{statusMessage}</p>
+          {taskId && (
+            <p className="text-xs opacity-60">Task ID: {taskId.substring(0, 8)}...</p>
+          )}
+        </div>
+        <div className="flex ml-2">
+          {/* Refresh button is less useful now with polling, could be removed */}
+          {/* <button
+            onClick={refreshTaskStatus}
+            className="text-gray-500 hover:text-gray-700 mr-2"
+            aria-label="Refresh status"
+            title="Refresh Status"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          </button> */}
+          <button
+            onClick={handleManualDismiss}
+            className="text-gray-500 hover:text-gray-700"
+            aria-label="Close status"
+            title="Dismiss Status"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TaskStatusBar;
+```
+
+**Key Changes in `TaskStatusBar.tsx`:**
+
+1.  **Removed `shouldShowCompleted` State:** Visibility is now directly tied to the `activeTaskData`'s status and the new `isManuallyDismissed` state.
+2.  **Simplified `isVisible` Logic:** The bar shows if there's task data and the status is relevant (`pending`, `processing`, `completed`, `failed`), *unless* it has been manually dismissed for the *current* task ID.
+3.  **Added Auto-Dismiss `useEffect`:** When the status becomes `completed` or `failed`, a `setTimeout` is created using `dismissTimerRef`. After `AUTO_DISMISS_DELAY`, it calls `clearActiveTask` from the context (if the task ID still matches) to hide the bar globally. The timer is cleared if the status changes again or the component unmounts.
+4.  **Improved Manual Dismissal:** `handleManualDismiss` now sets `isManuallyDismissed` to `true`, remembers *which* task was dismissed using `dismissedTaskIdRef`, and clears the auto-dismiss timer.
+5.  **Reset Dismissal on New Task:** A new `useEffect` watches `taskId`. If `taskId` changes (a new task starts), it resets `isManuallyDismissed` to `false`, ensuring the bar shows up for the new task.
+6.  **Relies on Context for Task Data:** It consistently uses `activeTaskData` for status, error messages, and task ID.
+
+---
+
+**Step 2: Adjust `TaskContext.tsx` (Minor Change)**
+
+The main change here is to *remove* any logic within the `onSuccess` or `onError` callbacks (passed to `useTaskPolling`) that automatically clears the `activeTaskId`. The context should simply reflect the latest polled state. The `TaskStatusBar` (or potentially other components) will decide when to call `clearActiveTask`.
+
+```tsx
+// frontend/my-app/src/contexts/TaskContext.tsx
+// ... other imports ...
+import { useTaskPolling } from '../hooks/useTaskPolling'; // Ensure this is imported
+import { TASK_STATUS } from '../config/apiEndpoints'; // Import TASK_STATUS
+
+// ... (rest of the component code) ...
+
+  // Function to handle task success (SIMPLIFIED)
+  const handleTaskSuccess = useCallback((taskData: TaskResponse) => {
+    // When the task completes successfully, store result ID if it exists
+    if (taskData.status === TASK_STATUS.COMPLETED) {
+      console.log(`[TaskContext] Task ${taskData.id} completed successfully`);
+
+      if (taskData.result_id) {
+        console.log(`[TaskContext] Setting latest result ID: ${taskData.result_id}`);
+        setLatestResultId(taskData.result_id);
+
+        // Invalidate concept queries to ensure fresh data is displayed
+        queryClient.invalidateQueries({ queryKey: ['concepts', 'detail', taskData.result_id], exact: false });
+        queryClient.invalidateQueries({ queryKey: ['concepts', 'recent'] });
+      } else {
+        console.log(`[TaskContext] Task completed but no result_id was found`);
+      }
+      // DO NOT clear the active task here anymore. Let the status bar handle it.
+    }
+  }, [setLatestResultId, queryClient]); // Dependencies updated
+
+  // Function to handle task error (SIMPLIFIED)
+  const handleTaskError = useCallback((error: Error) => {
+    console.error(`[TaskContext] Task failed:`, error);
+    // DO NOT automatically clear the active task here.
+    // The TaskStatusBar will show the error and auto-dismiss or allow manual dismissal.
+  }, []); // No dependencies needed if just logging
+
+  // Pass taskContextData directly to useTaskPolling to avoid circular dependency
+  const {
+    data: activeTaskData,
+    isPending,
+    isProcessing,
+    isCompleted,
+    isFailed,
+    isLoading: isPollingLoading,
+    refresh: refreshTaskStatus
+  } = useTaskPolling({
+    taskId: activeTaskId,
+    pollingInterval,
+    enabled: true, // Polling is always enabled when there's an activeTaskId
+    onSuccess: handleTaskSuccess,
+    onError: handleTaskError
+  });
+
+  // ... (rest of the component code, including clearActiveTask and context value) ...
+
+  const clearActiveTask = useCallback(() => {
+    console.log(`[TaskContext] Manually clearing active task: ${activeTaskId}`);
+    setActiveTaskId(null);
+    setIsTaskInitiating(false);
+    // Clear latestResultId when task is explicitly cleared? Maybe not, depends on desired behavior.
+    // setLatestResultId(null);
+  }, [activeTaskId]); // Dependency updated
+
+  const value: TaskContextType = {
+    // ... other properties ...
+    clearActiveTask, // Make sure clearActiveTask is included
+    // ... rest of the properties ...
+    isTaskPending: isPending || false, // Use derived flags from useTaskPolling
+    isTaskProcessing: isProcessing || false,
+    isTaskCompleted: isCompleted || false,
+    isTaskFailed: isFailed || false,
+  };
+
+// ... (rest of the component code) ...
+```
+
+**Key Changes in `TaskContext.tsx`:**
+
+1.  **Simplified Callbacks:** Removed logic from `handleTaskSuccess` and `handleTaskError` that automatically cleared the `activeTaskId`. The context now focuses on reflecting the state fetched by polling.
+2.  **Dependency on `clearActiveTask`:** The `TaskStatusBar` now calls `clearActiveTask` from the context when it auto-dismisses or is manually dismissed (if that behavior is desired for manual dismissal).
+
+---
+
+**Step 3: Verify `useTaskPolling.ts` and Task Initiation**
+
+*   **`useTaskPolling.ts`:** The existing logic seems generally sound. It uses React Query (`useTaskStatusQuery`) which handles caching and refetching. The `useEffect` that stops polling when `isTaskCompleted` becomes true is correct. The key is that it *reports* the final status correctly via its returned `data`.
+*   **`useConceptMutations.ts`:** The logic for setting `isTaskInitiating` and then calling `setActiveTask` upon receiving the initial task response seems correct and should work well with the refactored `TaskStatusBar`.
+
+---
+
+**Summary of Changes:**
+
+1.  **`TaskStatusBar.tsx`:** Overhauled to manage its own visibility based on `activeTaskData` and a new `isManuallyDismissed` state tied to the specific `taskId`. Implemented a reliable auto-dismiss timer using `useEffect`. Reset dismissal state when a new task starts.
+2.  **`TaskContext.tsx`:** Simplified the callbacks passed to `useTaskPolling` by removing the automatic clearing of the active task. The context now purely reflects the polled state.
+
+**Benefits of this Refactor:**
+
+1.  **Correct State Handling:** The status bar now reliably shows the status of the *current* active task. When a new task starts, the bar resets and shows the new task's status.
+2.  **Reliable Auto-Dismiss:** The `completed` and `failed` states will show for a defined duration (`AUTO_DISMISS_DELAY`) and then the bar will disappear by clearing the global task state.
+3.  **Clearer Logic:** State management within the `TaskStatusBar` is simplified and more directly tied to the `activeTaskData`.
+4.  **Improved User Experience:** Provides consistent feedback without lingering completed/failed messages interfering with new tasks.
+5.  **Robustness:** Handles edge cases like starting a new task while the previous completion message is still visible.
+
+Remember to test these changes thoroughly across different scenarios to ensure the desired behavior.
