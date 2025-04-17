@@ -1,21 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient, RateLimitError } from '../services/apiClient';
 import { 
-  GenerationResponse, 
   PromptRequest, 
   RefinementRequest,
   TaskResponse
-} from '../types';
+} from '../types/api.types';
+import { useToast } from './useToast';
 import { useAuth } from '../contexts/AuthContext';
 import { useErrorHandling } from './useErrorHandling';
 import { createQueryErrorHandler } from '../utils/errorUtils';
 import { useRateLimitsDecrement } from '../contexts/RateLimitContext';
-import { useTaskPolling } from './useTaskPolling';
 import { useState } from 'react';
 import { useTaskContext } from '../contexts/TaskContext';
 import { API_ENDPOINTS } from '../config/apiEndpoints';
 import { queryKeys } from '../config/queryKeys';
 import { useNetworkStatus } from './useNetworkStatus';
+import { ConceptData } from '../services/supabaseClient';
 
 /**
  * Extract a more user-friendly error message from API error responses

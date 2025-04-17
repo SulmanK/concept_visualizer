@@ -8,7 +8,7 @@ const AUTO_DISMISS_DELAY = 30000; // 30 seconds
 
 /**
  * Displays the current task status as a floating bar.
- * Refactored for more reliable state management and auto-dismissal.
+ * Updated to work with Supabase Realtime subscriptions.
  */
 const TaskStatusBar: React.FC = () => {
   // Get task state from the global context
@@ -39,6 +39,25 @@ const TaskStatusBar: React.FC = () => {
     console.log(`[TaskStatusBar] State update - activeTaskId: ${activeTaskId}, status: ${status}, isInitiating: ${isTaskInitiating}`);
     console.log(`[TaskStatusBar] Flags - isTaskPending: ${isTaskPending}, isTaskProcessing: ${isTaskProcessing}`);
   }, [activeTaskId, status, isTaskInitiating, isTaskPending, isTaskProcessing]);
+
+  // Refresh task status periodically when in pending state (as fallback)
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    // Set up a fallback polling mechanism in case Realtime subscription fails
+    if ((isTaskPending || isTaskProcessing) && activeTaskId) {
+      intervalId = setInterval(() => {
+        console.log(`[TaskStatusBar] Fallback refresh for task ${activeTaskId}`);
+        refreshTaskStatus();
+      }, 10000); // Every 10 seconds as fallback
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isTaskPending, isTaskProcessing, activeTaskId, refreshTaskStatus]);
 
   // --- Auto-Dismiss Logic ---
   useEffect(() => {
@@ -161,6 +180,15 @@ const TaskStatusBar: React.FC = () => {
           </svg>
         );
         break;
+      case TASK_STATUS.CANCELED:
+        statusMessage = "Task was canceled";
+        statusColor = "bg-gray-100 border-gray-300";
+        statusIcon = (
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        );
+        break;
     }
   }
 
@@ -179,6 +207,19 @@ const TaskStatusBar: React.FC = () => {
           )}
         </div>
         <div className="flex ml-2">
+          {/* When processing, add a manual refresh button */}
+          {(isTaskPending || isTaskProcessing) && (
+            <button
+              onClick={refreshTaskStatus}
+              className="text-gray-500 hover:text-gray-700 mr-2"
+              aria-label="Refresh status"
+              title="Refresh Status"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+          )}
           <button
             onClick={handleManualDismiss}
             className="text-gray-500 hover:text-gray-700"

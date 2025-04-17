@@ -1,11 +1,14 @@
-import React, { useState, FormEvent, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, FormEvent } from 'react';
 import { Button } from '../ui/Button';
 import { TextArea } from '../ui/TextArea';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { FormStatus } from '../../types';
 import { Spinner } from '../ui';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext, useOnTaskCleared } from '../../contexts/TaskContext';
+import { useToast } from '../../hooks/useToast';
+import { useErrorHandling, ErrorWithCategory, ErrorCategory } from '../../hooks/useErrorHandling';
+import { ConceptData } from '../../services/supabaseClient';
 
 export interface ConceptRefinementFormProps {
   /**
@@ -100,9 +103,44 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   const [themeDescription, setThemeDescription] = useState(initialThemeDescription);
   const [preserveAspects, setPreserveAspects] = useState<string[]>(defaultPreserveAspects);
   const [validationError, setValidationError] = useState<string | undefined>(undefined);
+  const [feedback, setFeedback] = useState('');
+  const [refinementMethod, setRefinementMethod] = useState<RefinementMethod>('both');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
   
   // Get global task status
   const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } = useTaskContext();
+  
+  // Use the dedicated selector hook for onTaskCleared
+  const onTaskCleared = useOnTaskCleared();
+  
+  // Reset form when task is cleared
+  useEffect(() => {
+    if (!onTaskCleared) {
+      console.warn('[ConceptRefinementForm] onTaskCleared is not available');
+      return;
+    }
+    
+    try {
+      const unsubscribe = onTaskCleared(() => {
+        console.log('[ConceptRefinementForm] Task cleared event received, resetting form');
+        setRefinementPrompt('');
+        setLogoDescription(initialLogoDescription);
+        setThemeDescription(initialThemeDescription);
+        setPreserveAspects(defaultPreserveAspects);
+        setValidationError(undefined);
+        if (formRef.current) {
+          formRef.current.reset();
+        }
+      });
+      
+      // Clean up subscription when component unmounts
+      return unsubscribe;
+    } catch (e) {
+      console.error('[ConceptRefinementForm] Error setting up task cleared listener:', e);
+    }
+  }, [onTaskCleared, initialLogoDescription, initialThemeDescription, defaultPreserveAspects]);
   
   // Update preserve aspects when defaultPreserveAspects changes
   useEffect(() => {
@@ -118,12 +156,14 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
     { id: 'color_scheme', label: 'Color Scheme' },
   ];
   
-  const isSubmitting = status === 'submitting';
-  const isSuccess = status === 'success';
   const showProcessing = isProcessing || isTaskPending || isTaskProcessing;
   
+  // Derive submission status from props
+  const isSubmittingForm = status === 'submitting';
+  const isSuccess = status === 'success';
+  
   // Check if any task is in progress
-  const isTaskInProgress = hasActiveTask || isSubmitting || isSuccess || isProcessing;
+  const isTaskInProgress = hasActiveTask || isSubmittingForm || isSuccess || isProcessing;
   
   // Get active task type for message customization
   const activeTaskType = activeTaskData?.type || '';
@@ -197,7 +237,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           </p>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" ref={formRef}>
           {/* Original image thumbnail */}
           <div className="flex justify-center mb-4">
             <div className="w-40 h-40 border border-indigo-200 rounded-lg overflow-hidden shadow-sm">
@@ -308,7 +348,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
           )}
           
           {/* Active task message */}
-          {hasActiveTask && !isSubmitting && !showProcessing && (
+          {hasActiveTask && !isSubmittingForm && !showProcessing && (
             <div className="flex items-center bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded relative" role="alert">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -332,7 +372,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
             )}
             
             <div className="flex items-center ml-auto">
-              {isSubmitting && (
+              {isSubmittingForm && (
                 <div className="flex items-center mr-4">
                   <Spinner size="sm" className="mr-2" />
                   <span className="text-indigo-600 text-sm">Submitting...</span>
@@ -346,7 +386,7 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
                 disabled={isTaskInProgress}
                 className={hasActiveTask ? "opacity-50" : ""}
               >
-                {isSubmitting ? 'Please wait...' : 
+                {isSubmittingForm ? 'Please wait...' : 
                  hasActiveTask ? 'Task in progress...' : 
                  'Refine Concept'}
               </Button>
