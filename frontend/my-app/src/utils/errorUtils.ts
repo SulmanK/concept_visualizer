@@ -115,7 +115,7 @@ export const createQueryErrorHandler = (
       errorHandler.setError(
         error.getUserFriendlyMessage(),
         'rateLimit',
-        'Please try again later or upgrade your plan.',
+        'Please try again next month when the usage limits reset.',
         error
       );
       return;

@@ -1,6 +1,16 @@
 import { useState, useCallback } from 'react';
 import useToast from './useToast';
 import { formatTimeRemaining } from '../services/rateLimitService';
+import { 
+  RateLimitError, 
+  AuthError, 
+  PermissionError, 
+  NotFoundError, 
+  ServerError, 
+  ValidationError, 
+  NetworkError,
+  ApiError 
+} from '../services/apiClient';
 
 export type ErrorCategory = 
   | 'validation'   // Form validation errors
@@ -10,6 +20,8 @@ export type ErrorCategory =
   | 'server'       // Server-side errors
   | 'client'       // Client-side errors
   | 'rateLimit'    // Rate limit errors
+  | 'auth'         // Authentication errors (401)
+  | 'validation'   // Validation errors (422)
   | 'unknown';     // Uncategorized errors
 
 export interface ErrorWithCategory {
@@ -22,6 +34,11 @@ export interface ErrorWithCategory {
   current?: number;
   period?: string;
   resetAfterSeconds?: number;
+  // Validation specific properties
+  validationErrors?: Record<string, string[]>;
+  // API error specific properties
+  status?: number;
+  url?: string;
 }
 
 export interface UseErrorHandlingResult {
@@ -115,12 +132,58 @@ export const useErrorHandling = (options: {
    * Categorize an error based on its properties or message
    */
   const categorizeError = useCallback((error: unknown): ErrorCategory => {
+    // Check for our custom API error types
+    if (error instanceof AuthError) {
+      return 'auth';
+    }
+    
+    if (error instanceof PermissionError) {
+      return 'permission';
+    }
+    
+    if (error instanceof NotFoundError) {
+      return 'notFound';
+    }
+    
+    if (error instanceof ServerError) {
+      return 'server';
+    }
+    
+    if (error instanceof ValidationError) {
+      return 'validation';
+    }
+    
+    if (error instanceof NetworkError) {
+      // Check if this network error is a CORS error that might be a rate limit
+      if (error.possibleRateLimit) {
+        console.log('[useErrorHandling] Detected NetworkError that might be a rate limit issue');
+        return 'rateLimit';
+      }
+      return 'network';
+    }
+    
+    if (error instanceof RateLimitError) {
+      return 'rateLimit';
+    }
+    
+    if (error instanceof ApiError) {
+      // Generic API error - categorize based on status code
+      if (error.status >= 500) {
+        return 'server';
+      } else if (error.status >= 400) {
+        return 'client';
+      }
+    }
+    
     // Handle axios or fetch errors
     if (typeof error === 'object' && error !== null) {
       const err = error as any;
       
-      // Check for rate limit errors based on status code
-      if (err.status === 429 || err.statusCode === 429) {
+      // Check for rate limit errors based on status code or message
+      if (err.status === 429 || err.statusCode === 429 || 
+          (err.message && 
+           (err.message.toLowerCase().includes('rate limit') ||
+            err.message.toLowerCase().includes('too many requests')))) {
         return 'rateLimit';
       }
       
@@ -130,7 +193,11 @@ export const useErrorHandling = (options: {
       }
       
       // Status code based categorization
-      if (err.status === 401 || err.status === 403 || err.statusCode === 401 || err.statusCode === 403) {
+      if (err.status === 401 || err.statusCode === 401) {
+        return 'auth';
+      }
+      
+      if (err.status === 403 || err.statusCode === 403) {
         return 'permission';
       }
       
@@ -243,9 +310,68 @@ export const useErrorHandling = (options: {
       const message = extractErrorMessage(error);
       const details = extractErrorDetails(error);
       
-      setError(message, category, details, error);
+      // Create the base error object
+      const errorWithCategory: ErrorWithCategory = {
+        message,
+        details,
+        category,
+        originalError: error
+      };
+      
+      // Add specific properties based on error type
+      if (error instanceof ApiError) {
+        errorWithCategory.status = error.status;
+        errorWithCategory.url = error.url;
+      }
+      
+      // Handle rate limit errors specifically to extract more data
+      if (category === 'rateLimit') {
+        if (error instanceof RateLimitError) {
+          // Extract rate limit specific data
+          errorWithCategory.limit = error.limit;
+          errorWithCategory.current = error.current;
+          errorWithCategory.period = error.period;
+          errorWithCategory.resetAfterSeconds = error.resetAfterSeconds;
+        } else if (error instanceof NetworkError && error.possibleRateLimit) {
+          // For network errors that might be rate limits, set default values
+          errorWithCategory.limit = 10;
+          errorWithCategory.current = 10;
+          errorWithCategory.period = '15min';
+          errorWithCategory.resetAfterSeconds = 60; // Default 1 minute
+          errorWithCategory.details = 'This might be due to hitting a rate limit or the server being temporarily unavailable. Please try again later.';
+        } else if (typeof error === 'object' && error !== null) {
+          // Try to extract rate limit data from generic error objects
+          const err = error as any;
+          errorWithCategory.limit = err.limit || err.response?.data?.limit;
+          errorWithCategory.current = err.current || err.response?.data?.current;
+          errorWithCategory.period = err.period || err.response?.data?.period;
+          errorWithCategory.resetAfterSeconds = err.resetAfterSeconds || 
+                                              err.response?.data?.reset_after_seconds ||
+                                              err.response?.headers?.['retry-after'];
+        }
+      }
+      
+      // Handle validation errors
+      if (category === 'validation' && error instanceof ValidationError) {
+        errorWithCategory.validationErrors = error.errors;
+      }
+      
+      setErrorState(errorWithCategory);
+      
+      if (showToasts) {
+        // Map error category to toast type
+        const toastType = 
+          category === 'server' || category === 'client' ? 'error' :
+          category === 'validation' ? 'warning' :
+          category === 'network' ? 'info' :
+          category === 'rateLimit' ? 'warning' :
+          category === 'auth' ? 'error' :
+          'error';
+        
+        toast.showToast(toastType, message);
+      }
     },
-    [categorizeError, extractErrorMessage, extractErrorDetails, setError]
+    [categorizeError, extractErrorMessage, extractErrorDetails, setErrorState, showToasts, toast]
   );
   
   /**

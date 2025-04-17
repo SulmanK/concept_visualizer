@@ -54,7 +54,7 @@ class ConceptGenerator:
         try:
             # Generate logo image
             image_url = await self.client.generate_image(
-                logo_description=logo_description,
+                prompt=logo_description,
                 width=512,
                 height=512,
                 model="stable-diffusion-xl",
