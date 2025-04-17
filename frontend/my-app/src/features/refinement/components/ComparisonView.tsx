@@ -1,12 +1,10 @@
 import React, { useCallback } from 'react';
-import { ConceptResult } from '../../../components/concept/ConceptResult';
-import { useConceptDetail } from '../../../hooks/useConceptQueries';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../contexts/AuthContext';
-import { Card } from '../../../components/ui/Card';
-import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
-import { getSignedImageUrl } from '../../../services/supabaseClient';
-import { OptimizedImage } from '../../../components/ui/OptimizedImage';
+import { useConceptDetail } from '../../../hooks/useConceptQueries';
+import { Card } from '../../../components/ui';
+import { SkeletonLoader } from '../../../components/ui';
+import { ConceptResult } from '../../../components/concept';
+import { OptimizedImage } from '../../../components/ui';
 
 interface ComparisonViewProps {
   originalImageUrl: string;
@@ -16,7 +14,7 @@ interface ComparisonViewProps {
 }
 
 /**
- * Side-by-side comparison of original and refined concepts
+ * Displays a comparison between the original and refined concept
  */
 export const ComparisonView: React.FC<ComparisonViewProps> = ({
   originalImageUrl,
@@ -25,32 +23,26 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   selectedColor = null,
 }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   
-  // Fetch the refined concept details
+  // Fetch the refined concept using its ID
   const { 
     data: refinedConcept, 
-    isLoading,
+    isLoading, 
     error 
-  } = useConceptDetail(refinedConceptId, user?.id);
+  } = useConceptDetail(refinedConceptId);
   
-  // Handler to navigate to the concept details page
-  const handleExport = useCallback((conceptId: string) => {
-    navigate(`/concepts/${conceptId}?showExport=true`);
-  }, [navigate]);
-
-  // Handler to view details
+  // Handle export button click
+  const handleExport = useCallback(() => {
+    console.log('Export clicked for:', refinedConceptId);
+    // Implementation would go here
+  }, [refinedConceptId]);
+  
+  // Handle view details button click
   const handleViewDetails = useCallback(() => {
     if (refinedConcept?.id) {
       navigate(`/concepts/${refinedConcept.id}`);
     }
   }, [navigate, refinedConcept?.id]);
-
-  // Format image URLs for the ConceptResult component
-  const formatImageUrl = useCallback((url: string | undefined, bucketType?: string) => {
-    if (!url) return '';
-    return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
-  }, []);
 
   if (isLoading) {
     return (
@@ -127,7 +119,6 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
           variations={refinedConcept.variations || []}
           onViewDetails={handleViewDetails}
           onExport={handleExport}
-          formatImageUrl={formatImageUrl}
         />
       </div>
       

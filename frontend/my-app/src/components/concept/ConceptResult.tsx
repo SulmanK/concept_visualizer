@@ -44,11 +44,6 @@ export interface ConceptResultProps {
   onExport?: (conceptId: string) => void;
   
   /**
-   * Handler for formatting URLs (replaces direct dependency on supabaseClient)
-   */
-  formatImageUrl?: (url: string | undefined, bucketType?: string) => string;
-  
-  /**
    * The currently selected color
    */
   selectedColor?: string | null;
@@ -69,7 +64,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   onColorSelect,
   variations = [],
   onExport,
-  formatImageUrl,
   selectedColor = null,
   onViewDetails
 }) => {
@@ -88,25 +82,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     // Set a placeholder or fallback image
     target.src = '/images/placeholder-image.png';
     target.alt = 'Image failed to load';
-  };
-  
-  // Utility function to format URLs using the provided formatter or a default
-  const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
-    if (!url) return '/images/placeholder-image.png';
-    
-    // Use the provided formatter if available
-    if (formatImageUrl) {
-      return formatImageUrl(url, bucketType);
-    }
-    
-    // Default formatting logic as fallback
-    // This might not work in all cases, which is why formatImageUrl is expected to be provided
-    if (url.startsWith('http')) {
-      return url;
-    }
-    
-    // If no proper formatter and not a complete URL, use a placeholder
-    return '/images/placeholder-image.png';
   };
   
   if (!concept || !concept.image_url) {
@@ -166,15 +141,17 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   };
   
   const getOriginalImageUrl = (): string => {
-    return getFormattedUrl(concept.image_url);
+    return concept.image_url || '/images/placeholder-image.png';
   };
   
   const getCurrentImageUrl = () => {
+    // If a variation is selected, use its image_url
     if (selectedVariation !== null && variations && variations[selectedVariation]) {
-      return getFormattedUrl(variations[selectedVariation].image_url);
+      return variations[selectedVariation].image_url || '/images/placeholder-image.png';
     }
     
-    return getOriginalImageUrl();
+    // Otherwise use the original concept image
+    return concept.image_url || '/images/placeholder-image.png';
   };
   
   const getCurrentVariationName = () => {
@@ -326,7 +303,7 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
                 </div>
                 <div className={styles.variationContent}>
                   <img 
-                    src={getFormattedUrl(variation.image_url)} 
+                    src={variation.image_url} 
                     alt={`Variation: ${variation.name}`}
                     className={styles.variationImage}
                     onError={handleImageError}

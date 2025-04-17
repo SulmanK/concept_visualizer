@@ -5,6 +5,7 @@
 import { createClient, Session, User } from '@supabase/supabase-js';
 import { getBucketName } from './configService';
 import { fetchRateLimits } from './rateLimitService';
+import { fetchRecentConceptsFromApi, fetchConceptDetailFromApi } from './conceptService';
 
 // Environment variables for Supabase
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -261,85 +262,6 @@ export async function getAuthenticatedImageUrl(bucket: string, path: string): Pr
 }
 
 /**
- * Format image URL - simplified since backend now provides complete URLs
- * Only used as a fallback or for directly provided URLs that need processing
- * 
- * @param imageUrl The URL to format
- * @returns Properly formatted URL
- */
-export const formatImageUrl = (imageUrl: string | null | undefined): string => {
-  // If URL is null or undefined, return empty string
-  if (!imageUrl) {
-    return '';
-  }
-  
-  // If URL is already a complete URL (starts with http or https), return it directly
-  if (imageUrl.startsWith('http')) {
-    return imageUrl;
-  }
-  
-  // If URL is a relative path starting with /, prepend the Supabase URL
-  if (imageUrl.startsWith('/')) {
-    return `${SUPABASE_URL}${imageUrl}`;
-  }
-  
-  // Return the URL as is
-  return imageUrl;
-};
-
-/**
- * Legacy function - kept for backward compatibility
- * Use formatImageUrl for new code
- */
-export const getImageUrl = async (path: string, bucketType: 'concept' | 'palette'): Promise<string> => {
-  if (!path) return '';
-  
-  // If path already looks like a complete URL, just format it
-  if (path.startsWith('http') || path.startsWith('/')) {
-    return formatImageUrl(path);
-  }
-  
-  // Otherwise, generate a signed URL
-  const bucket = getBucketName(bucketType);
-  const { data, error } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(path, 259200); // 3 days in seconds
-  
-  if (data?.signedUrl) {
-    return data.signedUrl;
-  }
-  
-  if (error) {
-    console.error(`Failed to create signed URL: ${error.message}`);
-  }
-  
-  // Fallback to public URL
-  const { data: { publicUrl } } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(path);
-    
-  return publicUrl;
-};
-
-/**
- * Legacy function - kept for backward compatibility
- * Use formatImageUrl for new code
- */
-export const getSignedImageUrl = (path: string | null | undefined, bucketType: 'concept' | 'palette'): string => {
-  // Handle null or empty path
-  if (!path) return '';
-  
-  // If path already looks like a complete URL, just format it
-  if (path.startsWith('http') || path.startsWith('/')) {
-    return formatImageUrl(path);
-  }
-  
-  // For direct paths, create a public URL
-  const bucket = getBucketName(bucketType);
-  return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-};
-
-/**
  * Types for Supabase database tables
  */
 
@@ -371,330 +293,71 @@ export interface ColorVariationData {
 }
 
 /**
- * Fetch recent concepts for the current user
- * @param userId User ID to fetch concepts for
- * @param limit Maximum number of concepts to fetch
- * @returns Array of concept data
+ * Fetch recent concepts
+ * This function now uses the backend API instead of direct Supabase access
+ * 
+ * @param userId User ID for which to fetch concepts
+ * @param limit Maximum number of concepts to return
+ * @returns Promise with array of concept data
  */
 export const fetchRecentConcepts = async (
   userId: string,
   limit: number = 10
 ): Promise<ConceptData[]> => {
   try {
-    console.log(`Attempting to fetch concepts with user ID: ${userId}`);
-    
-    const { data, error } = await supabase
-      .from('concepts')
-      .select('*, color_variations(*)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('Error fetching concepts:', error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      console.log('No concepts found for this user');
-      return [];
-    }
-    
-    console.log(`Found ${data.length} concepts for user`);
-    
-    // Process the data to ensure all concepts have the required fields
-    const concepts = await processConceptData(data);
-    
-    return concepts;
+    console.log(`[supabaseClient] Fetching recent concepts for user ${userId.substring(0, 6)}... using API`);
+    return await fetchRecentConceptsFromApi(userId, limit);
   } catch (error) {
-    console.error('Error fetching concepts:', error);
-    return [];
+    console.error('[supabaseClient] Error fetching recent concepts:', error);
+    throw error;
   }
 };
 
 /**
- * Process the raw concept data to add URLs and ensure proper formatting
- */
-async function processConceptData(data: any[]): Promise<ConceptData[]> {
-  console.log(`Processing ${data.length} concepts from Supabase`);
-  
-  // Process each concept using async operations to get signed URLs
-  const processedConcepts = await Promise.all((data || []).map(async (concept) => {
-    try {
-      // Get image paths and urls, handling both old and new field names
-      const image_path = concept.image_path || concept.base_image_path || '';
-      let image_url = concept.image_url || concept.base_image_url || '';
-      
-      console.log(`Processing concept ID ${concept.id}:`, {
-        has_image_url: !!concept.image_url,
-        has_base_image_url: !!concept.base_image_url,
-        image_path,
-        image_url_snippet: image_url ? image_url.substring(0, 50) + '...' : 'none'
-      });
-      
-      // If we don't have a valid signed URL, generate one
-      if (!image_url || (!image_url.includes('/object/sign/') && !image_url.includes('token='))) {
-        console.log(`Concept needs a new signed URL for path: ${image_path}`);
-        // Get a signed URL for the image path
-        try {
-          const { data: signedData } = await supabase.storage
-            .from(getBucketName('concept'))
-            .createSignedUrl(image_path, 3600);
-            
-          if (signedData?.signedUrl) {
-            image_url = signedData.signedUrl;
-            console.log(`Created signed URL for image: ${image_url.substring(0, 50)}...`);
-          } else {
-            // Fallback to token-based URL
-            image_url = getSignedImageUrl(image_path, 'concept');
-            console.log(`Falling back to token-based URL for image: ${image_url.substring(0, 50)}...`);
-          }
-        } catch (e) {
-          console.warn(`Error creating signed URL for image: ${e}`);
-          // Try the fallback method
-          image_url = getSignedImageUrl(image_path, 'concept');
-        }
-      } else {
-        console.log(`Concept already has a signed URL: ${image_url.substring(0, 50)}...`);
-        
-        // Ensure URL has proper format with /storage/v1/
-        if (image_url.startsWith('/') || (image_url.includes('/object/sign/') && !image_url.includes('/storage/v1/'))) {
-          const fixedUrl = image_url.replace('/object/sign/', '/storage/v1/object/sign/');
-          // Add SUPABASE_URL prefix if it's a relative URL
-          if (fixedUrl.startsWith('/')) {
-            image_url = `${SUPABASE_URL}${fixedUrl}`;
-          } else {
-            image_url = fixedUrl;
-          }
-          console.log(`Fixed URL format: ${image_url.substring(0, 50)}...`);
-        }
-      }
-      
-      // Process variation images if they exist
-      let variations = concept.color_variations || [];
-      
-      if (variations.length > 0) {
-        console.log(`  • Concept has ${variations.length} color variations`);
-        
-        // Process variations with Promise.all to handle async operations
-        variations = await Promise.all(variations.map(async (variation: ColorVariationData, index: number) => {
-          // Ensure colors is an array
-          const colors = Array.isArray(variation.colors) ? variation.colors : [];
-          
-          // Generate image URL for this variation - use signed URL
-          const variation_image_path = variation.image_path || '';
-          let variation_image_url = variation.image_url || '';
-          
-          // If we don't have a valid signed URL, generate one
-          if (!variation_image_url || (!variation_image_url.includes('/object/sign/') && !variation_image_url.includes('token='))) {
-            console.log(`Variation ${index} needs a new signed URL for path: ${variation_image_path}`);
-            // Get a signed URL for the variation image path
-            try {
-              const { data: signedData } = await supabase.storage
-                .from(getBucketName('palette'))
-                .createSignedUrl(variation_image_path, 3600);
-                
-              if (signedData?.signedUrl) {
-                variation_image_url = signedData.signedUrl;
-                console.log(`Created signed URL for variation ${index}: ${variation_image_url.substring(0, 50)}...`);
-              } else {
-                // Fallback to token-based URL
-                variation_image_url = getSignedImageUrl(variation_image_path, 'palette');
-                console.log(`Falling back to token-based URL for variation ${index}: ${variation_image_url.substring(0, 50)}...`);
-              }
-            } catch (e) {
-              console.warn(`Error creating signed URL for variation ${index}: ${e}`);
-              variation_image_url = getSignedImageUrl(variation_image_path, 'palette');
-            }
-          } else {
-            console.log(`Variation ${index} already has a signed URL: ${variation_image_url.substring(0, 50)}...`);
-            
-            // Ensure URL has proper format with /storage/v1/
-            if (variation_image_url.startsWith('/') || (variation_image_url.includes('/object/sign/') && !variation_image_url.includes('/storage/v1/'))) {
-              const fixedUrl = variation_image_url.replace('/object/sign/', '/storage/v1/object/sign/');
-              // Add SUPABASE_URL prefix if it's a relative URL
-              if (fixedUrl.startsWith('/')) {
-                variation_image_url = `${SUPABASE_URL}${fixedUrl}`;
-              } else {
-                variation_image_url = fixedUrl;
-              }
-              console.log(`Fixed variation URL format: ${variation_image_url.substring(0, 50)}...`);
-            }
-          }
-          
-          // Debug this variation
-          console.log(`    ◦ Variation ${index}: "${variation.palette_name || 'Unnamed'}"`);
-          console.log(`      - Image path: ${variation_image_path}`);
-          console.log(`      - Colors: ${colors.length} colors, first color: ${colors[0] || 'none'}`);
-          
-          return {
-            ...variation,
-            // Ensure critical fields have default values
-            id: variation.id || `temp-var-${index}-${Date.now()}`,
-            concept_id: variation.concept_id || concept.id,
-            palette_name: variation.palette_name || 'Color Palette',
-            colors: colors.length > 0 ? colors : ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81'],
-            image_path: variation_image_path,
-            image_url: variation_image_url,
-            created_at: variation.created_at || new Date().toISOString()
-          };
-        }));
-      } else {
-        console.log(`  • Concept has no color variations`);
-      }
-      
-      // Return the processed concept with URLs
-      return {
-        ...concept,
-        // Support both old and new field names to ensure backward compatibility
-        base_image_path: image_path,
-        base_image_url: image_url,
-        image_path: image_path,
-        image_url: image_url,
-        color_variations: variations
-      };
-    } catch (error) {
-      console.error(`Error processing concept ${concept.id}:`, error);
-      // Return the concept with minimal processing in case of error
-      return concept;
-    }
-  }));
-  
-  return processedConcepts;
-}
-
-/**
- * Synchronous version of processConceptData for cases where async isn't possible
- * This will use token-based URLs instead of signed URLs as a fallback
- */
-function processConceptDataSync(data: any[]): ConceptData[] {
-  console.log(`Processing ${data.length} concepts synchronously (token-based URLs only)`);
-  
-  return (data || []).map(concept => {
-    try {
-      // For synchronous processing, we'll use simpler URL generation
-      const base_image_path = concept.base_image_path || '';
-      let base_image_url = concept.base_image_url || '';
-      
-      // If base_image_url doesn't look like a signed URL, generate a token-based URL
-      if (!(base_image_url && (base_image_url.includes('/object/sign/') || base_image_url.includes('token=')))) {
-        base_image_url = getSignedImageUrl(base_image_path, 'concept');
-        console.log(`Using token-based URL for base image: ${base_image_url.substring(0, 50)}...`);
-      }
-      
-      // Process variation images if they exist
-      let variations = concept.color_variations || [];
-      
-      if (variations.length > 0) {
-        variations = variations.map((variation: ColorVariationData, index: number) => {
-          // Generate signed URL for the image
-          const image_path = variation.image_path || '';
-          let image_url = variation.image_url || '';
-          
-          // If image_url doesn't look like a signed URL, generate a token-based URL
-          if (!(image_url && (image_url.includes('/object/sign/') || image_url.includes('token=')))) {
-            image_url = getSignedImageUrl(image_path, 'palette');
-          }
-          
-          // Return the processed variation with URL
-          return {
-            ...variation,
-            image_path: image_path,
-            image_url: image_url,
-            colors: Array.isArray(variation.colors) && variation.colors.length > 0 ? 
-              variation.colors : 
-              ['#4F46E5', '#818CF8', '#C7D2FE', '#EEF2FF', '#312E81']
-          };
-        });
-      }
-      
-      return {
-        ...concept,
-        base_image_path: base_image_path,
-        base_image_url: base_image_url,
-        color_variations: variations
-      };
-    } catch (error) {
-      console.error(`Error processing concept ${concept.id}:`, error);
-      return concept;
-    }
-  });
-}
-
-/**
- * Fetch a concept by ID for a specific user
- * @param conceptId Concept ID to fetch
- * @param userId User ID the concept should belong to
- * @returns Concept data or null if not found
+ * Fetch concept detail
+ * This function now uses the backend API instead of direct Supabase access
+ * 
+ * @param conceptId ID of the concept to fetch
+ * @param userId User ID for security validation
+ * @returns Promise with concept data or null if not found
  */
 export const fetchConceptDetail = async (
   conceptId: string,
   userId: string
 ): Promise<ConceptData | null> => {
   try {
-    console.log(`Fetching concept detail for concept ID: ${conceptId}, user ID: ${userId}`);
-    
-    const { data, error } = await supabase
-      .from('concepts')
-      .select('*, color_variations(*)')
-      .eq('id', conceptId)
-      .eq('user_id', userId)
-      .single();
-
-    if (error) {
-      console.error('Error fetching concept detail:', error);
-      return null;
-    }
-
-    if (!data) {
-      console.log('No concept found with that ID for this user');
-      return null;
-    }
-    
-    // Process the data to ensure the concept has the required fields
-    const concepts = await processConceptData([data]);
-    
-    return concepts[0] || null;
+    console.log(`[supabaseClient] Fetching concept detail for ID ${conceptId} using API`);
+    return await fetchConceptDetailFromApi(conceptId);
   } catch (error) {
-    console.error('Error fetching concept detail:', error);
-    return null;
+    console.error('[supabaseClient] Error fetching concept detail:', error);
+    throw error;
   }
 };
 
 /**
- * Fetch a specific concept by ID
+ * Fetch a concept by ID (regardless of user)
+ * This function now uses the backend API instead of direct Supabase access
+ * 
+ * @param conceptId ID of the concept to fetch
+ * @returns Promise with concept data or null if not found
  */
 export const fetchConceptById = async (conceptId: string): Promise<ConceptData | null> => {
   try {
-    console.log(`Fetching concept with ID: ${conceptId}`);
-    
-    const { data, error } = await supabase
-      .from('concepts')
-      .select('*, color_variations(*)')
-      .eq('id', conceptId)
-      .single();
-    
-    if (error) {
-      console.error('Error fetching concept by ID:', error);
-      return null;
-    }
-    
-    if (!data) {
-      console.log(`No concept found with ID ${conceptId}`);
-      return null;
-    }
-    
-    // Process the concept to add signed URLs
-    const [processedConcept] = await processConceptData([data]);
-    return processedConcept;
+    console.log(`[supabaseClient] Fetching concept with ID: ${conceptId} using API`);
+    // Just use the same API endpoint but don't check user ownership
+    return await fetchConceptDetailFromApi(conceptId);
   } catch (error) {
-    console.error('Exception fetching concept by ID:', error);
+    console.error('[supabaseClient] Exception fetching concept by ID:', error);
     return null;
   }
 };
 
 /**
  * Get concept image details for detail page
+ * This function now uses the backend API instead of direct Supabase access
+ * 
+ * @param conceptId ID of the concept to get details for
+ * @returns Promise with concept details
  */
 export const getConceptDetails = async (conceptId: string): Promise<{
   base_image_url: string;
@@ -706,79 +369,35 @@ export const getConceptDetails = async (conceptId: string): Promise<{
   }>;
 }> => {
   try {
-    console.log(`Getting concept details for ID: ${conceptId}`);
+    console.log(`[supabaseClient] Getting concept details for ID: ${conceptId} using API`);
     
-    // Fetch the concept with variations
-    const concept = await fetchConceptById(conceptId);
+    // Fetch the concept with variations using the API
+    const concept = await fetchConceptDetailFromApi(conceptId);
     
     if (!concept) {
-      console.error(`Concept ${conceptId} not found`);
+      console.error(`[supabaseClient] Concept ${conceptId} not found`);
       return { base_image_url: '', variations: [] };
     }
     
-    // Get base image URL
-    const base_image_path = concept.base_image_path || '';
-    let base_image_url = concept.base_image_url || '';
+    // Use the pre-signed URLs from the API response
+    const base_image_url = concept.image_url || '';
     
-    // If we don't have a valid URL already, try to get a signed URL
-    if (!base_image_url.includes('/object/sign/') && !base_image_url.includes('token=')) {
-      try {
-        const { data } = await supabase.storage
-          .from(getBucketName('concept'))
-          .createSignedUrl(base_image_path, 259200); // 3-day URL
-          
-        if (data?.signedUrl) {
-          base_image_url = data.signedUrl;
-          console.log(`Created signed URL for concept detail: ${base_image_url.substring(0, 50)}...`);
-        } else {
-          // Fallback to token-based URL
-          base_image_url = getSignedImageUrl(base_image_path, 'concept');
-        }
-      } catch (e) {
-        console.warn(`Error creating signed URL for concept detail: ${e}`);
-        base_image_url = getSignedImageUrl(base_image_path, 'concept');
-      }
-    }
-    
-    // Process variations
-    const variations = await Promise.all((concept.color_variations || []).map(async (variation) => {
-      const image_path = variation.image_path || '';
-      let image_url = variation.image_url || '';
-      
-      // If the URL isn't already signed, get a signed URL
-      if (!image_url.includes('/object/sign/') && !image_url.includes('token=')) {
-        try {
-          const { data } = await supabase.storage
-            .from(getBucketName('palette'))
-            .createSignedUrl(image_path, 259200); // 3-day URL
-            
-          if (data?.signedUrl) {
-            image_url = data.signedUrl;
-            console.log(`Created signed URL for variation detail: ${image_url.substring(0, 50)}...`);
-          } else {
-            // Fallback to token-based URL
-            image_url = getSignedImageUrl(image_path, 'palette');
-          }
-        } catch (e) {
-          console.warn(`Error creating signed URL for variation detail: ${e}`);
-          image_url = getSignedImageUrl(image_path, 'palette');
-        }
-      }
-      
+    // Process variations using pre-signed URLs from the API
+    const variations = (concept.color_variations || []).map((variation) => {
       return {
         id: variation.id,
         name: variation.palette_name || 'Color Variation',
         colors: Array.isArray(variation.colors) ? variation.colors : [],
-        image_url
+        image_url: variation.image_url || ''
       };
-    }));
+    });
     
     return {
       base_image_url,
       variations
     };
   } catch (error) {
-    console.error('Error getting concept details:', error);
+    console.error('[supabaseClient] Error getting concept details:', error);
     return { base_image_url: '', variations: [] };
   }
 };

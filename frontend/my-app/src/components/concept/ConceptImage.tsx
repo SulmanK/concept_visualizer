@@ -1,65 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { getImageUrl } from '../../services/supabaseClient';
+import React, { useState } from 'react';
+import { OptimizedImage } from '../ui/OptimizedImage';
 
 interface ConceptImageProps {
-  path: string;
+  path?: string;
+  url?: string;
   isPalette?: boolean;
   alt: string;
   className?: string;
+  lazy?: boolean;
 }
 
 /**
- * Component for displaying concept images with signed URLs
+ * Component for displaying concept images
+ * This is now a simple wrapper around OptimizedImage that handles errors and loading states
  */
 const ConceptImage: React.FC<ConceptImageProps> = ({ 
   path, 
+  url,
   isPalette = false, 
   alt, 
-  className 
+  className,
+  lazy = true
 }) => {
-  const [imageUrl, setImageUrl] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  useEffect(() => {
-    async function loadImageUrl() {
-      if (!path) return;
-      
-      try {
-        setIsLoading(true);
-        
-        // Get signed URL for the image
-        const bucketType = isPalette ? 'palette' : 'concept';
-        const signedUrl = await getImageUrl(path, bucketType);
-        
-        setImageUrl(signedUrl);
-        setError(null);
-      } catch (err) {
-        console.error('Error getting image URL:', err);
-        setError('Failed to load image');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
-    loadImageUrl();
-  }, [path, isPalette]);
+  // Use url if provided, otherwise use path as fallback (for backward compatibility)
+  const imageUrl = url || path || '';
   
-  if (isLoading) {
-    return <div className="image-placeholder">Loading...</div>;
+  if (!imageUrl) {
+    return <div className="image-placeholder text-gray-500 text-sm">No image available</div>;
   }
   
   if (error) {
-    return <div className="image-error">{error}</div>;
+    return <div className="image-error text-red-500 text-sm">{error}</div>;
   }
   
   return (
-    <img 
-      src={imageUrl} 
-      alt={alt} 
+    <OptimizedImage 
+      src={imageUrl}
+      alt={alt}
       className={className}
-      onError={(e) => {
-        console.error('Error loading image:', path);
+      lazy={lazy}
+      onError={() => {
+        console.error('Error loading image:', imageUrl);
         setError('Failed to load image');
       }}
     />

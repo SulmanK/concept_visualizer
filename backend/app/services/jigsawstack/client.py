@@ -98,7 +98,7 @@ class JigsawStackClient:
             elif height > width:
                 aspect_ratio = "9:16"
             
-            # Enhance the prompt for logo generation
+            # Enhance the prompt for logo generation - use ONLY the logo description, not the theme
             enhanced_prompt = f"""Create a professional logo design based on this description: {prompt}.
 
 Design requirements:
@@ -416,11 +416,11 @@ Design requirements:
                         "name": "Name of the palette",
                         "colors": [
                             {
-                                "0": "#colorhex1",
-                                "1": "#colorhex2",
-                                "2": "#colorhex3",
-                                "3": "#colorhex4",
-                                "4": "#colorhex5"
+                                "first_color": "#colorhex1",
+                                "second_color": "#colorhex2",
+                                "third_color": "#colorhex3",
+                                "fourth_color": "#colorhex4",
+                                "fifth_color": "#colorhex5"
                             }
                         ],
                         "description": "Description of how the palette relates to the theme."

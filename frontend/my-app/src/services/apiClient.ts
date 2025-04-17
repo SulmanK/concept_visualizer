@@ -60,6 +60,75 @@ interface RateLimitErrorResponse {
   [key: string]: any;
 }
 
+// Base custom error class
+export class ApiError extends Error {
+  status: number;
+  url: string;
+
+  constructor(message: string, status: number, url: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.url = url;
+  }
+}
+
+// Authentication error class (401)
+export class AuthError extends ApiError {
+  constructor(message: string, url: string) {
+    super(message, 401, url);
+    this.name = 'AuthError';
+  }
+}
+
+// Permission error class (403)
+export class PermissionError extends ApiError {
+  constructor(message: string, url: string) {
+    super(message, 403, url);
+    this.name = 'PermissionError';
+  }
+}
+
+// Not found error class (404)
+export class NotFoundError extends ApiError {
+  constructor(message: string, url: string) {
+    super(message, 404, url);
+    this.name = 'NotFoundError';
+  }
+}
+
+// Server error class (5xx)
+export class ServerError extends ApiError {
+  constructor(message: string, status: number, url: string) {
+    super(message, status, url);
+    this.name = 'ServerError';
+  }
+}
+
+// Validation error class (422)
+export class ValidationError extends ApiError {
+  errors: Record<string, string[]>;
+  
+  constructor(message: string, url: string, errors: Record<string, string[]> = {}) {
+    super(message, 422, url);
+    this.name = 'ValidationError';
+    this.errors = errors;
+  }
+}
+
+// Network error class
+export class NetworkError extends Error {
+  isCORS?: boolean;
+  possibleRateLimit?: boolean;
+  
+  constructor(message: string, isCORS?: boolean, possibleRateLimit?: boolean) {
+    super(message || 'Network connection error');
+    this.name = 'NetworkError';
+    this.isCORS = isCORS;
+    this.possibleRateLimit = possibleRateLimit;
+  }
+}
+
 // Custom error class for rate limit errors
 export class RateLimitError extends Error {
   status: number;
@@ -185,9 +254,125 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
     
+    const url = originalRequest?.url || '';
+    
+    // Handle network errors (no response)
+    if (!error.response) {
+      console.error('[API] Network error:', error);
+      
+      // Check if it's a timeout
+      if (error.code === 'ECONNABORTED') {
+        const networkError = new NetworkError('Request timeout. Please check your connection and try again.');
+        return Promise.reject(networkError);
+      }
+      
+      // Check if it might be a CORS error by examining the message
+      // Often CORS errors show up as network errors
+      const isCORSError = 
+        error.message?.toLowerCase().includes('cors') || 
+        error.message?.includes('Network Error') ||
+        error.message?.includes('Cross-Origin');
+      
+      // Check if the URL suggests this might be a rate limit issue
+      // For common rate-limited endpoints
+      const isPossibleRateLimit = 
+        url.includes('/generate') || 
+        url.includes('/refine') || 
+        url.includes('/export') ||
+        url.includes('/process');
+      
+      // Special handling for CORS errors that might be rate limits
+      if (isCORSError && isPossibleRateLimit) {
+        console.warn('[API] CORS error on rate-limited endpoint detected:', error.message);
+        
+        // Create a custom rate limit error with sensible defaults
+        // Since we can't get the actual limits from the error response
+        const rateLimitError = new RateLimitError(
+          'Rate limit likely exceeded. Please try again later.',
+          {
+            message: 'Rate limit exceeded',
+            reset_after_seconds: 86400, // Default to 1 day
+            limit: 10, 
+            current: 10,
+            period: 'month'
+          },
+          url
+        );
+        
+        // Show a toast about the possible rate limit
+        toast({
+          title: 'Rate Limit Likely Reached',
+          message: 'You may have reached the monthly usage limit. Please try again later.',
+          type: 'warning',
+          duration: 8000,
+          isRateLimitError: true,
+          rateLimitResetTime: 86400 // Default to 1 day
+        });
+        
+        // Invalidate rate limits to force a refresh
+        queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+        
+        return Promise.reject(rateLimitError);
+      }
+      
+      // Generic network error
+      const networkError = new NetworkError(
+        'Network connection error. Please check your internet connection.',
+        isCORSError,
+        isPossibleRateLimit
+      );
+      return Promise.reject(networkError);
+    }
+    
+    // Get error response and status
+    const response = error.response;
+    const status = response.status;
+    
+    // Check if it's a 500 error that might actually be a rate limit
+    if (status === 500) {
+      // Check if there are indicators that this might be a rate limit issue
+      const isPossibleRateLimit = 
+        url.includes('/generate') || 
+        url.includes('/refine') || 
+        url.includes('/export') ||
+        url.includes('/process');
+      
+      if (isPossibleRateLimit) {
+        console.warn('[API] 500 error on rate-limited endpoint detected, might be a rate limit issue:', url);
+        
+        // Create a custom rate limit error with sensible defaults
+        const rateLimitError = new RateLimitError(
+          'Rate limit likely exceeded. Please try again later.',
+          {
+            message: 'Monthly usage limit reached',
+            reset_after_seconds: 86400, // Default to 1 day - will update when we know the actual time until month end
+            limit: 10, 
+            current: 10,
+            period: 'month'
+          },
+          url
+        );
+        
+        // Show a toast about the possible rate limit
+        toast({
+          title: 'Monthly Usage Limit Reached',
+          message: 'You have reached your monthly usage limit. Please try again next month.',
+          type: 'warning',
+          duration: 8000,
+          isRateLimitError: true,
+          rateLimitResetTime: 86400 // Default to 1 day
+        });
+        
+        // Invalidate rate limits to force a refresh
+        queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
+        
+        return Promise.reject(rateLimitError);
+      }
+    }
+    
     // Check if it's a 401 (Unauthorized) error and we haven't already tried to refresh
     if (
-      error.response?.status === 401 && 
+      status === 401 && 
       !originalRequest._retry && 
       originalRequest // Ensure we have a request to retry
     ) {
@@ -215,7 +400,9 @@ axiosInstance.interceptors.response.use(
           // Dispatch an event to signal that we need to log out
           document.dispatchEvent(new CustomEvent('auth-error-needs-logout'));
           
-          return Promise.reject(error);
+          // If we reach this point, auth refresh failed 
+          const authError = new AuthError('Your session has expired. Please sign in again.', url);
+          return Promise.reject(authError);
         }
       } catch (refreshError) {
         console.error('[AUTH INTERCEPTOR] Error during token refresh:', refreshError);
@@ -223,14 +410,24 @@ axiosInstance.interceptors.response.use(
         // Dispatch an event to signal that we need to log out
         document.dispatchEvent(new CustomEvent('auth-error-needs-logout'));
         
-        return Promise.reject(error);
+        // If we reach this point, auth refresh failed 
+        const authError = new AuthError('Your session has expired. Please sign in again.', url);
+        return Promise.reject(authError);
       }
     }
     
     // Handle rate limit errors (429)
-    if (error.response?.status === 429) {
+    if (status === 429) {
       const response = error.response;
-      const url = originalRequest?.url || '';
+      
+      // Create a more detailed error object for rate limit errors
+      let rateLimitResponse: RateLimitErrorResponse = {
+        message: response.data?.message || 'Rate limit exceeded',
+        reset_after_seconds: 0,
+        limit: 0,
+        current: 0,
+        period: 'unknown'
+      };
       
       // Try to extract rate limit information from headers
       const limit = parseInt(response.headers['x-ratelimit-limit'] as string || '0', 10);
@@ -249,60 +446,110 @@ axiosInstance.interceptors.response.use(
           const resetTime = new Date(Number(resetHeader) * 1000);
           resetAfterSeconds = Math.max(0, Math.floor((resetTime.getTime() - Date.now()) / 1000));
         } else {
-          // If it's a relative time in seconds
+          // Try as a relative time value in seconds
           resetAfterSeconds = parseInt(resetHeader, 10);
         }
-      } else if (retryAfter) {
-        // Use Retry-After header if available
+      } 
+      // Fallback to Retry-After header
+      else if (retryAfter) {
         resetAfterSeconds = parseInt(retryAfter, 10);
       }
       
-      // Create a consistent error response object
-      const errorResponse: RateLimitErrorResponse = {
-        message: response.data?.message || 'Rate limit exceeded',
+      // Populate the response object with extracted data
+      rateLimitResponse = {
+        ...rateLimitResponse,
+        limit,
+        current,
         reset_after_seconds: resetAfterSeconds,
-        limit: limit,
-        current: current,
-        period: 'unknown' // Default, could be updated if we had a period header
+        period: '15min' // Default period if not specified
       };
       
-      // Create RateLimitError with context
+      // Try to extract more details from response data if available
+      if (response.data) {
+        if (typeof response.data === 'object') {
+          // Override with any values from the response body
+          rateLimitResponse = {
+            ...rateLimitResponse,
+            ...response.data,
+            // Ensure we preserve our extracted headers if not in response
+            limit: response.data.limit || rateLimitResponse.limit,
+            current: response.data.current || rateLimitResponse.current,
+            reset_after_seconds: response.data.reset_after_seconds || rateLimitResponse.reset_after_seconds,
+            period: response.data.period || rateLimitResponse.period
+          };
+        }
+      }
+      
+      // Create custom error with rate limit details
       const rateLimitError = new RateLimitError(
-        errorResponse.message,
-        errorResponse,
+        rateLimitResponse.message || 'Rate limit exceeded',
+        rateLimitResponse,
         url
       );
       
-      // Display a toast notification about the rate limit
-      if (originalRequest?.showToastOnRateLimit !== false) {
-        const userMessage = originalRequest?.rateLimitToastMessage || rateLimitError.getUserFriendlyMessage();
+      console.warn('[RATE LIMIT]', rateLimitError);
+      
+      // Dispatch event or show toast notification if enabled in request options
+      if (originalRequest && originalRequest.showToastOnRateLimit !== false) {
+        const message = originalRequest.rateLimitToastMessage || rateLimitError.getUserFriendlyMessage();
         
         toast({
-          title: 'Rate Limit Reached',
-          message: userMessage,
+          title: 'Rate Limit Exceeded',
+          message,
           type: 'warning',
           duration: 8000,
           isRateLimitError: true,
-          rateLimitResetTime: resetAfterSeconds > 0 ? Date.now() + (resetAfterSeconds * 1000) : undefined,
-          action: resetAfterSeconds > 0 ? {
-            label: 'View Limits',
-            onClick: () => {
-              // Create a custom event to trigger opening the rate limits panel
-              document.dispatchEvent(new CustomEvent('open-rate-limits-panel'));
-            }
-          } : undefined
+          rateLimitResetTime: rateLimitResponse.reset_after_seconds
         });
       }
       
-      // Update React Query's rate limits cache
+      // Invalidate rate limits to force a refresh
       queryClient.invalidateQueries({ queryKey: ['rateLimits'] });
       
-      // Reject with the RateLimitError
+      // Return a rejected promise with our enhanced error
       return Promise.reject(rateLimitError);
     }
     
-    // For other errors, just reject with the original error
-    return Promise.reject(error);
+    // Handle other error types
+    let apiError: Error;
+    const errorMessage = response.data?.message || response.data?.error || 'An error occurred';
+    
+    switch (status) {
+      case 400:
+        apiError = new ApiError(errorMessage, status, url);
+        break;
+      
+      case 401:
+        apiError = new AuthError(errorMessage, url);
+        break;
+      
+      case 403:
+        apiError = new PermissionError('You do not have permission to access this resource', url);
+        break;
+      
+      case 404:
+        apiError = new NotFoundError('The requested resource was not found', url);
+        break;
+      
+      case 422:
+        // Handle validation errors
+        const validationErrors = response.data?.errors || response.data?.detail || {};
+        apiError = new ValidationError(errorMessage, url, validationErrors);
+        break;
+      
+      default:
+        // Server errors (5xx)
+        if (status >= 500) {
+          apiError = new ServerError('A server error occurred. Our team has been notified.', status, url);
+        } else {
+          apiError = new ApiError(errorMessage, status, url);
+        }
+    }
+    
+    console.error(`[API] Error ${status}:`, apiError);
+    
+    // Return the custom error
+    return Promise.reject(apiError);
   }
 );
 

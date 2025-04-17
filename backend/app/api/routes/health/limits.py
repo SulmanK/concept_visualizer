@@ -115,16 +115,8 @@ async def _get_rate_limits(request: Request, force_refresh: bool = False, check_
                         logger.debug(f"Using authenticated user ID from token for rate limits: {user_id}")
                 except Exception as e:
                     logger.warning(f"Error extracting user from token: {str(e)}")
-            
-        # Fall back to session ID if available
-        session_id = None
-        if not user_id:
-            session_id = request.cookies.get("concept_session")
-            if session_id:
-                user_id = session_id
-                logger.debug(f"Using session cookie ID for rate limits: {user_id}")
-            
-        # Finally fall back to IP address
+        
+        # Fall back to IP address if no user ID found
         ip_address = None
         if not user_id:
             ip_address = get_remote_address(request)
@@ -135,8 +127,6 @@ async def _get_rate_limits(request: Request, force_refresh: bool = False, check_
         # Ensure we always use a consistent format for the user ID
         if auth_user_id:
             cache_key = f"user:{auth_user_id}"
-        elif session_id:
-            cache_key = f"user:{session_id}"
         else:
             cache_key = f"ip:{ip_address or get_remote_address(request)}"
             

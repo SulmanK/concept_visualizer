@@ -1,109 +1,81 @@
-Okay, here are the implementation steps from the refactoring plan, broken down into actionable tasks. We'll skip the testing tasks for now as requested.
+Okay, I've reviewed the codebase structure and the plan, and identified the specific files most likely needing modification for each task.
+
+Here is the updated design plan with the relevant files listed for each task:
 
 ---
 
-**Phase 1: Backend API Endpoint Creation**
+**Design Plan: Frontend Error Handling Enhancement (with Files)**
 
-**Task 1: Create `GET /api/storage/concepts/recent` Endpoint**
+**Goal:**
 
-*   **File:** `backend/app/api/routes/concept_storage/storage_routes.py`
-*   **Action:** Define a new FastAPI route function (e.g., `get_recent_concepts_api`).
-*   **Decorator:** Use `@router.get("/recent", response_model=List[ConceptSummary])` (or an adapted `ConceptData` model for response).
-*   **Input:**
-    *   Accept an optional `limit: int = Query(10, ge=1, le=50)` query parameter.
-    *   Get `user_id: str = Depends(get_current_user_id)` from the authenticated request.
-*   **Dependencies:** Inject `ConceptPersistenceServiceInterface` and `ImagePersistenceServiceInterface`.
-*   **Logic:**
-    1.  Call `concept_persistence_service.get_recent_concepts(user_id, limit)`.
-    2.  Iterate through the returned concepts.
-    3.  For each concept's `image_path`, call `image_persistence_service.get_signed_url(path, is_palette=False)` to get the base image URL. Store this in an `image_url` field.
-    4.  Iterate through each concept's `color_variations`.
-    5.  For each variation's `image_path`, call `image_persistence_service.get_signed_url(path, is_palette=True)` to get the variation image URL. Store this in the variation's `image_url` field.
-    6.  Return the list of concepts with populated `image_url` fields.
-*   **Response Model:** Ensure the Pydantic response model used (e.g., `ConceptSummary` or a similar `ConceptData` adaptation) includes `image_url` for the base concept and nested `image_url` for variations.
-*   **Authentication:** Ensure the route is protected by the existing auth setup for the `/storage` router.
+1.  Correctly display specific "Rate Limit Exceeded" errors from the backend (HTTP 429) instead of generic "Network Error".
+2.  Establish a robust, consistent, and user-friendly error handling pattern across the frontend application suitable for production.
 
-**Task 2: Create `GET /api/storage/concept/{concept_id}` Endpoint**
+**Core Strategy:** (Remains the same as previous plan)
 
-*   **File:** `backend/app/api/routes/concept_storage/storage_routes.py`
-*   **Action:** Define a new FastAPI route function (e.g., `get_concept_detail_api`).
-*   **Decorator:** Use `@router.get("/concept/{concept_id}", response_model=ConceptDetail)` (or an adapted `ConceptData` model).
-*   **Input:**
-    *   Accept `concept_id: str` as a path parameter.
-    *   Get `user_id: str = Depends(get_current_user_id)` from the authenticated request.
-*   **Dependencies:** Inject `ConceptPersistenceServiceInterface` and `ImagePersistenceServiceInterface`.
-*   **Logic:**
-    1.  Call `concept_persistence_service.get_concept_detail(concept_id, user_id)`.
-    2.  If the concept is not found (returns `None` or raises `NotFoundError`), raise an appropriate `HTTPException` (e.g., 404 Not Found).
-    3.  If found, get the signed URL for the concept's `image_path` using `image_persistence_service.get_signed_url(path, is_palette=False)` and store it in `image_url`.
-    4.  Iterate through the concept's `color_variations`.
-    5.  For each variation's `image_path`, get the signed URL using `image_persistence_service.get_signed_url(path, is_palette=True)` and store it in the variation's `image_url`.
-    6.  Return the processed concept data.
-*   **Response Model:** Ensure the Pydantic response model includes `image_url` for the base concept and variations.
-*   **Authentication:** Ensure the route is protected.
-
-**Task 3: Verify/Update Backend Persistence Services**
-
-*   **Files:**
-    *   `backend/app/services/persistence/concept_persistence_service.py`
-    *   `backend/app/services/persistence/image_persistence_service.py`
-*   **Action:**
-    1.  **Concept Service:** Review `get_recent_concepts` and `get_concept_detail`. Confirm they primarily return data containing `image_path` (and `color_variations[].image_path`). They should *not* be generating the final URLs themselves.
-    2.  **Image Service:** Review `get_signed_url` in `ImagePersistenceService`. Ensure it correctly accepts `path` and `is_palette` (or equivalent logic to determine the bucket) and reliably returns a valid, usable signed URL with appropriate expiry.
+**Key Components Involved:** (Remains the same as previous plan)
 
 ---
 
-**Phase 2: Frontend Refactoring**
+**Task Breakdown (with Files):**
 
-**Task 4: Create Frontend Service Functions**
+**Phase 1: Fix Rate Limit Error Display**
 
-*   **File:** Create `src/services/conceptService.ts` (or modify `src/services/supabaseClient.ts`).
-*   **Action:**
-    1.  Implement `fetchRecentConceptsFromApi(userId: string, limit: number = 10): Promise<ConceptData[]>`.
-        *   Inside, call `apiClient.get<ConceptData[]>(API_ENDPOINTS.RECENT_CONCEPTS, { params: { limit } })`.
-        *   Return `response.data`.
-    2.  Implement `fetchConceptDetailFromApi(conceptId: string): Promise<ConceptData | null>`.
-        *   Inside, call `apiClient.get<ConceptData>(API_ENDPOINTS.CONCEPT_DETAIL(conceptId))`.
-        *   Handle potential 404s (maybe Axios throws, or check response status) and return `null` in that case.
-        *   Return `response.data` on success.
-*   **Update Config:** Add the new endpoint paths to `src/config/apiEndpoints.ts`:
-    *   `RECENT_CONCEPTS: '/storage/recent'` (Adjust path if different in backend)
-    *   `CONCEPT_DETAIL: (id: string) => \`/storage/concept/${id}\`` (Adjust path if different)
+1.  **Task:** Modify `apiClient.ts` Response Error Interceptor for 429.
+    *   **Description:** Detect 429 errors, parse details, throw custom `RateLimitError`.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/services/apiClient.ts` (Modify interceptor logic, ensure `RateLimitError` class is correctly defined and used).
 
-**Task 5: Refactor `supabaseClient.ts` Functions**
+2.  **Task:** Update `useErrorHandling` to Recognize `RateLimitError`.
+    *   **Description:** Enhance the hook to identify `RateLimitError` and store its specific details.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/hooks/useErrorHandling.tsx` (Update `categorizeError`/`handleError`, potentially update `ErrorWithCategory` interface).
 
-*   **File:** `src/services/supabaseClient.ts`
-*   **Action:**
-    1.  Modify the existing `fetchRecentConcepts` function: Remove its current Supabase logic and replace it with a call to the new `fetchRecentConceptsFromApi` function created in Task 4.
-    2.  Modify the existing `fetchConceptDetail` function: Remove its current Supabase logic and replace it with a call to the new `fetchConceptDetailFromApi` function.
-    3.  **Crucially:** Remove the `batchProcessConceptsUrls` function entirely.
-    4.  Remove any imports or direct `supabase.from(...)` calls related to the `concepts` or `color_variations` tables within these modified functions.
+3.  **Task:** Create/Enhance UI Component for Rate Limit Errors.
+    *   **Description:** Update `ErrorMessage` to display rate limit details or create a specialized component.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/components/ui/ErrorMessage.tsx` (Add conditional rendering for `type === 'rateLimit'`).
+        *   `frontend/my-app/src/services/rateLimitService.ts` (Import `formatTimeRemaining` helper).
 
-**Task 6: Update React Query Hooks**
+4.  **Task:** Integrate Enhanced Error Display into Relevant Components.
+    *   **Description:** Ensure components using API mutations/queries correctly display the categorized error, specifically the rate limit details.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/components/concept/ConceptForm.tsx` (Ensure it can render the enhanced `ErrorMessage` or `RateLimitErrorMessage` based on props).
+        *   `frontend/my-app/src/hooks/useConceptMutations.ts` (Ensure it correctly catches `RateLimitError` and passes appropriate state/props).
+        *   *(Review)* Other components that directly handle API errors might need similar updates.
 
-*   **File:** `src/hooks/useConceptQueries.ts`
-*   **Action:**
-    1.  **`useRecentConcepts`:** Verify its `queryFn` now correctly calls the refactored `fetchRecentConcepts` from `supabaseClient.ts` (which internally uses `apiClient`). No other changes should be strictly necessary, but consider updating the `queryKey` to maybe `['api', 'concepts', 'recent', userId, limit]` for clarity if desired.
-    2.  **`useConceptDetail`:** Verify its `queryFn` now correctly calls the refactored `fetchConceptDetail` from `supabaseClient.ts`. Keep `userId` in the `queryKey` (`['concepts', 'detail', conceptId, userId]`).
-    3.  Remove any post-fetch logic within these hooks that manually processes URLs (like calling `getSignedImageUrl` or similar). Trust the data coming from the (refactored) fetch functions.
+**Phase 2: Production-Ready Error Handling Improvements**
 
-**Task 7: Update Frontend Components**
+5.  **Task:** Enhance `apiClient.ts` for Other HTTP Errors.
+    *   **Description:** Add interceptor logic for 401, 403, 404, 5xx, network errors, throwing specific custom error types.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/services/apiClient.ts` (Add more `if/else if` blocks in the error interceptor, potentially define new error classes like `AuthError`, `NotFoundError`, `ServerError`, etc.).
 
-*   **Files:** Review components like `ConceptCard.tsx`, `ConceptDetailPage.tsx`, `RecentConceptsSection.tsx`, `ResultsSection.tsx`, `OptimizedImage.tsx`, etc.
-*   **Action:**
-    1.  Search the codebase for any remaining instances where `getSignedImageUrl` or `formatImageUrl` (or similar manual URL processing) is used for concept or variation images sourced from `useRecentConcepts` or `useConceptDetail`. Remove this logic.
-    2.  Ensure these components directly use the `image_url` property (for both base concepts and variations) provided in the data fetched by the hooks.
-    3.  Verify that `OptimizedImage` and standard `<img>` tags work correctly when passed the potentially long signed URLs returned by the backend.
+6.  **Task:** Update `useErrorHandling` Categories.
+    *   **Description:** Update the hook's types and logic to recognize and categorize the new error types from Task 5.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/hooks/useErrorHandling.tsx` (Update `ErrorCategory` type, update `categorizeError`/`handleError` logic).
 
----
+7.  **Task:** Enhance `ErrorMessage` Component for All Categories.
+    *   **Description:** Add distinct icons, colors, and potentially default action suggestions based on the expanded error categories. Handle display of field-specific validation errors.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/components/ui/ErrorMessage.tsx` (Add more conditional rendering based on `type`, icons, styling).
 
-**Phase 3: Cleanup (To be done after testing)**
+8.  **Task:** Implement Global Error Display.
+    *   **Description:** Use `useErrorHandling` at a high level (e.g., `App.tsx`) to show a global error banner for unhandled or critical errors.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/App.tsx` (Import and use `useErrorHandling`, add conditional rendering for a global `ErrorMessage`).
+        *   `frontend/my-app/src/components/ui/ErrorMessage.tsx` (Ensure it's suitable for global display).
 
-**Task 8: Code Cleanup**
+9.  **Task:** Review and Refactor Mutation/Query Hooks.
+    *   **Description:** Ensure all React Query hooks consistently use the centralized error handling (`createQueryErrorHandler` or similar) for their `onError` callbacks.
+    *   **Files to Modify:**
+        *   `frontend/my-app/src/hooks/useConceptMutations.ts`
+        *   `frontend/my-app/src/hooks/useConceptQueries.ts`
+        *   `frontend/my-app/src/hooks/useExportImageMutation.ts`
+        *   `frontend/my-app/src/hooks/useRateLimitsQuery.ts`
+        *   `frontend/my-app/src/hooks/useTaskQueries.ts`
+        *   `frontend/my-app/src/hooks/useSessionQuery.ts`
+        *   `frontend/my-app/src/hooks/useConfigQuery.ts`
+        *   `frontend/my-app/src/utils/errorUtils.ts` (Verify `createQueryErrorHandler` integrates well).
 
-*   **File:** `src/services/supabaseClient.ts`
-*   **Action:** Once the new approach is verified and stable, completely remove the implementation of `batchProcessConceptsUrls` and any orphaned helper functions related to the old direct Supabase fetching logic for concepts.
-
----
-
-This breakdown provides concrete steps for each part of the refactor. Remember to commit changes incrementally after completing related tasks.

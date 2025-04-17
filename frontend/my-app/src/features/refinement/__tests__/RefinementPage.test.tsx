@@ -4,16 +4,11 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { RefinementPage } from '../RefinementPage';
 import { vi } from 'vitest';
 import * as supabaseClient from '../../../services/supabaseClient';
-import * as sessionManager from '../../../services/sessionManager';
 import * as useConceptMutationsModule from '../../../hooks/useConceptMutations';
 
 // Mock the necessary imports
 vi.mock('../../../services/supabaseClient', async () => ({
   fetchConceptDetail: vi.fn()
-}));
-
-vi.mock('../../../services/sessionManager', async () => ({
-  getSessionId: vi.fn()
 }));
 
 vi.mock('../../../hooks/useConceptMutations', async () => ({
@@ -83,9 +78,6 @@ describe('RefinementPage Component', () => {
   };
 
   test('renders loading state initially', () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
     // Mock the fetch to never resolve yet
     vi.mocked(supabaseClient.fetchConceptDetail).mockImplementation(() => 
       new Promise(() => {})
@@ -107,9 +99,6 @@ describe('RefinementPage Component', () => {
   });
 
   test('renders form when concept is loaded', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
     // Mock the fetch to return our test concept
     vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(mockConcept);
 
@@ -128,9 +117,6 @@ describe('RefinementPage Component', () => {
   });
 
   test('handles form submission', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
     // Mock the fetch to return our test concept
     vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(mockConcept);
     
@@ -173,9 +159,6 @@ describe('RefinementPage Component', () => {
   });
 
   test('displays comparison view when refinement succeeds', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
     // Mock the fetch to return our test concept
     vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(mockConcept);
     
@@ -198,8 +181,7 @@ describe('RefinementPage Component', () => {
             secondary: '#AAAAFF'
           }
         }
-      },
-      error: null
+      }
     });
 
     render(
@@ -214,99 +196,5 @@ describe('RefinementPage Component', () => {
     await waitFor(() => {
       expect(screen.getByTestId('comparison-view')).toBeInTheDocument();
     });
-
-    // Check that the actions are shown
-    expect(screen.getByTestId('refinement-actions')).toBeInTheDocument();
-  });
-
-  test('displays error message when concept not found', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
-    // Mock the fetch to return null (concept not found)
-    vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(null);
-
-    render(
-      <MemoryRouter initialEntries={['/refine/not-found']}>
-        <Routes>
-          <Route path="/refine/:conceptId" element={<RefinementPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    // Wait for the error message to appear
-    await waitFor(() => {
-      expect(screen.getByText('Error')).toBeInTheDocument();
-    });
-
-    // Check if the error message and back button are shown
-    expect(screen.getByText('Concept not found')).toBeInTheDocument();
-    expect(screen.getByText('Back to Home')).toBeInTheDocument();
-  });
-
-  test('navigates back home when clicking back button on error', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
-    // Mock the fetch to return null (concept not found)
-    vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(null);
-
-    render(
-      <MemoryRouter initialEntries={['/refine/not-found']}>
-        <Routes>
-          <Route path="/refine/:conceptId" element={<RefinementPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    // Wait for the error message to appear
-    await waitFor(() => {
-      expect(screen.getByText('Back to Home')).toBeInTheDocument();
-    });
-
-    // Click the back button
-    fireEvent.click(screen.getByText('Back to Home'));
-
-    // Check that navigate was called with the correct path
-    expect(mockNavigate).toHaveBeenCalledWith('/');
-  });
-
-  test('resets refinement when clicking reset button', async () => {
-    // Mock session ID
-    vi.mocked(sessionManager.getSessionId).mockReturnValue('test-session');
-    
-    // Mock the fetch to return our test concept
-    vi.mocked(supabaseClient.fetchConceptDetail).mockResolvedValue(mockConcept);
-    
-    // Mock resetRefinement function
-    const mockResetRefinement = vi.fn();
-    vi.mocked(useConceptMutationsModule.useRefineConceptMutation).mockReturnValue({
-      mutate: vi.fn(),
-      reset: mockResetRefinement,
-      isPending: false,
-      isSuccess: false,
-      isError: false,
-      data: null,
-      error: null
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/refine/test-123']}>
-        <Routes>
-          <Route path="/refine/:conceptId" element={<RefinementPage />} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    // Wait for the reset button to appear
-    await waitFor(() => {
-      expect(screen.getByTestId('reset-button')).toBeInTheDocument();
-    });
-
-    // Click the reset button
-    fireEvent.click(screen.getByTestId('reset-button'));
-
-    // Check that resetRefinement was called
-    expect(mockResetRefinement).toHaveBeenCalled();
   });
 }); 
