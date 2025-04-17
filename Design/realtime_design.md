@@ -110,6 +110,22 @@ Here's a step-by-step plan:
 
 **Phase 3: Testing & Refinement**
 
+**Step 8: Testing**
+
+*   **Goal:** Verify the real-time updates work correctly and handle various scenarios.
+*   **Actions:**
+    1.  **Manual Testing:**
+        *   Submit tasks and observe the `TaskStatusBar` for immediate status changes (pending -> processing -> completed/failed).
+        *   Test consecutive submissions.
+        *   Test network interruptions: disconnect Wi-Fi while a task is processing, then reconnect. Does the status update correctly? (Supabase client handles reconnection attempts).
+        *   Test browser tab visibility changes: Start a task, switch tabs, come back. Is the status up-to-date?
+    2.  **Automated Testing (Vitest):**
+        *   Unit test `useTaskSubscription` by mocking Supabase channel methods (`on`, `subscribe`, `unsubscribe`). Simulate receiving different payload types.
+        *   Update `TaskContext` tests to mock `useTaskSubscription`.
+    3.  **Automated Testing (Playwright):**
+        *   Difficult to test *true* real-time updates reliably in E2E without complex backend mocking.
+        *   Focus E2E tests on verifying the *final* state (e.g., task completion leads to results rendering) and the *initial* state changes (e.g., status bar appears).
+        *   Consider adding short `waitFor` delays after actions and checking if the status bar *eventually* reflects the expected state.
 
 **Step 9: Optimize and Refine**
 

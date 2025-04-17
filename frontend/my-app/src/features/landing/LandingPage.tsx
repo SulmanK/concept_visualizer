@@ -26,7 +26,8 @@ const LandingPageContent: React.FC = () => {
     isTaskProcessing,
     isTaskInitiating,
     latestResultId,
-    clearActiveTask
+    clearActiveTask,
+    activeTaskData
   } = useTaskContext();
   
   // Use React Query mutation hook for generation
@@ -80,7 +81,7 @@ const LandingPageContent: React.FC = () => {
     if (isTaskPending) return 'pending';
     if (isTaskProcessing) return 'processing';
     if (isTaskCompleted) return 'success';
-    if (taskData?.status === 'failed') return 'error';
+    if (activeTaskData?.status === 'failed') return 'error';
     if (isError) return 'error';
     return 'idle';
   };
@@ -88,15 +89,15 @@ const LandingPageContent: React.FC = () => {
   // Get the appropriate processing message based on task state
   const getProcessingMessage = (): string | undefined => {
     if (isTaskInitiating) return 'Preparing your request...';
-    if (isTaskPending) return 'Request queued...';
-    if (isTaskProcessing) return 'Generating your concept...';
+    if (isTaskPending) return 'Request queued, waiting to start...';
+    if (isTaskProcessing) return 'Generating your concept design...';
     return undefined;
   };
   
   // Extract error message from the error object or task
   const getErrorMessage = (): string | null => {
-    if (taskData?.status === 'failed') {
-      return taskData.error_message || 'Task failed';
+    if (activeTaskData?.status === 'failed') {
+      return activeTaskData.error_message || 'Task failed';
     }
     if (!error) return null;
     return error instanceof Error ? error.message : String(error);

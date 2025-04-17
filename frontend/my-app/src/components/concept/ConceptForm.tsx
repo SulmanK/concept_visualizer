@@ -8,7 +8,7 @@ import { ErrorMessage, RateLimitErrorMessage } from '../ui/ErrorMessage';
 import { useToast } from '../../hooks/useToast';
 import { useErrorHandling, ErrorWithCategory, ErrorCategory } from '../../hooks/useErrorHandling';
 import { FormStatus } from '../../types';
-import { useTaskContext } from '../../contexts/TaskContext';
+import { useTaskContext, useOnTaskCleared } from '../../contexts/TaskContext';
 
 export interface ConceptFormProps {
   /**
@@ -65,25 +65,11 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     hasActiveTask, 
     isTaskPending, 
     isTaskProcessing, 
-    activeTaskData, 
-    onTaskCleared 
+    activeTaskData
   } = useTaskContext();
   
-  // Reset form when task is cleared
-  useEffect(() => {
-    const unsubscribe = onTaskCleared(() => {
-      console.log('[ConceptForm] Task cleared event received, resetting form');
-      setLogoDescription('');
-      setThemeDescription('');
-      setValidationError(undefined);
-      if (formRef.current) {
-        formRef.current.reset();
-      }
-    });
-    
-    // Clean up subscription when component unmounts
-    return unsubscribe;
-  }, [onTaskCleared]);
+  // Use the dedicated selector hook for onTaskCleared
+  const onTaskCleared = useOnTaskCleared();
   
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -138,6 +124,31 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
       // Note: we'd handle this with a rate limit handler if one was available
     }
   }, [error]);
+  
+  // Reset form when task is cleared
+  useEffect(() => {
+    if (!onTaskCleared) {
+      console.warn('[ConceptForm] onTaskCleared is not available');
+      return;
+    }
+    
+    try {
+      const unsubscribe = onTaskCleared(() => {
+        console.log('[ConceptForm] Task cleared event received, resetting form');
+        setLogoDescription('');
+        setThemeDescription('');
+        setValidationError(undefined);
+        if (formRef.current) {
+          formRef.current.reset();
+        }
+      });
+      
+      // Clean up subscription when component unmounts
+      return unsubscribe;
+    } catch (e) {
+      console.error('[ConceptForm] Error setting up task cleared listener:', e);
+    }
+  }, [onTaskCleared]);
   
   const isSubmitting = status === 'submitting';
   const isSuccess = status === 'success';
