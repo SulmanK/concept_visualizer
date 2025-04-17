@@ -61,7 +61,29 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
   const errorHandler = useErrorHandling();
   
   // Get global task status
-  const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } = useTaskContext();
+  const { 
+    hasActiveTask, 
+    isTaskPending, 
+    isTaskProcessing, 
+    activeTaskData, 
+    onTaskCleared 
+  } = useTaskContext();
+  
+  // Reset form when task is cleared
+  useEffect(() => {
+    const unsubscribe = onTaskCleared(() => {
+      console.log('[ConceptForm] Task cleared event received, resetting form');
+      setLogoDescription('');
+      setThemeDescription('');
+      setValidationError(undefined);
+      if (formRef.current) {
+        formRef.current.reset();
+      }
+    });
+    
+    // Clean up subscription when component unmounts
+    return unsubscribe;
+  }, [onTaskCleared]);
   
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
