@@ -53,11 +53,15 @@ jobs:
     - name: Check for secrets found
       run: |
         if [ -s gitleaks-report.json ]; then
-          echo "::warning::Potential secrets found in the code. See the gitleaks-report.json artifact."
-          # Don't show full report with secrets in logs
-          jq 'length' gitleaks-report.json
-          echo "Found potential secrets in the codebase. See the artifact for details."
-          exit 1
+          # File exists and is not empty
+          SECRETS_COUNT=$(jq 'length' gitleaks-report.json)
+          if [ "$SECRETS_COUNT" -gt 0 ]; then
+            echo "::warning::Potential secrets found in the code. See the gitleaks-report.json artifact."
+            echo "Found $SECRETS_COUNT potential secrets in the codebase. See the artifact for details."
+            exit 1
+          else
+            echo "GitLeaks report exists but contains no issues."
+          fi
         else
           echo "No secrets found by GitLeaks"
         fi
