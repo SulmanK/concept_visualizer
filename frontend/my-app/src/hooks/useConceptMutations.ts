@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiClient, RateLimitError } from '../services/apiClient';
+import { apiClient, RateLimitError, NetworkError } from '../services/apiClient';
 import { 
   PromptRequest, 
   RefinementRequest,
@@ -183,13 +183,82 @@ export function useGenerateConceptMutation() {
       
       // If it's a rate limit error, handle it specially
       if (error instanceof RateLimitError) {
+        // Set the detailed rate limit error with all relevant information
         errorHandler.setError(
           error.getUserFriendlyMessage(),
           'rateLimit',
           'Please try again later or upgrade your plan.',
           error
         );
-      } else {
+        
+        // Also set our state variables for component-level handling
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: error.getUserFriendlyMessage(),
+          limit: error.limit,
+          current: error.current,
+          period: error.period,
+          resetAfterSeconds: error.resetAfterSeconds
+        });
+        
+        // Invalidate queries to refresh rate limit data
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      } 
+      // Special case for network errors that might be rate limits 
+      else if (error instanceof NetworkError && error.possibleRateLimit) {
+        console.warn('[useGenerateConceptMutation] Detected network error that might be a rate limit issue');
+        
+        errorHandler.setError(
+          'Rate limit likely exceeded or server is busy',
+          'rateLimit',
+          'This might be due to hitting a rate limit or the server being temporarily unavailable. Please try again later.',
+          error
+        );
+        
+        // Set rate limit state
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: 'Rate limit likely exceeded or server is busy',
+          limit: 10,
+          current: 10,
+          period: '15min',
+          resetAfterSeconds: 60  // Default 1 minute
+        });
+        
+        // Invalidate rate limits 
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      }
+      // Check for specific error messages that might indicate rate limits
+      else if (error instanceof Error && 
+               error.message && 
+               (error.message.toLowerCase().includes('rate limit') || 
+                error.message.toLowerCase().includes('too many requests') ||
+                error.message.toLowerCase().includes('server busy') ||
+                error.message.toLowerCase().includes('try again'))) {
+        console.warn('[useGenerateConceptMutation] Detected error message that might indicate a rate limit issue');
+        
+        errorHandler.setError(
+          error.message,
+          'rateLimit',
+          'This might be due to hitting a rate limit. Please try again later.',
+          error
+        );
+        
+        // Set rate limit state
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: error.message,
+          limit: 10,
+          current: 10,
+          period: '15min',
+          resetAfterSeconds: 60  // Default 1 minute
+        });
+        
+        // Invalidate rate limits
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      }
+      else {
+        // Use the standard error handler for other errors
         onQueryError(error);
       }
       
@@ -340,7 +409,74 @@ export function useRefineConceptMutation() {
           'Please try again later or upgrade your plan.',
           error
         );
-      } else {
+        
+        // Also set our state variables for component-level handling
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: error.getUserFriendlyMessage(),
+          limit: error.limit,
+          current: error.current,
+          period: error.period,
+          resetAfterSeconds: error.resetAfterSeconds
+        });
+        
+        // Invalidate queries to refresh rate limit data
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      } 
+      // Special case for network errors that might be rate limits 
+      else if (error instanceof NetworkError && error.possibleRateLimit) {
+        console.warn('[useRefineConceptMutation] Detected network error that might be a rate limit issue');
+        
+        errorHandler.setError(
+          'Rate limit likely exceeded or server is busy',
+          'rateLimit',
+          'This might be due to hitting a rate limit or the server being temporarily unavailable. Please try again later.',
+          error
+        );
+        
+        // Set rate limit state
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: 'Rate limit likely exceeded or server is busy',
+          limit: 10,
+          current: 10,
+          period: '15min',
+          resetAfterSeconds: 60  // Default 1 minute
+        });
+        
+        // Invalidate rate limits 
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      }
+      // Check for specific error messages that might indicate rate limits
+      else if (error instanceof Error && 
+               error.message && 
+               (error.message.toLowerCase().includes('rate limit') || 
+                error.message.toLowerCase().includes('too many requests') ||
+                error.message.toLowerCase().includes('server busy') ||
+                error.message.toLowerCase().includes('try again'))) {
+        console.warn('[useRefineConceptMutation] Detected error message that might indicate a rate limit issue');
+        
+        errorHandler.setError(
+          error.message,
+          'rateLimit',
+          'This might be due to hitting a rate limit. Please try again later.',
+          error
+        );
+        
+        // Set rate limit state
+        setIsRateLimited(true);
+        setRateLimitDetails({
+          message: error.message,
+          limit: 10,
+          current: 10,
+          period: '15min',
+          resetAfterSeconds: 60  // Default 1 minute
+        });
+        
+        // Invalidate rate limits
+        queryClient.invalidateQueries({ queryKey: queryKeys.rateLimits() });
+      }
+      else {
         onQueryError(error);
       }
       
