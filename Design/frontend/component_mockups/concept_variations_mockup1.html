@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Variations - Layout 1</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f5f7ff;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .variation-item {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .variation-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+    .selected {
+      border: 2px solid #4F46E5;
+    }
+  </style>
+</head>
+<body class="p-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="card p-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-gray-900">Generated Concept</h2>
+        <span class="text-sm text-gray-500">August 25, 2023</span>
+      </div>
+
+      <!-- Main Image Display -->
+      <div class="flex justify-center mb-8">
+        <div class="overflow-hidden rounded-lg border border-gray-200 shadow-sm">
+          <img src="https://via.placeholder.com/800x600/4F46E5/FFFFFF?text=Main+Concept" alt="Main concept" class="w-full max-h-96 object-contain">
+        </div>
+      </div>
+
+      <!-- Color Palette -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Color Palette</h3>
+        <div class="flex flex-wrap gap-3">
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-indigo-600"></div>
+            <span class="text-xs mt-1 text-gray-600">Primary</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-indigo-400"></div>
+            <span class="text-xs mt-1 text-gray-600">Secondary</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-purple-400"></div>
+            <span class="text-xs mt-1 text-gray-600">Accent</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-gray-100"></div>
+            <span class="text-xs mt-1 text-gray-600">Background</span>
+          </div>
+          <div class="flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-gray-900"></div>
+            <span class="text-xs mt-1 text-gray-600">Text</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Color Variations -->
+      <div class="mb-6">
+        <h3 class="text-lg font-medium text-gray-800 mb-3">Color Variations</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <!-- Original -->
+          <div class="variation-item selected rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/4F46E5/FFFFFF?text=Original" alt="Original" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Original</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-indigo-600" title="#4F46E5"></div>
+                <div class="w-2 h-2 rounded-full bg-indigo-400" title="#818CF8"></div>
+                <div class="w-2 h-2 rounded-full bg-purple-400" title="#C084FC"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-100" title="#F3F4F6"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-900" title="#111827"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Primary Palette -->
+          <div class="variation-item rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/2563EB/FFFFFF?text=Primary" alt="Primary Palette" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Primary Palette</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-blue-600" title="#2563EB"></div>
+                <div class="w-2 h-2 rounded-full bg-blue-400" title="#60A5FA"></div>
+                <div class="w-2 h-2 rounded-full bg-sky-400" title="#38BDF8"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-100" title="#F3F4F6"></div>
+                <div class="w-2 h-2 rounded-full bg-blue-900" title="#1E3A8A"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Secondary Palette -->
+          <div class="variation-item rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/7C3AED/FFFFFF?text=Secondary" alt="Secondary Palette" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Secondary Palette</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-violet-600" title="#7C3AED"></div>
+                <div class="w-2 h-2 rounded-full bg-violet-400" title="#A78BFA"></div>
+                <div class="w-2 h-2 rounded-full bg-fuchsia-400" title="#E879F9"></div>
+                <div class="w-2 h-2 rounded-full bg-violet-50" title="#F5F3FF"></div>
+                <div class="w-2 h-2 rounded-full bg-violet-900" title="#4C1D95"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Accent Palette -->
+          <div class="variation-item rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/0EA5E9/FFFFFF?text=Accent" alt="Accent Palette" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Accent Palette</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-sky-500" title="#0EA5E9"></div>
+                <div class="w-2 h-2 rounded-full bg-sky-300" title="#7DD3FC"></div>
+                <div class="w-2 h-2 rounded-full bg-cyan-400" title="#22D3EE"></div>
+                <div class="w-2 h-2 rounded-full bg-sky-50" title="#F0F9FF"></div>
+                <div class="w-2 h-2 rounded-full bg-sky-900" title="#0C4A6E"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Complementary Palette -->
+          <div class="variation-item rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/10B981/FFFFFF?text=Complementary" alt="Complementary Palette" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Complementary</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-emerald-500" title="#10B981"></div>
+                <div class="w-2 h-2 rounded-full bg-emerald-300" title="#6EE7B7"></div>
+                <div class="w-2 h-2 rounded-full bg-teal-400" title="#2DD4BF"></div>
+                <div class="w-2 h-2 rounded-full bg-emerald-50" title="#ECFDF5"></div>
+                <div class="w-2 h-2 rounded-full bg-emerald-900" title="#064E3B"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Analogous Palette -->
+          <div class="variation-item rounded-lg overflow-hidden border">
+            <div class="bg-gray-50">
+              <img src="https://via.placeholder.com/300x300/F59E0B/FFFFFF?text=Analogous" alt="Analogous Palette" class="w-full h-32 object-contain">
+            </div>
+            <div class="p-1 text-center bg-white text-xs">
+              <span class="font-medium text-gray-700">Analogous</span>
+              <div class="flex justify-center space-x-1 mt-1">
+                <div class="w-2 h-2 rounded-full bg-amber-500" title="#F59E0B"></div>
+                <div class="w-2 h-2 rounded-full bg-amber-300" title="#FCD34D"></div>
+                <div class="w-2 h-2 rounded-full bg-orange-400" title="#FB923C"></div>
+                <div class="w-2 h-2 rounded-full bg-amber-50" title="#FFFBEB"></div>
+                <div class="w-2 h-2 rounded-full bg-amber-900" title="#78350F"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+        <button class="px-4 py-2 bg-white text-indigo-600 font-medium border border-indigo-600 rounded hover:bg-indigo-50">
+          Refine This Concept
+        </button>
+        <button class="px-4 py-2 bg-indigo-600 text-white font-medium rounded hover:bg-indigo-700">
+          Download Image
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

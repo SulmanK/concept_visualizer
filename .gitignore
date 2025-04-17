@@ -203,7 +203,3 @@ pnpm-debug.log*
 lerna-debug.log*
 /frontend/my-app/dist
 /frontend/my-app/dist-analyze
-/.cursor
-/Context
-/Design
-/TODO

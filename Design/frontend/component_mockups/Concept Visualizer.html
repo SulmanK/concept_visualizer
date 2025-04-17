@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module">
+import RefreshRuntime from "/@react-refresh"
+RefreshRuntime.injectIntoGlobalHook(window)
+window.$RefreshReg$ = () => {}
+window.$RefreshSig$ = () => (type) => type
+window.__vite_plugin_react_preamble_installed__ = true
+</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Concept Visualizer</title>
+    <!-- Load Montserrat font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow-x: hidden !important;
+      }
+      #root {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      
+      /* Override any potential Vite/React default styles */
+      body > div:first-child {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-page">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx?t=1743471932062"></script>
+  </body>
+</html>

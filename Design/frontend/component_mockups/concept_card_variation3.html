@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Card Variation 3 - Glassmorphic Design</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+    .glass-dark {
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .color-chip {
+      transition: all 0.2s ease;
+      height: 28px;
+      cursor: pointer;
+      opacity: 0.8;
+    }
+    .color-chip:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    .selected-chip {
+      opacity: 1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+    }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-white mb-8">Glassmorphic Concept Cards</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <!-- Card 1 -->
+      <div class="card-hover rounded-2xl overflow-hidden glass relative">
+        <div class="absolute top-0 right-0 left-0 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-20"></div>
+        
+        <div class="px-6 pt-8 pb-6 relative">
+          <div class="flex space-x-4 mb-6">
+            <div class="w-20 h-20 rounded-xl glass-dark flex items-center justify-center shadow-lg p-1">
+              <img src="https://via.placeholder.com/100" alt="Krypto" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white mb-1">Krypto</h3>
+              <p class="text-white text-opacity-80 text-sm">Modern crypto trading platform</p>
+            </div>
+          </div>
+          
+          <p class="text-white text-opacity-70 text-sm mb-6 line-clamp-2">An intuitive cryptocurrency trading platform that makes digital currency accessible to everyone.</p>
+          
+          <div class="flex space-x-2 mb-6 overflow-x-auto">
+            <div class="color-chip selected-chip rounded-lg w-10" style="background-color: #6366F1;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #3B82F6;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #10B981;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #F59E0B;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #EF4444;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2.5 px-4 glass rounded-xl text-white font-medium text-sm hover:bg-white hover:bg-opacity-10 transition">Refine</button>
+            <button class="py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white font-medium text-sm hover:from-indigo-600 hover:to-purple-700 transition shadow-lg">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="card-hover rounded-2xl overflow-hidden glass relative">
+        <div class="absolute top-0 right-0 left-0 h-32 bg-gradient-to-br from-green-500 to-teal-600 opacity-20"></div>
+        
+        <div class="px-6 pt-8 pb-6 relative">
+          <div class="flex space-x-4 mb-6">
+            <div class="w-20 h-20 rounded-xl glass-dark flex items-center justify-center shadow-lg p-1">
+              <img src="https://via.placeholder.com/100" alt="Golf King" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white mb-1">Golf King</h3>
+              <p class="text-white text-opacity-80 text-sm">Premier golf equipment brand</p>
+            </div>
+          </div>
+          
+          <p class="text-white text-opacity-70 text-sm mb-6 line-clamp-2">Premium golf equipment and accessories trusted by professional players worldwide.</p>
+          
+          <div class="flex space-x-2 mb-6 overflow-x-auto">
+            <div class="color-chip selected-chip rounded-lg w-10" style="background-color: #047857;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #15803D;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #0E7490;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #1E3A8A;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #111827;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2.5 px-4 glass rounded-xl text-white font-medium text-sm hover:bg-white hover:bg-opacity-10 transition">Refine</button>
+            <button class="py-2.5 px-4 bg-gradient-to-r from-green-500 to-teal-600 rounded-xl text-white font-medium text-sm hover:from-green-600 hover:to-teal-700 transition shadow-lg">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 3 -->
+      <div class="card-hover rounded-2xl overflow-hidden glass relative">
+        <div class="absolute top-0 right-0 left-0 h-32 bg-gradient-to-br from-pink-500 to-rose-600 opacity-20"></div>
+        
+        <div class="px-6 pt-8 pb-6 relative">
+          <div class="flex space-x-4 mb-6">
+            <div class="w-20 h-20 rounded-xl glass-dark flex items-center justify-center shadow-lg p-1">
+              <img src="https://via.placeholder.com/100" alt="Queen" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1">
+              <h3 class="text-xl font-bold text-white mb-1">Queen</h3>
+              <p class="text-white text-opacity-80 text-sm">Luxury women's fashion</p>
+            </div>
+          </div>
+          
+          <p class="text-white text-opacity-70 text-sm mb-6 line-clamp-2">Luxury fashion brand focusing on elegant, high-quality women's clothing and accessories.</p>
+          
+          <div class="flex space-x-2 mb-6 overflow-x-auto">
+            <div class="color-chip selected-chip rounded-lg w-10" style="background-color: #BE185D;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #DB2777;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #9D174D;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #831843;"></div>
+            <div class="color-chip rounded-lg w-10" style="background-color: #4C1D95;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2.5 px-4 glass rounded-xl text-white font-medium text-sm hover:bg-white hover:bg-opacity-10 transition">Refine</button>
+            <button class="py-2.5 px-4 bg-gradient-to-r from-pink-500 to-rose-600 rounded-xl text-white font-medium text-sm hover:from-pink-600 hover:to-rose-700 transition shadow-lg">View Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

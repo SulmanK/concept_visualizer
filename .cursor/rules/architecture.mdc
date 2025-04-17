@@ -1,0 +1,188 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Architecture rules for the Concept Visualizer project
+globs:
+alwaysApply: true
+---
+# Project Architecture Guidelines
+
+This document outlines the architectural patterns to be followed when generating or modifying code in this project.
+
+## Overall Structure
+
+The project follows a monorepo approach with clear separation between backend and frontend:
+
+- `backend/` - Python FastAPI backend
+- `frontend/` - React frontend
+- `design/` - Design documents and specifications
+- `scripts/` - Utility scripts for development
+
+## Backend Architecture
+
+### Layer Separation
+
+The backend follows a layered architecture with strict separation between components:
+
+#### API Layer
+- Located in `backend/app/api/routes/`
+- Handles HTTP requests/responses and routing
+- Responsible for input validation using Pydantic models
+- Depends on services for business logic
+- Must not contain business logic
+
+#### Service Layer
+- Located in `backend/app/services/`
+- Contains business logic and orchestrates use cases
+- May depend on external services like JigsawStack API
+- Should be independent of API layer
+
+#### Models
+- Located in `backend/app/models/`
+- Defines data structures using Pydantic
+- Used for request/response validation and documentation
+
+#### Core
+- Located in `backend/app/core/`
+- Contains application configuration, logging, and exception handling
+- Should be independent of other layers
+
+### Dependency Direction
+
+- Dependencies should point inward (API → Services → External APIs)
+- Higher-level components should depend on lower-level components
+- External service clients should be isolated in dedicated modules
+
+## Frontend Architecture
+
+### Feature-Based Organization
+
+The frontend follows a feature-based organization:
+
+#### Feature Modules
+- Located in `frontend/src/features/`
+- Each feature has its own directory containing:
+  - Components specific to the feature
+  - Hooks specific to the feature
+  - Types specific to the feature
+
+#### Shared Components
+- Located in `frontend/src/components/`
+- Reusable UI components used across features
+- Should be independent of feature-specific logic
+
+#### API Services
+- Located in `frontend/src/services/`
+- Handles communication with backend
+- Abstract away HTTP details from components
+- Should return typed responses
+
+### Dependency Direction
+
+- Feature modules may use shared components and services
+- Shared components should not depend on features
+- Services should not depend on components or features
+
+## Example: Backend Architecture
+
+```python
+# CORRECT: API route using service layer
+# backend/app/api/routes/concept.py
+from fastapi import APIRouter, Depends, HTTPException
+from ...models.request import PromptRequest
+from ...models.response import GenerationResponse
+from ...services.concept_service import ConceptService
+
+router = APIRouter()
+
+@router.post("/generate", response_model=GenerationResponse)
+async def generate_concept(request: PromptRequest, service: ConceptService = Depends()):
+    try:
+        return await service.generate_concept(request.logo_description, request.theme_description)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+```python
+# INCORRECT: API route implementing business logic directly
+# backend/app/api/routes/concept.py
+from fastapi import APIRouter, HTTPException
+from ...models.request import PromptRequest
+from ...models.response import GenerationResponse
+import requests  # VIOLATION: Direct external API call
+
+router = APIRouter()
+
+@router.post("/generate", response_model=GenerationResponse)
+async def generate_concept(request: PromptRequest):
+    # VIOLATION: Business logic in API layer
+    api_key = os.getenv("JIGSAWSTACK_API_KEY")
+    response = requests.post(
+        "https://api.jigsawstack.com/v1/images/generate",
+        json={"prompt": request.logo_description},
+        headers={"Authorization": f"Bearer {api_key}"}
+    )
+    # More business logic...
+```
+
+## Example: Frontend Architecture
+
+```tsx
+// CORRECT: Feature component using shared components and services
+// frontend/src/features/conceptCreator/ConceptCreatorPage.tsx
+import React, { useState } from 'react';
+import { Button } from '../../components/Button/Button';
+import { LoadingSpinner } from '../../components/LoadingSpinner/LoadingSpinner';
+import { useConceptGeneration } from './hooks/useConceptGeneration';
+import type { PromptInput } from '../../types';
+
+export const ConceptCreatorPage: React.FC = () => {
+  const [input, setInput] = useState<PromptInput>({ logoDescription: '', themeDescription: '' });
+  const { generateConcept, isLoading, result } = useConceptGeneration();
+  
+  // Component implementation...
+};
+```
+
+```tsx
+// INCORRECT: Shared component with feature-specific logic
+// frontend/src/components/Button/Button.tsx
+import React from 'react';
+import { generateConcept } from '../../features/conceptCreator/api'; // VIOLATION: Importing from feature
+
+export const Button: React.FC<{ onClick?: () => void }> = ({ onClick, children }) => {
+  // VIOLATION: Feature-specific logic in shared component
+  const handleGenerateConcept = async () => {
+    const result = await generateConcept({ 
+      logoDescription: 'Default logo', 
+      themeDescription: 'Default theme' 
+    });
+    // Do something with result...
+  };
+  
+  return (
+    <button onClick={handleGenerateConcept || onClick}>{children}</button>
+  );
+};
+```
+
+## Testing Guidelines
+
+- Unit tests should respect architectural boundaries
+- Mock dependencies at layer boundaries
+- Test each layer in isolation when possible
+- Integration tests can cross layer boundaries
+
+## Enforcement
+
+These architectural guidelines are enforced through:
+- Code reviews
+- Pre-commit hooks
+- Automated linting
+- Documentation
+
+Always consult this document and the project structure document when adding new features or modifying existing code.
+
