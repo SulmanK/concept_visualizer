@@ -1,16 +1,109 @@
+#!/usr/bin/env python
 """
-Masking utilities.
+Security utilities for masking sensitive information.
 
-This module provides functions for masking sensitive data for logging,
-such as user IDs, concept IDs, and storage paths.
+This module provides functions to mask various types of sensitive information
+such as credit card numbers, email addresses, and phone numbers.
 """
 
-import logging
 import re
-from typing import Dict, Any, Optional
+import logging
+from typing import Optional, Union
 
-# Configure logging
+# Configure module logger
 logger = logging.getLogger(__name__)
+
+
+def mask_credit_card(card_number: Optional[str]) -> Optional[str]:
+    """
+    Mask a credit card number, showing only the last 4 digits.
+    
+    Args:
+        card_number: The credit card number to mask
+        
+    Returns:
+        A masked version of the credit card number or None if input was None
+    """
+    if card_number is None:
+        return None
+    
+    if not card_number:
+        return card_number
+    
+    # Remove any spaces or dashes from the card number
+    cleaned_number = re.sub(r'[\s-]', '', card_number)
+    
+    # If too short, return as is
+    if len(cleaned_number) < 10:
+        logger.debug(f"Card number too short to mask: {len(cleaned_number)} digits")
+        return card_number
+    
+    # Mask all but the last 4 digits
+    return '*' * (len(cleaned_number) - 4) + cleaned_number[-4:]
+
+
+def mask_email(email: Optional[str]) -> Optional[str]:
+    """
+    Mask an email address, showing only the first character of the username.
+    
+    Args:
+        email: The email address to mask
+        
+    Returns:
+        A masked version of the email or None if input was None
+    """
+    if email is None:
+        return None
+    
+    if not email:
+        return email
+        
+    # Simple regex for email validation
+    email_pattern = r'^(.*?)@(.+)$'
+    match = re.match(email_pattern, email)
+    
+    if not match:
+        logger.debug(f"Not a valid email format: {email}")
+        return email
+    
+    username, domain = match.groups()
+    
+    # If username is too short, return as is
+    if len(username) <= 2:
+        logger.debug(f"Email username too short to mask: {len(username)} characters")
+        return email
+    
+    # Mask username except first character
+    masked_username = username[0] + '*' * (len(username) - 1)
+    return f"{masked_username}@{domain}"
+
+
+def mask_phone_number(phone: Optional[str]) -> Optional[str]:
+    """
+    Mask a phone number, showing only the last 4 digits.
+    
+    Args:
+        phone: The phone number to mask
+        
+    Returns:
+        A masked version of the phone number or None if input was None
+    """
+    if phone is None:
+        return None
+    
+    if not phone:
+        return phone
+    
+    # Remove any non-digit characters
+    digits_only = re.sub(r'\D', '', phone)
+    
+    # If too short, return as is
+    if len(digits_only) < 7:
+        logger.debug(f"Phone number too short to mask: {len(digits_only)} digits")
+        return phone
+    
+    # Mask all but the last 4 digits
+    return '*' * (len(digits_only) - 4) + digits_only[-4:]
 
 
 def mask_id(id_string: str, visible_chars: int = 4) -> str:

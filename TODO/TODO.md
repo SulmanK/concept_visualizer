@@ -162,9 +162,9 @@ Okay, let's expand Phase 1 with a detailed list of test files to create/modify, 
         *   [x] Test `ImageStorage.create_signed_url`: Mock `create_supabase_jwt`, `requests.post`. Test URL formatting fixes.
 
     20. **`tests/app/models/**/*.py`**:
-        *   Create test files like `tests/app/models/concept/test_requests.py`.
-        *   Test any custom Pydantic validators (e.g., `RefinementRequest.validate_preserve_aspects`).
-        *   Test field constraints (min/max length, format).
+        *   [x] Create test files like `tests/app/models/concept/test_requests.py`.
+        *   [x] Test any custom Pydantic validators (e.g., `RefinementRequest.validate_preserve_aspects`).
+        *   [x] Test field constraints (min/max length, format).
 
     21. **`tests/app/utils/api_limits/test_*.py`**:
         *   Test `apply_rate_limit`, `apply_multiple_rate_limits` (mock `Request`, `settings`, limiter state/`check_rate_limit`). Verify logic and `HTTPException` raising.
