@@ -98,68 +98,68 @@ Okay, let's expand Phase 1 with a detailed list of test files to create/modify, 
         *    [x] Test `ConceptPersistenceService._delete_concept`: Mock `requests.delete`. Test deletion logic via service role key.
 
     13. **`tests/app/services/persistence/test_image_persistence_service.py`**:
-        *   Test `ImagePersistenceService.store_image`: Mock `ImageStorage.upload_image`, `ImageStorage.create_signed_url`. Test path generation, content type detection, metadata handling, calls to storage component.
-        *   Test `ImagePersistenceService.get_image`: Mock `ImageStorage.download_image`. Verify delegation and error handling (`ImageNotFoundError`).
-        *   Test `ImagePersistenceService.delete_image`: Mock `ImageStorage.remove_image`.
-        *   Test `ImagePersistenceService.get_signed_url`: Mock `ImageStorage.create_signed_url`.
-        *   Test `ImagePersistenceService.get_image_url`: Test logic for handling existing URLs vs generating signed URLs.
-        *   Test `ImagePersistenceService.get_image_async`: Mock `httpx.AsyncClient`, `get_image`. Test URL vs path logic, caching if implemented.
+        *   [x] Test `ImagePersistenceService.store_image`: Mock `ImageStorage.upload_image`, `ImageStorage.create_signed_url`. Test path generation, content type detection, metadata handling, calls to storage component.
+        *   [x] Test `ImagePersistenceService.get_image`: Mock `ImageStorage.download_image`. Verify delegation and error handling (`ImageNotFoundError`).
+        *   [x] Test `ImagePersistenceService.delete_image`: Mock `ImageStorage.remove_image`.
+        *   [x] Test `ImagePersistenceService.get_signed_url`: Mock `ImageStorage.create_signed_url`.
+        *   [x] Test `ImagePersistenceService.get_image_url`: Test logic for handling existing URLs vs generating signed URLs.
+        *   [x] Test `ImagePersistenceService.get_image_async`: Mock `httpx.AsyncClient`, `get_image`. Test URL vs path logic, caching if implemented.
 
     14. **`tests/app/services/task/test_task_service.py`**:
-        *   Test `TaskService.create_task`: Mock Supabase `client.table().insert().execute()`. Verify data inserted, ID generation, return value. Test using service role vs regular client.
-        *   Test `TaskService.update_task_status`: Mock `client.table().update().eq().execute()`. Test different statuses, `result_id`, `error_message`. Test `TaskNotFoundError`.
-        *   Test `TaskService.get_task`: Mock `client.table().select().eq().execute()`. Test found/not found cases.
-        *   Test `TaskService.get_tasks_by_user`: Mock `client.table().select().eq().order().limit().execute()`. Test filtering by status, limit.
-        *   Test `TaskService.delete_task`: Mock `get_task`, `client.table().delete().eq().execute()`. Test found/not found, deletion logic.
-        *   Test `TaskService.get_task_by_result_id`: Mock `client.table().select().eq().execute()`.
+        *   [x] Test `TaskService.create_task`: Mock Supabase `client.table().insert().execute()`. Verify data inserted, ID generation, return value. Test using service role vs regular client.
+        *   [x] Test `TaskService.update_task_status`: Mock `client.table().update().eq().execute()`. Test different statuses, `result_id`, `error_message`. Test `TaskNotFoundError`.
+        *   [x] Test `TaskService.get_task`: Mock `client.table().select().eq().execute()`. Test found/not found cases.
+        *   [x] Test `TaskService.get_tasks_by_user`: Mock `client.table().select().eq().order().limit().execute()`. Test filtering by status, limit.
+        *   [x] Test `TaskService.delete_task`: Mock `get_task`, `client.table().delete().eq().execute()`. Test found/not found, deletion logic.
+        *   [x] Test `TaskService.get_task_by_result_id`: Mock `client.table().select().eq().execute()`.
 
     15. **`tests/app/core/limiter/test_redis_store.py`**:
-        *   Test `RedisStore._make_key`.
-        *   Test `RedisStore.increment`: Mock `redis.Redis.pipeline`. Verify INCRBY and EXPIRE calls. Test error handling.
-        *   Test `RedisStore.get`: Mock `redis.Redis.get`. Test found/not found/error cases.
-        *   Test `RedisStore.get_with_expiry`: Mock `redis.Redis.pipeline` (GET, TTL). Test value/ttl logic.
-        *   Test `RedisStore.get_quota`: Mock `get_with_expiry`. Test quota calculation.
-        *   Test `RedisStore.check_rate_limit`: Mock `get`, `increment`, `get_quota`. Test logic for allowed, denied, check_only. Test error handling.
-        *   Test `RedisStore.reset`: Mock `redis.Redis.delete`.
-        *   Test `RedisStore.clear_all`: Mock `redis.Redis.scan`, `redis.Redis.delete`.
+        *   [x] Test `RedisStore._make_key`.
+        *   [x] Test `RedisStore.increment`: Mock `redis.Redis.pipeline`. Verify INCRBY and EXPIRE calls. Test error handling.
+        *   [x] Test `RedisStore.get`: Mock `redis.Redis.get`. Test found/not found/error cases.
+        *   [x] Test `RedisStore.get_with_expiry`: Mock `redis.Redis.pipeline` (GET, TTL). Test value/ttl logic.
+        *   [x] Test `RedisStore.get_quota`: Mock `get_with_expiry`. Test quota calculation.
+        *   [x] Test `RedisStore.check_rate_limit`: Mock `get`, `increment`, `get_quota`. Test logic for allowed, denied, check_only. Test error handling.
+        *   [x] Test `RedisStore.reset`: Mock `redis.Redis.delete`.
+        *   [x] Test `RedisStore.clear_all`: Mock `redis.Redis.scan`, `redis.Redis.delete`.
 
     16. **`tests/app/core/limiter/test_keys.py`**:
-        *   Test `get_user_id`: Mock `Request` with state, headers, remote address. Verify correct key (user vs ip).
-        *   Test `get_endpoint_key`: Mock `Request` with/without route scope.
-        *   Test `combine_keys`.
-        *   Test `calculate_ttl`.
-        *   Test `generate_rate_limit_keys`.
+        *   [x] Test `get_user_id`: Mock `Request` with state, headers, remote address. Verify correct key (user vs ip).
+        *   [x] Test `get_endpoint_key`: Mock `Request` with/without route scope.
+        *   [x] Test `combine_keys`.
+        *   [x] Test `calculate_ttl`.
+        *   [x] Test `generate_rate_limit_keys`.
 
     17. **`tests/app/core/supabase/test_client.py`**:
-        *   Test `SupabaseClient` init (mock `create_client`).
-        *   Test `get_service_role_client` (mock `settings`, `create_client`).
-        *   Test `SupabaseAuthClient` init.
-        *   Test `verify_token` (mock `jwt.decode`, test valid, expired, invalid cases).
-        *   Test `get_user_from_request` (mock `Request`, `verify_token`).
+        *   [x] Test `SupabaseClient` init (mock `create_client`).
+        *   [x] Test `get_service_role_client` (mock `settings`, `create_client`).
+        *   [x] Test `SupabaseAuthClient` init.
+        *   [x] Test `verify_token` (mock `jwt.decode`, test valid, expired, invalid cases).
+        *   [x] Test `get_user_from_request` (mock `Request`, `verify_token`).
 
     18. **`tests/app/core/supabase/test_concept_storage.py`**:
-        *   Test `ConceptStorage.store_concept`: Mock `client.table().insert().execute()` and `_store_concept_with_service_role`. Test data preparation, ID removal.
-        *   Test `ConceptStorage._store_concept_with_service_role`: Mock `settings`, `requests.post`. Test direct API call logic.
-        *   Test `ConceptStorage.store_color_variations`: Mock `client.table().insert().execute()` and `_store_variations_with_service_role`. Test data cleaning.
-        *   Test `ConceptStorage._store_variations_with_service_role`: Mock `settings`, `requests.post`.
-        *   Test `ConceptStorage.get_recent_concepts`: Mock client/service role methods. Verify filtering, ordering, limit. Ensure variations aren't fetched initially.
-        *   Test `ConceptStorage._get_recent_concepts_with_service_role`: Mock `settings`, `requests.get`.
-        *   Test `ConceptStorage.get_concept_detail`: Mock client/service role methods. Verify select includes variations.
-        *   Test `ConceptStorage._get_concept_detail_with_service_role`: Mock `settings`, `requests.get` (for concept and variations).
-        *   Test `ConceptStorage.delete_all_concepts`: Mock client method.
-        *   Test `ConceptStorage.get_concept_by_task_id`: Mock client/service role methods.
-        *   Test `ConceptStorage.get_variations_by_concept_ids`: Mock client/service role methods. Test grouping logic.
-        *   Test `ConceptStorage._get_variations_by_concept_ids_with_service_role`: Mock `settings`, `requests.get`.
+        *   [x] Test `ConceptStorage.store_concept`: Mock `client.table().insert().execute()` and `_store_concept_with_service_role`. Test data preparation, ID removal.
+        *   [x] Test `ConceptStorage._store_concept_with_service_role`: Mock `settings`, `requests.post`. Test direct API call logic.
+        *   [x] Test `ConceptStorage.store_color_variations`: Mock `client.table().insert().execute()` and `_store_variations_with_service_role`. Test data cleaning.
+        *   [x] Test `ConceptStorage._store_variations_with_service_role`: Mock `settings`, `requests.post`.
+        *   [x] Test `ConceptStorage.get_recent_concepts`: Mock client/service role methods. Verify filtering, ordering, limit. Ensure variations aren't fetched initially.
+        *   [x] Test `ConceptStorage._get_recent_concepts_with_service_role`: Mock `settings`, `requests.get`.
+        *   [x] Test `ConceptStorage.get_concept_detail`: Mock client/service role methods. Verify select includes variations.
+        *   [x] Test `ConceptStorage._get_concept_detail_with_service_role`: Mock `settings`, `requests.get` (for concept and variations).
+        *   [x] Test `ConceptStorage.delete_all_concepts`: Mock client method.
+        *   [x] Test `ConceptStorage.get_concept_by_task_id`: Mock client/service role methods.
+        *   [x] Test `ConceptStorage.get_variations_by_concept_ids`: Mock client/service role methods. Test grouping logic.
+        *   [x] Test `ConceptStorage._get_variations_by_concept_ids_with_service_role`: Mock `settings`, `requests.get`.
 
     19. **`tests/app/core/supabase/test_image_storage.py`**:
-        *   Test `ImageStorage.upload_image_from_url`: Mock `requests.get`, `PIL.Image.open`, `client.storage.from_().upload`.
-        *   Test `ImageStorage.get_image_url`: Mock `get_signed_url`.
-        *   Test `ImageStorage.apply_color_palette`: Mock image download/upload logic, test path generation.
-        *   Test `ImageStorage.delete_all_storage_objects`: Mock `client.storage.from_().list`, `remove`. Test user_id vs all logic.
-        *   Test `ImageStorage.store_image`: Mock `create_supabase_jwt`, `requests.post`. Test path/content-type generation.
-        *   Test `ImageStorage.upload_image`: Mock `create_supabase_jwt`, `requests.post`.
-        *   Test `ImageStorage.download_image`: Mock `create_supabase_jwt`, `requests.get`.
-        *   Test `ImageStorage.create_signed_url`: Mock `create_supabase_jwt`, `requests.post`. Test URL formatting fixes.
+        *   [x] Test `ImageStorage.upload_image_from_url`: Mock `requests.get`, `PIL.Image.open`, `client.storage.from_().upload`.
+        *   [x] Test `ImageStorage.get_image_url`: Mock `get_signed_url`.
+        *   [x] Test `ImageStorage.apply_color_palette`: Mock image download/upload logic, test path generation.
+        *   [x] Test `ImageStorage.delete_all_storage_objects`: Mock `client.storage.from_().list`, `remove`. Test user_id vs all logic.
+        *   [x] Test `ImageStorage.store_image`: Mock `create_supabase_jwt`, `requests.post`. Test path/content-type generation.
+        *   [x] Test `ImageStorage.upload_image`: Mock `create_supabase_jwt`, `requests.post`.
+        *   [x] Test `ImageStorage.download_image`: Mock `create_supabase_jwt`, `requests.get`.
+        *   [x] Test `ImageStorage.create_signed_url`: Mock `create_supabase_jwt`, `requests.post`. Test URL formatting fixes.
 
     20. **`tests/app/models/**/*.py`**:
         *   Create test files like `tests/app/models/concept/test_requests.py`.
