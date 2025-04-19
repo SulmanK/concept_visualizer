@@ -24,13 +24,14 @@ Okay, here is a detailed breakdown of the files to be created or modified for im
 ### 2. `src/components/`
 
 *   **`common/`**
-    *   **File to Create:** `src/components/common/__tests__/QueryResultHandler.test.tsx` `[CREATE]`
+    *   **File to Create:** `src/components/common/__tests__/QueryResultHandler.test.tsx` `[CREATE]` `[DONE]`
         *   **Purpose:** Test conditional rendering based on query state props.
         *   **Key Tests:**
             *   Render with `isLoading={true}` -> Assert `loadingComponent` or default `LoadingIndicator` is shown.
             *   Render with `error` -> Assert `errorComponent` or default `ErrorMessage` is shown with the correct message.
             *   Render with `data={null}` or `data={[]}` -> Assert `emptyComponent` or default empty message is shown.
             *   Render with valid `data` -> Assert `children` function is called with data and its output is rendered.
+        *   **Status:** Implemented all test cases for each condition (loading, error, empty, data) including custom component variants.
 
 *   **`concept/`**
     *   **File to Modify:** `src/components/concept/__tests__/ConceptForm.test.tsx` `[MODIFY]`
