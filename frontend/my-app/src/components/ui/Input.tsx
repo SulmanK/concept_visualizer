@@ -127,7 +127,7 @@ export const Input: React.FC<InputProps> = ({
         <input
           id={inputId}
           className={inputClasses}
-          aria-invalid={error ? 'true' : 'false'}
+          aria-invalid={Boolean(error)}
           aria-describedby={
             error 
               ? `${inputId}-error` 
