@@ -44,13 +44,14 @@ Okay, here is a detailed breakdown of the files to be created or modified for im
             *   Test `onReset` callback invocation.
             *   Verify snapshot is up-to-date.
         *   **Status:** Implemented all required tests, fixed mocks for dependencies, and added tests for error states and reset functionality.
-    *   **File to Create:** `src/components/concept/__tests__/ConceptImage.test.tsx` `[CREATE]`
+    *   **File to Create:** `src/components/concept/__tests__/ConceptImage.test.tsx` `[CREATE]` `[DONE]`
         *   **Purpose:** Test the wrapper around `OptimizedImage`.
         *   **Key Tests:**
             *   Render with `url` prop -> Assert `OptimizedImage` receives the `url`.
             *   Render with `path` prop -> Assert `OptimizedImage` receives the `path` (check if URL conversion happens if needed).
             *   Render without `url` or `path` -> Assert placeholder text is shown.
             *   Simulate `onError` from `OptimizedImage` -> Assert error message is displayed.
+        *   **Status:** Implemented comprehensive tests covering all required scenarios, including testing placeholder text display, error handling, and prop forwarding. Added additional tests for className and lazy prop forwarding.
     *   **File to Modify:** `src/components/concept/__tests__/ConceptRefinementForm.test.tsx` `[MODIFY]`
         *   **Purpose:** Enhance existing tests for the refinement form.
         *   **Key Tests (Add/Verify):**
