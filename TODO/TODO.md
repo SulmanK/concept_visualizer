@@ -34,7 +34,7 @@ Okay, here is a detailed breakdown of the files to be created or modified for im
         *   **Status:** Implemented all test cases for each condition (loading, error, empty, data) including custom component variants.
 
 *   **`concept/`**
-    *   **File to Modify:** `src/components/concept/__tests__/ConceptForm.test.tsx` `[MODIFY]`
+    *   **File to Modify:** `src/components/concept/__tests__/ConceptForm.test.tsx` `[MODIFY]` `[DONE]`
         *   **Purpose:** Enhance existing tests for the concept generation form.
         *   **Key Tests (Add/Verify):**
             *   Simulate input changes using `fireEvent.change` and verify state updates (if applicable, or check controlled component behavior).
@@ -43,6 +43,7 @@ Okay, here is a detailed breakdown of the files to be created or modified for im
             *   Test rendering based on `status` prop ('submitting', 'error', 'success'): check button disabled state, loading indicator visibility, error message display.
             *   Test `onReset` callback invocation.
             *   Verify snapshot is up-to-date.
+        *   **Status:** Implemented all required tests, fixed mocks for dependencies, and added tests for error states and reset functionality.
     *   **File to Create:** `src/components/concept/__tests__/ConceptImage.test.tsx` `[CREATE]`
         *   **Purpose:** Test the wrapper around `OptimizedImage`.
         *   **Key Tests:**
