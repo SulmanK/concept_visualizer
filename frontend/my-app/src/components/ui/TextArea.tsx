@@ -104,7 +104,7 @@ export const TextArea: React.FC<TextAreaProps> = ({
         id={textareaId}
         className={textareaClasses}
         rows={rows}
-        aria-invalid={error ? 'true' : 'false'}
+        aria-invalid={Boolean(error)}
         aria-describedby={
           error 
             ? `${textareaId}-error` 

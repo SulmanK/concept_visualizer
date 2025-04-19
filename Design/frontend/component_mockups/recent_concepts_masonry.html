@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recent Concepts - Masonry Layout</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #818CF8;
+      --primary-lighter: #C7D2FE;
+      --primary-lightest: #EEF2FF;
+      --primary-dark: #4338CA;
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f7f9fc;
+      color: var(--gray-800);
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    
+    .page-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 0.5rem;
+    }
+    
+    .page-description {
+      font-size: 0.875rem;
+      color: var(--gray-500);
+    }
+    
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    
+    .filter-options {
+      display: flex;
+      gap: 1rem;
+    }
+    
+    .filter-btn {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      border-radius: 9999px;
+      border: 1px solid var(--gray-300);
+      background-color: white;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn:hover {
+      background-color: var(--gray-50);
+    }
+    
+    .filter-btn.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    .create-btn {
+      padding: 0.5rem 1rem;
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .create-btn:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    .masonry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-auto-rows: 20px;
+      grid-gap: 1.5rem;
+    }
+    
+    .concept-card {
+      grid-row-end: span 18; /* Default height */
+      background-color: white;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--gray-200);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .concept-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .concept-card.large {
+      grid-row-end: span 24;
+    }
+    
+    .concept-card.medium {
+      grid-row-end: span 20;
+    }
+    
+    .concept-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      object-position: center;
+    }
+    
+    .card-body {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+    
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gray-900);
+      margin-bottom: 0.5rem;
+    }
+    
+    .card-description {
+      font-size: 0.875rem;
+      color: var(--gray-600);
+      margin-bottom: 1rem;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .card-meta {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--gray-500);
+    }
+    
+    .card-date {
+      margin-right: 0.75rem;
+    }
+    
+    .color-tags {
+      display: flex;
+      gap: 0.375rem;
+      margin-bottom: 1rem;
+    }
+    
+    .color-tag {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.1s;
+      border: 2px solid white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    .color-tag:hover {
+      transform: scale(1.1);
+    }
+    
+    .card-actions {
+      display: flex;
+      border-top: 1px solid var(--gray-200);
+      margin-top: auto;
+    }
+    
+    .card-btn {
+      flex: 1;
+      padding: 0.75rem 0;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--gray-700);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .card-btn:hover {
+      background-color: var(--gray-50);
+      color: var(--gray-900);
+    }
+    
+    .card-btn:first-child {
+      border-right: 1px solid var(--gray-200);
+    }
+    
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 3rem;
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--gray-200);
+    }
+
+    @media (max-width: 768px) {
+      .masonry-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .masonry-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .filter-options {
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1 class="page-title">Recent Concepts</h1>
+      <p class="page-description">Browse your previously generated design concepts</p>
+    </div>
+    
+    <div class="toolbar">
+      <div class="filter-options">
+        <button class="filter-btn active">All</button>
+        <button class="filter-btn">This Week</button>
+        <button class="filter-btn">This Month</button>
+        <button class="filter-btn">With Palettes</button>
+      </div>
+      
+      <button class="create-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+          <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+        </svg>
+        Create New Concept
+      </button>
+    </div>
+    
+    <div class="masonry-grid">
+      <!-- Card 1 - Large -->
+      <div class="concept-card large">
+        <img src="https://via.placeholder.com/400x240/4F46E5/FFFFFF" alt="Tech Concept" class="concept-image">
+        <div class="card-body">
+          <h3 class="card-title">Tech Innovators</h3>
+          <div class="card-meta">
+            <span class="card-date">3 days ago</span>
+            <span class="card-variations">5 variations</span>
+          </div>
+          <p class="card-description">
+            A modern tech company concept with a focus on innovation and cutting-edge solutions. The design features a clean, geometric approach with vibrant accents.
+          </p>
+          
+          <div class="color-tags">
+            <div class="color-tag" style="background-color: #4F46E5;"></div>
+            <div class="color-tag" style="background-color: #10B981;"></div>
+            <div class="color-tag" style="background-color: #F59E0B;"></div>
+            <div class="color-tag" style="background-color: #EC4899;"></div>
+            <div class="color-tag" style="background-color: #6366F1;"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="card-btn">Edit</button>
+          <button class="card-btn">View Details</button>
+        </div>
+      </div>
+      
+      <!-- Card 2 - Medium -->
+      <div class="concept-card medium">
+        <img src="https://via.placeholder.com/400x180/10B981/FFFFFF" alt="Eco Friendly" class="concept-image">
+        <div class="card-body">
+          <h3 class="card-title">Eco Friendly</h3>
+          <div class="card-meta">
+            <span class="card-date">1 week ago</span>
+            <span class="card-variations">3 variations</span>
+          </div>
+          <p class="card-description">
+            A sustainable brand concept focusing on environmental consciousness and natural elements.
+          </p>
+          
+          <div class="color-tags">
+            <div class="color-tag" style="background-color: #10B981;"></div>
+            <div class="color-tag" style="background-color: #047857;"></div>
+            <div class="color-tag" style="background-color: #D97706;"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="card-btn">Edit</button>
+          <button class="card-btn">View Details</button>
+        </div>
+      </div>
+      
+      <!-- Card 3 - Default -->
+      <div class="concept-card">
+        <img src="https://via.placeholder.com/400x180/F59E0B/FFFFFF" alt="Mountain Adventure" class="concept-image">
+        <div class="card-body">
+          <h3 class="card-title">Mountain Gear</h3>
+          <div class="card-meta">
+            <span class="card-date">2 weeks ago</span>
+            <span class="card-variations">2 variations</span>
+          </div>
+          <p class="card-description">
+            Outdoor adventure equipment brand with a bold, rugged aesthetic.
+          </p>
+          
+          <div class="color-tags">
+            <div class="color-tag" style="background-color: #F59E0B;"></div>
+            <div class="color-tag" style="background-color: #1E40AF;"></div>
+            <div class="color-tag" style="background-color: #4B5563;"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="card-btn">Edit</button>
+          <button class="card-btn">View Details</button>
+        </div>
+      </div>
+      
+      <!-- Card 4 - Large -->
+      <div class="concept-card large">
+        <img src="https://via.placeholder.com/400x240/8B5CF6/FFFFFF" alt="Wellness Brand" class="concept-image">
+        <div class="card-body">
+          <h3 class="card-title">Wellness Studio</h3>
+          <div class="card-meta">
+            <span class="card-date">3 weeks ago</span>
+            <span class="card-variations">4 variations</span>
+          </div>
+          <p class="card-description">
+            A wellness and mindfulness brand with a calming, serene aesthetic. The design balances professional polish with warm, inviting elements to create a sense of peace and self-care.
+          </p>
+          
+          <div class="color-tags">
+            <div class="color-tag" style="background-color: #8B5CF6;"></div>
+            <div class="color-tag" style="background-color: #EC4899;"></div>
+            <div class="color-tag" style="background-color: #6366F1;"></div>
+            <div class="color-tag" style="background-color: #C4B5FD;"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="card-btn">Edit</button>
+          <button class="card-btn">View Details</button>
+        </div>
+      </div>
+      
+      <!-- Card 5 - Medium -->
+      <div class="concept-card medium">
+        <img src="https://via.placeholder.com/400x180/EC4899/FFFFFF" alt="Beauty Shop" class="concept-image">
+        <div class="card-body">
+          <h3 class="card-title">Beauty Shop</h3>
+          <div class="card-meta">
+            <span class="card-date">1 month ago</span>
+            <span class="card-variations">3 variations</span>
+          </div>
+          <p class="card-description">
+            Cosmetics and beauty products brand with elegant, sophisticated design elements.
+          </p>
+          
+          <div class="color-tags">
+            <div class="color-tag" style="background-color: #EC4899;"></div>
+            <div class="color-tag" style="background-color: #DB2777;"></div>
+            <div class="color-tag" style="background-color: #8B5CF6;"></div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="card-btn">Edit</button>
+          <button class="card-btn">View Details</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Empty state (hidden) -->
+    <!--
+    <div class="masonry-grid">
+      <div class="empty-state">
+        <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">No concepts yet</h2>
+        <p style="color: var(--gray-500); margin-bottom: 1.5rem;">
+          Your recently generated concepts will appear here. Create your first concept to get started.
+        </p>
+        <button class="create-btn" style="margin: 0 auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Create First Concept
+        </button>
+      </div>
+    </div>
+    -->
+  </div>
+</body>
+</html> 

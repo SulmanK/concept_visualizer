@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Card Variation 8 - Clean Modern</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8fafc;
+      min-height: 100vh;
+    }
+    .modern-card {
+      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.02);
+      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .modern-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08), 0 16px 24px rgba(0, 0, 0, 0.04);
+    }
+    .color-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+    .color-circle::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .color-circle:hover::after {
+      opacity: 0.2;
+      box-shadow: 0 0 0 4px currentColor;
+    }
+    .original-circle {
+      background-color: #f3f4f6;
+      color: #4b5563;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .selected-circle::after {
+      opacity: 1;
+      box-shadow: 0 0 0 2px white, 0 0 0 4px currentColor;
+    }
+    .logo-image {
+      transition: all 0.3s ease;
+    }
+    .modern-card:hover .logo-image {
+      transform: scale(1.05);
+    }
+    .header-gradient {
+      background: linear-gradient(to right, rgba(255,255,255,0.9), rgba(249,250,251,0.4));
+      height: 100px;
+    }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Clean Modern Concept Cards</h1>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+      <!-- Card 1 -->
+      <div class="modern-card bg-white rounded-xl overflow-hidden">
+        <div class="header-gradient relative">
+          <div class="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+            <div class="w-32 h-32 bg-white rounded-xl shadow-sm p-3 flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Krypto" class="logo-image w-full h-full object-contain">
+            </div>
+          </div>
+        </div>
+        
+        <div class="px-6 pt-20 pb-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Krypto</h3>
+            <p class="text-gray-500 text-sm mb-5">Modern crypto trading platform</p>
+          </div>
+          
+          <div class="flex justify-center space-x-3 mb-6">
+            <div class="color-circle original-circle">O</div>
+            <div class="color-circle selected-circle" style="background-color: #6366F1; color: #6366F1;"></div>
+            <div class="color-circle" style="background-color: #3B82F6; color: #3B82F6;"></div>
+            <div class="color-circle" style="background-color: #10B981; color: #10B981;"></div>
+            <div class="color-circle" style="background-color: #F59E0B; color: #F59E0B;"></div>
+            <div class="color-circle" style="background-color: #EF4444; color: #EF4444;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2.5 px-4 bg-gray-50 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100 transition border border-gray-200">Refine</button>
+            <button class="flex-1 py-2.5 px-4 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="modern-card bg-white rounded-xl overflow-hidden">
+        <div class="header-gradient relative">
+          <div class="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+            <div class="w-32 h-32 bg-white rounded-xl shadow-sm p-3 flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Golf King" class="logo-image w-full h-full object-contain">
+            </div>
+          </div>
+        </div>
+        
+        <div class="px-6 pt-20 pb-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Golf King</h3>
+            <p class="text-gray-500 text-sm mb-5">Premier golf equipment brand</p>
+          </div>
+          
+          <div class="flex justify-center space-x-3 mb-6">
+            <div class="color-circle original-circle">O</div>
+            <div class="color-circle selected-circle" style="background-color: #047857; color: #047857;"></div>
+            <div class="color-circle" style="background-color: #15803D; color: #15803D;"></div>
+            <div class="color-circle" style="background-color: #0E7490; color: #0E7490;"></div>
+            <div class="color-circle" style="background-color: #1E3A8A; color: #1E3A8A;"></div>
+            <div class="color-circle" style="background-color: #111827; color: #111827;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2.5 px-4 bg-gray-50 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100 transition border border-gray-200">Refine</button>
+            <button class="flex-1 py-2.5 px-4 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 3 -->
+      <div class="modern-card bg-white rounded-xl overflow-hidden">
+        <div class="header-gradient relative">
+          <div class="absolute -bottom-16 left-1/2 transform -translate-x-1/2">
+            <div class="w-32 h-32 bg-white rounded-xl shadow-sm p-3 flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Queen" class="logo-image w-full h-full object-contain">
+            </div>
+          </div>
+        </div>
+        
+        <div class="px-6 pt-20 pb-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-gray-800 mb-1">Queen</h3>
+            <p class="text-gray-500 text-sm mb-5">Luxury women's fashion</p>
+          </div>
+          
+          <div class="flex justify-center space-x-3 mb-6">
+            <div class="color-circle original-circle">O</div>
+            <div class="color-circle selected-circle" style="background-color: #BE185D; color: #BE185D;"></div>
+            <div class="color-circle" style="background-color: #DB2777; color: #DB2777;"></div>
+            <div class="color-circle" style="background-color: #9D174D; color: #9D174D;"></div>
+            <div class="color-circle" style="background-color: #831843; color: #831843;"></div>
+            <div class="color-circle" style="background-color: #4C1D95; color: #4C1D95;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2.5 px-4 bg-gray-50 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100 transition border border-gray-200">Refine</button>
+            <button class="flex-1 py-2.5 px-4 bg-pink-600 text-white rounded-lg text-sm font-medium hover:bg-pink-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

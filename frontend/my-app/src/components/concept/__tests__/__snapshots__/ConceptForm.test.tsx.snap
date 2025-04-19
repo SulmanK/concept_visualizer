@@ -2,64 +2,30 @@
 
 exports[`ConceptForm Component > matches snapshot 1`] = `
 <div
-  style="background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02); padding: 2rem; margin-bottom: 2rem;"
+  class="max-w-4xl mx-auto"
 >
-  <h2
-    class="text-xl font-semibold text-indigo-900 mb-6"
+  <div
+    class="p-6 shadow-lg bg-white border border-indigo-100 rounded-xl"
   >
-    Create New Concept
-  </h2>
-  <form
-    class="space-y-6"
-  >
-    <div>
-      <div
-        class="mb-6"
-      >
-        <label
-          style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;"
-        >
-          Logo Description
-        </label>
-        <textarea
-          placeholder="Describe the logo you want to generate..."
-          style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
-        />
-        <p
-          style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;"
-        >
-          Be descriptive about style, symbols, and colors you want
-        </p>
-      </div>
-      <div
-        class="mb-6"
-      >
-        <label
-          style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;"
-        >
-          Theme/Color Scheme Description
-        </label>
-        <textarea
-          placeholder="Describe the theme or color scheme..."
-          style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"
-        />
-        <p
-          style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;"
-        >
-          Describe mood, colors, and style of your brand
-        </p>
-      </div>
-    </div>
-    <div
-      class="flex justify-end"
+    <form
+      class="space-y-6"
     >
-      <button
-        style="background-color: rgb(79, 70, 229); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s; margin-top: 1rem;"
-        type="submit"
+      <textarea
+        placeholder="Describe the logo you want to create (e.g., A modern tech startup logo with abstract geometric shapes)"
+      />
+      <textarea
+        placeholder="Describe the theme or style (e.g., Minimalist corporate design with blue and gray tones)"
+      />
+      <div
+        class="flex justify-end items-center"
       >
-        Generate Concept
-      </button>
-    </div>
-  </form>
+        <button
+          type="submit"
+        >
+          Generate Concept
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 `;

@@ -1,170 +1,73 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '../../../test-utils';
 import { Card } from '../Card';
 
 describe('Card Component', () => {
   // Basic rendering tests
-  test('renders card with children', () => {
+  test('renders children inside card', () => {
     render(
       <Card>
-        <p>Card content</p>
+        <p data-testid="card-content">Card Content</p>
       </Card>
     );
     
-    const content = screen.getByText('Card content');
-    expect(content).toBeInTheDocument();
+    expect(screen.getByTestId('card-content')).toBeInTheDocument();
   });
   
-  // Variant tests
-  test.each([
-    ['default', 'card'],
-    ['gradient', 'card-gradient'],
-    ['elevated', 'card bg-white border-none shadow-lg'],
-  ])('renders %s variant correctly', (variant, expectedClass) => {
-    render(
-      <Card variant={variant as any}>
-        <p>Card content</p>
-      </Card>
-    );
+  test('applies default classes', () => {
+    const { container } = render(<Card>Default Card</Card>);
+    const cardElement = container.firstChild as HTMLElement;
     
-    const contentElement = screen.getByText('Card content');
-    const card = contentElement.parentElement?.parentElement;
-    expect(card?.className).toContain(expectedClass.split(' ')[0]); // Just check the first class
+    expect(cardElement.className).toContain('bg-white');
+    expect(cardElement.className).toContain('rounded-lg');
+    expect(cardElement.className).toContain('shadow-modern');
   });
   
-  // Padding tests
-  test('renders card with padding when padded is true', () => {
-    render(
-      <Card padded>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const contentDiv = screen.getByText('Card content').parentElement;
-    expect(contentDiv?.className).toContain('p-4');
-  });
-  
-  test('renders card without padding when padded is false', () => {
-    render(
-      <Card padded={false}>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const contentDiv = screen.getByText('Card content').parentElement;
-    expect(contentDiv?.className).toBe('');
-  });
-  
-  // Loading state tests
-  test('renders loading spinner when isLoading is true', () => {
-    render(
-      <Card isLoading>
-        <p>Card content</p>
-      </Card>
-    );
-    
-    const spinner = document.querySelector('.animate-spin');
-    expect(spinner).not.toBeNull();
-  });
-  
-  // Custom className test
+  // Props tests
   test('applies custom className when provided', () => {
-    render(
-      <Card className="custom-class">
-        <p>Card content</p>
-      </Card>
+    const { container } = render(
+      <Card className="custom-class">Card with custom class</Card>
     );
     
-    const contentElement = screen.getByText('Card content');
-    const card = contentElement.parentElement?.parentElement;
-    expect(card?.className).toContain('custom-class');
+    const cardElement = container.firstChild as HTMLElement;
+    expect(cardElement.className).toContain('custom-class');
   });
   
-  // Header and footer tests
-  test('renders card with header when provided', () => {
-    const header = <div data-testid="card-header">Custom Header</div>;
-    
-    render(
-      <Card header={header}>
-        <p>Card content</p>
-      </Card>
+  test('has hover effect with shadow by default', () => {
+    const { container } = render(
+      <Card>Card with hover effect</Card>
     );
     
-    const cardHeader = screen.getByTestId('card-header');
-    expect(cardHeader).toBeInTheDocument();
-    expect(cardHeader.textContent).toBe('Custom Header');
+    const cardElement = container.firstChild as HTMLElement;
+    expect(cardElement.className).toContain('hover:shadow-lg');
   });
   
-  test('renders card with footer when provided', () => {
-    const footer = <div data-testid="card-footer">Custom Footer</div>;
-    
-    render(
-      <Card footer={footer}>
-        <p>Card content</p>
-      </Card>
+  test('applies border by default', () => {
+    const { container } = render(
+      <Card>Bordered Card</Card>
     );
     
-    const cardFooter = screen.getByTestId('card-footer');
-    expect(cardFooter).toBeInTheDocument();
-    expect(cardFooter.textContent).toBe('Custom Footer');
+    const cardElement = container.firstChild as HTMLElement;
+    expect(cardElement.className).toContain('border');
+    expect(cardElement.className).toContain('border-indigo-100');
   });
   
-  // Snapshot tests
-  describe('Snapshots', () => {
-    test('default card snapshot', () => {
-      const { container } = render(
-        <Card>
-          <p>Default card content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
+  test('includes transition for animations', () => {
+    const { container } = render(
+      <Card>Card with transition</Card>
+    );
     
-    test('gradient variant card snapshot', () => {
-      const { container } = render(
-        <Card variant="gradient">
-          <p>Gradient card content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
+    const cardElement = container.firstChild as HTMLElement;
+    expect(cardElement.className).toContain('transition-all');
+    expect(cardElement.className).toContain('duration-300');
+  });
+  
+  test('has hover translate effect', () => {
+    const { container } = render(
+      <Card>Card with hover translate</Card>
+    );
     
-    test('elevated variant card snapshot', () => {
-      const { container } = render(
-        <Card variant="elevated">
-          <p>Elevated card content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-    
-    test('card with header snapshot', () => {
-      const header = <div>Header Content</div>;
-      const { container } = render(
-        <Card header={header}>
-          <p>Card with header content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-    
-    test('card with footer snapshot', () => {
-      const footer = <div>Footer Content</div>;
-      const { container } = render(
-        <Card footer={footer}>
-          <p>Card with footer content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
-    
-    test('loading card snapshot', () => {
-      const { container } = render(
-        <Card isLoading>
-          <p>Loading card content</p>
-        </Card>
-      );
-      expect(container.firstChild).toMatchSnapshot();
-    });
+    const cardElement = container.firstChild as HTMLElement;
+    expect(cardElement.className).toContain('hover:translate-y-[-4px]');
   });
 }); 

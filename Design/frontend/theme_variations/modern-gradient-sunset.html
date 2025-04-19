@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Gradient Sunset - Concept Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#F97316',
+            'primary-dark': '#EA580C',
+            secondary: '#FB923C',
+            'secondary-dark': '#F59E0B',
+            accent: '#FFF7ED',
+            'accent-foreground': '#7C2D12',
+          },
+          backgroundImage: {
+            'gradient-primary': 'linear-gradient(135deg, #F97316 0%, #FB923C 100%)',
+            'gradient-secondary': 'linear-gradient(135deg, #FB923C 0%, #F59E0B 100%)',
+            'gradient-page': 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)',
+          },
+          boxShadow: {
+            'modern': '0 10px 30px -5px rgba(249, 115, 22, 0.2)',
+            'modern-hover': '0 20px 40px -5px rgba(249, 115, 22, 0.3)',
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      padding: 2rem;
+      background-image: linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%);
+      color: #7C2D12;
+    }
+    .component-section {
+      margin-bottom: 4rem;
+      padding-bottom: 2rem;
+    }
+    .component-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-5xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-5xl font-bold mb-3 bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">Concept Visualizer</h1>
+      <p class="text-orange-900/70 text-lg">Modern Gradient Sunset Theme</p>
+    </header>
+    
+    <!-- Buttons -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-orange-900">Buttons</h2>
+      
+      <h3 class="text-lg font-semibold mt-6 mb-3 text-orange-800">Variants</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover">
+          Primary Button
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 h-12 px-6 py-2 bg-gradient-secondary text-white shadow-modern hover:shadow-modern-hover">
+          Secondary Button
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 border-2 border-primary/50 bg-white/80 hover:bg-white text-primary shadow-modern hover:shadow-modern-hover">
+          Outline Button
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 hover:bg-orange-50 text-orange-700 hover:text-primary">
+          Ghost Button
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-semibold mt-6 mb-3 text-orange-800">Sizes</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-9 px-4 text-sm bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover">
+          Small
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover">
+          Medium
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-14 px-8 text-lg bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover">
+          Large
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-semibold mt-6 mb-3 text-orange-800">States</h3>
+      <div class="component-group">
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover opacity-40 pointer-events-none">
+          Disabled
+        </button>
+        
+        <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-6 py-2 bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover disabled:opacity-50 disabled:pointer-events-none">
+          <svg class="h-5 w-5 mr-2 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading
+        </button>
+      </div>
+    </div>
+    
+    <!-- Loading Spinners -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-orange-900">Loading Spinners</h2>
+      
+      <h3 class="text-lg font-semibold mt-6 mb-3 text-orange-800">Sizes</h3>
+      <div class="component-group items-center">
+        <div role="status" class="inline-block">
+          <svg class="h-5 w-5 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block">
+          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block">
+          <svg class="h-12 w-12 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Error Messages -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-orange-900">Error Messages</h2>
+      
+      <h3 class="text-lg font-semibold mt-6 mb-3 text-orange-800">Default Variant</h3>
+      <div class="component-group flex-col">
+        <div class="flex items-center p-4 rounded-2xl text-sm bg-gradient-to-r from-red-50 to-orange-50 text-red-600 border border-orange-200 shadow-lg" role="alert">
+          <div class="flex-1">
+            <div class="font-semibold">Failed to generate concept</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="text-xs font-medium px-3 py-1 rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex items-center p-4 rounded-2xl text-sm bg-gradient-to-r from-red-50 to-orange-50 text-red-600 border border-orange-200 shadow-lg" role="alert">
+          <div class="flex-1">
+            <div class="font-semibold">Failed to connect to server</div>
+            <div class="text-xs mt-1 text-red-500">Network error: Connection refused</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="text-xs font-medium px-3 py-1 rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form Example with Components -->
+    <div class="component-section">
+      <h2 class="text-2xl font-bold mb-6 text-orange-900">Form Example</h2>
+      
+      <div class="bg-white p-8 rounded-3xl shadow-modern border border-orange-100">
+        <h3 class="text-2xl font-bold mb-6 text-orange-900">Generate New Concept</h3>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-orange-800 mb-2">Logo Description</label>
+            <input type="text" class="w-full px-5 py-3 bg-orange-50/70 border border-orange-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all duration-200" 
+              placeholder="A modern tech startup logo with abstract geometric shapes">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-orange-800 mb-2">Theme Description</label>
+            <input type="text" class="w-full px-5 py-3 bg-orange-50/70 border border-orange-200 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all duration-200" 
+              placeholder="Professional corporate theme with a touch of creativity">
+          </div>
+          
+          <div class="flex items-center p-4 rounded-2xl text-sm bg-gradient-to-r from-red-50 to-orange-50 text-red-600 border border-orange-200 shadow-lg" role="alert">
+            <div class="flex-1">
+              <div class="font-semibold">Failed to generate concept. Please try again.</div>
+            </div>
+            
+            <div class="flex gap-3 ml-4">
+              <button class="text-xs font-medium px-3 py-1 rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Retry">
+                Retry
+              </button>
+              
+              <button class="text-xs font-medium w-6 h-6 flex items-center justify-center rounded-xl bg-white border border-orange-200 text-red-600 hover:bg-orange-50 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex justify-end pt-4">
+            <button class="inline-flex items-center justify-center rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 h-12 px-8 py-2 bg-gradient-primary text-white shadow-modern hover:shadow-modern-hover">
+              Generate Concept
+            </button>
+          </div>
+          
+          <div class="flex justify-center py-12">
+            <div role="status" class="inline-block">
+              <svg class="h-16 w-16 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="sr-only">Generating your concept...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

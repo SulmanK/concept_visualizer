@@ -1,0 +1,1 @@
+export { ConceptDetailPage } from './ConceptDetailPage'; 

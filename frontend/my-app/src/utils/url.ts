@@ -63,7 +63,9 @@ export function extractStoragePathFromUrl(url: string | undefined): string | nul
     // Check for direct storage paths
     if (url.includes('/')) {
       // Try to find a pattern like [user-id]/[image-id].png
-      const matches = url.match(/([a-f0-9-]+\/[a-f0-9-]+\.[a-z]+)(\?.*)?$/i);
+      // This regex looks for a pattern of characters/digits followed by slash, 
+      // followed by more characters/digits and an extension, optionally followed by query params
+      const matches = url.match(/([^\/]+\/[^\/]+\.[a-z]+)(\?.*)?$/i);
       if (matches && matches[1]) {
         logger.debug('Extracted storage path (pattern match):', matches[1]);
         return matches[1];

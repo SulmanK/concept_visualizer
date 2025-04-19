@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Card Variation 1 - Dark Modern</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .bg-dark-gradient {
+      background: linear-gradient(to right, #1a1a2e, #16213e);
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    .color-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .color-dot:hover {
+      transform: scale(1.2);
+    }
+    .selected-dot {
+      box-shadow: 0 0 0 2px #4F46E5, 0 0 0 4px rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-900 min-h-screen p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-white mb-8">Dark Modern Concept Card</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Card 1 -->
+      <div class="card-hover rounded-xl overflow-hidden bg-gray-800 shadow-xl">
+        <div class="bg-dark-gradient h-24 relative overflow-hidden">
+          <div class="absolute inset-0 opacity-20 bg-pattern"></div>
+        </div>
+        
+        <div class="px-6 -mt-12 relative">
+          <div class="w-24 h-24 mx-auto rounded-lg overflow-hidden border-4 border-gray-800 shadow-lg">
+            <img src="https://via.placeholder.com/100" alt="Krypto" class="w-full h-full object-cover bg-white">
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-white mb-1">Krypto</h3>
+            <p class="text-gray-400 text-sm mb-4">Modern crypto trading platform</p>
+          </div>
+          
+          <div class="flex justify-center space-x-2 mb-6">
+            <div class="color-dot selected-dot" style="background-color: #6366F1;"></div>
+            <div class="color-dot" style="background-color: #3B82F6;"></div>
+            <div class="color-dot" style="background-color: #10B981;"></div>
+            <div class="color-dot" style="background-color: #F59E0B;"></div>
+            <div class="color-dot" style="background-color: #EF4444;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2 px-4 bg-gray-700 text-gray-200 rounded-md text-sm font-medium hover:bg-gray-600 transition">Refine</button>
+            <button class="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="card-hover rounded-xl overflow-hidden bg-gray-800 shadow-xl">
+        <div class="bg-dark-gradient h-24 relative overflow-hidden">
+          <div class="absolute inset-0 opacity-20 bg-pattern"></div>
+        </div>
+        
+        <div class="px-6 -mt-12 relative">
+          <div class="w-24 h-24 mx-auto rounded-lg overflow-hidden border-4 border-gray-800 shadow-lg">
+            <img src="https://via.placeholder.com/100" alt="Golf King" class="w-full h-full object-cover bg-white">
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-white mb-1">Golf King</h3>
+            <p class="text-gray-400 text-sm mb-4">Premier golf equipment brand</p>
+          </div>
+          
+          <div class="flex justify-center space-x-2 mb-6">
+            <div class="color-dot selected-dot" style="background-color: #047857;"></div>
+            <div class="color-dot" style="background-color: #15803D;"></div>
+            <div class="color-dot" style="background-color: #0E7490;"></div>
+            <div class="color-dot" style="background-color: #1E3A8A;"></div>
+            <div class="color-dot" style="background-color: #111827;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2 px-4 bg-gray-700 text-gray-200 rounded-md text-sm font-medium hover:bg-gray-600 transition">Refine</button>
+            <button class="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 3 -->
+      <div class="card-hover rounded-xl overflow-hidden bg-gray-800 shadow-xl">
+        <div class="bg-dark-gradient h-24 relative overflow-hidden">
+          <div class="absolute inset-0 opacity-20 bg-pattern"></div>
+        </div>
+        
+        <div class="px-6 -mt-12 relative">
+          <div class="w-24 h-24 mx-auto rounded-lg overflow-hidden border-4 border-gray-800 shadow-lg">
+            <img src="https://via.placeholder.com/100" alt="Queen" class="w-full h-full object-cover bg-white">
+          </div>
+        </div>
+        
+        <div class="p-6">
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-white mb-1">Queen</h3>
+            <p class="text-gray-400 text-sm mb-4">Luxury women's fashion</p>
+          </div>
+          
+          <div class="flex justify-center space-x-2 mb-6">
+            <div class="color-dot selected-dot" style="background-color: #BE185D;"></div>
+            <div class="color-dot" style="background-color: #DB2777;"></div>
+            <div class="color-dot" style="background-color: #9D174D;"></div>
+            <div class="color-dot" style="background-color: #831843;"></div>
+            <div class="color-dot" style="background-color: #4C1D95;"></div>
+          </div>
+          
+          <div class="flex space-x-3">
+            <button class="flex-1 py-2 px-4 bg-gray-700 text-gray-200 rounded-md text-sm font-medium hover:bg-gray-600 transition">Refine</button>
+            <button class="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition">View Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

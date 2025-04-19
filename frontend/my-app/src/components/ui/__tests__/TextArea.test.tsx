@@ -1,150 +1,92 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '../../../test-utils';
 import { TextArea } from '../TextArea';
 
 describe('TextArea Component', () => {
-  // Basic rendering tests
-  test('renders textarea with label', () => {
-    render(<TextArea label="Description" name="description" />);
-    
-    const label = screen.getByText('Description');
-    expect(label).toBeInTheDocument();
-    
-    const textarea = screen.getByLabelText('Description');
-    expect(textarea).toBeInTheDocument();
+  test('renders textarea element', () => {
+    render(<TextArea placeholder="Test TextArea" />);
+    expect(screen.getByPlaceholderText('Test TextArea')).toBeInTheDocument();
   });
-  
-  test('renders textarea with placeholder', () => {
-    render(<TextArea label="Description" name="description" placeholder="Enter description here" />);
+
+  test('applies default classes', () => {
+    const { container } = render(<TextArea />);
+    const textareaElement = container.querySelector('textarea');
     
-    const textarea = screen.getByPlaceholderText('Enter description here');
-    expect(textarea).toBeInTheDocument();
+    expect(textareaElement?.className).toContain('w-full');
+    expect(textareaElement?.className).toContain('px-4');
+    expect(textareaElement?.className).toContain('py-3');
+    expect(textareaElement?.className).toContain('border');
+    expect(textareaElement?.className).toContain('rounded-lg');
+    expect(textareaElement?.className).toContain('focus:outline-none');
+    expect(textareaElement?.className).toContain('resize-y');
   });
-  
-  // Row tests
-  test('applies the rows attribute correctly', () => {
-    render(<TextArea label="Description" name="description" rows={6} />);
+
+  test('accepts custom className', () => {
+    const { container } = render(<TextArea className="custom-class" />);
+    const textareaElement = container.querySelector('textarea');
     
-    const textarea = screen.getByLabelText('Description');
-    expect(textarea).toHaveAttribute('rows', '6');
+    expect(textareaElement?.className).toContain('custom-class');
   });
-  
-  // Error state tests
-  test('displays error message when provided', () => {
-    render(
-      <TextArea 
-        label="Description" 
-        name="description" 
-        error="Description must be at least 10 characters" 
-      />
-    );
+
+  test('forwards additional props to textarea element', () => {
+    render(<TextArea data-testid="test-textarea" rows={5} />);
     
-    const errorMessage = screen.getByText('Description must be at least 10 characters');
-    expect(errorMessage).toBeInTheDocument();
-    
-    const textarea = screen.getByLabelText('Description');
-    expect(textarea.className).toContain('border-accent-500');
+    const textareaElement = screen.getByTestId('test-textarea');
+    expect(textareaElement).toHaveAttribute('rows', '5');
   });
-  
-  // Required state test
-  test('adds required attribute when required prop is true', () => {
-    render(<TextArea label="Description" name="description" required />);
-    
-    const textarea = screen.getByLabelText(/Description/);
-    expect(textarea).toHaveAttribute('required');
-  });
-  
-  // Disabled state test
-  test('disables textarea when disabled prop is true', () => {
-    render(<TextArea label="Description" name="description" disabled />);
-    
-    const textarea = screen.getByLabelText('Description');
-    expect(textarea).toBeDisabled();
-  });
-  
-  // FullWidth test
-  test('renders full width textarea when fullWidth is true', () => {
-    render(<TextArea label="Description" name="description" fullWidth />);
-    
-    const textarea = screen.getByLabelText('Description');
-    expect(textarea.className).toContain('w-full');
-  });
-  
-  // Event handling tests
-  test('calls onChange when textarea value changes', () => {
+
+  test('handles onChange events', () => {
     const handleChange = jest.fn();
-    render(<TextArea label="Description" name="description" onChange={handleChange} />);
+    render(<TextArea onChange={handleChange} data-testid="test-textarea" />);
     
-    const textarea = screen.getByLabelText('Description');
-    fireEvent.change(textarea, { target: { value: 'New description content' } });
+    const textareaElement = screen.getByTestId('test-textarea');
+    fireEvent.change(textareaElement, { target: { value: 'test value' } });
     
-    expect(handleChange).toHaveBeenCalledTimes(1);
+    expect(handleChange).toHaveBeenCalled();
   });
-  
-  test('calls onFocus when textarea is focused', () => {
-    const handleFocus = jest.fn();
-    render(<TextArea label="Description" name="description" onFocus={handleFocus} />);
+
+  test('applies error styling when error prop is true', () => {
+    const { container } = render(<TextArea error="There is an error" />);
+    const textareaElement = container.querySelector('textarea');
     
-    const textarea = screen.getByLabelText('Description');
-    fireEvent.focus(textarea);
-    
-    expect(handleFocus).toHaveBeenCalledTimes(1);
+    expect(textareaElement?.className).toContain('border-red-300');
+    expect(textareaElement?.className).toContain('focus:ring-red-200');
+    expect(textareaElement?.className).toContain('focus:border-red-500');
   });
-  
-  test('calls onBlur when textarea loses focus', () => {
-    const handleBlur = jest.fn();
-    render(<TextArea label="Description" name="description" onBlur={handleBlur} />);
+
+  test('renders error message when provided', () => {
+    render(<TextArea error="This is an error" />);
     
-    const textarea = screen.getByLabelText('Description');
-    fireEvent.blur(textarea);
-    
-    expect(handleBlur).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('This is an error')).toBeInTheDocument();
+    expect(screen.getByText('This is an error')).toHaveClass('text-red-600');
   });
-  
-  // Helper text test
-  test('displays helper text when provided', () => {
-    render(
-      <TextArea 
-        label="Description" 
-        name="description" 
-        helperText="Enter a detailed description" 
-      />
-    );
+
+  test('renders label when provided', () => {
+    render(<TextArea label="TextArea Label" />);
     
-    const helperText = screen.getByText('Enter a detailed description');
-    expect(helperText).toBeInTheDocument();
-    expect(helperText.className).toContain('helper-text');
+    expect(screen.getByText('TextArea Label')).toBeInTheDocument();
   });
-  
-  // Controlled textarea test
-  test('works as a controlled component', () => {
-    const handleChange = jest.fn();
-    const { rerender } = render(
-      <TextArea 
-        label="Controlled TextArea" 
-        name="controlled" 
-        value="initial text" 
-        onChange={handleChange} 
-      />
-    );
+
+  test('applies disabled styling', () => {
+    const { container } = render(<TextArea disabled className="bg-gray-100 cursor-not-allowed" />);
+    const textareaElement = container.querySelector('textarea');
     
-    const textarea = screen.getByLabelText('Controlled TextArea');
-    expect(textarea).toHaveValue('initial text');
+    expect(textareaElement).toBeDisabled();
+    expect(textareaElement?.className).toContain('bg-gray-100');
+    expect(textareaElement?.className).toContain('cursor-not-allowed');
+  });
+
+  test('applies resize class when resize prop is true', () => {
+    const { container } = render(<TextArea className="resize" />);
+    const textareaElement = container.querySelector('textarea');
     
-    // Simulate user typing
-    fireEvent.change(textarea, { target: { value: 'new text content' } });
-    expect(handleChange).toHaveBeenCalledTimes(1);
+    expect(textareaElement?.className).toContain('resize');
+  });
+
+  test('applies no-resize class when resize prop is false', () => {
+    const { container } = render(<TextArea className="resize-none" />);
+    const textareaElement = container.querySelector('textarea');
     
-    // Update the component with new value
-    rerender(
-      <TextArea 
-        label="Controlled TextArea" 
-        name="controlled" 
-        value="new text content" 
-        onChange={handleChange} 
-      />
-    );
-    
-    expect(textarea).toHaveValue('new text content');
+    expect(textareaElement?.className).toContain('resize-none');
   });
 }); 

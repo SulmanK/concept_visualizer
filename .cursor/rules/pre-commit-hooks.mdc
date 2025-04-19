@@ -1,0 +1,113 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Pre-commit hooks configuration for the Concept Visualizer project
+globs:
+alwaysApply: false
+---
+# Pre-commit Hooks Configuration
+
+This document describes the pre-commit hooks used in this project and how they affect code generation requirements.
+
+## Active Hooks
+
+### Basic Hooks
+- **trailing-whitespace**: Removes trailing whitespace at end of lines
+- **end-of-file-fixer**: Ensures files end with a newline
+- **check-yaml**: Validates YAML files
+- **check-json**: Validates JSON files
+- **check-added-large-files**: Prevents large files from being committed
+- **debug-statements**: Catches debug statements (pdb, ipdb, etc.)
+- **check-merge-conflict**: Ensures merge conflicts aren't committed
+
+### Python Code Formatting
+- **black** (v23.11.0): Enforces consistent code formatting
+  - Applied to all Python files
+  - Configuration in pyproject.toml
+
+### JavaScript/TypeScript Code Formatting
+- **prettier** (v3.0.0): Enforces consistent code formatting for JS/TS
+  - Applied to all .js, .jsx, .ts, .tsx files
+  - Configuration in .prettierrc
+
+### Python Import Organization
+- **isort** (v5.12.0): Sorts import statements
+  - Configured with `--profile black` for compatibility
+  - Applied to all Python files
+
+### JavaScript/TypeScript Import Organization
+- **import-sort**: Sorts import statements in JS/TS files
+  - Applied to all .js, .jsx, .ts, .tsx files
+  - Configuration in .importsortrx
+
+### Python Linting
+- **flake8** (v6.1.0): Enforces code style and finds common errors
+  - Includes flake8-docstrings for docstring checking
+  - Applied to all Python files
+  - Configuration in .flake8
+
+### JavaScript/TypeScript Linting
+- **eslint** (v8.45.0): Enforces code style and finds errors
+  - Uses React and TypeScript plugins
+  - Applied to all .js, .jsx, .ts, .tsx files
+  - Configuration in .eslintrc.js
+
+### Python Type Checking
+- **mypy** (v1.7.0): Performs static type checking
+  - Includes additional types for requests
+  - Applied to all Python files
+  - Configuration in pyproject.toml
+
+### TypeScript Type Checking
+- **tsc**: TypeScript type checking
+  - Applied to all .ts and .tsx files
+  - Configuration in tsconfig.json
+
+### Custom Architectural Checks
+- Ensures API routes don't contain business logic
+  - Applied to files in `backend/app/api/routes/`
+- Ensures shared components don't import from features
+  - Applied to files in `frontend/src/components/`
+
+## Implications for Code Generation
+
+When generating code:
+
+### Python
+1. Always use proper type annotations
+2. Include comprehensive docstrings following Google style
+3. Respect architectural boundaries
+4. Format code consistent with Black's style
+5. Organize imports according to isort's expectations
+
+### TypeScript/React
+1. Use TypeScript for all React components
+2. Define proper prop types with interfaces
+3. Follow functional component pattern
+4. Use hooks appropriately
+5. Format code according to Prettier's style
+6. Organize imports properly
+
+## Example PR Checklist
+
+### Backend
+- [ ] Code is formatted with Black
+- [ ] Imports are sorted with isort
+- [ ] Code passes flake8 checks
+- [ ] All functions and classes have proper docstrings
+- [ ] All code has appropriate type annotations
+- [ ] Tests are written for new functionality
+- [ ] Architectural constraints are maintained
+
+### Frontend
+- [ ] Code is formatted with Prettier
+- [ ] Code passes ESLint checks
+- [ ] TypeScript types are properly defined
+- [ ] Components follow the established patterns
+- [ ] Tests are written for components
+- [ ] Imports are properly organized
+- [ ] No feature-specific logic in shared components
+

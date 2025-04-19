@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Concept Card Variation 6 - Refined Original</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f5f7ff;
+      min-height: 100vh;
+    }
+    .concept-card {
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .concept-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.15);
+    }
+    .concept-image {
+      transition: transform 0.3s ease;
+    }
+    .concept-card:hover .concept-image {
+      transform: scale(1.03);
+    }
+    .color-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+    }
+    .color-dot:hover {
+      transform: scale(1.15);
+    }
+    .color-dot.selected {
+      transform: scale(1.15);
+      border: 2px solid white;
+      box-shadow: 0 0 0 2px #4F46E5;
+    }
+    .original-dot {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #4F46E5;
+      font-weight: bold;
+      font-size: 12px;
+      background-color: #EEF2FF;
+    }
+  </style>
+</head>
+<body class="p-8">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">Refined Concept Cards</h1>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+      <!-- Card 1 -->
+      <div class="concept-card bg-white rounded-xl overflow-hidden shadow-md border border-indigo-100">
+        <div class="h-32 bg-indigo-100 relative overflow-hidden">
+          <div class="concept-image h-full w-full">
+            <!-- Background Image -->
+          </div>
+        </div>
+        
+        <div class="p-5">
+          <div class="-mt-16 mb-4 relative z-10 flex justify-center">
+            <div class="w-24 h-24 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Krypto" class="object-contain max-w-full max-h-full">
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Krypto</h3>
+            <p class="text-gray-500 text-sm mb-4">Modern crypto trading platform</p>
+          </div>
+          
+          <div class="flex justify-center items-center space-x-2 mb-4">
+            <div class="color-dot original-dot">O</div>
+            <div class="color-dot selected" style="background-color: #6366F1;"></div>
+            <div class="color-dot" style="background-color: #3B82F6;"></div>
+            <div class="color-dot" style="background-color: #10B981;"></div>
+            <div class="color-dot" style="background-color: #F59E0B;"></div>
+            <div class="color-dot" style="background-color: #EF4444;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2 px-3 border border-gray-300 bg-white rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">Refine</button>
+            <button class="py-2 px-3 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition shadow-sm">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 2 -->
+      <div class="concept-card bg-white rounded-xl overflow-hidden shadow-md border border-indigo-100">
+        <div class="h-32 bg-green-100 relative overflow-hidden">
+          <div class="concept-image h-full w-full">
+            <!-- Background Image -->
+          </div>
+        </div>
+        
+        <div class="p-5">
+          <div class="-mt-16 mb-4 relative z-10 flex justify-center">
+            <div class="w-24 h-24 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Golf King" class="object-contain max-w-full max-h-full">
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Golf King</h3>
+            <p class="text-gray-500 text-sm mb-4">Premier golf equipment brand</p>
+          </div>
+          
+          <div class="flex justify-center items-center space-x-2 mb-4">
+            <div class="color-dot original-dot">O</div>
+            <div class="color-dot selected" style="background-color: #047857;"></div>
+            <div class="color-dot" style="background-color: #15803D;"></div>
+            <div class="color-dot" style="background-color: #0E7490;"></div>
+            <div class="color-dot" style="background-color: #1E3A8A;"></div>
+            <div class="color-dot" style="background-color: #111827;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2 px-3 border border-gray-300 bg-white rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">Refine</button>
+            <button class="py-2 px-3 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition shadow-sm">View Details</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Card 3 -->
+      <div class="concept-card bg-white rounded-xl overflow-hidden shadow-md border border-indigo-100">
+        <div class="h-32 bg-pink-100 relative overflow-hidden">
+          <div class="concept-image h-full w-full">
+            <!-- Background Image -->
+          </div>
+        </div>
+        
+        <div class="p-5">
+          <div class="-mt-16 mb-4 relative z-10 flex justify-center">
+            <div class="w-24 h-24 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center">
+              <img src="https://via.placeholder.com/100" alt="Queen" class="object-contain max-w-full max-h-full">
+            </div>
+          </div>
+          
+          <div class="text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Queen</h3>
+            <p class="text-gray-500 text-sm mb-4">Luxury women's fashion</p>
+          </div>
+          
+          <div class="flex justify-center items-center space-x-2 mb-4">
+            <div class="color-dot original-dot">O</div>
+            <div class="color-dot selected" style="background-color: #BE185D;"></div>
+            <div class="color-dot" style="background-color: #DB2777;"></div>
+            <div class="color-dot" style="background-color: #9D174D;"></div>
+            <div class="color-dot" style="background-color: #831843;"></div>
+            <div class="color-dot" style="background-color: #4C1D95;"></div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <button class="py-2 px-3 border border-gray-300 bg-white rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">Refine</button>
+            <button class="py-2 px-3 bg-indigo-600 rounded-md text-sm font-medium text-white hover:bg-indigo-700 transition shadow-sm">View Details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 

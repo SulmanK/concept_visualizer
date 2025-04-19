@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soft UI (Neumorphic) - Concept Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4361EE',
+            'primary-dark': '#3A56D4',
+            secondary: '#7209B7',
+            'secondary-dark': '#6207A0',
+            softbg: '#EEF0F4',
+            softsurface: '#E5E9F0',
+            softtext: '#525A7B',
+          },
+          boxShadow: {
+            'soft': '6px 6px 12px #C8CCD6, -6px -6px 12px #FFFFFF',
+            'soft-inset': 'inset 2px 2px 5px #C8CCD6, inset -2px -2px 5px #FFFFFF',
+            'soft-sm': '3px 3px 6px #C8CCD6, -3px -3px 6px #FFFFFF',
+            'soft-inner': 'inset 3px 3px 6px #C8CCD6, inset -3px -3px 6px #FFFFFF'
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding: 2rem;
+      background-color: #EEF0F4;
+      color: #525A7B;
+    }
+    .component-section {
+      margin-bottom: 4rem;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    .component-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      margin-top: 1.5rem;
+    }
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .neumorphic-btn {
+      transition: all 0.2s ease;
+    }
+    .neumorphic-btn:active {
+      box-shadow: inset 3px 3px 6px #C8CCD6, inset -3px -3px 6px #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-5xl mx-auto">
+    <header class="mb-12">
+      <h1 class="text-4xl font-semibold mb-2 text-softtext">Concept Visualizer</h1>
+      <p class="text-softtext/70 text-lg">Soft UI (Neumorphic) Theme</p>
+    </header>
+    
+    <!-- Buttons -->
+    <div class="component-section">
+      <h2 class="text-2xl font-semibold mb-6 text-softtext">Buttons</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-softtext/80">Variants</h3>
+      <div class="component-group">
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-softbg shadow-soft text-primary hover:text-primary-dark">
+          Primary Button
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-primary text-white shadow-soft-sm">
+          Filled Button
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-softbg shadow-soft-inner text-softtext">
+          Pressed Button
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-gradient-to-br from-primary/80 to-primary text-white shadow-soft-sm">
+          Gradient Button
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-softtext/80">Sizes</h3>
+      <div class="component-group">
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-9 px-4 text-sm bg-softbg shadow-soft-sm text-primary hover:text-primary-dark">
+          Small
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-softbg shadow-soft text-primary hover:text-primary-dark">
+          Medium
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-14 px-8 text-lg bg-softbg shadow-soft text-primary hover:text-primary-dark">
+          Large
+        </button>
+      </div>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-softtext/80">States</h3>
+      <div class="component-group">
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-softbg shadow-soft text-softtext/40 cursor-not-allowed">
+          Disabled
+        </button>
+        
+        <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-6 py-2 bg-softbg shadow-soft text-primary disabled:text-softtext/40 disabled:cursor-not-allowed">
+          <svg class="h-4 w-4 mr-2 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading
+        </button>
+      </div>
+    </div>
+    
+    <!-- Loading Spinners -->
+    <div class="component-section">
+      <h2 class="text-2xl font-semibold mb-6 text-softtext">Loading Spinners</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-softtext/80">Sizes</h3>
+      <div class="component-group items-center">
+        <div role="status" class="inline-block p-4 rounded-full shadow-soft">
+          <svg class="h-5 w-5 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block p-5 rounded-full shadow-soft">
+          <svg class="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+        
+        <div role="status" class="inline-block p-6 rounded-full shadow-soft">
+          <svg class="h-12 w-12 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span class="sr-only">Loading...</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Error Messages -->
+    <div class="component-section">
+      <h2 class="text-2xl font-semibold mb-6 text-softtext">Error Messages</h2>
+      
+      <h3 class="text-lg font-medium mt-6 mb-3 text-softtext/80">Default Variant</h3>
+      <div class="component-group flex-col">
+        <div class="flex items-center p-6 rounded-xl text-sm bg-softbg text-red-500 shadow-soft" role="alert">
+          <div class="flex-1">
+            <div class="font-medium">Failed to generate concept</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="neumorphic-btn text-xs font-medium px-3 py-1 rounded-lg bg-softbg shadow-soft-sm text-primary" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="neumorphic-btn text-xs font-medium w-6 h-6 flex items-center justify-center rounded-lg bg-softbg shadow-soft-sm text-softtext/80" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex items-center p-6 rounded-xl text-sm bg-softbg text-red-500 shadow-soft" role="alert">
+          <div class="flex-1">
+            <div class="font-medium">Failed to connect to server</div>
+            <div class="text-xs mt-1 text-softtext/60">Network error: Connection refused</div>
+          </div>
+          
+          <div class="flex gap-3 ml-4">
+            <button class="neumorphic-btn text-xs font-medium px-3 py-1 rounded-lg bg-softbg shadow-soft-sm text-primary" aria-label="Retry">
+              Retry
+            </button>
+            
+            <button class="neumorphic-btn text-xs font-medium w-6 h-6 flex items-center justify-center rounded-lg bg-softbg shadow-soft-sm text-softtext/80" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form Example with Components -->
+    <div class="component-section">
+      <h2 class="text-2xl font-semibold mb-6 text-softtext">Form Example</h2>
+      
+      <div class="bg-softbg p-8 rounded-2xl shadow-soft">
+        <h3 class="text-xl font-semibold mb-8 text-softtext">Generate New Concept</h3>
+        
+        <div class="space-y-6">
+          <div>
+            <label class="block text-sm font-medium text-softtext/80 mb-2">Logo Description</label>
+            <input type="text" class="w-full px-5 py-3 rounded-xl bg-softbg shadow-soft-inner focus:shadow-soft-inner focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all duration-200 text-softtext" 
+              placeholder="A modern tech startup logo with abstract geometric shapes">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-softtext/80 mb-2">Theme Description</label>
+            <input type="text" class="w-full px-5 py-3 rounded-xl bg-softbg shadow-soft-inner focus:shadow-soft-inner focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all duration-200 text-softtext" 
+              placeholder="Professional corporate theme with a touch of creativity">
+          </div>
+          
+          <div class="flex items-center p-6 rounded-xl text-sm bg-softbg text-red-500 shadow-soft" role="alert">
+            <div class="flex-1">
+              <div class="font-medium">Failed to generate concept. Please try again.</div>
+            </div>
+            
+            <div class="flex gap-3 ml-4">
+              <button class="neumorphic-btn text-xs font-medium px-3 py-1 rounded-lg bg-softbg shadow-soft-sm text-primary" aria-label="Retry">
+                Retry
+              </button>
+              
+              <button class="neumorphic-btn text-xs font-medium w-6 h-6 flex items-center justify-center rounded-lg bg-softbg shadow-soft-sm text-softtext/80" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex justify-end pt-4">
+            <button class="neumorphic-btn inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none h-12 px-8 py-2 bg-softbg shadow-soft text-primary">
+              Generate Concept
+            </button>
+          </div>
+          
+          <div class="flex justify-center py-12">
+            <div role="status" class="inline-block p-6 rounded-full shadow-soft">
+              <svg class="h-14 w-14 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="sr-only">Generating your concept...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 
