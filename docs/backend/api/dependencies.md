@@ -1,123 +1,112 @@
-# Dependency Injection
+# API Dependencies
 
-This document describes the dependency injection system used in the Concept Visualizer API.
+This documentation covers the dependency injection system used in the Concept Visualizer API.
 
 ## Overview
 
-The application uses FastAPI's dependency injection system to:
-- Provide services to API endpoints
-- Centralize common dependencies
-- Facilitate testing through dependency overrides
-- Simplify session management
+The `dependencies.py` module provides FastAPI dependency functions and classes that can be used for:
 
-## Common Dependencies
+- Service injection into route handlers
+- User authentication and extraction
+- Common functionality shared across multiple endpoints
 
-The `app.api.dependencies` module provides a `CommonDependencies` class that bundles all commonly used services:
+## Key Dependencies
+
+### User Authentication
+
+```python
+def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
+    """Extract the current user from the request session."""
+```
+
+This dependency extracts user information from the request session. It returns the user data if authenticated, or `None` otherwise.
+
+### JWT Token Processing
+
+```python
+def decode_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+    """Simple decode of JWT token without verification."""
+```
+
+This utility function decodes a JWT token without verifying it (primarily used for development). It extracts the payload portion and returns the decoded data.
+
+## Common Dependencies Class
+
+The module provides a `CommonDependencies` class that acts as a container for all frequently used dependencies:
 
 ```python
 class CommonDependencies:
-    """Bundle of common dependencies used across API endpoints."""
-    
-    def __init__(
-        self,
-        concept_service: ConceptService = Depends(get_concept_service),
-        image_service: ImageService = Depends(get_image_service),
-        session_service: SessionService = Depends(get_session_service),
-        storage_service: ConceptStorageService = Depends(get_concept_storage_service)
-    ):
-        self.concept_service = concept_service
-        self.image_service = image_service
-        self.session_service = session_service
-        self.storage_service = storage_service
+    """Common dependencies for API routes."""
 ```
 
-## Using Dependencies in Endpoints
+### Injected Services
 
-Dependencies can be injected into endpoints using FastAPI's `Depends` function:
+The `CommonDependencies` class automatically injects the following services:
+
+- `supabase_client`: Supabase client for database operations
+- `jigsawstack_client`: JigsawStack API client for AI image generation
+- `concept_service`: Service for concept generation and refinement
+- `concept_persistence_service`: Service for concept persistence
+- `image_service`: Service for image processing
+- `image_persistence_service`: Service for image persistence
+- `task_service`: Service for background task management
+- `export_service`: Service for exporting concepts
+
+### User Authentication
+
+The class also handles user authentication by:
+
+1. Extracting the authorization header
+2. Parsing JWT tokens if present
+3. Extracting user information from the session
+4. Providing user_id for authorized operations
+
+## Usage Examples
+
+### Basic Usage in Route Handlers
 
 ```python
-@router.post("/generate")
-async def generate_concept(
-    request: GenerationRequest,
-    commons: CommonDependencies = Depends(),
+from fastapi import APIRouter, Depends
+from app.api.dependencies import CommonDependencies
+
+router = APIRouter()
+
+@router.get("/resource/{resource_id}")
+async def get_resource(
+    resource_id: str,
+    deps: CommonDependencies = Depends()
 ):
-    result = await commons.concept_service.generate_concept(request.prompt)
+    # Access injected services
+    result = await deps.concept_service.get_concept(resource_id)
+    
+    # Check if user is authenticated
+    if deps.user_id:
+        # Perform authorized operation
+        pass
+        
     return result
 ```
 
-## Session Management Dependencies
+### Processing Requests
 
-The module provides specialized dependencies for session management:
-
-### get_session_id
-
-Extracts and validates the session ID from cookies:
+The `process_request` method can be used to extract user information from the request:
 
 ```python
-async def get_session_id(
+@router.get("/user-info")
+async def get_user_info(
     request: Request,
-    session_id: Optional[str] = Cookie(None, alias="concept_session")
-) -> str:
-    """Get the session ID from cookies and validate it."""
-    if not session_id:
-        raise AuthenticationError(detail="No session ID provided")
-    return session_id
-```
-
-### get_or_create_session
-
-Creates a new session or returns the existing one:
-
-```python
-async def get_or_create_session(
-    response: Response,
-    session_service: SessionService,
-    session_id: Optional[str] = None,
-    client_session_id: Optional[str] = None
-) -> Tuple[str, bool]:
-    """Get or create a session and set the cookie."""
-    session_id, is_new_session = await session_service.get_or_create_session(
-        response, session_id, client_session_id
-    )
-    return session_id, is_new_session
-```
-
-## Dependency Scopes
-
-Dependencies can have different scopes:
-
-1. **Request-scoped**: Created for each request (default)
-2. **Application-scoped**: Created once at startup (e.g., database connections)
-
-## Testing with Dependencies
-
-For testing, dependencies can be overridden using FastAPI's dependency override system:
-
-```python
-# In your test file
-from unittest.mock import MagicMock
-from app.services.concept_service import get_concept_service
-
-async def test_generate_concept(client):
-    # Create a mock service
-    mock_service = MagicMock()
-    mock_service.generate_concept.return_value = {"id": "test"}
+    deps: CommonDependencies = Depends()
+):
+    # Process the request to extract user information
+    deps.process_request(request)
     
-    # Override the dependency
-    app.dependency_overrides[get_concept_service] = lambda: mock_service
-    
-    # Test the endpoint
-    response = await client.post("/api/concept/generate", json={"prompt": "test"})
-    assert response.status_code == 200
-    
-    # Clean up
-    app.dependency_overrides = {}
+    # Return user information
+    return {"user": deps.user}
 ```
 
 ## Best Practices
 
-1. **Use CommonDependencies** for endpoints that need multiple services
-2. **Use Specific Dependencies** for endpoints that only need one service
-3. **Create Factory Functions** for services to facilitate testing
-4. **Document Dependencies** in endpoint docstrings
-5. **Keep Dependencies Lightweight** to avoid performance issues 
+1. **Use CommonDependencies**: Instead of injecting individual services, use the `CommonDependencies` class to access all required services.
+2. **Process Requests**: Call `process_request` when you need to extract user information from the request.
+3. **Check Authentication**: Always check `deps.user_id` before performing authorized operations.
+4. **Security**: Remember that JWT token decoding is done without verification for development purposes. Use proper auth middleware for production. 

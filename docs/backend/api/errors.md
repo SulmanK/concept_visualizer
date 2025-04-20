@@ -1,135 +1,114 @@
-# Error Handling
+# API Error Handling
 
-This document describes the error handling system used in the Concept Visualizer API.
+This documentation covers the error handling system in the Concept Visualizer API.
 
 ## Overview
 
-The application implements a standardized error handling system that:
-- Provides consistent error responses across all endpoints
-- Uses specific error types for different error scenarios
-- Includes structured error information for easier client processing
-- Enables detailed logging for debugging
+The `errors.py` module defines a comprehensive error handling system for the API layer. It includes:
 
-## Error Response Format
+- A hierarchy of API-specific error classes
+- Mapping from application domain errors to HTTP errors
+- Custom exception handlers for FastAPI
+- Standardized error response format
 
-All API errors follow a standard format:
+## Error Hierarchy
 
-```json
-{
-  "detail": "Human-readable error message",
-  "status_code": 400,
-  "error_code": "validation_error",
-  "field_errors": {
-    "field_name": ["Error message for this field"]
-  }
-}
+All API errors inherit from the base `APIError` class, which extends FastAPI's `HTTPException`. The inheritance structure is as follows:
+
+```
+APIError
+├── BadRequestError (400)
+├── UnauthorizedError (401)
+│   └── AuthenticationError
+├── ForbiddenError (403)
+│   └── AuthorizationError 
+├── NotFoundError (404)
+│   └── ResourceNotFoundError
+├── MethodNotAllowedError (405)
+├── NotAcceptableError (406)
+├── ConflictError (409)
+├── GoneError (410)
+├── UnprocessableEntityError (422)
+│   └── ValidationError
+├── TooManyRequestsError (429)
+│   └── RateLimitExceededError
+├── InternalServerError (500)
+├── BadGatewayError (502)
+├── ServiceUnavailableError (503)
+└── GatewayTimeoutError (504)
 ```
 
-Key components:
-- `detail`: Human-readable error message
-- `status_code`: HTTP status code
-- `error_code`: Machine-readable error code for programmatic handling
-- `field_errors`: (Optional) Field-specific validation errors
+## Standard Error Fields
 
-## Custom Error Types
+All API errors include the following standard fields in their JSON response:
 
-The application defines several custom error types in `app.api.errors`:
+- `status_code`: The HTTP status code
+- `detail`: A human-readable error message
+- `type`: The error type (class name)
+- `request_id`: A unique identifier for the request (for tracking)
+- `timestamp`: When the error occurred
 
-### ValidationError (400)
+Some errors add additional fields:
 
-Used for request validation failures:
+- `ValidationError`: Includes `field_errors` with specific validation issues
+- `ResourceNotFoundError`: Includes `resource_type` and `resource_id`
+- `RateLimitExceededError`: Includes `limit` and `reset_at` information
+
+## Usage Examples
+
+### Raising API Errors
 
 ```python
+# Basic error
+raise BadRequestError("Invalid request parameters")
+
+# Resource not found with context
+raise ResourceNotFoundError(
+    detail="Concept not found",
+    resource_type="concept",
+    resource_id="12345"
+)
+
+# Validation error with field details
 raise ValidationError(
     detail="Invalid input data",
-    field_errors={"name": ["Field is required"]}
+    field_errors={"name": ["Field is required", "Must be at least 3 characters"]}
 )
 ```
 
-### ResourceNotFoundError (404)
+### Mapping Domain Errors
 
-Used when a requested resource doesn't exist:
+The module provides a function to map application domain errors to API errors:
 
 ```python
-raise ResourceNotFoundError(
-    detail=f"Concept with ID {concept_id} not found"
-)
+from app.core.exceptions import ResourceNotFoundException
+from app.api.errors import map_application_error_to_api_error
+
+try:
+    # Some operation that might raise domain errors
+    service.get_concept(concept_id)
+except ResourceNotFoundException as e:
+    # Map to appropriate API error
+    api_error = map_application_error_to_api_error(e)
+    raise api_error
 ```
 
-### AuthenticationError (401)
+## Error Handler Configuration
 
-Used for authentication failures:
+The module provides a `configure_error_handlers` function that registers exception handlers with the FastAPI application. This ensures consistent error responses across the API.
 
 ```python
-raise AuthenticationError(
-    detail="Invalid session ID"
-)
+from fastapi import FastAPI
+from app.api.errors import configure_error_handlers
+
+app = FastAPI()
+configure_error_handlers(app)
 ```
-
-### ServiceUnavailableError (503)
-
-Used when a service dependency is unavailable:
-
-```python
-raise ServiceUnavailableError(
-    detail="Image generation service is currently unavailable"
-)
-```
-
-### RateLimitExceededError (429)
-
-Used when a rate limit is exceeded:
-
-```python
-raise RateLimitExceededError(
-    detail="Rate limit exceeded. Try again later.",
-    retry_after=3600  # Seconds until the rate limit resets
-)
-```
-
-## Exception Handlers
-
-The application registers custom exception handlers that:
-1. Format the error response according to the standard format
-2. Log detailed information about the error
-3. Include stack traces in development mode
 
 ## Best Practices
 
-When implementing API endpoints:
-
-1. **Use Specific Error Types**: Choose the most specific error type for each error scenario
-2. **Include Clear Messages**: Error messages should be clear and actionable
-3. **Include Field Errors**: For validation errors, include specific field errors
-4. **Log Detailed Information**: Log additional context for debugging
-5. **Catch Unexpected Errors**: Wrap endpoint logic in try/except blocks to catch unexpected errors
-
-## Example Usage
-
-```python
-@router.post("/generate")
-async def generate_concept(request: Request, concept_service: ConceptService = Depends()):
-    try:
-        # Validate input
-        if not request.prompt:
-            raise ValidationError(
-                detail="Prompt is required",
-                field_errors={"prompt": ["Field is required"]}
-            )
-            
-        # Call service
-        result = await concept_service.generate_concept(request.prompt)
-        if not result:
-            raise ServiceUnavailableError(
-                detail="Failed to generate concept"
-            )
-            
-        return result
-    except (ValidationError, ServiceUnavailableError):
-        # Re-raise our custom errors directly
-        raise
-    except Exception as e:
-        # Log unexpected errors and convert to ServiceUnavailableError
-        logger.error(f"Unexpected error: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
-        raise ServiceUnavailableError(detail=f"Unexpected error: {str(e)}") 
+1. **Use Specific Error Classes**: Always use the most specific error class for the situation.
+2. **Provide Meaningful Messages**: Error messages should be clear and actionable.
+3. **Include Context**: When possible, include context about the error (e.g., resource IDs, field names).
+4. **Log Appropriately**: Errors are automatically logged with appropriate severity levels.
+5. **Map Domain Errors**: Use `map_application_error_to_api_error` to convert domain errors to API errors. 

@@ -1,50 +1,34 @@
 # Backend Documentation
 
-This directory contains documentation for the Concept Visualizer backend, which is built with FastAPI and follows a layered architecture pattern.
+This directory contains comprehensive documentation for the backend of the Concept Visualizer application. The backend is built using FastAPI and follows a layered architecture.
 
-## Architecture Overview
+## Directory Structure
 
-The backend follows a clean architecture with the following layers:
+- [API](api/README.md): API routes, middleware, dependencies, and error handling
+- [Core](core/README.md): Core infrastructure including configuration, exceptions, and service integrations
+- [Models](models/README.md): Data models used throughout the application
+- [Services](services/README.md): Business logic and external service integrations
+- [Utils](utils/README.md): Utility functions and helpers
 
-1. **API Layer**: Handles HTTP requests, routing, and input validation
-2. **Service Layer**: Contains business logic and coordinates with external services
-3. **Models Layer**: Defines data structures and validation
-4. **Core Layer**: Provides configuration, logging, and infrastructure
-5. **Utils Layer**: Contains reusable utility functions
+## Main Application
 
-## Key Directories
+- [Main Application](main.md): The entry point of the FastAPI application
 
-```
-backend/
-├── api/              # API endpoints and routing
-├── services/         # Business logic and service coordination
-├── models/           # Data models and validation
-├── core/             # Configuration and infrastructure
-└── utils/            # Utility functions
-```
+## Architecture
 
-## Key Concepts
+The backend follows a layered architecture with strict separation between components:
 
-### Dependency Injection
+1. **API Layer**: Handles HTTP requests/responses, routing, and input validation
+2. **Service Layer**: Contains business logic and orchestrates use cases
+3. **External Services**: Integrations with external APIs and services
+4. **Models**: Defines data structures and validation
+5. **Core**: Application configuration, logging, and exception handling
+6. **Utils**: Helper functions and utilities
 
-The application uses FastAPI's dependency injection system with a centralized `dependencies.py` file that provides common dependencies across endpoints.
+## Dependencies
 
-### Error Handling
-
-Custom error handling is implemented through the `errors.py` module, providing consistent error responses across the API.
-
-### Rate Limiting
-
-Rate limiting is implemented to prevent abuse of the API, with configuration in `core/rate_limiter.py` and middleware applied in the main application.
-
-### Authentication
-
-Session-based authentication is used for tracking user sessions, with cookies storing session identifiers.
-
-## Documentation Organization
-
-- **API**: Documentation for API endpoints, request/response models, and routing
-- **Services**: Documentation for service layer and business logic
-- **Models**: Documentation for data models and validation
-- **Core**: Documentation for configuration, logging, and infrastructure
-- **Utils**: Documentation for utility functions 
+- FastAPI: Modern, high-performance web framework
+- Pydantic: Data validation and settings management
+- Supabase: Database and storage
+- Redis: Rate limiting and caching
+- JigsawStack API: External image generation service 
