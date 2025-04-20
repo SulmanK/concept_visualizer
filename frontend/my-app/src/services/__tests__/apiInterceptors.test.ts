@@ -4,318 +4,226 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios from 'axios'; // Import the real axios first
 
-// Define mock interceptor functions
-let mockRequestInterceptor: (config: any) => Promise<any>;
-let mockResponseInterceptor: (response: any) => any;
-let mockResponseErrorInterceptor: (error: any) => Promise<any>;
-
-// Define mock request and response use functions
-const mockRequestUse = vi.fn((onFulfilled) => {
-  mockRequestInterceptor = onFulfilled;
-  return 1; // Return a mock interceptor ID
-});
-
-const mockResponseUse = vi.fn((onFulfilled, onRejected) => {
-  mockResponseInterceptor = onFulfilled;
-  mockResponseErrorInterceptor = onRejected;
-  return 2; // Return a mock interceptor ID
-});
+// --- Mocks ---
+// Define mock interceptor functions captured during module initialization
+let capturedRequestInterceptor: ((config: any) => Promise<any>) | null = null;
+let capturedResponseInterceptor: ((response: any) => any) | null = null;
+let capturedResponseErrorInterceptor: ((error: any) => Promise<any>) | null = null;
 
 // Mock axios module
+const mockRequestUse = vi.fn((onFulfilled) => {
+  capturedRequestInterceptor = onFulfilled; // Capture the function
+  return 1;
+});
+const mockResponseUse = vi.fn((onFulfilled, onRejected) => {
+  capturedResponseInterceptor = onFulfilled; // Capture the function
+  capturedResponseErrorInterceptor = onRejected; // Capture the function
+  return 2;
+});
+const mockEject = vi.fn();
+const mockAxiosInstance = {
+  defaults: { headers: { common: {} } },
+  interceptors: {
+    request: { use: mockRequestUse, eject: mockEject },
+    response: { use: mockResponseUse, eject: mockEject }
+  },
+  get: vi.fn(),
+  post: vi.fn(),
+  request: vi.fn(), // Mock the generic request method used for retries
+  create: vi.fn() // Keep create mock if needed elsewhere
+};
 vi.mock('axios', () => {
-  const mockAxiosInstance = {
-    interceptors: {
-      request: {
-        use: mockRequestUse,
-        eject: vi.fn()
-      },
-      response: {
-        use: mockResponseUse,
-        eject: vi.fn()
-      }
-    },
-    get: vi.fn(),
-    post: vi.fn(),
-    create: vi.fn()
-  };
-
-  mockAxiosInstance.create.mockReturnValue(mockAxiosInstance);
-
+  mockAxiosInstance.create.mockReturnValue(mockAxiosInstance); // Ensure create returns the mock
   return {
     default: {
       ...mockAxiosInstance,
-      isAxiosError: vi.fn((err) => true),
-      create: vi.fn().mockReturnValue(mockAxiosInstance)
+       isAxiosError: vi.fn((error: any) => error && error.isAxiosError === true), // More robust check
+       create: vi.fn().mockReturnValue(mockAxiosInstance) // Ensure create returns the mock
     }
   };
 });
 
+
+// Mock supabase
 vi.mock('../supabaseClient', () => ({
   supabase: {
     auth: {
       getSession: vi.fn(),
       refreshSession: vi.fn()
     }
-  },
-  initializeAnonymousAuth: vi.fn()
+  }
 }));
 
+// Mock rateLimitService
 vi.mock('../rateLimitService', () => ({
   extractRateLimitHeaders: vi.fn(),
   mapEndpointToCategory: vi.fn()
 }));
 
-// Import after mock setup
-import { apiClient } from '../apiClient';
-import { supabase } from '../supabaseClient';
-import * as rateLimitService from '../rateLimitService';
-import axios from 'axios';
-
-// Mock the RateLimitError class
+// Mock RateLimitError (as it's defined in apiClient usually)
 class RateLimitError extends Error {
   status: number;
   resetAfterSeconds: number;
-  constructor(message: string, status: number, resetAfterSeconds: number) {
+  constructor(message: string, status = 429, resetAfterSeconds = 60) {
     super(message);
     this.name = 'RateLimitError';
     this.status = status;
     this.resetAfterSeconds = resetAfterSeconds;
   }
 }
+vi.stubGlobal('RateLimitError', RateLimitError);
+
+
+// Import apiClient AFTER mocks are set up
+import { apiClient } from '../apiClient';
+import { supabase } from '../supabaseClient';
+import * as rateLimitService from '../rateLimitService';
 
 // Mock window.dispatchEvent
 vi.stubGlobal('dispatchEvent', vi.fn());
 
 describe('API Client Interceptors', () => {
-  // Mock for document.dispatchEvent
   let dispatchEventSpy: any;
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     dispatchEventSpy = vi.spyOn(document, 'dispatchEvent');
-    
-    // apiClient would have called the interceptors in its initialization
-    // We've already captured the interceptor functions via the mock setup
+
+    // Ensure interceptors are captured before each test
+    if (!capturedRequestInterceptor || !capturedResponseInterceptor || !capturedResponseErrorInterceptor) {
+       console.warn("Interceptors not captured correctly. Check mock setup.");
+       // Attempt to re-initialize the client to trigger interceptor setup again
+       // This is a workaround and might indicate deeper issues if needed frequently.
+       vi.resetModules(); // Reset modules to force re-initialization
+       require('../apiClient'); // Re-import to trigger setup
+    }
   });
 
   afterEach(() => {
     vi.resetAllMocks();
+    dispatchEventSpy.mockRestore(); // Restore the original dispatchEvent
   });
 
   describe('Request Interceptor', () => {
     it('adds Authorization header when session token exists', async () => {
-      // Setup a mock request config
-      const config = { headers: {}, url: '/test-endpoint' };
-      
-      // Mock the session with a valid token
+      const config = { headers: {}, url: '/test-endpoint' } as AxiosRequestConfig;
       vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'valid-token-123',
-            user: { id: 'user-123' }
-          }
-        },
-        error: null
+        data: { session: { access_token: 'valid-token-123' } }, error: null
       });
 
-      // Apply the interceptor manually (ensure it exists first)
-      expect(mockRequestInterceptor).toBeDefined();
-      const result = await mockRequestInterceptor(config);
+      // Manually call the captured interceptor
+      expect(capturedRequestInterceptor).toBeDefined();
+      const result = await capturedRequestInterceptor!(config);
 
-      // Verify authorization header was added
       expect(result.headers).toHaveProperty('Authorization', 'Bearer valid-token-123');
     });
 
     it('removes Authorization header when no session exists', async () => {
-      // Setup a mock request config with existing auth header
-      const config = { 
-        headers: { Authorization: 'Bearer old-token' },
-        url: '/test-endpoint'
-      };
-      
-      // Mock no session
+        const config = {
+          headers: { Authorization: 'Bearer old-token' }, // Start with an existing header
+          url: '/test-endpoint'
+        } as AxiosRequestConfig;
+
       vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
-        data: { session: null },
-        error: null
+        data: { session: null }, error: null
       });
 
-      // Apply the interceptor manually (ensure it exists first)
-      expect(mockRequestInterceptor).toBeDefined();
-      const result = await mockRequestInterceptor(config);
+      // Manually call the captured interceptor
+      expect(capturedRequestInterceptor).toBeDefined();
+      const result = await capturedRequestInterceptor!(config);
 
-      // Verify Authorization header was removed
-      expect(result.headers.Authorization).toBeUndefined();
+      expect(result.headers?.Authorization).toBeUndefined(); // Use optional chaining
     });
   });
 
   describe('Response Interceptor', () => {
-    it('extracts rate limit headers from successful responses', async () => {
-      // Setup a mock response with rate limit headers
-      const mockResponse = {
-        data: { success: true },
-        status: 200,
-        statusText: 'OK',
-        headers: {
-          'x-ratelimit-limit': '100',
-          'x-ratelimit-remaining': '99',
-          'x-ratelimit-reset': '60'
-        },
-        config: { url: '/test-endpoint' }
-      };
+     it('extracts rate limit headers from successful responses', async () => {
+        const mockResponse = {
+            data: { success: true },
+            status: 200,
+            headers: {
+                'x-ratelimit-limit': '100',
+                'x-ratelimit-remaining': '99',
+                'x-ratelimit-reset': '1600000000'
+            },
+            config: { url: '/test-endpoint' } // Added config
+        } as AxiosResponse;
 
-      // Apply the response interceptor (ensure it exists first)
-      expect(mockResponseInterceptor).toBeDefined();
-      const result = mockResponseInterceptor(mockResponse);
+       // Manually call the captured interceptor
+       expect(capturedResponseInterceptor).toBeDefined();
+       const result = capturedResponseInterceptor!(mockResponse);
 
-      // Verify headers were extracted
-      expect(rateLimitService.extractRateLimitHeaders).toHaveBeenCalledWith(
-        mockResponse,
-        '/test-endpoint'
-      );
-      
-      // Verify response is unchanged
-      expect(result).toEqual(mockResponse);
+       expect(rateLimitService.extractRateLimitHeaders).toHaveBeenCalledWith(
+          mockResponse, // Pass the whole response
+          '/test-endpoint' // Extract URL from config
+       );
+       expect(result).toEqual(mockResponse); // Interceptor should return the response
+     });
+
+     it('refreshes token and retries request on 401 error', async () => {
+        const mockAxiosError = {
+            response: { status: 401, data: { message: 'Unauthorized' } },
+            config: { url: '/test-endpoint', method: 'get', headers: {} }, // Ensure method is present
+            isAxiosError: true
+        } as AxiosError;
+
+        // Mock successful refresh
+        vi.mocked(supabase.auth.refreshSession).mockResolvedValueOnce({
+            data: { session: { access_token: 'new-token' } }, error: null
+        });
+
+        // Mock the retry request (using the axios instance mock)
+        vi.mocked(mockAxiosInstance.request).mockResolvedValueOnce({ data: { success: true }, status: 200 });
+
+        // Manually call the captured error interceptor
+        expect(capturedResponseErrorInterceptor).toBeDefined();
+        await capturedResponseErrorInterceptor!(mockAxiosError);
+
+        expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+        // Verify the retry call on the instance
+        expect(mockAxiosInstance.request).toHaveBeenCalledWith(expect.objectContaining({
+            headers: expect.objectContaining({ Authorization: 'Bearer new-token' })
+        }));
     });
 
-    it('refreshes token and retries request on 401 error', async () => {
-      // Setup mock error
-      const mockAxiosError = {
-        response: {
-          status: 401,
-          data: { message: 'Unauthorized' }
-        },
-        config: {
-          url: '/test-endpoint',
-          method: 'GET',
-          headers: { 'Authorization': 'Bearer expired-token' }
-        },
-        isAxiosError: true
-      };
-      
-      // Mock successful token refresh
-      vi.mocked(supabase.auth.refreshSession).mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'new-refreshed-token',
-            user: { id: 'user-123' }
-          }
-        },
-        error: null
-      });
-      
-      // Mock successful retry
-      vi.mocked(axios.get).mockResolvedValueOnce({ 
-        data: { success: true },
-        status: 200 
-      });
+     it('dispatches auth-error-needs-logout event when token refresh fails', async () => {
+        const mockAxiosError = {
+            response: { status: 401, data: { message: 'Unauthorized' } },
+            config: { url: '/test-endpoint', method: 'get', headers: {} },
+            isAxiosError: true
+        } as AxiosError;
 
-      // Apply the error interceptor (ensure it exists first)
-      expect(mockResponseErrorInterceptor).toBeDefined();
-      try {
-        await mockResponseErrorInterceptor(mockAxiosError);
-        
-        // Verify token refresh was called
-        expect(supabase.auth.refreshSession).toHaveBeenCalled();
-        
-        // Verify request was retried with new token
-        expect(axios.get).toHaveBeenCalledWith(
-          '/test-endpoint',
-          expect.objectContaining({
-            headers: expect.objectContaining({
-              'Authorization': 'Bearer new-refreshed-token'
-            })
-          })
-        );
-      } catch (error) {
-        // This should not happen
-        expect(true).toBe(false);
-      }
-    });
+        // Mock failed refresh
+        vi.mocked(supabase.auth.refreshSession).mockResolvedValueOnce({
+            data: { session: null }, error: { message: 'Refresh failed' }
+        });
 
-    it('dispatches auth-error-needs-logout event when token refresh fails', async () => {
-      // Setup mock error
-      const mockAxiosError = {
-        response: {
-          status: 401,
-          data: { message: 'Unauthorized' }
-        },
-        config: {
-          url: '/test-endpoint',
-          method: 'GET',
-          headers: { 'Authorization': 'Bearer expired-token' }
-        },
-        isAxiosError: true
-      };
-      
-      // Mock failed token refresh
-      vi.mocked(supabase.auth.refreshSession).mockResolvedValueOnce({
-        data: { session: null },
-        error: { message: 'Failed to refresh token' }
-      });
+        // Manually call the captured error interceptor
+        expect(capturedResponseErrorInterceptor).toBeDefined();
+        await expect(capturedResponseErrorInterceptor!(mockAxiosError)).rejects.toThrow(Error); // Expect it to re-throw or throw AuthError
 
-      // Apply the error interceptor and expect it to throw
-      expect(mockResponseErrorInterceptor).toBeDefined();
-      try {
-        await mockResponseErrorInterceptor(mockAxiosError);
-        // Should not reach here
-        expect(true).toBe(false);
-      } catch (error) {
-        // Verify token refresh was attempted
-        expect(supabase.auth.refreshSession).toHaveBeenCalled();
-        
-        // Verify the auth-error-needs-logout event was dispatched
-        expect(dispatchEventSpy).toHaveBeenCalledWith(
-          expect.objectContaining({
-            type: 'auth-error-needs-logout'
-          })
-        );
-      }
+        expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+        // Verify the event dispatch
+        expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(CustomEvent));
+        expect(dispatchEventSpy.mock.calls[0][0].type).toBe('auth-error-needs-logout');
     });
 
     it('handles rate limit errors (429)', async () => {
-      // Setup mock error with RateLimitError
-      const mockAxiosError = {
-        response: {
-          status: 429,
-          data: { 
-            message: 'Rate limit exceeded',
-            reset_after_seconds: 60,
-            limit: 100,
-            current: 101
-          }
-        },
-        config: {
-          url: '/concepts/generate',
-          method: 'POST'
-        },
-        isAxiosError: true
-      };
+        const mockAxiosError = {
+            response: {
+                status: 429,
+                data: { message: 'Rate limit exceeded', reset_after_seconds: 60 },
+                headers: { 'retry-after': '60' } // Add headers
+            },
+            config: { url: '/test-endpoint' },
+            isAxiosError: true
+        } as AxiosError;
 
-      // Mock the implementation to throw RateLimitError
-      mockResponseErrorInterceptor = vi.fn().mockImplementation((error) => {
-        if (error.response?.status === 429) {
-          const resetAfterSeconds = error.response.data.reset_after_seconds || 60;
-          throw new RateLimitError(
-            'Rate limit exceeded',
-            429, 
-            resetAfterSeconds
-          );
-        }
-        throw error;
-      });
-
-      // Apply the error interceptor and expect it to throw
-      try {
-        await mockResponseErrorInterceptor(mockAxiosError);
-        // Should not reach here
-        expect(true).toBe(false);
-      } catch (error: any) {
-        // Verify error has rate limit properties
-        expect(error.name).toBe('RateLimitError');
-        expect(error.status).toBe(429);
-        expect(error.resetAfterSeconds).toBe(60);
-      }
+        // Manually call the captured error interceptor
+        expect(capturedResponseErrorInterceptor).toBeDefined();
+        await expect(capturedResponseErrorInterceptor!(mockAxiosError)).rejects.toThrow(RateLimitError);
     });
   });
 }); 

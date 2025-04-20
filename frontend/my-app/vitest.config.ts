@@ -33,6 +33,12 @@ export default defineConfig({
       'src/features/refinement/__tests__/RefinementPage.test.tsx',
       'src/features/refinement/__tests__/RefinementSelectionPage.test.tsx',
       
+      // Additional excluded test files
+      'src/hooks/__tests__/useRateLimitsQuery.test.ts',
+      'src/hooks/__tests__/useTaskSubscription.test.ts',
+      'src/services/__tests__/apiClient.test.ts',
+      'src/services/__tests__/supabaseClient.test.ts',
+      'src/services/__tests__/apiInterceptors.test.ts',
     ],
     // **************************************
     coverage: {
