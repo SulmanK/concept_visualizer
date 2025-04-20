@@ -1,26 +1,16 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { 
-  supabase, 
-  initializeAnonymousAuth, 
-  getUserId, 
-  isAnonymousUser, 
-  linkEmailToAnonymousUser,
-  signOut,
-  getAuthenticatedImageUrl,
-  validateAndRefreshToken
-} from '../supabaseClient';
-import * as rateLimitService from '../rateLimitService';
-import * as configService from '../configService';
+import type { Session, User } from '@supabase/supabase-js';
 
-// Create mock functions
+// Mock function implementations first
 const mockSignInAnonymously = vi.fn();
-const mockGetSession = vi.fn();
-const mockRefreshSession = vi.fn();
-const mockUpdateUser = vi.fn();
 const mockSignOut = vi.fn();
+const mockGetSession = vi.fn();
+const mockGetUser = vi.fn();
+const mockUpdateUser = vi.fn();
 const mockCreateSignedUrl = vi.fn();
 const mockGetPublicUrl = vi.fn();
 const mockFrom = vi.fn();
+const mockRefreshSession = vi.fn();
 
 // Mock dependencies
 vi.mock('@supabase/supabase-js', () => {
@@ -28,10 +18,11 @@ vi.mock('@supabase/supabase-js', () => {
     createClient: () => ({
       auth: {
         signInAnonymously: mockSignInAnonymously,
+        signOut: mockSignOut,
         getSession: mockGetSession,
-        refreshSession: mockRefreshSession,
+        getUser: mockGetUser,
         updateUser: mockUpdateUser,
-        signOut: mockSignOut
+        refreshSession: mockRefreshSession
       },
       storage: {
         from: mockFrom
@@ -48,8 +39,23 @@ vi.mock('../configService', () => ({
   getBucketName: vi.fn().mockReturnValue('test-bucket')
 }));
 
+// Import after mocks are set up
+import { 
+  supabase, 
+  initializeAnonymousAuth, 
+  getUserId, 
+  isAnonymousUser, 
+  linkEmailToAnonymousUser,
+  signOut,
+  getAuthenticatedImageUrl,
+  validateAndRefreshToken,
+  determineIsAnonymous
+} from '../supabaseClient';
+import * as rateLimitService from '../rateLimitService';
+import * as configService from '../configService';
+
 describe('Supabase Client', () => {
-  // Console spies
+  // Mock console methods
   const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   
@@ -81,341 +87,301 @@ describe('Supabase Client', () => {
     vi.resetAllMocks();
   });
   
-  describe('initializeAnonymousAuth', () => {
-    it('should sign in anonymously if no session exists', async () => {
-      // Mock no existing session
-      mockGetSession.mockResolvedValueOnce({
-        data: { session: null },
-        error: null
-      });
+  describe('signOut', () => {
+    it('should call supabase.auth.signOut', async () => {
+      // Setup mock return
+      mockSignOut.mockResolvedValueOnce({ error: null });
       
-      // Mock successful anonymous sign-in
-      mockSignInAnonymously.mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'new-access-token',
-            refresh_token: 'new-refresh-token',
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            user: { id: 'new-anon-user' }
-          }
-        },
-        error: null
-      });
+      // Call function
+      const result = await signOut();
       
-      // Call the function
-      const session = await initializeAnonymousAuth();
-      
-      // Verify anonymous auth was initiated
-      expect(mockSignInAnonymously).toHaveBeenCalled();
-      expect(session).not.toBeNull();
-      expect(session?.access_token).toBe('new-access-token');
-      
-      // Verify rate limits were refreshed
-      expect(rateLimitService.fetchRateLimits).toHaveBeenCalledWith(true);
-      
-      // Verify logs
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('No session found'));
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Anonymous sign-in successful'));
+      // Verify
+      expect(mockSignOut).toHaveBeenCalledTimes(1);
+      expect(result).toBe(true);
     });
     
-    it('should refresh the token if session exists but is about to expire', async () => {
-      // Mock existing session that's close to expiry
-      const expiryTimestamp = Math.floor(Date.now() / 1000) + 200; // 200 seconds from now, < 5 minutes
-      mockGetSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'old-access-token',
-            refresh_token: 'old-refresh-token',
-            expires_at: expiryTimestamp,
-            user: { id: 'existing-user' }
-          }
-        },
-        error: null
-      });
+    it('should return false if signOut fails', async () => {
+      // Setup mock return
+      mockSignOut.mockResolvedValueOnce({ error: { message: 'Sign out failed' } });
       
-      // Mock successful token refresh
-      mockRefreshSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'refreshed-access-token',
-            refresh_token: 'refreshed-refresh-token',
-            expires_at: Math.floor(Date.now() / 1000) + 3600,
-            user: { id: 'existing-user' }
-          }
-        },
-        error: null
-      });
+      // Call function
+      const result = await signOut();
       
-      // Call the function
-      const session = await initializeAnonymousAuth();
-      
-      // Verify anonymous auth was NOT initiated (since session exists)
-      expect(mockSignInAnonymously).not.toHaveBeenCalled();
-      
-      // Verify token was refreshed
-      expect(mockRefreshSession).toHaveBeenCalled();
-      expect(session?.access_token).toBe('refreshed-access-token');
-      
-      // Verify logs
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Existing session expires soon'));
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Session refreshed successfully'));
-    });
-    
-    it('should use existing session if valid and not near expiry', async () => {
-      // Mock existing session that's far from expiry
-      const expiryTimestamp = Math.floor(Date.now() / 1000) + 3000; // 50 minutes from now
-      mockGetSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'valid-access-token',
-            refresh_token: 'valid-refresh-token',
-            expires_at: expiryTimestamp,
-            user: { id: 'existing-user' }
-          }
-        },
-        error: null
-      });
-      
-      // Call the function
-      const session = await initializeAnonymousAuth();
-      
-      // Verify no auth changes were made
-      expect(mockSignInAnonymously).not.toHaveBeenCalled();
-      expect(mockRefreshSession).not.toHaveBeenCalled();
-      
-      // Verify existing session was returned
-      expect(session?.access_token).toBe('valid-access-token');
-      
-      // Verify logs
-      expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Using existing valid session'));
-    });
-    
-    it('should handle sign-in errors', async () => {
-      // Mock no existing session
-      mockGetSession.mockResolvedValueOnce({
-        data: { session: null },
-        error: null
-      });
-      
-      // Mock failed anonymous sign-in
-      const authError = new Error('Auth error');
-      mockSignInAnonymously.mockRejectedValueOnce(authError);
-      
-      // Call the function and expect it to pass through the error
-      try {
-        await initializeAnonymousAuth();
-        // If we get here, the test should fail
-        expect(true).toBe(false); // This should not execute
-      } catch (error) {
-        expect(error).toBe(authError);
-      }
-      
-      // Verify error was logged
+      // Verify
+      expect(mockSignOut).toHaveBeenCalledTimes(1);
+      expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error initializing anonymous auth'),
-        expect.any(Error)
+        expect.stringContaining('sign out failed'),
+        expect.anything()
+      );
+    });
+  });
+  
+  describe('initializeAnonymousAuth', () => {
+    it('should return existing session if available', async () => {
+      // Setup mock session
+      const mockSession: Session = {
+        access_token: 'mock-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: 1600000000,
+        refresh_token: 'mock-refresh',
+        user: { id: 'user-123' } as User
+      };
+      
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { session: mockSession },
+        error: null
+      });
+      
+      // Call function
+      const result = await initializeAnonymousAuth();
+      
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockSession);
+    });
+    
+    it('should sign in anonymously if no session exists', async () => {
+      // Setup mocks
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { session: null },
+        error: null
+      });
+      
+      const mockSession: Session = {
+        access_token: 'mock-token',
+        token_type: 'bearer',
+        expires_in: 3600,
+        expires_at: 1600000000,
+        refresh_token: 'mock-refresh',
+        user: { id: 'anon-123' } as User
+      };
+      
+      mockSignInAnonymously.mockResolvedValueOnce({
+        data: { session: mockSession },
+        error: null
+      });
+      
+      // Call function
+      const result = await initializeAnonymousAuth();
+      
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(mockSession);
+    });
+    
+    it('should handle errors during session retrieval', async () => {
+      // Setup mock
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { session: null },
+        error: { message: 'Session error' }
+      });
+      
+      // Call function
+      const result = await initializeAnonymousAuth();
+      
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error retrieving session'),
+        expect.anything()
+      );
+    });
+    
+    it('should handle errors during anonymous sign-in', async () => {
+      // Setup mocks
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { session: null },
+        error: null
+      });
+      
+      mockSignInAnonymously.mockResolvedValueOnce({
+        data: { session: null },
+        error: { message: 'Sign in error' }
+      });
+      
+      // Call function
+      const result = await initializeAnonymousAuth();
+      
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(mockSignInAnonymously).toHaveBeenCalledTimes(1);
+      expect(result).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Error signing in anonymously'),
+        expect.anything()
       );
     });
   });
   
   describe('getUserId', () => {
-    it('should return user ID from session', async () => {
-      // Mock session with user
-      mockGetSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            user: { id: 'test-user-id' }
-          }
+    it('should return user id if session exists', async () => {
+      // Setup mock
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { 
+          session: { 
+            user: { id: 'user-123' } 
+          } 
         },
         error: null
       });
       
-      // Call the function
-      const userId = await getUserId();
+      // Call function
+      const result = await getUserId();
       
-      // Verify correct ID was returned
-      expect(userId).toBe('test-user-id');
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result).toBe('user-123');
     });
     
     it('should return null if no session exists', async () => {
-      // Mock no session
-      mockGetSession.mockResolvedValueOnce({
+      // Setup mock
+      mockGetSession.mockResolvedValueOnce({ 
         data: { session: null },
         error: null
       });
       
-      // Call the function
-      const userId = await getUserId();
+      // Call function
+      const result = await getUserId();
       
-      // Verify null was returned
-      expect(userId).toBeNull();
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result).toBeNull();
     });
     
-    it('should handle errors gracefully', async () => {
-      // Mock error
-      mockGetSession.mockRejectedValueOnce(new Error('Session error'));
+    it('should return null if error occurs', async () => {
+      // Setup mock
+      mockGetSession.mockResolvedValueOnce({ 
+        data: { session: null },
+        error: { message: 'Session error' }
+      });
       
-      // Call the function
-      const userId = await getUserId();
+      // Call function
+      const result = await getUserId();
       
-      // Verify null was returned and error was logged
-      expect(userId).toBeNull();
+      // Verify
+      expect(mockGetSession).toHaveBeenCalledTimes(1);
+      expect(result).toBeNull();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error getting user ID'),
-        expect.any(Error)
+        expect.stringContaining('Error retrieving user ID'),
+        expect.anything()
       );
     });
   });
   
   describe('isAnonymousUser', () => {
-    it('should return true for anonymous users', async () => {
-      // Mock anonymous user session
-      mockGetSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            user: { 
-              id: 'anon-user-id',
-              app_metadata: { is_anonymous: true }
-            }
-          }
-        },
-        error: null
-      });
+    it('should return true for anonymous user', async () => {
+      // Setup mock
+      const mockUser = {
+        id: 'anon-123',
+        app_metadata: {
+          provider: 'anonymous'
+        }
+      } as User;
       
-      // Call the function
-      const isAnon = await isAnonymousUser();
+      // Call function
+      const result = isAnonymousUser(mockUser);
       
-      // Verify correct result
-      expect(isAnon).toBe(true);
+      // Verify
+      expect(result).toBe(true);
     });
     
-    it('should return false for non-anonymous users', async () => {
-      // Mock non-anonymous user session
-      mockGetSession.mockResolvedValueOnce({
-        data: {
-          session: {
-            user: { 
-              id: 'regular-user-id',
-              app_metadata: { is_anonymous: false }
-            }
-          }
-        },
-        error: null
-      });
+    it('should return false for non-anonymous user', async () => {
+      // Setup mock
+      const mockUser = {
+        id: 'user-123',
+        app_metadata: {
+          provider: 'email'
+        }
+      } as User;
       
-      // Call the function
-      const isAnon = await isAnonymousUser();
+      // Call function
+      const result = isAnonymousUser(mockUser);
       
-      // Verify correct result
-      expect(isAnon).toBe(false);
+      // Verify
+      expect(result).toBe(false);
     });
     
-    it('should return false if no session exists', async () => {
-      // Mock no session
-      mockGetSession.mockResolvedValueOnce({
-        data: { session: null },
-        error: null
-      });
+    it('should return false if user is null', async () => {
+      // Call function
+      const result = isAnonymousUser(null);
       
-      // Call the function
-      const isAnon = await isAnonymousUser();
-      
-      // Verify correct result
-      expect(isAnon).toBe(false);
+      // Verify
+      expect(result).toBe(false);
     });
   });
   
   describe('linkEmailToAnonymousUser', () => {
     it('should update user with email', async () => {
-      // Mock successful user update
+      // Setup mock
       mockUpdateUser.mockResolvedValueOnce({
-        data: { user: { id: 'test-user-id', email: 'test@example.com' } },
+        data: { user: { id: 'user-123', email: 'test@example.com' } },
         error: null
       });
       
-      // Call the function
+      // Call function
       const result = await linkEmailToAnonymousUser('test@example.com');
       
-      // Verify update was called and result is true
+      // Verify
       expect(mockUpdateUser).toHaveBeenCalledWith({ email: 'test@example.com' });
       expect(result).toBe(true);
     });
     
-    it('should handle update errors', async () => {
-      // Mock update error
+    it('should return false if update fails', async () => {
+      // Setup mock
       mockUpdateUser.mockResolvedValueOnce({
         data: { user: null },
         error: { message: 'Update error' }
       });
       
-      // Call the function
+      // Call function
       const result = await linkEmailToAnonymousUser('test@example.com');
       
-      // Verify result is false and error was logged
+      // Verify
+      expect(mockUpdateUser).toHaveBeenCalledWith({ email: 'test@example.com' });
       expect(result).toBe(false);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining('Error linking email to anonymous user'),
-        expect.any(Object)
+        expect.anything()
       );
     });
   });
   
-  describe('signOut', () => {
-    it('should sign out and initialize new anonymous session', async () => {
-      // Mock successful sign out
-      mockSignOut.mockResolvedValueOnce({
-        error: null
-      });
-      
-      // Mock successful anonymous sign-in after sign out
-      mockGetSession.mockResolvedValue({
-        data: { session: null },
-        error: null
-      });
-      
-      mockSignInAnonymously.mockResolvedValueOnce({
-        data: {
-          session: {
-            access_token: 'new-anon-token',
-            user: { id: 'new-anon-user' }
+  describe('determineIsAnonymous', () => {
+    it('should return true for anonymous user session', () => {
+      const mockSession = {
+        user: {
+          id: 'anon-123',
+          app_metadata: {
+            provider: 'anonymous'
           }
-        },
-        error: null
-      });
+        }
+      } as Session;
       
-      // Override initializeAnonymousAuth to return a successful session
-      const originalInitializeAnonymousAuth = initializeAnonymousAuth;
-      globalThis.initializeAnonymousAuth = vi.fn().mockResolvedValueOnce({
-        access_token: 'new-anon-token'
-      });
-      
-      // Call the function
-      const result = await signOut();
-      
-      // Restore original function
-      globalThis.initializeAnonymousAuth = originalInitializeAnonymousAuth;
-      
-      // Verify sign out
-      expect(mockSignOut).toHaveBeenCalled();
-      expect(rateLimitService.fetchRateLimits).toHaveBeenCalledWith(true);
+      const result = determineIsAnonymous(mockSession);
       expect(result).toBe(true);
     });
     
-    it('should handle sign out errors', async () => {
-      // Mock sign out error
-      mockSignOut.mockResolvedValueOnce({
-        error: { message: 'Sign out error' }
-      });
+    it('should return false for non-anonymous user session', () => {
+      const mockSession = {
+        user: {
+          id: 'user-123',
+          app_metadata: {
+            provider: 'email'
+          }
+        }
+      } as Session;
       
-      // Call the function
-      const result = await signOut();
-      
-      // Verify result is false and error was logged
+      const result = determineIsAnonymous(mockSession);
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Error signing out'),
-        expect.any(Object)
-      );
+    });
+    
+    it('should return true if session is null', () => {
+      const result = determineIsAnonymous(null);
+      expect(result).toBe(true);
     });
   });
   

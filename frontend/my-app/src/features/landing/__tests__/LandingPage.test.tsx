@@ -68,7 +68,19 @@ vi.mock('../../../contexts/TaskContext', () => ({
     activeTaskData: null,
     setActiveTask: vi.fn(),
     refreshTaskStatus: vi.fn(),
-    setIsTaskInitiating: vi.fn()
+    setIsTaskInitiating: vi.fn(),
+    hasActiveTask: false
+  }),
+  useOnTaskCleared: () => (callback) => {
+    // Return a mock unsubscribe function
+    return () => {};
+  },
+  useActiveTaskId: () => null,
+  useTaskStatusFlags: () => ({
+    isPending: false,
+    isProcessing: false,
+    isCompleted: false,
+    isFailed: false
   })
 }));
 
@@ -92,10 +104,26 @@ import { AllProvidersWrapper } from '../../../test-wrappers';
 
 // Mock useErrorHandling
 vi.mock('../../../hooks/useErrorHandling', () => ({
-  default: () => ({
+  useErrorHandling: () => ({
     handleError: vi.fn(),
-    clearError: vi.fn()
-  })
+    clearError: vi.fn(),
+    error: null,
+    hasError: false,
+    setError: vi.fn(),
+    showErrorToast: vi.fn(),
+    showAndClearError: vi.fn()
+  }),
+  ErrorCategory: {
+    validation: 'validation',
+    network: 'network',
+    permission: 'permission',
+    notFound: 'notFound',
+    server: 'server',
+    client: 'client',
+    rateLimit: 'rateLimit',
+    auth: 'auth',
+    unknown: 'unknown'
+  }
 }));
 
 // Mock console.log
@@ -187,14 +215,19 @@ describe('LandingPage Component', () => {
   });
   
   test('handles form submission', async () => {
-    // Skip this test for now
+    // Improve the mock implementation to include all required properties
     vi.spyOn(useConceptMutationsModule, 'useGenerateConceptMutation').mockImplementation(() => ({
       mutate: vi.fn((data, options) => {
         if (options?.onSuccess) {
           options.onSuccess({
+            id: 'test-task-id',
             task_id: 'test-task-id',
             status: 'completed',
-            result_id: 'test-123'
+            result_id: 'test-123',
+            type: 'generate_concept',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            user_id: 'test-user-id'
           });
         }
       }),
@@ -204,9 +237,14 @@ describe('LandingPage Component', () => {
       isError: false,
       error: null,
       data: {
+        id: 'test-task-id',
         task_id: 'test-task-id',
         status: 'completed',
-        result_id: 'test-123'
+        result_id: 'test-123',
+        type: 'generate_concept',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        user_id: 'test-user-id'
       }
     }));
     
@@ -267,27 +305,43 @@ describe('LandingPage Component', () => {
     expect(true).toBe(true);
   });
   
-  test('navigates to the detail page when clicking view details', () => {
-    // Update the mock to return test data
-    useRecentConceptsMock.mockReturnValue({
-      data: [
-        {
-          id: 'test-123',
-          image_url: 'https://example.com/test-concept.png',
-          base_image_url: 'https://example.com/test-concept.png',
-          logo_description: 'Sample concept',
-          theme_description: 'Sample theme',
-          created_at: new Date().toISOString(),
-          user_id: 'test-user-id'
-        }
-      ],
+  test('navigates to the detail page when clicking view details', async () => {
+    // Mock the useGenerateConceptMutation hook to prevent the TypeError
+    vi.spyOn(useConceptMutationsModule, 'useGenerateConceptMutation').mockImplementation(() => ({
+      mutate: vi.fn(),
+      reset: vi.fn(),
+      isPending: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+      data: null,
+      status: 'idle',
+      isIdle: true,
       isLoading: false,
+      variables: undefined,
+      failureCount: 0,
+      failureReason: null,
+      context: undefined,
+      mutateAsync: vi.fn()
+    }));
+
+    // Mock the useConceptDetail to return concept data
+    useConceptDetailMock.mockReturnValue({
+      data: {
+        id: 'test-123',
+        base_image_url: 'https://example.com/test-concept.png',
+        logo_description: 'Test logo',
+        theme_description: 'Test theme',
+        has_variations: false
+      },
+      isLoading: false,
+      error: null,
       refetch: vi.fn()
     });
-    
+
     renderWithAllProviders(<LandingPage />);
     
-    // Test will pass if the component renders without throwing errors
+    // Test passes if we don't get TypeError 
     expect(true).toBe(true);
   });
 }); 
