@@ -122,39 +122,40 @@ docs/
     │   ├── common/
     │   │   └── QueryResultHandler.md
     │   ├── concept/
-    │   │   ├── ConceptForm.md
-    │   │   ├── ConceptImage.md
-    │   │   ├── ConceptRefinementForm.md
-    │   │   └── ConceptResult.md
+    │   │   ├── ConceptForm.md ✓
+    │   │   ├── ConceptImage.md ✓
+    │   │   ├── ConceptRefinementForm.md ✓
+    │   │   └── ConceptResult.md ✓
     │   ├── layout/
-    │   │   ├── Footer.md
-    │   │   ├── Header.md
-    │   │   └── MainLayout.md
+    │   │   ├── Footer.md ✓
+    │   │   ├── Header.md ✓
+    │   │   └── MainLayout.md ✓
     │   ├── RateLimitsPanel/
-    │   │   └── RateLimitsPanel.md
+    │   │   └── RateLimitsPanel.md ✓
     │   ├── ui/
-    │   │   ├── ApiToastListener.md
-    │   │   ├── Button.md
-    │   │   ├── Card.md
-    │   │   ├── ColorPalette.md
+    │   │   ├── ApiToastListener.md ✓
+    │   │   ├── Button.md ✓
+    │   │   ├── Card.md ✓
+    │   │   ├── ColorPalette.md ✓
     │   │   ├── ConceptCard.md
     │   │   ├── ErrorBoundary.md
-    │   │   ├── ErrorMessage.md
+    │   │   ├── ErrorMessage.md ✓
     │   │   ├── FeatureSteps.md
-    │   │   ├── Input.md
-    │   │   ├── LoadingIndicator.md
-    │   │   ├── OfflineStatus.md
-    │   │   ├── OptimizedImage.md
-    │   │   ├── SkeletonLoader.md
-    │   │   ├── Spinner.md
-    │   │   ├── TextArea.md
-    │   │   ├── Toast.md
-    │   │   └── ToastContainer.md
-    │   └── TaskStatusBar.md
-    │   └── README.md # Overview of Components
+    │   │   ├── Input.md ✓
+    │   │   ├── LoadingIndicator.md ✓
+    │   │   ├── OfflineStatus.md ✓
+    │   │   ├── OptimizedImage.md ✓
+    │   │   ├── SkeletonLoader.md ✓
+    │   │   ├── Spinner.md ✓
+    │   │   ├── TextArea.md ✓
+    │   │   ├── Toast.md ✓
+    │   │   └── ToastContainer.md ✓
+    │   └── TaskStatusBar.md ✓
+    │   └── README.md # Overview of Components ✓
     ├── config/
-    │   ├── apiEndpoints.md
-    │   └── queryKeys.md
+    │   ├── apiEndpoints.md ✓
+    │   └── queryKeys.md ✓
+    │   └── README.md ✓
     ├── contexts/
     │   ├── AuthContext.md
     │   ├── RateLimitContext.md
@@ -171,7 +172,7 @@ docs/
     │   │   │   │   ├── ConceptList.md
     │   │   │   │   └── RecentConceptsHeader.md
     │   │   │   └── RecentConceptsPage.md
-    │   │   └── README.md # Overview of Concepts feature
+    │   │   └── README.md # Overview of Concepts feature ✓
     │   ├── landing/
     │   │   ├── components/
     │   │   │   ├── ConceptFormSection.md
@@ -188,7 +189,7 @@ docs/
     │   │   │   └── RefinementHeader.md
     │   │   ├── RefinementPage.md
     │   │   └── RefinementSelectionPage.md
-    │   └── README.md # Overview of Features
+    │   └── README.md # Overview of Features ✓
     ├── hooks/
     │   ├── animation/
     │   │   ├── useAnimatedMount.md
@@ -204,33 +205,35 @@ docs/
     │   ├── useSessionQuery.md
     │   ├── useTaskQueries.md
     │   ├── useTaskSubscription.md
-    │   ├── useToast.md
-    │   └── README.md # Overview of Hooks
+    │   ├── useToast.md ✓
+    │   └── README.md # Overview of Hooks ✓
     ├── services/
-    │   ├── apiClient.md
-    │   ├── conceptService.md
-    │   ├── configService.md
-    │   ├── eventService.md
-    │   ├── rateLimitService.md
-    │   └── supabaseClient.md
+    │   ├── apiClient.md ✓
+    │   ├── conceptService.md ✓
+    │   ├── configService.md ✓
+    │   ├── eventService.md ✓
+    │   ├── rateLimitService.md ✓
+    │   ├── supabaseClient.md ✓
+    │   └── README.md # Overview of Services ✓
     ├── styles/
-    │   └── README.md # Explain global styles, variables, animations
+    │   └── README.md # Explain global styles, variables, animations ✓
     ├── types/
-    │   └── README.md # Explain type organisation
+    │   └── README.md # Explain type organisation ✓
     ├── utils/
-    │   ├── dev-logging.md
-    │   ├── errorUtils.md
-    │   ├── formatUtils.md
-    │   ├── logger.md
-    │   ├── stringUtils.md
-    │   ├── url.md
-    │   └── validationUtils.md ✓
-    ├── App.md # Documentation for the main App component
-    ├── main.md # Documentation for the entry point
-    ├── setupTests.md # Documentation for test setup
-    ├── theme.md # Documentation for MUI theme setup
+    │   ├── dev-logging.md ✓
+    │   ├── errorUtils.md ✓
+    │   ├── formatUtils.md ✓
+    │   ├── logger.md ✓
+    │   ├── stringUtils.md ✓
+    │   ├── url.md ✓
+    │   ├── validationUtils.md ✓
+    │   └── README.md # Overview of Utils ✓
+    ├── App.md # Documentation for the main App component ✓
+    ├── main.md # Documentation for the entry point ✓
+    ├── setupTests.md # Documentation for test setup ✓
+    ├── theme.md # Documentation for MUI theme setup ✓
     └── README.md # Overview of Frontend src
-    └── README.md # Overview of Frontend
+    └── README.md # Overview of Frontend ✓
 ```
 
 ## Phase 2: Step-by-Step Documentation Plan
@@ -348,103 +351,110 @@ This provides a comprehensive target list for your documentation efforts, mirror
         *   Provide an overview of the directory's contents and purpose.
         *   List the key modules/classes within the directory and link to their respective `.md` files.
 
-5.  **Create Frontend Directory Structure:**
+5.  **Create Frontend Directory Structure:** ✓
     *   Recursively create directories within `docs/frontend/` to mirror the structure under `frontend/my-app/src/`.
     *   Example: `mkdir -p docs/frontend/components/ui docs/frontend/hooks/animation ...`
 
-6.  **Create Frontend Markdown Files:**
+6.  **Create Frontend Markdown Files:** ✓ (Basic structure and key files)
     *   For each significant `.ts`/`.tsx` file in `frontend/my-app/src/` (excluding `index.ts`), create a corresponding `.md` file in the mirrored `docs/frontend/` structure.
     *   Example: Create `docs/frontend/components/ui/Button.md` for `frontend/my-app/src/components/ui/Button.tsx`.
     *   Create `README.md` files for logical groupings (e.g., `docs/frontend/components/README.md`, `docs/frontend/hooks/README.md`).
 
     **Frontend Documentation Files (`docs/frontend/`)**
 
-*   `docs/frontend/README.md`
-*   `docs/frontend/App.md`
-*   `docs/frontend/main.md`
-*   `docs/frontend/setupTests.md`
-*   `docs/frontend/theme.md`
-*   **`docs/frontend/api/README.md`**
-    *   `docs/frontend/api/task.md`
-*   **`docs/frontend/assets/README.md`** (Optional: Explain asset usage)
-*   **`docs/frontend/components/README.md`**
-    *   `docs/frontend/components/common/QueryResultHandler.md`
-    *   `docs/frontend/components/concept/ConceptForm.md`
-    *   `docs/frontend/components/concept/ConceptImage.md`
-    *   `docs/frontend/components/concept/ConceptRefinementForm.md`
-    *   `docs/frontend/components/concept/ConceptResult.md`
-    *   `docs/frontend/components/layout/Footer.md`
-    *   `docs/frontend/components/layout/Header.md`
-    *   `docs/frontend/components/layout/MainLayout.md`
-    *   `docs/frontend/components/RateLimitsPanel/RateLimitsPanel.md`
-    *   `docs/frontend/components/ui/ApiToastListener.md`
-    *   `docs/frontend/components/ui/Button.md`
-    *   `docs/frontend/components/ui/Card.md`
-    *   `docs/frontend/components/ui/ColorPalette.md`
+*   `docs/frontend/README.md` ✓
+*   `docs/frontend/App.md` ✓
+*   `docs/frontend/main.md` ✓
+*   `docs/frontend/setupTests.md` ✓
+*   `docs/frontend/theme.md` ✓
+*   **`docs/frontend/api/README.md`** ✓
+    *   `docs/frontend/api/task.md` ✓
+*   **`docs/frontend/assets/README.md`** ✓ (Optional: Explain asset usage)
+*   **`docs/frontend/components/README.md`** ✓
+    *   `docs/frontend/components/common/QueryResultHandler.md` ✓
+    *   `docs/frontend/components/concept/ConceptForm.md` ✓
+    *   `docs/frontend/components/concept/ConceptImage.md` ✓
+    *   `docs/frontend/components/concept/ConceptRefinementForm.md` ✓
+    *   `docs/frontend/components/concept/ConceptResult.md` ✓
+    *   `docs/frontend/components/layout/Footer.md` ✓
+    *   `docs/frontend/components/layout/Header.md` ✓
+    *   `docs/frontend/components/layout/MainLayout.md` ✓
+    *   `docs/frontend/components/RateLimitsPanel/RateLimitsPanel.md` ✓
+    *   `docs/frontend/components/ui/ApiToastListener.md` ✓
+    *   `docs/frontend/components/ui/Button.md` ✓
+    *   `docs/frontend/components/ui/Card.md` ✓
+    *   `docs/frontend/components/ui/ColorPalette.md` ✓
     *   `docs/frontend/components/ui/ConceptCard.md`
     *   `docs/frontend/components/ui/ErrorBoundary.md`
-    *   `docs/frontend/components/ui/ErrorMessage.md`
+    *   `docs/frontend/components/ui/ErrorMessage.md` ✓
     *   `docs/frontend/components/ui/FeatureSteps.md`
-    *   `docs/frontend/components/ui/Input.md`
-    *   `docs/frontend/components/ui/LoadingIndicator.md`
-    *   `docs/frontend/components/ui/OfflineStatus.md`
-    *   `docs/frontend/components/ui/OptimizedImage.md`
-    *   `docs/frontend/components/ui/SkeletonLoader.md`
-    *   `docs/frontend/components/ui/Spinner.md`
-    *   `docs/frontend/components/ui/TextArea.md`
-    *   `docs/frontend/components/ui/Toast.md`
-    *   `docs/frontend/components/ui/ToastContainer.md`
-    *   `docs/frontend/components/TaskStatusBar.md`
-*   **`docs/frontend/config/README.md`**
-    *   `docs/frontend/config/apiEndpoints.md`
-    *   `docs/frontend/config/queryKeys.md`
-*   **`docs/frontend/contexts/README.md`**
-    *   `docs/frontend/contexts/AuthContext.md`
-    *   `docs/frontend/contexts/RateLimitContext.md`
-    *   `docs/frontend/contexts/TaskContext.md`
-*   **`docs/frontend/features/README.md`**
-    *   `docs/frontend/features/concepts/README.md`
-    *   `docs/frontend/features/concepts/detail/ConceptDetailPage.md`
-    *   `docs/frontend/features/concepts/detail/components/EnhancedImagePreview.md`
-    *   `docs/frontend/features/concepts/detail/components/ExportOptions.md`
-    *   `docs/frontend/features/concepts/recent/RecentConceptsPage.md`
-    *   `docs/frontend/features/concepts/recent/components/ConceptList.md`
-    *   `docs/frontend/features/concepts/recent/components/RecentConceptsHeader.md`
-    *   `docs/frontend/features/landing/LandingPage.md`
-    *   `docs/frontend/features/landing/components/ConceptFormSection.md`
-    *   `docs/frontend/features/landing/components/ConceptHeader.md`
-    *   `docs/frontend/features/landing/components/HowItWorks.md`
-    *   `docs/frontend/features/landing/components/RecentConceptsSection.md`
-    *   `docs/frontend/features/landing/components/ResultsSection.md`
-    *   `docs/frontend/features/refinement/RefinementPage.md`
-    *   `docs/frontend/features/refinement/RefinementSelectionPage.md`
-    *   `docs/frontend/features/refinement/components/ComparisonView.md`
-    *   `docs/frontend/features/refinement/components/RefinementActions.md`
-    *   `docs/frontend/features/refinement/components/RefinementForm.md`
-    *   `docs/frontend/features/refinement/components/RefinementHeader.md`
-*   **`docs/frontend/hooks/README.md`**
-    *   `docs/frontend/hooks/animation/useAnimatedMount.md`
-    *   `docs/frontend/hooks/animation/useAnimatedValue.md`
-    *   `docs/frontend/hooks/animation/usePrefersReducedMotion.md`
-    *   `docs/frontend/hooks/useConceptMutations.md`
-    *   `docs/frontend/hooks/useConceptQueries.md`
-    *   `docs/frontend/hooks/useConfigQuery.md`
-    *   `docs/frontend/hooks/useErrorHandling.md`
-    *   `docs/frontend/hooks/useExportImageMutation.md`
-    *   `docs/frontend/hooks/useNetworkStatus.md`
-    *   `docs/frontend/hooks/useRateLimitsQuery.md`
-    *   `docs/frontend/hooks/useSessionQuery.md`
-    *   `docs/frontend/hooks/useTaskQueries.md`
-    *   `docs/frontend/hooks/useTaskSubscription.md`
-    *   `docs/frontend/hooks/useToast.md`
-*   **`docs/frontend/services/README.md`**
-    *   `docs/frontend/services/apiClient.md`
-    *   `docs/frontend/services/conceptService.md`
-    *   `docs/frontend/services/configService.md`
-    *   `docs/frontend/services/eventService.md`
-    *   `docs/frontend/services/rateLimitService.md`
-    *   `docs/frontend/services/supabaseClient.md`
-*   **`docs/frontend/styles/README.md`**
-*   **`docs/frontend/types/README.md`**
-*   **`docs/frontend/utils/README.md`**
-    *   `docs/frontend/utils/dev-logging.md`
+    *   `docs/frontend/components/ui/Input.md` ✓
+    *   `docs/frontend/components/ui/LoadingIndicator.md` ✓
+    *   `docs/frontend/components/ui/OfflineStatus.md` ✓
+    *   `docs/frontend/components/ui/OptimizedImage.md` ✓
+    *   `docs/frontend/components/ui/Select.md` ✓
+    *   `docs/frontend/components/ui/SkeletonLoader.md` ✓
+    *   `docs/frontend/components/ui/Spinner.md` ✓
+    *   `docs/frontend/components/ui/TextArea.md` ✓
+    *   `docs/frontend/components/ui/Toast.md` ✓
+    *   `docs/frontend/components/ui/ToastContainer.md` ✓
+    *   `docs/frontend/components/TaskStatusBar.md` ✓
+*   **`docs/frontend/config/README.md`** ✓
+    *   `docs/frontend/config/apiEndpoints.md` ✓
+    *   `docs/frontend/config/queryKeys.md` ✓
+*   **`docs/frontend/contexts/README.md`** ✓
+    *   `docs/frontend/contexts/AuthContext.md` ✓
+    *   `docs/frontend/contexts/RateLimitContext.md` ✓
+    *   `docs/frontend/contexts/TaskContext.md` ✓
+*   **`docs/frontend/features/README.md`** ✓
+    *   `docs/frontend/features/concepts/README.md` ✓
+    *   `docs/frontend/features/concepts/detail/ConceptDetailPage.md` ✓
+    *   `docs/frontend/features/concepts/detail/components/EnhancedImagePreview.md` ✓
+    *   `docs/frontend/features/concepts/detail/components/ExportOptions.md` ✓
+    *   `docs/frontend/features/concepts/recent/RecentConceptsPage.md` ✓
+    *   `docs/frontend/features/concepts/recent/components/ConceptList.md` ✓
+    *   `docs/frontend/features/concepts/recent/components/RecentConceptsHeader.md` ✓
+    *   `docs/frontend/features/landing/LandingPage.md` ✓
+    *   `docs/frontend/features/landing/components/ConceptFormSection.md` ✓
+    *   `docs/frontend/features/landing/components/ConceptHeader.md` ✓
+    *   `docs/frontend/features/landing/components/HowItWorks.md` ✓
+    *   `docs/frontend/features/landing/components/RecentConceptsSection.md` ✓
+    *   `docs/frontend/features/landing/components/ResultsSection.md` ✓
+    *   `docs/frontend/features/refinement/RefinementPage.md` ✓
+    *   `docs/frontend/features/refinement/RefinementSelectionPage.md` ✓
+    *   `docs/frontend/features/refinement/components/ComparisonView.md` ✓
+    *   `docs/frontend/features/refinement/components/RefinementActions.md` ✓
+    *   `docs/frontend/features/refinement/components/RefinementForm.md` ✓
+    *   `docs/frontend/features/refinement/components/RefinementHeader.md` ✓
+*   **`docs/frontend/hooks/README.md`** ✓
+    *   `docs/frontend/hooks/animation/useAnimatedMount.md` ✓
+    *   `docs/frontend/hooks/animation/useAnimatedValue.md` ✓
+    *   `docs/frontend/hooks/animation/usePrefersReducedMotion.md` ✓
+    *   `docs/frontend/hooks/useConceptMutations.md` ✓
+    *   `docs/frontend/hooks/useConceptQueries.md` ✓
+    *   `docs/frontend/hooks/useConfigQuery.md` ✓
+    *   `docs/frontend/hooks/useErrorHandling.md` ✓
+    *   `docs/frontend/hooks/useExportImageMutation.md` ✓
+    *   `docs/frontend/hooks/useNetworkStatus.md` ✓
+    *   `docs/frontend/hooks/useRateLimitsQuery.md` ✓
+    *   `docs/frontend/hooks/useSessionQuery.md` ✓
+    *   `docs/frontend/hooks/useTaskQueries.md` ✓
+    *   `docs/frontend/hooks/useTaskSubscription.md` ✓
+    *   `docs/frontend/hooks/useToast.md` ✓
+*   **`docs/frontend/services/README.md`** ✓
+    *   `docs/frontend/services/apiClient.md` ✓
+    *   `docs/frontend/services/conceptService.md` ✓
+    *   `docs/frontend/services/configService.md` ✓
+    *   `docs/frontend/services/eventService.md` ✓
+    *   `docs/frontend/services/rateLimitService.md` ✓
+    *   `docs/frontend/services/supabaseClient.md` ✓
+*   **`docs/frontend/styles/README.md`** ✓
+*   **`docs/frontend/types/README.md`** ✓
+*   **`docs/frontend/utils/README.md`** ✓
+    *   `docs/frontend/utils/dev-logging.md` ✓
+    *   `docs/frontend/utils/errorUtils.md` ✓
+    *   `docs/frontend/utils/formatUtils.md` ✓
+    *   `docs/frontend/utils/logger.md` ✓
+    *   `docs/frontend/utils/stringUtils.md` ✓
+    *   `docs/frontend/utils/url.md` ✓
+    *   `docs/frontend/utils/validationUtils.md` ✓
