@@ -1,43 +1,60 @@
-# Utilities Documentation
+# Utils Documentation
 
-The `app/utils` directory contains various utility functions and helpers used throughout the application. These utilities are organized into focused subdirectories based on their functionality.
+The Utils module contains utility functions and helpers used throughout the Concept Visualizer application.
 
-## Directory Structure
+## Structure
 
-```
-app/utils/
-├── __init__.py           # Re-exports all utilities
-├── api_limits/           # API rate limiting utilities
-│   ├── __init__.py       # Exports rate limiting functions
-│   └── endpoints.py      # Rate limiting implementation
-├── data/                 # Data transformation utilities
-│   └── __init__.py       # (Placeholder)
-├── logging/              # Logging configuration
-│   ├── __init__.py       # Exports logging functions
-│   └── setup.py          # Logging setup implementation
-├── security/             # Security-related utilities
-│   ├── __init__.py       # Exports security functions
-│   └── mask.py           # Data masking implementation
-└── validation/           # Validation utilities
-    └── __init__.py       # (Placeholder)
-```
+- [API Limits](api_limits/README.md): Utilities for API rate limiting
+- [Auth](auth/README.md): Authentication and authorization utilities
+- [Data](data/README.md): Data manipulation utilities
+- [Logging](logging/README.md): Logging configuration and utilities
+- [Security](security/README.md): Security-related utilities
+- [Validation](validation/README.md): Data validation utilities
 
-## Module Documentation
+## Key Files
 
-- [API Limits](./api_limits.md) - Rate limiting utilities for API endpoints
-- [Logging](./logging.md) - Logging configuration and utilities
-- [Security](./security.md) - Security utilities including data masking
+- [HTTP Utils](http_utils.md): Utilities for HTTP requests and responses
+- [JWT Utils](jwt_utils.md): JSON Web Token handling utilities
 
-## Usage
+## Purpose
 
-All utility functions can be imported directly from the `app.utils` package:
+The Utils module provides reusable functions and utilities that:
+
+1. Simplify common operations
+2. Ensure consistent implementation of cross-cutting concerns
+3. Reduce code duplication
+4. Abstract implementation details for better maintainability
+
+## Guidelines for Utils
+
+When adding utilities, follow these guidelines:
+
+1. **Pure Functions**: Utilities should be pure functions when possible
+2. **Single Responsibility**: Each utility should have a single, well-defined responsibility
+3. **Documentation**: All utilities should be well-documented with docstrings
+4. **Type Hints**: Include type hints for improved developer experience
+5. **Testability**: Utilities should be easily testable
+
+## Example Usage
 
 ```python
-from app.utils import setup_logging, get_logger, apply_rate_limit, mask_id
+from app.utils.http_utils import create_success_response, create_error_response
+from app.utils.security.mask import mask_sensitive_data
 
-# Use the utility functions
-setup_logging()
+# Creating standardized responses
+def get_user_data(user_id: str):
+    try:
+        user = get_user_by_id(user_id)
+        masked_user = mask_sensitive_data(user, fields=["password", "ssn"])
+        return create_success_response(data=masked_user)
+    except Exception as e:
+        return create_error_response(message=str(e))
+
+# Using logging utilities
+from app.utils.logging.setup import get_logger
 logger = get_logger(__name__)
-await apply_rate_limit(request, "/endpoint", "10/month")
-masked_session_id = mask_id(session_id)
-``` 
+
+def process_data(data: dict):
+    logger.info("Processing data", extra={"data_size": len(data)})
+    # Processing logic
+    logger.debug("Data processed successfully") 
