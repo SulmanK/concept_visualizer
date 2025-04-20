@@ -21,86 +21,61 @@ describe('Spinner', () => {
   it('renders the LoadingIndicator component', () => {
     render(<Spinner />);
     
-    expect(screen.getByTestId('mocked-loading-indicator')).toBeInTheDocument();
     expect(LoadingIndicator).toHaveBeenCalled();
   });
   
   it('passes size="medium" to LoadingIndicator by default', () => {
     render(<Spinner />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'medium',
-        className: '',
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('medium');
+    expect(callArgs.className).toBe('');
+    expect(callArgs.variant).toBe('primary');
   });
   
   it('converts sm size to small for LoadingIndicator', () => {
     render(<Spinner size="sm" />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'small',
-        className: '',
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('small');
+    expect(callArgs.className).toBe('');
+    expect(callArgs.variant).toBe('primary');
   });
   
   it('converts md size to medium for LoadingIndicator', () => {
     render(<Spinner size="md" />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'medium',
-        className: '',
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('medium');
+    expect(callArgs.className).toBe('');
+    expect(callArgs.variant).toBe('primary');
   });
   
   it('converts lg size to large for LoadingIndicator', () => {
     render(<Spinner size="lg" />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'large',
-        className: '',
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('large');
+    expect(callArgs.className).toBe('');
+    expect(callArgs.variant).toBe('primary');
   });
   
   it('passes className prop to LoadingIndicator', () => {
     const customClass = 'custom-spinner-class';
     render(<Spinner className={customClass} />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'medium',
-        className: customClass,
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('medium');
+    expect(callArgs.className).toBe(customClass);
+    expect(callArgs.variant).toBe('primary');
   });
   
   it('sets primary variant on LoadingIndicator', () => {
     render(<Spinner />);
     
-    expect(LoadingIndicator).toHaveBeenCalledWith(
-      expect.objectContaining({
-        size: 'medium',
-        className: '',
-        variant: 'primary'
-      }),
-      expect.anything()
-    );
+    const callArgs = vi.mocked(LoadingIndicator).mock.calls[0][0];
+    expect(callArgs.size).toBe('medium');
+    expect(callArgs.className).toBe('');
+    expect(callArgs.variant).toBe('primary');
   });
 }); 

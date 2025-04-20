@@ -2,110 +2,258 @@
 
 exports[`Footer Component > Snapshots > default footer snapshot 1`] = `
 <footer
-  style="background-color: rgb(49, 46, 129); color: rgb(224, 231, 255); padding: 2rem 0px; margin-top: 3rem; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;"
+  class="w-full bg-indigo-900 text-indigo-100 py-8 sm:py-12 mt-8 sm:mt-12 shadow-lg relative overflow-hidden"
 >
   <div
-    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+    class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
   >
     <div
-      style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2rem;"
+      class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12"
     >
       <div
-        style="flex: 1; min-width: 250px;"
+        class="flex flex-col md:col-span-1"
       >
         <div
-          style="display: flex; align-items: center;"
+          class="flex items-center justify-center md:justify-start"
         >
           <div
-            style="height: 2.5rem; width: 2.5rem; border-radius: 9999px; background: linear-gradient(to right, #8B5CF6, #7C3AED); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.2);"
+            class="w-10 h-10 bg-gradient-to-r from-primary to-primary-dark rounded-lg flex items-center justify-center text-white font-bold shadow-md"
           >
             CV
           </div>
           <h2
-            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; color: white;"
+            class="ml-3 text-xl font-bold text-white"
           >
             Concept Visualizer
           </h2>
         </div>
         <p
-          style="margin-top: 0.75rem; font-size: 0.875rem; color: rgb(199, 210, 254);"
+          class="mt-4 text-sm text-indigo-200 leading-relaxed text-center md:text-left"
         >
-          Create and refine visual concepts with AI
+          Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.
         </p>
+        <div
+          class="mt-6 flex justify-center md:justify-start"
+        >
+          <a
+            class="block"
+            href="https://jigsawstack.com/?ref=powered-by"
+            rel="follow"
+          >
+            <img
+              alt="Powered by JigsawStack. The One API for your next big thing."
+              class="h-10 max-w-full"
+              src="https://jigsawstack.com/badge.svg"
+            />
+          </a>
+        </div>
       </div>
       <div
-        style="flex: 1; min-width: 250px;"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-8 md:col-span-2"
       >
-        <h3
-          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
-        >
-          Features
-        </h3>
-        <ul
-          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
-        >
-          <li>
-            <a
-              href="/create"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-            >
-              Create Concepts
-            </a>
-          </li>
-          <li>
-            <a
-              href="/refine"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-            >
-              Refine Concepts
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div
-        style="flex: 1; min-width: 250px;"
-      >
-        <h3
-          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
-        >
-          Resources
-        </h3>
-        <ul
-          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
-        >
-          <li>
-            <a
-              href="https://github.com/username/concept-visualizer"
-              rel="noopener noreferrer"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-              target="_blank"
-            >
-              GitHub Repository
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://jigsawstack.com"
-              rel="noopener noreferrer"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-              target="_blank"
-            >
-              JigsawStack API
-            </a>
-          </li>
-        </ul>
+        <div>
+          <h3
+            class="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left"
+          >
+            Features
+          </h3>
+          <ul
+            class="space-y-3 flex flex-col items-center sm:items-start"
+          >
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/create"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Create Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/recent"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Recent Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/refine"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Refine Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3
+            class="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left"
+          >
+            Resources
+          </h3>
+          <ul
+            class="space-y-3 flex flex-col items-center sm:items-start"
+          >
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="https://github.com/SulmanK/concept-visualizer"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  GitHub Repository
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="https://jigsawstack.com"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  JigsawStack API
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
     <div
-      style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #4F46E5; text-align: center;"
+      class="mt-8 sm:mt-10 pt-4 sm:pt-6 border-t border-indigo-700 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0"
     >
-      <p
-        style="font-size: 0.875rem; color: rgb(165, 180, 252);"
+      <div
+        class="text-xs text-indigo-300 text-center sm:text-left"
       >
         © 
         2025
          Concept Visualizer. All rights reserved.
-      </p>
+      </div>
+      <a
+        aria-label="GitHub"
+        class="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-800/30 text-indigo-200 hover:bg-indigo-700/50 hover:text-white transition-all transform hover:-translate-y-1 hover:shadow-md"
+        href="https://github.com/SulmanK/concept-visualizer"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-4 h-4"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            clip-rule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </a>
     </div>
   </div>
 </footer>
@@ -113,110 +261,258 @@ exports[`Footer Component > Snapshots > default footer snapshot 1`] = `
 
 exports[`Footer Component > Snapshots > footer with custom year snapshot 1`] = `
 <footer
-  style="background-color: rgb(49, 46, 129); color: rgb(224, 231, 255); padding: 2rem 0px; margin-top: 3rem; box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1); width: 100%;"
+  class="w-full bg-indigo-900 text-indigo-100 py-8 sm:py-12 mt-8 sm:mt-12 shadow-lg relative overflow-hidden"
 >
   <div
-    style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"
+    class="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
   >
     <div
-      style="display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 2rem;"
+      class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12"
     >
       <div
-        style="flex: 1; min-width: 250px;"
+        class="flex flex-col md:col-span-1"
       >
         <div
-          style="display: flex; align-items: center;"
+          class="flex items-center justify-center md:justify-start"
         >
           <div
-            style="height: 2.5rem; width: 2.5rem; border-radius: 9999px; background: linear-gradient(to right, #8B5CF6, #7C3AED); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; box-shadow: 0 10px 30px -5px rgba(139, 92, 246, 0.2);"
+            class="w-10 h-10 bg-gradient-to-r from-primary to-primary-dark rounded-lg flex items-center justify-center text-white font-bold shadow-md"
           >
             CV
           </div>
           <h2
-            style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; color: white;"
+            class="ml-3 text-xl font-bold text-white"
           >
             Concept Visualizer
           </h2>
         </div>
         <p
-          style="margin-top: 0.75rem; font-size: 0.875rem; color: rgb(199, 210, 254);"
+          class="mt-4 text-sm text-indigo-200 leading-relaxed text-center md:text-left"
         >
-          Create and refine visual concepts with AI
+          Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.
         </p>
+        <div
+          class="mt-6 flex justify-center md:justify-start"
+        >
+          <a
+            class="block"
+            href="https://jigsawstack.com/?ref=powered-by"
+            rel="follow"
+          >
+            <img
+              alt="Powered by JigsawStack. The One API for your next big thing."
+              class="h-10 max-w-full"
+              src="https://jigsawstack.com/badge.svg"
+            />
+          </a>
+        </div>
       </div>
       <div
-        style="flex: 1; min-width: 250px;"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-8 md:col-span-2"
       >
-        <h3
-          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
-        >
-          Features
-        </h3>
-        <ul
-          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
-        >
-          <li>
-            <a
-              href="/create"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-            >
-              Create Concepts
-            </a>
-          </li>
-          <li>
-            <a
-              href="/refine"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-            >
-              Refine Concepts
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div
-        style="flex: 1; min-width: 250px;"
-      >
-        <h3
-          style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;"
-        >
-          Resources
-        </h3>
-        <ul
-          style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"
-        >
-          <li>
-            <a
-              href="https://github.com/username/concept-visualizer"
-              rel="noopener noreferrer"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-              target="_blank"
-            >
-              GitHub Repository
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://jigsawstack.com"
-              rel="noopener noreferrer"
-              style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s ease;"
-              target="_blank"
-            >
-              JigsawStack API
-            </a>
-          </li>
-        </ul>
+        <div>
+          <h3
+            class="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left"
+          >
+            Features
+          </h3>
+          <ul
+            class="space-y-3 flex flex-col items-center sm:items-start"
+          >
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/create"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Create Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/recent"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Recent Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="/refine"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  Refine Concepts
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3
+            class="text-sm font-semibold uppercase tracking-wider text-white pb-2 mb-3 border-b border-indigo-700 text-center sm:text-left"
+          >
+            Resources
+          </h3>
+          <ul
+            class="space-y-3 flex flex-col items-center sm:items-start"
+          >
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="https://github.com/SulmanK/concept-visualizer"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  GitHub Repository
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                class="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
+                href="https://jigsawstack.com"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                  />
+                </svg>
+                <span
+                  class="relative"
+                >
+                  JigsawStack API
+                  <span
+                    class="absolute bottom-0 left-0 w-0 h-px bg-white transition-all duration-200 group-hover:w-full"
+                  />
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
     <div
-      style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #4F46E5; text-align: center;"
+      class="mt-8 sm:mt-10 pt-4 sm:pt-6 border-t border-indigo-700 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0"
     >
-      <p
-        style="font-size: 0.875rem; color: rgb(165, 180, 252);"
+      <div
+        class="text-xs text-indigo-300 text-center sm:text-left"
       >
         © 
         2025
          Concept Visualizer. All rights reserved.
-      </p>
+      </div>
+      <a
+        aria-label="GitHub"
+        class="w-8 h-8 flex items-center justify-center rounded-full bg-indigo-800/30 text-indigo-200 hover:bg-indigo-700/50 hover:text-white transition-all transform hover:-translate-y-1 hover:shadow-md"
+        href="https://github.com/SulmanK/concept-visualizer"
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <svg
+          aria-hidden="true"
+          class="w-4 h-4"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            clip-rule="evenodd"
+            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+            fill-rule="evenodd"
+          />
+        </svg>
+      </a>
     </div>
   </div>
 </footer>

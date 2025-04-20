@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { OptimizedImage } from '../OptimizedImage';
 
 // Store the callback function reference globally for testing
@@ -101,11 +101,18 @@ describe('OptimizedImage', () => {
       time: Date.now()
     }] as IntersectionObserverEntry[];
     
-    // Trigger the intersection callback directly
-    intersectionCallback(mockEntry, {} as IntersectionObserver);
+    // Use act to ensure state updates are processed
+    act(() => {
+      // Trigger the intersection callback directly
+      intersectionCallback(mockEntry, {} as IntersectionObserver);
+    });
     
-    // Check that image src was updated
-    expect(image.getAttribute('src')).toBe(testSrc);
+    // Force a re-render to ensure the state changes take effect
+    fireEvent(image, new Event('load'));
+    
+    // Use new instance of image to ensure we get updated attributes
+    const updatedImage = screen.getByAltText('Test Image');
+    expect(updatedImage.getAttribute('src')).toBe(testSrc);
   });
   
   it('sets the loaded state when image loads', () => {

@@ -68,13 +68,24 @@ vi.mock('../../../contexts/TaskContext', () => ({
 }));
 
 // Mock useToast hook
-vi.mock('../../../hooks/useToast', () => ({
-  useToast: vi.fn().mockReturnValue({
-    showSuccess: vi.fn(),
-    showError: vi.fn(),
-    showInfo: vi.fn()
-  })
+const useToastMock = vi.hoisted(() => vi.fn().mockReturnValue({
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+  showInfo: vi.fn(),
+  showWarning: vi.fn(),
+  showToast: vi.fn(),
+  dismissToast: vi.fn(),
+  dismissAll: vi.fn()
 }));
+
+// Mock useToast hook
+vi.mock('../../../hooks/useToast', () => {
+  return {
+    useToast: useToastMock,
+    default: useToastMock,
+    __esModule: true
+  };
+});
 
 // Mock useErrorHandling hook
 vi.mock('../../../hooks/useErrorHandling', () => ({

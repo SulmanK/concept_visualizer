@@ -52,17 +52,23 @@ class ApiError extends Error {
 }
 
 // Create a mock module for useToast
-vi.mock('../useToast', () => ({
-  default: vi.fn(() => ({
-    showToast: vi.fn(),
-    showSuccess: vi.fn(),
-    showError: vi.fn(),
-    showInfo: vi.fn(),
-    showWarning: vi.fn(),
-    dismissToast: vi.fn(),
-    dismissAll: vi.fn(),
-  })),
-}));
+const useToastMock = vi.hoisted(() => vi.fn(() => ({
+  showToast: vi.fn(),
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+  showInfo: vi.fn(),
+  showWarning: vi.fn(),
+  dismissToast: vi.fn(),
+  dismissAll: vi.fn(),
+})));
+
+vi.mock('../useToast', () => {
+  return {
+    useToast: useToastMock,
+    default: useToastMock,
+    __esModule: true
+  };
+});
 
 describe('useErrorHandling', () => {
   beforeEach(() => {

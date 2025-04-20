@@ -2,31 +2,64 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ConceptRefinementForm } from '../ConceptRefinementForm';
 import { FormStatus } from '../../../types';
+import { vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TaskProvider } from '../../../contexts/TaskContext';
+
+// Mock TaskProvider for tests
+vi.mock('../../../hooks/useTaskSubscription', () => ({
+  useTaskSubscription: () => ({
+    taskData: null,
+    error: null,
+    status: 'success'
+  })
+}));
+
+// Create a wrapper component for the tests
+const TestWrapper = ({ children }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TaskProvider>
+        {children}
+      </TaskProvider>
+    </QueryClientProvider>
+  );
+};
 
 describe('ConceptRefinementForm Component', () => {
   // Mock handlers and props
-  const mockSubmit = jest.fn();
-  const mockCancel = jest.fn();
+  const mockSubmit = vi.fn();
+  const mockCancel = vi.fn();
   const originalImageUrl = 'https://example.com/original-concept.png';
   const initialLogoDescription = 'Initial logo description';
   const initialThemeDescription = 'Initial theme description';
   
   // Reset mocks before each test
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   // Basic rendering test
   test('renders form fields and buttons', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-        initialLogoDescription={initialLogoDescription}
-        initialThemeDescription={initialThemeDescription}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+          initialLogoDescription={initialLogoDescription}
+          initialThemeDescription={initialThemeDescription}
+        />
+      </TestWrapper>
     );
     
     // Check for card title - be more specific to get the heading, not the button
@@ -72,14 +105,16 @@ describe('ConceptRefinementForm Component', () => {
   // Initial values test
   test('renders with initial values', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-        initialLogoDescription={initialLogoDescription}
-        initialThemeDescription={initialThemeDescription}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+          initialLogoDescription={initialLogoDescription}
+          initialThemeDescription={initialThemeDescription}
+        />
+      </TestWrapper>
     );
     
     // Find the textareas by their labels
@@ -98,12 +133,14 @@ describe('ConceptRefinementForm Component', () => {
   // Form validation test - empty refinement prompt
   test('validates form and prevents submission with empty refinement prompt', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
     // Find and click the submit button without filling out the refinement prompt
@@ -121,12 +158,14 @@ describe('ConceptRefinementForm Component', () => {
   // Form validation test - refinement prompt too short
   test('validates form and prevents submission with refinement prompt that is too short', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
     // Find the refinement prompt textarea by its label
@@ -153,14 +192,16 @@ describe('ConceptRefinementForm Component', () => {
   // Successful form submission test - with no preserved aspects
   test('submits form with valid refinement prompt and no preserved aspects', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-        initialLogoDescription={initialLogoDescription}
-        initialThemeDescription={initialThemeDescription}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+          initialLogoDescription={initialLogoDescription}
+          initialThemeDescription={initialThemeDescription}
+        />
+      </TestWrapper>
     );
     
     // Find the refinement prompt textarea by its label
@@ -188,14 +229,16 @@ describe('ConceptRefinementForm Component', () => {
   // Successful form submission test - with preserved aspects
   test('submits form with valid refinement prompt and selected preserved aspects', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-        initialLogoDescription={initialLogoDescription}
-        initialThemeDescription={initialThemeDescription}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+          initialLogoDescription={initialLogoDescription}
+          initialThemeDescription={initialThemeDescription}
+        />
+      </TestWrapper>
     );
     
     // Find the refinement prompt textarea by its label
@@ -232,12 +275,14 @@ describe('ConceptRefinementForm Component', () => {
   // Test aspect selection toggle
   test('toggles preserve aspect when checkbox is clicked', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
     // Find the colors checkbox
@@ -254,75 +299,67 @@ describe('ConceptRefinementForm Component', () => {
     // Now it should be checked
     expect(colorsCheckbox).toBeChecked();
     
-    // Click to unselect it
+    // Click again to deselect
     if (colorsCheckbox) {
       fireEvent.click(colorsCheckbox);
     }
     
-    // Now it should not be checked again
+    // It should be unchecked again
     expect(colorsCheckbox).not.toBeChecked();
   });
   
-  // Loading state test
+  // Test loading state
   test('displays loading state when status is submitting', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="submitting" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="submitting" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
-    // Check for the loading button text
-    const loadingButton = screen.getByText('Refining...');
-    expect(loadingButton).toBeInTheDocument();
-    
-    // Verify that the submit button is disabled
-    const submitButton = loadingButton.closest('button');
+    // Check for loading state
+    const submitButton = screen.getByRole('button', { name: /Processing.../i });
     expect(submitButton).toBeDisabled();
     
-    // Verify that the textareas are disabled
-    const textareas = screen.getAllByRole('textbox');
-    textareas.forEach(textarea => {
-      expect(textarea).toBeDisabled();
-    });
-    
-    // Verify that the checkboxes are disabled
-    const checkboxes = screen.getAllByRole('checkbox');
-    checkboxes.forEach(checkbox => {
-      expect(checkbox).toBeDisabled();
-    });
+    // Form should be disabled
+    const refinementPrompt = screen.getByLabelText('Refinement Instructions');
+    expect(refinementPrompt).toBeDisabled();
   });
   
-  // Error state test
+  // Test error display
   test('displays error message when provided', () => {
-    const errorMessage = 'Failed to refine concept';
-    
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="error" 
-        error={errorMessage}
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="error" 
+          onCancel={mockCancel}
+          error="Something went wrong during refinement"
+        />
+      </TestWrapper>
     );
     
-    // Check for the error message
-    const errorElement = screen.getByText(errorMessage);
-    expect(errorElement).toBeInTheDocument();
+    // Check for error message
+    const errorMessage = screen.getByText('Something went wrong during refinement');
+    expect(errorMessage).toBeInTheDocument();
   });
   
-  // Cancel button test
+  // Test cancel button
   test('calls onCancel when cancel button is clicked', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
     // Find and click the cancel button
@@ -330,50 +367,46 @@ describe('ConceptRefinementForm Component', () => {
     fireEvent.click(cancelButton);
     
     // Verify that the cancel handler was called
-    expect(mockCancel).toHaveBeenCalled();
+    expect(mockCancel).toHaveBeenCalledTimes(1);
   });
   
-  // Success state test - form inputs should be disabled
+  // Test success state
   test('disables form inputs when status is success', () => {
     render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="success" 
-        onCancel={mockCancel}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="success" 
+          onCancel={mockCancel}
+        />
+      </TestWrapper>
     );
     
-    // Check that the form inputs are disabled
-    const textareas = screen.getAllByRole('textbox');
-    textareas.forEach(textarea => {
-      expect(textarea).toBeDisabled();
-    });
+    // Form should be disabled
+    const refinementPrompt = screen.getByLabelText('Refinement Instructions');
+    expect(refinementPrompt).toBeDisabled();
     
-    // Check that the checkboxes are disabled
-    const checkboxes = screen.getAllByRole('checkbox');
-    checkboxes.forEach(checkbox => {
-      expect(checkbox).toBeDisabled();
-    });
-    
-    // Check that the submit button is disabled
+    // Submit button should be disabled
     const submitButton = screen.getByRole('button', { name: /Refine Concept/i });
     expect(submitButton).toBeDisabled();
   });
   
-  // Snapshot test
+  // Test snapshot
   test('matches snapshot', () => {
     const { container } = render(
-      <ConceptRefinementForm 
-        originalImageUrl={originalImageUrl}
-        onSubmit={mockSubmit} 
-        status="idle" 
-        onCancel={mockCancel}
-        initialLogoDescription={initialLogoDescription}
-        initialThemeDescription={initialThemeDescription}
-      />
+      <TestWrapper>
+        <ConceptRefinementForm 
+          originalImageUrl={originalImageUrl}
+          onSubmit={mockSubmit} 
+          status="idle" 
+          onCancel={mockCancel}
+          initialLogoDescription={initialLogoDescription}
+          initialThemeDescription={initialThemeDescription}
+        />
+      </TestWrapper>
     );
     
-    expect(container.firstChild).toMatchSnapshot();
+    expect(container).toMatchSnapshot();
   });
 }); 

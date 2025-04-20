@@ -4,17 +4,25 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import useNetworkStatus from '../useNetworkStatus';
 import { apiClient } from '../../services/apiClient';
 
-// Mock the useToast hook
-vi.mock('../useToast', () => ({
-  useToast: () => ({
-    showToast: vi.fn(),
-    showSuccess: vi.fn(),
-    showWarning: vi.fn(),
-    showError: vi.fn(),
-    dismissToast: vi.fn(),
-    dismissAll: vi.fn(),
-  }),
+// Define useToast mock with proper functions
+const useToastMock = vi.hoisted(() => vi.fn().mockReturnValue({
+  showSuccess: vi.fn(),
+  showError: vi.fn(),
+  showInfo: vi.fn(),
+  showWarning: vi.fn(),
+  showToast: vi.fn(),
+  dismissToast: vi.fn(),
+  dismissAll: vi.fn()
 }));
+
+// Mock the useToast hook
+vi.mock('../useToast', () => {
+  return {
+    useToast: useToastMock,
+    default: useToastMock,
+    __esModule: true
+  };
+});
 
 // Mock the apiClient
 vi.mock('../../services/apiClient', () => ({

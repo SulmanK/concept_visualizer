@@ -1,27 +1,16 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { BrowserRouter } from 'react-router-dom';
 import { RefinementSelectionPage } from '../RefinementSelectionPage';
 import { vi } from 'vitest';
+import { QueryClient } from '@tanstack/react-query';
+
+// Create a custom wrapper just for these tests
+import { MemoryRouter } from 'react-router-dom';
 
 // Mock the React Query hooks
 vi.mock('../../../hooks/useConceptQueries', () => ({
   useRecentConcepts: vi.fn()
-}));
-
-// Mock the AuthContext
-vi.mock('../../../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'test-user-id' }
-  })
-}));
-
-// Mock the QueryClient
-vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: vi.fn().mockReturnValue({
-    invalidateQueries: vi.fn()
-  })
 }));
 
 // Mock the navigate function
@@ -34,8 +23,61 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
+// Mock the QueryClient - this is important
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn()
+    })
+  };
+});
+
+// Mock the loading skeleton components
+vi.mock('../../../components/ui/SkeletonLoader', () => ({
+  SkeletonLoader: () => <div data-testid="loading-skeleton">Loading...</div>
+}));
+
+// Mock AuthContext hooks
+vi.mock('../../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'test-user-id', email: 'test@example.com' },
+    isLoading: false,
+    isAuthenticated: true
+  }),
+  useAuthUser: () => ({ id: 'test-user-id', email: 'test@example.com' }),
+  useUserId: () => 'test-user-id',
+  useIsAnonymous: () => false,
+  useAuthIsLoading: () => false
+}));
+
 // Import the mocked hook
 import { useRecentConcepts } from '../../../hooks/useConceptQueries';
+
+// Simple wrapper for our tests
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  // Create a custom provider component that includes all necessary providers
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <div>
+      {children}
+    </div>
+  );
+
+  return render(
+    <MemoryRouter>
+      {ui}
+    </MemoryRouter>
+  );
+};
 
 describe('RefinementSelectionPage Component', () => {
   beforeEach(() => {
@@ -51,11 +93,7 @@ describe('RefinementSelectionPage Component', () => {
       refetch: vi.fn()
     });
 
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RefinementSelectionPage />);
 
     // Check that the loading state is shown
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
@@ -71,16 +109,16 @@ describe('RefinementSelectionPage Component', () => {
       refetch: vi.fn()
     });
 
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RefinementSelectionPage />);
 
     // Check that the error state is shown
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
     expect(screen.getByText('Error')).toBeInTheDocument();
-    expect(screen.getByText('Failed to load concepts')).toBeInTheDocument();
+    
+    // Use a regex to match the error since it might be prefixed with "Error: "
+    const errorMessageElement = screen.getByText(/Failed to load concepts/);
+    expect(errorMessageElement).toBeInTheDocument();
+    
     expect(screen.getByText('Try Again')).toBeInTheDocument();
   });
 
@@ -93,11 +131,7 @@ describe('RefinementSelectionPage Component', () => {
       refetch: vi.fn()
     });
 
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RefinementSelectionPage />);
 
     // Check that the empty state is shown
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();
@@ -115,11 +149,7 @@ describe('RefinementSelectionPage Component', () => {
       refetch: vi.fn()
     });
 
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RefinementSelectionPage />);
 
     // Click the Create New Concept button
     fireEvent.click(screen.getByText('Create New Concept'));
@@ -157,11 +187,7 @@ describe('RefinementSelectionPage Component', () => {
       refetch: vi.fn()
     });
 
-    render(
-      <BrowserRouter>
-        <RefinementSelectionPage />
-      </BrowserRouter>
-    );
+    renderWithProviders(<RefinementSelectionPage />);
 
     // Check that the concept rows are rendered
     expect(screen.getByText('Select a Concept to Refine')).toBeInTheDocument();

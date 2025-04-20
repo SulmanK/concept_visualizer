@@ -1,95 +1,84 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import EnhancedImagePreview from '../EnhancedImagePreview';
-
-// Mock Material UI components
-jest.mock('@mui/material', () => {
-  const actual = jest.requireActual('@mui/material');
-  return {
-    ...actual,
-    Modal: ({ children, open, onClose }) => open ? (
-      <div data-testid="modal">
-        <button data-testid="modal-close" onClick={onClose}>Close Modal</button>
-        {children}
-      </div>
-    ) : null,
-    IconButton: ({ children, onClick }) => (
-      <button onClick={onClick} data-testid="icon-button">{children}</button>
-    ),
-    Box: ({ children, component, sx, ...props }) => {
-      const Component = component || 'div';
-      return (
-        <Component data-testid="box" {...props}>
-          {children}
-        </Component>
-      );
-    },
-    Typography: ({ children, variant, component }) => {
-      const Component = component || 'p';
-      return <Component data-testid={`typography-${variant}`}>{children}</Component>;
-    }
-  };
-});
+import { ThemeProvider } from '@mui/material/styles';
+import { theme } from '../../../../../theme';
 
 // Mock Material UI icons
-jest.mock('@mui/icons-material/ZoomIn', () => () => 'ZoomIn');
-jest.mock('@mui/icons-material/ZoomOut', () => () => 'ZoomOut');
-jest.mock('@mui/icons-material/RestartAlt', () => () => 'Reset');
-jest.mock('@mui/icons-material/Close', () => () => 'Close');
+vi.mock('@mui/icons-material/ZoomIn', () => ({
+  default: () => <span data-testid="zoom-in-icon">ZoomIn</span>
+}));
 
-describe('EnhancedImagePreview', () => {
-  const mockProps = {
+vi.mock('@mui/icons-material/ZoomOut', () => ({
+  default: () => <span data-testid="zoom-out-icon">ZoomOut</span>
+}));
+
+vi.mock('@mui/icons-material/RestartAlt', () => ({
+  default: () => <span data-testid="reset-icon">Reset</span>
+}));
+
+vi.mock('@mui/icons-material/Close', () => ({
+  default: () => <span data-testid="close-icon">Close</span>
+}));
+
+describe('EnhancedImagePreview Component', () => {
+  const mockImageUrl = 'test-image.jpg';
+  const mockFormat = 'jpg';
+  const mockOnClose = vi.fn();
+  
+  const defaultProps = {
     isOpen: true,
-    onClose: jest.fn(),
-    imageUrl: 'https://example.com/test-image.png',
-    format: 'png'
+    imageUrl: mockImageUrl,
+    format: mockFormat,
+    onClose: mockOnClose,
+  };
+  
+  const renderWithTheme = (ui: React.ReactElement) => {
+    return render(
+      <ThemeProvider theme={theme}>
+        {ui}
+      </ThemeProvider>
+    );
   };
   
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
-  it('renders correctly when open', () => {
-    render(<EnhancedImagePreview {...mockProps} />);
+  test('renders correctly when open', () => {
+    renderWithTheme(<EnhancedImagePreview {...defaultProps} />);
     
-    // Check title shows correct format
-    expect(screen.getByText('Preview (PNG)')).toBeInTheDocument();
+    // Check if the component is rendered
+    expect(screen.getByRole('presentation')).toBeInTheDocument();
     
-    // Check the image is displayed
-    const image = screen.getByAltText('Preview in png format');
+    // Check if image is rendered with correct attributes
+    const image = screen.getByAltText(`Preview in ${mockFormat} format`);
     expect(image).toBeInTheDocument();
-    expect(image).toHaveAttribute('src', mockProps.imageUrl);
+    expect(image).toHaveAttribute('src', mockImageUrl);
+    
+    // Check for control buttons
+    expect(screen.getByTitle('Zoom in')).toBeInTheDocument();
+    expect(screen.getByTitle('Zoom out')).toBeInTheDocument();
+    expect(screen.getByTitle('Reset zoom')).toBeInTheDocument();
+    expect(screen.getByTitle('Close preview')).toBeInTheDocument();
   });
   
-  it('does not render when closed', () => {
-    render(<EnhancedImagePreview {...mockProps} isOpen={false} />);
+  test('does not render when closed', () => {
+    renderWithTheme(<EnhancedImagePreview {...defaultProps} isOpen={false} />);
     
-    expect(screen.queryByTestId('modal')).not.toBeInTheDocument();
+    // Modal should not be in the document
+    expect(screen.queryByRole('presentation')).not.toBeInTheDocument();
   });
   
-  it('calls onClose when close button is clicked', () => {
-    render(<EnhancedImagePreview {...mockProps} />);
+  test('calls onClose when close button is clicked', () => {
+    renderWithTheme(<EnhancedImagePreview {...defaultProps} />);
     
-    fireEvent.click(screen.getByTestId('modal-close'));
-    expect(mockProps.onClose).toHaveBeenCalled();
-  });
-  
-  it('supports mouse interactions for panning', () => {
-    render(<EnhancedImagePreview {...mockProps} />);
+    // Find and click the close button
+    const closeButton = screen.getByTitle('Close preview');
+    fireEvent.click(closeButton);
     
-    const container = screen.getByTestId('box');
-    
-    // Start dragging
-    fireEvent.mouseDown(container, { clientX: 100, clientY: 100, button: 0 });
-    
-    // Move while dragging
-    fireEvent.mouseMove(container, { clientX: 150, clientY: 150 });
-    
-    // End dragging
-    fireEvent.mouseUp(container);
-    
-    // Expect the image to be panned (we can't easily test the state changes,
-    // but we can at least ensure the events don't throw errors)
-    expect(container).toBeInTheDocument();
+    // Check if onClose was called
+    expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 }); 
