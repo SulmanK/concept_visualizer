@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import type { Session, User } from '@supabase/supabase-js';
 
-// Mock function implementations first
+// FIX: Declare mock functions *before* they are used in vi.mock
 const mockSignInAnonymously = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetSession = vi.fn();
@@ -15,6 +15,7 @@ const mockRefreshSession = vi.fn();
 // Mock dependencies
 vi.mock('@supabase/supabase-js', () => {
   return {
+    // Use the pre-declared mock functions here
     createClient: () => ({
       auth: {
         signInAnonymously: mockSignInAnonymously,
