@@ -4,6 +4,8 @@ import { useRateLimitsQuery, useOptimisticRateLimitUpdate } from '../useRateLimi
 import * as rateLimitService from '../../services/rateLimitService';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import { apiClient } from '../../services/apiClient';
+import { API_ENDPOINTS } from '../../config/apiEndpoints';
 
 // Mock the rateLimitService
 vi.mock('../../services/rateLimitService', () => ({
@@ -23,6 +25,13 @@ vi.mock('../useErrorHandling', () => ({
   })
 }));
 
+// Mock API client
+vi.mock('../../services/apiClient', () => ({
+  apiClient: {
+    get: vi.fn()
+  }
+}));
+
 // Sample rate limits response for tests
 const mockRateLimitsResponse = {
   user_identifier: 'test-user',
@@ -37,18 +46,17 @@ const mockRateLimitsResponse = {
   default_limits: ['generate_concept', 'refine_concept']
 };
 
-const createWrapper = (queryClient: QueryClient) => {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
+describe('useRateLimitsQuery', () => {
+  let queryClient: QueryClient;
+  
+  // Define wrapper component
+  function TestWrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
     );
-  };
-};
-
-describe('useRateLimitsQuery', () => {
-  let queryClient: QueryClient;
+  }
 
   beforeEach(() => {
     // Create a new QueryClient for each test
@@ -56,7 +64,7 @@ describe('useRateLimitsQuery', () => {
       defaultOptions: {
         queries: {
           retry: false,
-          cacheTime: 0,
+          gcTime: 0, // Use gcTime instead of cacheTime which is deprecated
         },
       },
     });
@@ -76,7 +84,7 @@ describe('useRateLimitsQuery', () => {
   describe('Basic query functionality', () => {
     it('should return loading state initially', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Should start with loading state
@@ -89,7 +97,7 @@ describe('useRateLimitsQuery', () => {
 
     it('should fetch rate limits on mount', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Should have called fetchRateLimits
@@ -109,7 +117,7 @@ describe('useRateLimitsQuery', () => {
       vi.mocked(rateLimitService.fetchRateLimits).mockRejectedValueOnce(testError);
       
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for the query to fail
@@ -124,7 +132,7 @@ describe('useRateLimitsQuery', () => {
   describe('Refetch functionality', () => {
     it('should refetch rate limits', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for initial fetch to complete
@@ -145,7 +153,7 @@ describe('useRateLimitsQuery', () => {
 
     it('should handle refetch error', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for initial fetch to complete
@@ -170,7 +178,7 @@ describe('useRateLimitsQuery', () => {
   describe('Decrement limit functionality', () => {
     it('should decrement rate limit for a category', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for initial fetch to complete
@@ -193,7 +201,7 @@ describe('useRateLimitsQuery', () => {
       vi.mocked(rateLimitService.fetchRateLimits).mockResolvedValueOnce(undefined as any);
       
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for initial fetch to complete
@@ -209,7 +217,7 @@ describe('useRateLimitsQuery', () => {
 
     it('should not allow decrementing below zero', async () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
-        wrapper: createWrapper(queryClient)
+        wrapper: TestWrapper
       });
       
       // Wait for initial fetch to complete
@@ -224,10 +232,113 @@ describe('useRateLimitsQuery', () => {
       expect(result.current.data?.limits.generate_concept.remaining).toBe(0);
     });
   });
+
+  describe('API functionality', () => {
+    it('should fetch rate limits and return the data', async () => {
+      // Mock API response
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockRateLimitsResponse });
+
+      // Render the hook with the wrapper
+      const { result } = renderHook(() => useRateLimitsQuery(), {
+        wrapper: TestWrapper
+      });
+
+      // Initially, it should be in loading state
+      expect(result.current.isLoading).toBe(true);
+      expect(result.current.data).toBeUndefined();
+
+      // Wait for the query to complete
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Verify data is returned
+      expect(result.current.data).toEqual(mockRateLimitsResponse);
+      expect(result.current.error).toBeNull();
+
+      // Verify API was called correctly
+      expect(apiClient.get).toHaveBeenCalledWith(API_ENDPOINTS.RATE_LIMITS);
+    });
+
+    it('should handle API errors', async () => {
+      // Mock API error
+      const mockError = new Error('API Error');
+      vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
+
+      // Render the hook with the wrapper
+      const { result } = renderHook(() => useRateLimitsQuery(), {
+        wrapper: TestWrapper
+      });
+
+      // Wait for the query to complete
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Verify error is handled
+      expect(result.current.error).not.toBeNull();
+      expect(result.current.data).toBeUndefined();
+    });
+
+    it('should use the provided options', async () => {
+      // Mock API response
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: mockRateLimitsResponse });
+
+      // Custom options
+      const options = {
+        enabled: false, 
+        staleTime: 60000,
+        refetchOnWindowFocus: false,
+      };
+
+      // Render the hook with options
+      renderHook(() => useRateLimitsQuery(options), {
+        wrapper: TestWrapper
+      });
+
+      // Since enabled is false, API should not be called
+      expect(apiClient.get).not.toHaveBeenCalled();
+    });
+
+    it('should refetch data when triggered', async () => {
+      // Mock API responses
+      vi.mocked(apiClient.get)
+        .mockResolvedValueOnce({ data: mockRateLimitsResponse })
+        .mockResolvedValueOnce({ data: { ...mockRateLimitsResponse, user_identifier: 'updated-user' } });
+
+      // Render the hook with the wrapper
+      const { result } = renderHook(() => useRateLimitsQuery(), {
+        wrapper: TestWrapper
+      });
+
+      // Wait for the initial query to complete
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Trigger a refetch
+      await result.current.refetch();
+
+      // Verify API was called twice
+      expect(apiClient.get).toHaveBeenCalledTimes(2);
+
+      // Verify data was updated
+      expect(result.current.data?.user_identifier).toBe('updated-user');
+    });
+  });
 });
 
 describe('useOptimisticRateLimitUpdate', () => {
   let queryClient: QueryClient;
+  
+  // Define wrapper component
+  function TestWrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  }
 
   beforeEach(() => {
     // Create a new QueryClient for each test
@@ -235,7 +346,7 @@ describe('useOptimisticRateLimitUpdate', () => {
       defaultOptions: {
         queries: {
           retry: false,
-          cacheTime: 0,
+          gcTime: 0,
         },
       },
     });
@@ -250,7 +361,7 @@ describe('useOptimisticRateLimitUpdate', () => {
 
   it('should decrement rate limit optimistically', async () => {
     const { result } = renderHook(() => useOptimisticRateLimitUpdate(), {
-      wrapper: createWrapper(queryClient)
+      wrapper: TestWrapper
     });
     
     // Verify initial data in the query cache
@@ -272,7 +383,7 @@ describe('useOptimisticRateLimitUpdate', () => {
     queryClient.removeQueries({ queryKey: ['rateLimits'] });
     
     const { result } = renderHook(() => useOptimisticRateLimitUpdate(), {
-      wrapper: createWrapper(queryClient)
+      wrapper: TestWrapper
     });
     
     // Decrement the limit (should not throw)

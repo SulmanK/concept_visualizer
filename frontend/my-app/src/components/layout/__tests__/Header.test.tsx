@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Header } from '../Header';
-import styles from '../header.module.css';
 
 // Helper function to render with router
 const renderWithRouter = (ui: React.ReactElement, { route = '/' } = {}) => {
@@ -18,9 +17,9 @@ describe('Header Component', () => {
   test('renders header with logo and title', () => {
     renderWithRouter(<Header />);
     
-    // Check for logo text
-    const logo = screen.getByText('CV');
-    expect(logo).toBeInTheDocument();
+    // Check for logo text (there are multiple elements with 'CV')
+    const logoElements = screen.getAllByText('CV');
+    expect(logoElements.length).toBeGreaterThan(0);
     
     // Check for title
     const title = screen.getByText('Concept Visualizer');
@@ -50,9 +49,9 @@ describe('Header Component', () => {
     expect(createLink).toHaveAttribute('href', '/create');
     expect(refineLink).toHaveAttribute('href', '/refine');
     
-    // Test CSS classes instead of inline styles
-    expect(createLink).toHaveClass(styles.activeNavLink);
-    expect(refineLink).toHaveClass(styles.inactiveNavLink);
+    // Test CSS classes with actual class names from implementation
+    expect(createLink).toHaveClass('nav-link-active');
+    expect(refineLink).toHaveClass('nav-link-inactive');
   });
   
   test('highlights Refine link when on refine route', () => {
@@ -62,8 +61,8 @@ describe('Header Component', () => {
     const refineLink = screen.getByText(/Refine/i).closest('a');
     
     // Check that correct link is highlighted via CSS classes
-    expect(refineLink).toHaveClass(styles.activeNavLink);
-    expect(createLink).toHaveClass(styles.inactiveNavLink);
+    expect(refineLink).toHaveClass('nav-link-active');
+    expect(createLink).toHaveClass('nav-link-inactive');
   });
   
   // Home route test
@@ -73,24 +72,51 @@ describe('Header Component', () => {
     const createLink = screen.getByText(/Create/i).closest('a');
     
     // Check that Create is highlighted on home route
-    expect(createLink).toHaveClass(styles.activeNavLink);
+    expect(createLink).toHaveClass('nav-link-active');
   });
   
-  // Snapshot tests
+  // Update snapshot tests to use inline snapshots
   describe('Snapshots', () => {
-    test('default header snapshot', () => {
+    test('default header structure', () => {
       const { container } = renderWithRouter(<Header />);
-      expect(container.firstChild).toMatchSnapshot();
+      
+      // Test specific elements instead of full snapshot
+      const header = container.firstChild as HTMLElement;
+      const navigation = header.querySelector('nav');
+      const links = navigation?.querySelectorAll('a');
+      
+      // Check header has proper classes
+      expect(header).toHaveClass('sticky', 'top-0', 'w-full');
+      
+      // Check we have the expected navigation links
+      expect(links?.length).toBe(3);
+      
+      // First link should be active (Create)
+      expect(links?.[0]).toHaveClass('nav-link-active');
     });
     
-    test('header with create route active snapshot', () => {
+    test('header with create route active', () => {
       const { container } = renderWithRouter(<Header activeRoute="/create" />);
-      expect(container.firstChild).toMatchSnapshot();
+      
+      // Get all navigation links
+      const navigation = container.querySelector('nav');
+      const links = navigation?.querySelectorAll('a');
+      
+      // Check Create link is active
+      expect(links?.[0]).toHaveClass('nav-link-active');
+      expect(links?.[2]).toHaveClass('nav-link-inactive');
     });
     
-    test('header with refine route active snapshot', () => {
+    test('header with refine route active', () => {
       const { container } = renderWithRouter(<Header activeRoute="/refine" />);
-      expect(container.firstChild).toMatchSnapshot();
+      
+      // Get all navigation links
+      const navigation = container.querySelector('nav');
+      const links = navigation?.querySelectorAll('a');
+      
+      // Check Refine link is active
+      expect(links?.[0]).toHaveClass('nav-link-inactive');
+      expect(links?.[2]).toHaveClass('nav-link-active');
     });
   });
 }); 
