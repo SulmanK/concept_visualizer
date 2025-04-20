@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, expect, afterEach } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
+import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 
 // Add vi (Vitest) to global to allow usage like jest in tests
 // This allows existing jest-style tests to work with Vitest
@@ -66,3 +68,86 @@ vi.mock('./hooks/animation/usePrefersReducedMotion', () => ({
 }));
 
 // Optional: Set up any global mocks or configurations here 
+
+// Clean up after each test
+afterEach(() => {
+  cleanup();
+  // Clear all mocks after each test
+  vi.clearAllMocks();
+});
+
+// Mock IntersectionObserver
+class MockIntersectionObserver {
+  readonly root: Element | null;
+  readonly rootMargin: string;
+  readonly thresholds: ReadonlyArray<number>;
+  
+  constructor(
+    callback: IntersectionObserverCallback,
+    options?: IntersectionObserverInit
+  ) {
+    this.root = options?.root ?? null;
+    this.rootMargin = options?.rootMargin ?? '0px';
+    this.thresholds = Array.isArray(options?.threshold) 
+      ? options.threshold 
+      : [options?.threshold ?? 0];
+  }
+  
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn(() => []);
+}
+
+// Fix for Date.now not being a function in JSDOM
+Object.defineProperty(global.Date, 'now', {
+  writable: true,
+  value: () => new Date().getTime(),
+});
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// Mock for resizeObserver
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+// Set global mocks
+global.IntersectionObserver = MockIntersectionObserver as any;
+global.ResizeObserver = MockResizeObserver as any;
+
+// Mocking fetch API
+global.fetch = vi.fn(() => 
+  Promise.resolve({
+    json: () => Promise.resolve({}),
+    text: () => Promise.resolve(''),
+    ok: true,
+    status: 200,
+    headers: new Headers(),
+  }) as any
+);
+
+// Mock console.error to fail tests on prop type warnings
+const originalConsoleError = console.error;
+console.error = (...args: any[]) => {
+  // Check if this is a PropType validation
+  if (args[0]?.includes?.('Failed prop type')) {
+    throw new Error(args[0]);
+  }
+  originalConsoleError(...args);
+}; 

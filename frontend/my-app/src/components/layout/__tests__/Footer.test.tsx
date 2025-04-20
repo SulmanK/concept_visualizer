@@ -29,7 +29,7 @@ describe('Footer Component', () => {
   test('renders tagline', () => {
     renderWithRouter(<Footer />);
     
-    const tagline = screen.getByText('Create and refine visual concepts with AI');
+    const tagline = screen.getByText('Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.');
     expect(tagline).toBeInTheDocument();
   });
   
@@ -43,9 +43,11 @@ describe('Footer Component', () => {
     
     // Check for feature links
     const createLink = screen.getByText('Create Concepts');
+    const recentLink = screen.getByText('Recent Concepts');
     const refineLink = screen.getByText('Refine Concepts');
     
     expect(createLink).toBeInTheDocument();
+    expect(recentLink).toBeInTheDocument();
     expect(refineLink).toBeInTheDocument();
   });
   
@@ -63,6 +65,14 @@ describe('Footer Component', () => {
     
     expect(githubLink).toBeInTheDocument();
     expect(jigsawStackLink).toBeInTheDocument();
+  });
+  
+  // Check for JigsawStack badge
+  test('renders JigsawStack badge', () => {
+    renderWithRouter(<Footer />);
+    
+    const badge = screen.getByAltText('Powered by JigsawStack. The One API for your next big thing.');
+    expect(badge).toBeInTheDocument();
   });
   
   // Copyright test
