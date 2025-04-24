@@ -9,19 +9,19 @@ This hook combines browser network events with active API health checks to provi
 ## Usage
 
 ```tsx
-import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 
 function NetworkAwareComponent() {
-  const { 
-    isOnline, 
-    isSlowConnection, 
+  const {
+    isOnline,
+    isSlowConnection,
     connectionType,
     offlineSince,
-    checkConnection 
+    checkConnection,
   } = useNetworkStatus({
-    notifyOnStatusChange: true
+    notifyOnStatusChange: true,
   });
-  
+
   const handleRetry = async () => {
     const isConnected = await checkConnection();
     if (isConnected) {
@@ -30,7 +30,7 @@ function NetworkAwareComponent() {
       // Still offline, show offline UI
     }
   };
-  
+
   // Render offline UI when disconnected
   if (!isOnline) {
     return (
@@ -43,23 +43,22 @@ function NetworkAwareComponent() {
       </div>
     );
   }
-  
+
   // Render warning for slow connections
   if (isSlowConnection) {
     return (
       <div className="slow-connection-warning">
-        <p>You're on a slow connection ({connectionType}). Some features may be limited.</p>
+        <p>
+          You're on a slow connection ({connectionType}). Some features may be
+          limited.
+        </p>
         {/* Main component content */}
       </div>
     );
   }
-  
+
   // Normal online rendering
-  return (
-    <div>
-      {/* Main component content */}
-    </div>
-  );
+  return <div>{/* Main component content */}</div>;
 }
 ```
 
@@ -67,11 +66,11 @@ function NetworkAwareComponent() {
 
 The hook accepts an optional configuration object with the following properties:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `notifyOnStatusChange` | boolean | `true` | Whether to show toast notifications when network status changes |
-| `checkEndpoint` | string | `'/health'` | API endpoint used to test connectivity |
-| `checkInterval` | number | `120000` (2 minutes) | Interval in milliseconds to perform periodic connection checks |
+| Parameter              | Type    | Default              | Description                                                     |
+| ---------------------- | ------- | -------------------- | --------------------------------------------------------------- |
+| `notifyOnStatusChange` | boolean | `true`               | Whether to show toast notifications when network status changes |
+| `checkEndpoint`        | string  | `'/health'`          | API endpoint used to test connectivity                          |
+| `checkInterval`        | number  | `120000` (2 minutes) | Interval in milliseconds to perform periodic connection checks  |
 
 ## Return Value
 
@@ -81,19 +80,19 @@ The hook returns a `NetworkStatus` object with the following properties:
 interface NetworkStatus {
   // Whether the application is currently online
   isOnline: boolean;
-  
+
   // Network connection type if available (e.g., '4g', 'wifi')
   connectionType?: string;
-  
+
   // Whether the browser is on a slow connection (2g, 3g)
   isSlowConnection: boolean;
-  
+
   // Last time connection status was checked
   lastCheckedAt: Date;
-  
+
   // Function to manually check connection status
   checkConnection: () => Promise<boolean>;
-  
+
   // Timestamp when the connection was last lost (if applicable)
   offlineSince?: Date;
 }
@@ -150,4 +149,4 @@ The `checkConnection` function allows components to:
 
 - `OfflineStatus` component - UI component that displays offline status
 - `useToast` hook - Used for displaying notifications
-- `apiClient` - Used for health check requests 
+- `apiClient` - Used for health check requests

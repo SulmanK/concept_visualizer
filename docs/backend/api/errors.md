@@ -21,7 +21,7 @@ APIError
 ├── UnauthorizedError (401)
 │   └── AuthenticationError
 ├── ForbiddenError (403)
-│   └── AuthorizationError 
+│   └── AuthorizationError
 ├── NotFoundError (404)
 │   └── ResourceNotFoundError
 ├── MethodNotAllowedError (405)
@@ -111,4 +111,4 @@ configure_error_handlers(app)
 2. **Provide Meaningful Messages**: Error messages should be clear and actionable.
 3. **Include Context**: When possible, include context about the error (e.g., resource IDs, field names).
 4. **Log Appropriately**: Errors are automatically logged with appropriate severity levels.
-5. **Map Domain Errors**: Use `map_application_error_to_api_error` to convert domain errors to API errors. 
+5. **Map Domain Errors**: Use `map_application_error_to_api_error` to convert domain errors to API errors.

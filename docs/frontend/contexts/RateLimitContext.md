@@ -19,16 +19,16 @@ The context provides the following properties and methods:
 interface RateLimitContextType {
   // Current rate limits data from the API
   rateLimits: RateLimitsResponse | null;
-  
+
   // Whether rate limits are being fetched
   isLoading: boolean;
-  
+
   // Any error that occurred during fetching
   error: string | null;
-  
+
   // Function to refresh rate limit data
   refetch: (forceRefresh?: boolean) => Promise<void>;
-  
+
   // Function to optimistically update a rate limit
   decrementLimit: (category: RateLimitCategory, amount?: number) => void;
 }
@@ -45,27 +45,30 @@ import {
   useRateLimitsError,
   useRateLimitsRefetch,
   useRateLimitsDecrement,
-  useRateLimitContext
-} from '../contexts/RateLimitContext';
+  useRateLimitContext,
+} from "../contexts/RateLimitContext";
 
 // Component that only needs to display limits
 function RateLimitDisplay() {
   // Only subscribes to the limits data, not other context changes
   const limits = useRateLimitsData();
   const isLoading = useRateLimitsLoading();
-  
+
   if (isLoading) return <LoadingSpinner />;
-  
+
   return (
     <div className="rate-limits">
       <h3>API Usage</h3>
-      {limits && Object.entries(limits.limits).map(([category, limit]) => (
-        <div key={category} className="limit-item">
-          <span>{category}: </span>
-          <span>{limit.remaining}/{limit.limit}</span>
-          <small>Resets: {new Date(limit.reset).toLocaleTimeString()}</small>
-        </div>
-      ))}
+      {limits &&
+        Object.entries(limits.limits).map(([category, limit]) => (
+          <div key={category} className="limit-item">
+            <span>{category}: </span>
+            <span>
+              {limit.remaining}/{limit.limit}
+            </span>
+            <small>Resets: {new Date(limit.reset).toLocaleTimeString()}</small>
+          </div>
+        ))}
     </div>
   );
 }
@@ -74,37 +77,28 @@ function RateLimitDisplay() {
 function ConceptGenerator() {
   // Only subscribes to the decrement function
   const decrementLimit = useRateLimitsDecrement();
-  
+
   const handleGenerate = async () => {
     // Update UI immediately
-    decrementLimit('concept-generation');
-    
+    decrementLimit("concept-generation");
+
     // Then make the actual API call
     await generateConcept(formData);
   };
-  
-  return (
-    <button onClick={handleGenerate}>
-      Generate Concept
-    </button>
-  );
+
+  return <button onClick={handleGenerate}>Generate Concept</button>;
 }
 
 // Component that needs full rate limit context
 function RateLimitManager() {
   // Uses the comprehensive hook (less performant but simpler)
-  const { 
-    rateLimits, 
-    isLoading, 
-    error, 
-    refetch, 
-    decrementLimit 
-  } = useRateLimitContext();
-  
+  const { rateLimits, isLoading, error, refetch, decrementLimit } =
+    useRateLimitContext();
+
   const handleRefresh = () => {
     refetch(true); // Force a fresh fetch
   };
-  
+
   return (
     <div>
       <button onClick={handleRefresh}>Refresh Limits</button>
@@ -122,10 +116,10 @@ The rate limits data has the following structure:
 interface RateLimitsResponse {
   limits: {
     [category: string]: {
-      limit: number;      // Maximum allowed requests
-      remaining: number;  // Number of requests remaining
-      reset: number;      // Timestamp when the limit will reset
-    }
+      limit: number; // Maximum allowed requests
+      remaining: number; // Number of requests remaining
+      reset: number; // Timestamp when the limit will reset
+    };
   };
   global?: {
     limit: number;
@@ -136,6 +130,7 @@ interface RateLimitsResponse {
 ```
 
 Common categories include:
+
 - `'concept-generation'`
 - `'concept-refinement'`
 - `'export'`
@@ -171,17 +166,17 @@ The context uses several techniques to optimize performance:
 
 ## Exposed Hooks
 
-| Hook | Returns | Description |
-|------|---------|-------------|
-| `useRateLimitsData()` | `RateLimitsResponse \| null` | Just the rate limits data |
-| `useRateLimitsLoading()` | `boolean` | Just the loading state |
-| `useRateLimitsError()` | `string \| null` | Just the error state |
-| `useRateLimitsRefetch()` | `(forceRefresh?: boolean) => Promise<void>` | Just the refetch function |
+| Hook                       | Returns                                       | Description                 |
+| -------------------------- | --------------------------------------------- | --------------------------- |
+| `useRateLimitsData()`      | `RateLimitsResponse \| null`                  | Just the rate limits data   |
+| `useRateLimitsLoading()`   | `boolean`                                     | Just the loading state      |
+| `useRateLimitsError()`     | `string \| null`                              | Just the error state        |
+| `useRateLimitsRefetch()`   | `(forceRefresh?: boolean) => Promise<void>`   | Just the refetch function   |
 | `useRateLimitsDecrement()` | `(category: string, amount?: number) => void` | Just the decrement function |
-| `useRateLimitContext()` | `RateLimitContextType` | The complete context object |
+| `useRateLimitContext()`    | `RateLimitContextType`                        | The complete context object |
 
 ## Related
 
 - [useRateLimitsQuery](../hooks/useRateLimitsQuery.md) - The underlying hook used for data fetching
 - [rateLimitService](../services/rateLimitService.md) - API service for rate limits
-- [RateLimitsPanel](../components/RateLimitsPanel/RateLimitsPanel.md) - UI component that displays rate limits 
+- [RateLimitsPanel](../components/RateLimitsPanel/RateLimitsPanel.md) - UI component that displays rate limits

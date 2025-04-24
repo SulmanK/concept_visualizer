@@ -5,10 +5,10 @@
 type EventHandler = (...args: any[]) => void;
 
 export enum AppEvent {
-  CONCEPT_CREATED = 'concept_created',
-  CONCEPT_UPDATED = 'concept_updated',
-  CONCEPT_DELETED = 'concept_deleted',
-  SVG_CONVERTED = 'svg_converted',
+  CONCEPT_CREATED = "concept_created",
+  CONCEPT_UPDATED = "concept_updated",
+  CONCEPT_DELETED = "concept_deleted",
+  SVG_CONVERTED = "svg_converted",
 }
 
 class EventService {
@@ -24,12 +24,14 @@ class EventService {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
     }
-    
+
     this.listeners[event].push(handler);
-    
+
     // Return unsubscribe function
     return () => {
-      this.listeners[event] = this.listeners[event].filter(h => h !== handler);
+      this.listeners[event] = this.listeners[event].filter(
+        (h) => h !== handler,
+      );
     };
   }
 
@@ -40,16 +42,19 @@ class EventService {
    */
   emit(event: AppEvent, ...args: any[]): void {
     console.log(`[EventService] Emitting event: ${event}`);
-    
+
     if (!this.listeners[event]) {
       return;
     }
-    
-    this.listeners[event].forEach(handler => {
+
+    this.listeners[event].forEach((handler) => {
       try {
         handler(...args);
       } catch (error) {
-        console.error(`[EventService] Error in event handler for ${event}:`, error);
+        console.error(
+          `[EventService] Error in event handler for ${event}:`,
+          error,
+        );
       }
     });
   }
@@ -64,4 +69,4 @@ class EventService {
 }
 
 // Create singleton instance
-export const eventService = new EventService(); 
+export const eventService = new EventService();

@@ -20,11 +20,11 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
 }) => {
   const [selectedVersionIndex, setSelectedVersionIndex] = useState<number>(0);
   const selectedVersion = previousVersions[selectedVersionIndex];
-  
+
   return (
     <section className="comparison-view">
       <h2 className="section-title">Version Comparison</h2>
-      
+
       <div className="version-selector">
         <label htmlFor="version-select">Compare with:</label>
         <Select
@@ -33,11 +33,13 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
           onChange={(e) => setSelectedVersionIndex(Number(e.target.value))}
           options={previousVersions.map((version, index) => ({
             value: String(index),
-            label: `Version ${version.version} (${new Date(version.createdAt).toLocaleDateString()})`,
+            label: `Version ${version.version} (${new Date(
+              version.createdAt,
+            ).toLocaleDateString()})`,
           }))}
         />
       </div>
-      
+
       <div className="comparison-container">
         <div className="version-card">
           <h3>Previous Version {selectedVersion.version}</h3>
@@ -54,7 +56,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
             <p>{selectedVersion.prompt}</p>
           </div>
         </div>
-        
+
         <div className="version-card current">
           <h3>Current Version {currentVersion.version}</h3>
           <div className="image-container">
@@ -71,20 +73,26 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
           </div>
         </div>
       </div>
-      
+
       <div className="comparison-controls">
         <Button
           variant="secondary"
           disabled={selectedVersionIndex === 0}
-          onClick={() => setSelectedVersionIndex(prev => Math.max(0, prev - 1))}
+          onClick={() =>
+            setSelectedVersionIndex((prev) => Math.max(0, prev - 1))
+          }
         >
           Previous Version
         </Button>
-        
+
         <Button
           variant="secondary"
           disabled={selectedVersionIndex === previousVersions.length - 1}
-          onClick={() => setSelectedVersionIndex(prev => Math.min(previousVersions.length - 1, prev + 1))}
+          onClick={() =>
+            setSelectedVersionIndex((prev) =>
+              Math.min(previousVersions.length - 1, prev + 1),
+            )
+          }
         >
           Next Version
         </Button>
@@ -96,10 +104,10 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `currentVersion` | `ConceptVersion` | Yes | - | The current version of the concept |
-| `previousVersions` | `ConceptVersion[]` | Yes | - | Array of previous concept versions |
+| Prop               | Type               | Required | Default | Description                        |
+| ------------------ | ------------------ | -------- | ------- | ---------------------------------- |
+| `currentVersion`   | `ConceptVersion`   | Yes      | -       | The current version of the concept |
+| `previousVersions` | `ConceptVersion[]` | Yes      | -       | Array of previous concept versions |
 
 ## Types
 
@@ -149,12 +157,12 @@ interface ConceptVersion {
 
 ```tsx
 const RefinementPageContent: React.FC = () => {
-  const { data: concept } = useConceptQueries.useConceptById('concept-123');
-  
+  const { data: concept } = useConceptQueries.useConceptById("concept-123");
+
   if (!concept || !concept.previousVersions?.length) {
     return null;
   }
-  
+
   return (
     <div className="refinement-page-content">
       {/* Other content */}
@@ -172,4 +180,4 @@ const RefinementPageContent: React.FC = () => {
 - Clear visual distinction between current and previous versions
 - Consistent card styling for each version
 - Responsive grid layout for comparison view
-- Visual indicators for version numbers 
+- Visual indicators for version numbers

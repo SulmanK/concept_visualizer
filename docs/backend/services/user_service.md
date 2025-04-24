@@ -19,9 +19,9 @@ The User Service provides a high-level API for:
 ```python
 class UserService:
     """Service for managing users and authentication."""
-    
+
     def __init__(
-        self, 
+        self,
         user_persistence: UserPersistenceService,
         auth_provider: AuthProvider,
         config: UserServiceConfig
@@ -30,6 +30,7 @@ class UserService:
 ```
 
 **Dependencies:**
+
 - `user_persistence`: Service for persisting user data in the database
 - `auth_provider`: Provider for authentication mechanisms
 - `config`: Configuration parameters for the user service
@@ -48,10 +49,12 @@ async def authenticate_user(
 Authenticates a user with the provided credentials.
 
 **Parameters:**
+
 - `email`: User's email address
 - `password`: User's password
 
 **Returns:**
+
 - `AuthToken`: Authentication token for the user session
 
 ```python
@@ -65,9 +68,11 @@ async def verify_token(
 Verifies an authentication token and returns the associated user.
 
 **Parameters:**
+
 - `token`: Authentication token to verify
 
 **Returns:**
+
 - `User`: The authenticated user
 
 ### User Registration and Management
@@ -86,12 +91,14 @@ async def register_user(
 Registers a new user with the provided information.
 
 **Parameters:**
+
 - `email`: User's email address
 - `password`: User's password
 - `name`: User's full name
 - `profile_data`: Additional profile information
 
 **Returns:**
+
 - `User`: The newly created user
 
 ```python
@@ -106,10 +113,12 @@ async def update_user_profile(
 Updates a user's profile information.
 
 **Parameters:**
+
 - `user_id`: ID of the user to update
 - `profile_updates`: Dictionary containing profile fields to update
 
 **Returns:**
+
 - `User`: The updated user
 
 ```python
@@ -123,6 +132,7 @@ async def delete_user(
 Deletes a user account.
 
 **Parameters:**
+
 - `user_id`: ID of the user to delete
 
 ### Password Management
@@ -140,11 +150,13 @@ async def change_password(
 Changes a user's password.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `current_password`: User's current password
 - `new_password`: User's new password
 
 **Returns:**
+
 - `bool`: True if password was successfully changed
 
 ```python
@@ -158,9 +170,11 @@ async def request_password_reset(
 Initiates a password reset process for a user.
 
 **Parameters:**
+
 - `email`: Email address of the user
 
 **Returns:**
+
 - `bool`: True if password reset request was successfully initiated
 
 ```python
@@ -175,10 +189,12 @@ async def reset_password(
 Resets a user's password using a reset token.
 
 **Parameters:**
+
 - `reset_token`: Password reset token
 - `new_password`: User's new password
 
 **Returns:**
+
 - `bool`: True if password was successfully reset
 
 ### Authorization and Permissions
@@ -196,11 +212,13 @@ async def check_permission(
 Checks if a user has a specific permission.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `permission`: Permission to check
 - `resource_id`: Optional ID of the resource to check permission against
 
 **Returns:**
+
 - `bool`: True if user has the specified permission
 
 ```python
@@ -215,10 +233,12 @@ async def assign_role(
 Assigns a role to a user.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `role`: Role to assign
 
 **Returns:**
+
 - `User`: The updated user with the new role
 
 ### User Preferences
@@ -234,9 +254,11 @@ async def get_user_preferences(
 Retrieves a user's preferences.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 
 **Returns:**
+
 - Dictionary containing the user's preferences
 
 ```python
@@ -251,10 +273,12 @@ async def update_user_preferences(
 Updates a user's preferences.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `preferences`: Dictionary containing preference updates
 
 **Returns:**
+
 - Dictionary containing the updated preferences
 
 ### Usage Analytics
@@ -272,6 +296,7 @@ async def record_user_activity(
 Records a user activity for analytics purposes.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `activity_type`: Type of activity
 - `activity_data`: Additional data about the activity
@@ -288,10 +313,12 @@ async def get_user_activity_summary(
 Retrieves a summary of a user's activity.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `time_period`: Time period for the summary (e.g., "7d", "30d", "90d")
 
 **Returns:**
+
 - Dictionary containing a summary of the user's activity
 
 ## Data Models
@@ -301,7 +328,7 @@ Retrieves a summary of a user's activity.
 ```python
 class User(BaseModel):
     """Represents a user of the application."""
-    
+
     user_id: str
     email: str
     name: str
@@ -320,7 +347,7 @@ Represents a user of the application.
 ```python
 class AuthToken(BaseModel):
     """Represents an authentication token."""
-    
+
     token: str
     token_type: str = "Bearer"
     expires_at: datetime
@@ -334,7 +361,7 @@ Represents an authentication token.
 ```python
 class UserPreferences(BaseModel):
     """Represents a user's preferences."""
-    
+
     user_id: str
     theme: str = "light"
     notifications_enabled: bool = True
@@ -508,4 +535,4 @@ The `UserService` integrates with several components:
 - [Auth Provider](../auth/auth_provider.md): Authentication provider interface
 - [JWT Auth Provider](../auth/jwt_auth_provider.md): JWT-based authentication implementation
 - [User API Routes](../api/routes/user_routes.md): API endpoints for user operations
-- [Security Best Practices](../security/best_practices.md): Security guidelines 
+- [Security Best Practices](../security/best_practices.md): Security guidelines

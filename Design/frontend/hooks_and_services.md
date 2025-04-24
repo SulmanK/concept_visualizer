@@ -16,17 +16,20 @@ This design document outlines the shared hooks and services that will support bo
 ### Functional Requirements
 
 1. **API Communication**
+
    - Support for making HTTP requests to backend endpoints
    - Handle request configuration and authentication
    - Support for file uploads (images) and JSON data
    - Maintain consistent request/response patterns
 
 2. **Concept Generation and Refinement**
+
    - Provide hooks for generating new concepts
    - Provide hooks for refining existing concepts
    - Handle state management for these operations
 
 3. **Error Handling**
+
    - Provide consistent error handling across API requests
    - Format and normalize error messages from different sources
    - Support retry mechanisms for failed requests
@@ -39,11 +42,13 @@ This design document outlines the shared hooks and services that will support bo
 ### Non-Functional Requirements
 
 1. **Performance**
+
    - Minimize unnecessary re-renders with proper React patterns
    - Implement request debouncing where appropriate
    - Support for request cancellation to prevent race conditions
 
 2. **Maintainability**
+
    - Modular design with clear separation of concerns
    - Consistent patterns across hooks and services
    - Comprehensive type safety using TypeScript
@@ -59,12 +64,14 @@ This design document outlines the shared hooks and services that will support bo
 ### 1. API Client Structure
 
 Will implement a modular, service-based API client because:
+
 - Separates networking concerns from UI components
 - Allows for centralized request/response handling
 - Provides a consistent interface for all API interactions
 - Makes testing and mocking easier
 
 The API client will consist of:
+
 - A base client for common HTTP operations
 - Feature-specific service modules (concept service, refinement service)
 - Configuration and authentication handling
@@ -73,12 +80,14 @@ The API client will consist of:
 ### 2. Custom Hook Architecture
 
 Will implement custom hooks that encapsulate API service calls because:
+
 - Provides a React-friendly interface to imperative API code
 - Manages component state (loading, data, errors) consistently
 - Separates presentation logic from data fetching
 - Enables reuse across multiple components
 
 Each feature will have dedicated hooks that:
+
 - Expose a declarative interface to components
 - Handle loading and error states internally
 - Transform API responses into component-friendly data structures
@@ -87,12 +96,14 @@ Each feature will have dedicated hooks that:
 ### 3. Error Handling Strategy
 
 Will implement a centralized error handling approach because:
+
 - Ensures consistent error messages across the application
 - Provides a single point for error normalization and formatting
 - Enables global error handling policies (e.g., logging, analytics)
 - Simplifies component code by abstracting error management
 
 The error handling system will:
+
 - Normalize errors from different sources (network, validation, etc.)
 - Format error messages for user display
 - Support error categorization (recoverable vs. fatal)
@@ -101,12 +112,14 @@ The error handling system will:
 ### 4. State Management Approach
 
 Will use React hooks for local state management because:
+
 - Sufficient for the application's complexity level
 - Keeps state close to where it's used
 - Simplifies the component tree compared to global state
 - Easier to test and reason about
 
 For shared state needs, will implement:
+
 - Custom hooks for state that spans multiple components
 - Context providers for feature-specific state when needed
 - Proper state lifting for parent-child component communication
@@ -118,8 +131,13 @@ For shared state needs, will implement:
 ```typescript
 // services/api/baseClient.ts
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
-import { ApiResponse, ApiError } from '../../types';
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  AxiosError,
+} from "axios";
+import { ApiResponse, ApiError } from "../../types";
 
 /**
  * Configuration options for the API client
@@ -141,7 +159,7 @@ export class BaseApiClient {
       baseURL: config.baseURL,
       timeout: config.timeout || 30000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...config.headers,
       },
     });
@@ -157,20 +175,20 @@ export class BaseApiClient {
     this.client.interceptors.request.use(
       (config) => {
         // Add authentication token if available
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem("auth_token");
         if (token) {
           config.headers = config.headers || {};
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
       },
-      (error) => Promise.reject(error)
+      (error) => Promise.reject(error),
     );
 
     // Response interceptor
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => this.handleRequestError(error)
+      (error: AxiosError) => this.handleRequestError(error),
     );
   }
 
@@ -179,8 +197,8 @@ export class BaseApiClient {
    */
   private handleRequestError(error: AxiosError): Promise<never> {
     const apiError: ApiError = {
-      message: 'An unexpected error occurred',
-      code: 'unknown_error',
+      message: "An unexpected error occurred",
+      code: "unknown_error",
       status: error.response?.status || 500,
       details: undefined,
     };
@@ -188,15 +206,15 @@ export class BaseApiClient {
     if (error.response) {
       // Server responded with an error status
       const data = error.response.data as any;
-      
-      apiError.message = data.message || data.error || 'Server error';
-      apiError.code = data.code || 'server_error';
+
+      apiError.message = data.message || data.error || "Server error";
+      apiError.code = data.code || "server_error";
       apiError.status = error.response.status;
       apiError.details = data.details || data;
     } else if (error.request) {
       // Request was made but no response received
-      apiError.message = 'No response received from server';
-      apiError.code = 'network_error';
+      apiError.message = "No response received from server";
+      apiError.code = "network_error";
       apiError.status = 0;
     }
 
@@ -206,7 +224,10 @@ export class BaseApiClient {
   /**
    * Make a GET request
    */
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async get<T>(
+    url: string,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.get<T>(url, config);
     return {
       data: response.data,
@@ -218,7 +239,11 @@ export class BaseApiClient {
   /**
    * Make a POST request
    */
-  async post<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async post<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.post<T>(url, data, config);
     return {
       data: response.data,
@@ -230,7 +255,11 @@ export class BaseApiClient {
   /**
    * Make a PUT request
    */
-  async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async put<T>(
+    url: string,
+    data?: any,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.put<T>(url, data, config);
     return {
       data: response.data,
@@ -242,7 +271,10 @@ export class BaseApiClient {
   /**
    * Make a DELETE request
    */
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  async delete<T>(
+    url: string,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<T>> {
     const response = await this.client.delete<T>(url, config);
     return {
       data: response.data,
@@ -258,35 +290,38 @@ export class BaseApiClient {
 ```typescript
 // services/api/conceptApi.ts
 
-import { BaseApiClient } from './baseClient';
-import { 
+import { BaseApiClient } from "./baseClient";
+import {
   ConceptResponse,
   PromptFormData,
   RefinementFormData,
-  RefinementRequest, 
-  ApiError
-} from '../../types';
+  RefinementRequest,
+  ApiError,
+} from "../../types";
 
 /**
  * Service for interacting with concept-related API endpoints
  */
 export class ConceptApiService {
   private client: BaseApiClient;
-  
+
   constructor(client: BaseApiClient) {
     this.client = client;
   }
-  
+
   /**
    * Generate a new concept based on user input
    */
   async generateConcept(data: PromptFormData): Promise<ConceptResponse> {
     try {
-      const response = await this.client.post<ConceptResponse>('/api/generate', {
-        logoDescription: data.logoDescription,
-        themeDescription: data.themeDescription,
-      });
-      
+      const response = await this.client.post<ConceptResponse>(
+        "/api/generate",
+        {
+          logoDescription: data.logoDescription,
+          themeDescription: data.themeDescription,
+        },
+      );
+
       return {
         success: true,
         data: response.data,
@@ -299,20 +334,20 @@ export class ConceptApiService {
       };
     }
   }
-  
+
   /**
    * Refine an existing concept
    */
   async refineConcept(data: RefinementRequest): Promise<ConceptResponse> {
     try {
-      const response = await this.client.post<ConceptResponse>('/api/refine', {
+      const response = await this.client.post<ConceptResponse>("/api/refine", {
         originalImageUrl: data.originalImageUrl,
         logoDescription: data.logoDescription,
         themeDescription: data.themeDescription,
         refinementPrompt: data.refinementPrompt,
         preserveAspects: data.preserveAspects,
       });
-      
+
       return {
         success: true,
         data: response.data,
@@ -332,9 +367,9 @@ export class ConceptApiService {
  */
 export const createConceptApi = () => {
   const apiClient = new BaseApiClient({
-    baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+    baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
   });
-  
+
   return new ConceptApiService(apiClient);
 };
 
@@ -349,40 +384,45 @@ export const conceptApi = createConceptApi();
 ```typescript
 // utils/errorHandling.ts
 
-import { ApiError } from '../types';
+import { ApiError } from "../types";
 
 /**
  * Parse and normalize error objects from different sources
  */
 export const normalizeError = (error: unknown): ApiError => {
   // Already normalized API error
-  if (typeof error === 'object' && error !== null && 'code' in error && 'message' in error) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    "message" in error
+  ) {
     return error as ApiError;
   }
-  
+
   // Error with message property
   if (error instanceof Error) {
     return {
       message: error.message,
-      code: 'client_error',
+      code: "client_error",
       status: 400,
       details: error.stack,
     };
   }
-  
+
   // String error
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return {
       message: error,
-      code: 'client_error',
+      code: "client_error",
       status: 400,
     };
   }
-  
+
   // Unknown error type
   return {
-    message: 'An unexpected error occurred',
-    code: 'unknown_error',
+    message: "An unexpected error occurred",
+    code: "unknown_error",
     status: 500,
     details: JSON.stringify(error),
   };
@@ -394,14 +434,14 @@ export const normalizeError = (error: unknown): ApiError => {
 export const getUserFriendlyErrorMessage = (error: ApiError): string => {
   // Map specific error codes to user-friendly messages
   switch (error.code) {
-    case 'network_error':
-      return 'Unable to connect to the server. Please check your internet connection and try again.';
-    case 'unauthorized':
-      return 'You are not authorized to perform this action. Please log in and try again.';
-    case 'validation_error':
-      return 'The provided information is invalid. Please check your inputs and try again.';
-    case 'server_error':
-      return 'The server encountered an error. Our team has been notified and is working on it.';
+    case "network_error":
+      return "Unable to connect to the server. Please check your internet connection and try again.";
+    case "unauthorized":
+      return "You are not authorized to perform this action. Please log in and try again.";
+    case "validation_error":
+      return "The provided information is invalid. Please check your inputs and try again.";
+    case "server_error":
+      return "The server encountered an error. Our team has been notified and is working on it.";
     default:
       return error.message;
   }
@@ -413,13 +453,16 @@ export const getUserFriendlyErrorMessage = (error: ApiError): string => {
 export const isRecoverableError = (error: ApiError): boolean => {
   // Define which errors are considered recoverable
   const recoverableCodes = [
-    'network_error',      // Network connectivity issues
-    'timeout_error',      // Request timeout
-    'rate_limit_error',   // Rate limiting (can retry after delay)
-    'service_unavailable', // Temporary service unavailability
+    "network_error", // Network connectivity issues
+    "timeout_error", // Request timeout
+    "rate_limit_error", // Rate limiting (can retry after delay)
+    "service_unavailable", // Temporary service unavailability
   ];
-  
-  return recoverableCodes.includes(error.code) || (error.status >= 500 && error.status < 600);
+
+  return (
+    recoverableCodes.includes(error.code) ||
+    (error.status >= 500 && error.status < 600)
+  );
 };
 ```
 
@@ -428,9 +471,9 @@ export const isRecoverableError = (error: ApiError): boolean => {
 ```typescript
 // hooks/useApi.ts
 
-import { useState, useCallback, useRef } from 'react';
-import { ApiError } from '../types';
-import { normalizeError, isRecoverableError } from '../utils/errorHandling';
+import { useState, useCallback, useRef } from "react";
+import { ApiError } from "../types";
+import { normalizeError, isRecoverableError } from "../utils/errorHandling";
 
 /**
  * Options for the useApi hook
@@ -440,12 +483,12 @@ interface UseApiOptions {
    * Enable automatic retries for recoverable errors
    */
   enableRetry?: boolean;
-  
+
   /**
    * Maximum number of retry attempts
    */
   maxRetries?: number;
-  
+
   /**
    * Base delay between retries in milliseconds
    */
@@ -460,22 +503,22 @@ interface ApiExecuteOptions<TParams> {
    * Parameters to pass to the API function
    */
   params: TParams;
-  
+
   /**
    * Callback to run before executing the API call
    */
   onBefore?: () => void;
-  
+
   /**
    * Callback to run after a successful API call
    */
   onSuccess?: (data: any) => void;
-  
+
   /**
    * Callback to run after a failed API call
    */
   onError?: (error: ApiError) => void;
-  
+
   /**
    * Callback to run after the API call completes (success or failure)
    */
@@ -487,96 +530,90 @@ interface ApiExecuteOptions<TParams> {
  */
 export function useApi<TParams, TResult>(
   apiFunction: (params: TParams) => Promise<TResult>,
-  options: UseApiOptions = {}
+  options: UseApiOptions = {},
 ) {
-  const {
-    enableRetry = false,
-    maxRetries = 3,
-    retryDelay = 1000,
-  } = options;
-  
+  const { enableRetry = false, maxRetries = 3, retryDelay = 1000 } = options;
+
   const [data, setData] = useState<TResult | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  
+
   // Keep track of retry attempts
   const retryCount = useRef<number>(0);
-  
+
   // Store the latest API function to avoid stale closures
   const apiFunctionRef = useRef(apiFunction);
   apiFunctionRef.current = apiFunction;
-  
+
   /**
    * Clear error state
    */
   const clearError = useCallback(() => {
     setError(null);
   }, []);
-  
+
   /**
    * Execute the API call
    */
-  const execute = useCallback(async (executeOptions: ApiExecuteOptions<TParams>) => {
-    const {
-      params,
-      onBefore,
-      onSuccess,
-      onError,
-      onFinally,
-    } = executeOptions;
-    
-    try {
-      // Reset retry count on new execution
-      retryCount.current = 0;
-      
-      // Call onBefore callback if provided
-      onBefore?.();
-      
-      // Start loading
-      setIsLoading(true);
-      setError(null);
-      
-      // Execute the API call
-      const result = await apiFunctionRef.current(params);
-      
-      // Set data and call success callback
-      setData(result);
-      onSuccess?.(result);
-      
-      return result;
-    } catch (err) {
-      // Normalize the error
-      const normalizedError = normalizeError(err);
-      
-      // Handle retries for recoverable errors
-      if (
-        enableRetry &&
-        isRecoverableError(normalizedError) &&
-        retryCount.current < maxRetries
-      ) {
-        retryCount.current += 1;
-        
-        // Exponential backoff delay
-        const delay = retryDelay * Math.pow(2, retryCount.current - 1);
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
-        // Retry the request
-        return execute(executeOptions);
+  const execute = useCallback(
+    async (executeOptions: ApiExecuteOptions<TParams>) => {
+      const { params, onBefore, onSuccess, onError, onFinally } =
+        executeOptions;
+
+      try {
+        // Reset retry count on new execution
+        retryCount.current = 0;
+
+        // Call onBefore callback if provided
+        onBefore?.();
+
+        // Start loading
+        setIsLoading(true);
+        setError(null);
+
+        // Execute the API call
+        const result = await apiFunctionRef.current(params);
+
+        // Set data and call success callback
+        setData(result);
+        onSuccess?.(result);
+
+        return result;
+      } catch (err) {
+        // Normalize the error
+        const normalizedError = normalizeError(err);
+
+        // Handle retries for recoverable errors
+        if (
+          enableRetry &&
+          isRecoverableError(normalizedError) &&
+          retryCount.current < maxRetries
+        ) {
+          retryCount.current += 1;
+
+          // Exponential backoff delay
+          const delay = retryDelay * Math.pow(2, retryCount.current - 1);
+
+          await new Promise((resolve) => setTimeout(resolve, delay));
+
+          // Retry the request
+          return execute(executeOptions);
+        }
+
+        // Set error state and call error callback
+        setError(normalizedError);
+        onError?.(normalizedError);
+
+        throw normalizedError;
+      } finally {
+        // End loading and call finally callback
+        setIsLoading(false);
+        onFinally?.();
       }
-      
-      // Set error state and call error callback
-      setError(normalizedError);
-      onError?.(normalizedError);
-      
-      throw normalizedError;
-    } finally {
-      // End loading and call finally callback
-      setIsLoading(false);
-      onFinally?.();
-    }
-  }, [enableRetry, maxRetries, retryDelay]);
-  
+    },
+    [enableRetry, maxRetries, retryDelay],
+  );
+
   return {
     data,
     error,
@@ -592,57 +629,58 @@ export function useApi<TParams, TResult>(
 ```typescript
 // hooks/useConceptGeneration.ts
 
-import { useState, useCallback } from 'react';
-import { useApi } from './useApi';
-import { conceptApi } from '../services/api/conceptApi';
-import { PromptFormData, GenerationResult } from '../types';
+import { useState, useCallback } from "react";
+import { useApi } from "./useApi";
+import { conceptApi } from "../services/api/conceptApi";
+import { PromptFormData, GenerationResult } from "../types";
 
 /**
  * Hook for generating new concepts
  */
 export function useConceptGeneration() {
   const [result, setResult] = useState<GenerationResult | null>(null);
-  
-  const {
-    isLoading,
-    error,
-    execute,
-    clearError,
-  } = useApi(conceptApi.generateConcept.bind(conceptApi), {
-    enableRetry: true,
-    maxRetries: 2,
-  });
-  
+
+  const { isLoading, error, execute, clearError } = useApi(
+    conceptApi.generateConcept.bind(conceptApi),
+    {
+      enableRetry: true,
+      maxRetries: 2,
+    },
+  );
+
   /**
    * Generate a new concept based on the provided form data
    */
-  const generateConcept = useCallback(async (data: PromptFormData) => {
-    try {
-      const response = await execute({
-        params: data,
-      });
-      
-      if (response.success && response.data) {
-        const generationResult: GenerationResult = {
-          imageUrl: response.data.imageUrl,
-          colors: response.data.colors,
-          prompt: `${data.logoDescription} + ${data.themeDescription}`,
-          logoDescription: data.logoDescription,
-          themeDescription: data.themeDescription,
-          timestamp: new Date(),
-        };
-        
-        setResult(generationResult);
-        return generationResult;
+  const generateConcept = useCallback(
+    async (data: PromptFormData) => {
+      try {
+        const response = await execute({
+          params: data,
+        });
+
+        if (response.success && response.data) {
+          const generationResult: GenerationResult = {
+            imageUrl: response.data.imageUrl,
+            colors: response.data.colors,
+            prompt: `${data.logoDescription} + ${data.themeDescription}`,
+            logoDescription: data.logoDescription,
+            themeDescription: data.themeDescription,
+            timestamp: new Date(),
+          };
+
+          setResult(generationResult);
+          return generationResult;
+        }
+
+        return null;
+      } catch (err) {
+        // Error is already handled by useApi
+        return null;
       }
-      
-      return null;
-    } catch (err) {
-      // Error is already handled by useApi
-      return null;
-    }
-  }, [execute]);
-  
+    },
+    [execute],
+  );
+
   return {
     generateConcept,
     result,
@@ -658,43 +696,51 @@ export function useConceptGeneration() {
 ```typescript
 // hooks/useConceptRefinement.ts
 
-import { useState, useCallback } from 'react';
-import { useApi } from './useApi';
-import { conceptApi } from '../services/api/conceptApi';
-import { RefinementFormData, GenerationResult, RefinementRequest } from '../types';
+import { useState, useCallback } from "react";
+import { useApi } from "./useApi";
+import { conceptApi } from "../services/api/conceptApi";
+import {
+  RefinementFormData,
+  GenerationResult,
+  RefinementRequest,
+} from "../types";
 
 /**
  * Hook for refining existing concepts
  */
 export function useConceptRefinement() {
-  const [refinedConcept, setRefinedConcept] = useState<GenerationResult | null>(null);
-  
-  const {
-    isLoading,
-    error,
-    execute,
-    clearError,
-  } = useApi(conceptApi.refineConcept.bind(conceptApi), {
-    enableRetry: true,
-    maxRetries: 2,
-  });
-  
+  const [refinedConcept, setRefinedConcept] = useState<GenerationResult | null>(
+    null,
+  );
+
+  const { isLoading, error, execute, clearError } = useApi(
+    conceptApi.refineConcept.bind(conceptApi),
+    {
+      enableRetry: true,
+      maxRetries: 2,
+    },
+  );
+
   /**
    * Helper to construct a detailed refinement prompt
    */
-  const constructRefinementPrompt = useCallback((
-    originalConcept: GenerationResult, 
-    refinementData: RefinementFormData
-  ): string => {
-    const preserveText = refinementData.preserveAspects.length > 0
-      ? `Preserve these aspects from the original: ${refinementData.preserveAspects.join(', ')}.`
-      : '';
-      
-    const changesText = refinementData.adjustmentInstructions
-      ? `Make these specific adjustments: ${refinementData.adjustmentInstructions}`
-      : 'Refine the concept based on the updated descriptions.';
-      
-    return `
+  const constructRefinementPrompt = useCallback(
+    (
+      originalConcept: GenerationResult,
+      refinementData: RefinementFormData,
+    ): string => {
+      const preserveText =
+        refinementData.preserveAspects.length > 0
+          ? `Preserve these aspects from the original: ${refinementData.preserveAspects.join(
+              ", ",
+            )}.`
+          : "";
+
+      const changesText = refinementData.adjustmentInstructions
+        ? `Make these specific adjustments: ${refinementData.adjustmentInstructions}`
+        : "Refine the concept based on the updated descriptions.";
+
+      return `
       Create a refined version of the original concept.
       Original prompt: "${originalConcept.prompt}"
       New logo description: "${refinementData.logoDescription}"
@@ -702,52 +748,62 @@ export function useConceptRefinement() {
       ${preserveText}
       ${changesText}
     `.trim();
-  }, []);
-  
+    },
+    [],
+  );
+
   /**
    * Refine an existing concept based on the provided form data
    */
-  const refineConcept = useCallback(async (
-    originalConcept: GenerationResult, 
-    refinementData: RefinementFormData
-  ) => {
-    try {
-      // Construct a refinement prompt based on the form data
-      const refinementPrompt = constructRefinementPrompt(originalConcept, refinementData);
-      
-      const requestData: RefinementRequest = {
-        originalImageUrl: originalConcept.imageUrl,
-        logoDescription: refinementData.logoDescription,
-        themeDescription: refinementData.themeDescription,
-        refinementPrompt,
-        preserveAspects: refinementData.preserveAspects,
-      };
-      
-      const response = await execute({
-        params: requestData,
-      });
-      
-      if (response.success && response.data) {
-        const newRefinedConcept: GenerationResult = {
-          imageUrl: response.data.imageUrl,
-          colors: response.data.colors,
-          prompt: `Refinement of "${originalConcept.prompt}" with changes: ${refinementData.adjustmentInstructions || 'General refinement'}`,
+  const refineConcept = useCallback(
+    async (
+      originalConcept: GenerationResult,
+      refinementData: RefinementFormData,
+    ) => {
+      try {
+        // Construct a refinement prompt based on the form data
+        const refinementPrompt = constructRefinementPrompt(
+          originalConcept,
+          refinementData,
+        );
+
+        const requestData: RefinementRequest = {
+          originalImageUrl: originalConcept.imageUrl,
           logoDescription: refinementData.logoDescription,
           themeDescription: refinementData.themeDescription,
-          timestamp: new Date(),
+          refinementPrompt,
+          preserveAspects: refinementData.preserveAspects,
         };
-        
-        setRefinedConcept(newRefinedConcept);
-        return newRefinedConcept;
+
+        const response = await execute({
+          params: requestData,
+        });
+
+        if (response.success && response.data) {
+          const newRefinedConcept: GenerationResult = {
+            imageUrl: response.data.imageUrl,
+            colors: response.data.colors,
+            prompt: `Refinement of "${originalConcept.prompt}" with changes: ${
+              refinementData.adjustmentInstructions || "General refinement"
+            }`,
+            logoDescription: refinementData.logoDescription,
+            themeDescription: refinementData.themeDescription,
+            timestamp: new Date(),
+          };
+
+          setRefinedConcept(newRefinedConcept);
+          return newRefinedConcept;
+        }
+
+        return null;
+      } catch (err) {
+        // Error is already handled by useApi
+        return null;
       }
-      
-      return null;
-    } catch (err) {
-      // Error is already handled by useApi
-      return null;
-    }
-  }, [execute, constructRefinementPrompt]);
-  
+    },
+    [execute, constructRefinementPrompt],
+  );
+
   return {
     refineConcept,
     refinedConcept,
@@ -895,6 +951,7 @@ The hooks and services will be implemented in phases to ensure a solid foundatio
 For each hook and service, test the following aspects:
 
 #### BaseApiClient
+
 - Proper configuration of Axios instance
 - Interceptor behavior (authentication, error handling)
 - HTTP method wrappers (get, post, put, delete)
@@ -902,68 +959,71 @@ For each hook and service, test the following aspects:
 
 ```typescript
 // baseClient.test.ts (example)
-import { BaseApiClient } from './baseClient';
-import axios from 'axios';
-import MockAdapter from 'axios-mock-adapter';
+import { BaseApiClient } from "./baseClient";
+import axios from "axios";
+import MockAdapter from "axios-mock-adapter";
 
-describe('BaseApiClient', () => {
+describe("BaseApiClient", () => {
   let mock: MockAdapter;
   let client: BaseApiClient;
-  
+
   beforeEach(() => {
     mock = new MockAdapter(axios);
     client = new BaseApiClient({
-      baseURL: 'https://api.example.com',
+      baseURL: "https://api.example.com",
     });
   });
-  
+
   afterEach(() => {
     mock.reset();
   });
-  
-  test('successfully makes GET request', async () => {
-    const mockData = { id: 1, name: 'Test' };
-    mock.onGet('https://api.example.com/test').reply(200, mockData);
-    
-    const response = await client.get('/test');
-    
+
+  test("successfully makes GET request", async () => {
+    const mockData = { id: 1, name: "Test" };
+    mock.onGet("https://api.example.com/test").reply(200, mockData);
+
+    const response = await client.get("/test");
+
     expect(response.status).toBe(200);
     expect(response.data).toEqual(mockData);
   });
-  
-  test('handles error responses', async () => {
-    mock.onGet('https://api.example.com/error').reply(500, {
-      error: 'Server error',
-      code: 'server_error',
+
+  test("handles error responses", async () => {
+    mock.onGet("https://api.example.com/error").reply(500, {
+      error: "Server error",
+      code: "server_error",
     });
-    
+
     try {
-      await client.get('/error');
-      fail('Expected error was not thrown');
+      await client.get("/error");
+      fail("Expected error was not thrown");
     } catch (error: any) {
       expect(error.status).toBe(500);
-      expect(error.code).toBe('server_error');
-      expect(error.message).toBe('Server error');
+      expect(error.code).toBe("server_error");
+      expect(error.message).toBe("Server error");
     }
   });
-  
+
   // Additional tests...
 });
 ```
 
 #### conceptApi Service
+
 - Proper formatting of request data
 - Handling of successful responses
 - Error handling and normalization
 - Integration with BaseApiClient
 
 #### useApi Hook
+
 - Loading state management
 - Error state management
 - Callback execution (onBefore, onSuccess, onError, onFinally)
 - Retry logic for recoverable errors
 
 #### Feature-Specific Hooks
+
 - State management for generation/refinement results
 - Proper API call with correct parameters
 - Error handling and propagation
@@ -971,94 +1031,100 @@ describe('BaseApiClient', () => {
 
 ```typescript
 // useConceptGeneration.test.ts (example)
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useConceptGeneration } from './useConceptGeneration';
-import { conceptApi } from '../services/api/conceptApi';
+import { renderHook, act } from "@testing-library/react-hooks";
+import { useConceptGeneration } from "./useConceptGeneration";
+import { conceptApi } from "../services/api/conceptApi";
 
 // Mock the conceptApi service
-jest.mock('../services/api/conceptApi', () => ({
+jest.mock("../services/api/conceptApi", () => ({
   conceptApi: {
     generateConcept: jest.fn(),
   },
 }));
 
-describe('useConceptGeneration', () => {
+describe("useConceptGeneration", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  
-  test('successfully generates a concept', async () => {
+
+  test("successfully generates a concept", async () => {
     // Mock a successful API response
     const mockResponse = {
       success: true,
       data: {
-        imageUrl: 'https://example.com/image.jpg',
-        colors: ['#123456', '#789ABC'],
+        imageUrl: "https://example.com/image.jpg",
+        colors: ["#123456", "#789ABC"],
       },
     };
-    
+
     (conceptApi.generateConcept as jest.Mock).mockResolvedValue(mockResponse);
-    
-    const { result, waitForNextUpdate } = renderHook(() => useConceptGeneration());
-    
+
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useConceptGeneration(),
+    );
+
     const formData = {
-      logoDescription: 'Test logo',
-      themeDescription: 'Test theme',
+      logoDescription: "Test logo",
+      themeDescription: "Test theme",
     };
-    
+
     let generationResult;
-    
+
     act(() => {
       generationResult = result.current.generateConcept(formData);
     });
-    
+
     expect(result.current.isLoading).toBe(true);
-    
+
     await waitForNextUpdate();
-    
+
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBe(null);
     expect(result.current.result).toEqual({
-      imageUrl: 'https://example.com/image.jpg',
-      colors: ['#123456', '#789ABC'],
-      prompt: 'Test logo + Test theme',
-      logoDescription: 'Test logo',
-      themeDescription: 'Test theme',
+      imageUrl: "https://example.com/image.jpg",
+      colors: ["#123456", "#789ABC"],
+      prompt: "Test logo + Test theme",
+      logoDescription: "Test logo",
+      themeDescription: "Test theme",
       timestamp: expect.any(Date),
     });
-    
+
     expect(conceptApi.generateConcept).toHaveBeenCalledWith(formData);
   });
-  
-  test('handles generation error', async () => {
+
+  test("handles generation error", async () => {
     // Mock an API error response
     const mockError = {
       success: false,
-      error: 'Failed to generate concept',
+      error: "Failed to generate concept",
     };
-    
+
     (conceptApi.generateConcept as jest.Mock).mockRejectedValue(mockError);
-    
-    const { result, waitForNextUpdate } = renderHook(() => useConceptGeneration());
-    
+
+    const { result, waitForNextUpdate } = renderHook(() =>
+      useConceptGeneration(),
+    );
+
     const formData = {
-      logoDescription: 'Test logo',
-      themeDescription: 'Test theme',
+      logoDescription: "Test logo",
+      themeDescription: "Test theme",
     };
-    
+
     act(() => {
       result.current.generateConcept(formData);
     });
-    
+
     await waitForNextUpdate();
-    
+
     expect(result.current.isLoading).toBe(false);
-    expect(result.current.error).toEqual(expect.objectContaining({
-      message: expect.stringContaining('Failed to generate concept'),
-    }));
+    expect(result.current.error).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("Failed to generate concept"),
+      }),
+    );
     expect(result.current.result).toBe(null);
   });
-  
+
   // Additional tests...
 });
 ```
@@ -1076,12 +1142,14 @@ While the hooks and services don't have visual components themselves, it's impor
 ## Future Considerations
 
 ### Potential Enhancements
+
 - Implement request cancellation for abandoned API calls
 - Add support for real-time updates using WebSockets
 - Implement more advanced caching strategies
 - Add support for offline mode and request queuing
 
 ### Known Limitations
+
 - Initial implementation does not include advanced caching
 - No global state management for shared data across the application
 - Limited request cancellation support
@@ -1089,16 +1157,19 @@ While the hooks and services don't have visual components themselves, it's impor
 ## Dependencies
 
 ### Runtime Dependencies
+
 - React 18+
 - TypeScript 5+
 - Axios for HTTP requests
 
 ### Development Dependencies
+
 - Jest for unit testing
 - React Testing Library for hook testing
 - MSW (Mock Service Worker) for API mocking
 
 ## Security Considerations
+
 - Implement proper error handling to avoid leaking sensitive information
 - Sanitize user inputs before sending to the API
 - Use HTTPS for all API communications
@@ -1106,9 +1177,10 @@ While the hooks and services don't have visual components themselves, it's impor
 - Validate all API responses before processing
 
 ## Integration Points
+
 - React components in the ConceptCreator feature
 - React components in the Refinement feature
 - Backend API endpoints
 - JigsawStack API (indirectly through the backend)
 
-This design document provides a comprehensive blueprint for implementing the frontend hooks and services for the Concept Visualizer application, ensuring consistent data fetching, error handling, and state management across features while maintaining the Modern Gradient Violet theme. 
+This design document provides a comprehensive blueprint for implementing the frontend hooks and services for the Concept Visualizer application, ensuring consistent data fetching, error handling, and state management across features while maintaining the Modern Gradient Violet theme.

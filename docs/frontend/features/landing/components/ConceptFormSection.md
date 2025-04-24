@@ -13,36 +13,41 @@ const ConceptFormSection: React.FC = () => {
   const router = useRouter();
   const { mutate, isPending } = useConceptMutations.useCreateConcept();
   const [formData, setFormData] = useState<CreateConceptFormData>({
-    logoDescription: '',
-    themeDescription: '',
+    logoDescription: "",
+    themeDescription: "",
   });
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate form data
-    const errors = validateConceptForm(formData);
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-    
-    // Submit to API
-    mutate(formData, {
-      onSuccess: (data) => {
-        router.push(`/concepts/${data.conceptId}`);
-      },
-    });
-  }, [formData, mutate, router]);
-  
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+
+      // Validate form data
+      const errors = validateConceptForm(formData);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
+      // Submit to API
+      mutate(formData, {
+        onSuccess: (data) => {
+          router.push(`/concepts/${data.conceptId}`);
+        },
+      });
+    },
+    [formData, mutate, router],
+  );
+
   return (
     <section className="concept-form-section">
       <h2>Create Your Concept</h2>
       <p className="section-description">
         Describe your brand concept and we'll generate visual representations
       </p>
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-fields">
           <div className="form-group">
@@ -50,32 +55,36 @@ const ConceptFormSection: React.FC = () => {
             <TextArea
               id="logoDescription"
               value={formData.logoDescription}
-              onChange={(e) => setFormData({
-                ...formData,
-                logoDescription: e.target.value
-              })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  logoDescription: e.target.value,
+                })
+              }
               placeholder="Describe your ideal logo..."
               rows={4}
               error={validationErrors.logoDescription}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="themeDescription">Brand Theme</label>
             <TextArea
               id="themeDescription"
               value={formData.themeDescription}
-              onChange={(e) => setFormData({
-                ...formData,
-                themeDescription: e.target.value
-              })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  themeDescription: e.target.value,
+                })
+              }
               placeholder="Describe your brand's theme, colors, and style..."
               rows={4}
               error={validationErrors.themeDescription}
             />
           </div>
         </div>
-        
+
         <Button
           type="submit"
           variant="primary"
@@ -136,4 +145,4 @@ interface CreateConceptFormData {
 - Form fields have proper labels
 - Error messages are associated with form fields
 - Loading state is communicated to screen readers
-- Focus management during form submission 
+- Focus management during form submission

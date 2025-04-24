@@ -23,7 +23,7 @@ Create a dedicated endpoint for checking rate limits that doesn't count against 
 @router.get("/rate-limits-status", include_in_schema=True)
 async def rate_limits_status(request: Request):
     """Get current rate limit information without counting against limits.
-    
+
     This endpoint is explicitly exempted from rate limiting.
     """
     # Same implementation as /rate-limits but marked as non-counting
@@ -42,17 +42,17 @@ Add standard rate limit headers to all API responses so clients can track limits
 # In app/api/middleware/rate_limit_headers.py
 class RateLimitHeadersMiddleware:
     """Add rate limit headers to all API responses."""
-    
+
     async def __call__(self, request: Request, call_next):
         response = await call_next(request)
-        
+
         # Add headers if rate limit info is available from request state
         if hasattr(request.state, "limiter_info"):
             info = request.state.limiter_info
             response.headers["X-RateLimit-Limit"] = str(info.get("limit", ""))
             response.headers["X-RateLimit-Remaining"] = str(info.get("remaining", ""))
             response.headers["X-RateLimit-Reset"] = str(info.get("reset", ""))
-            
+
         return response
 ```
 
@@ -78,19 +78,19 @@ const rateLimitCache: Record<string, RateLimitCache> = {};
 // Extract rate limit info from response headers
 export const extractRateLimitHeaders = (
   response: Response,
-  endpoint: string
+  endpoint: string,
 ): void => {
   // Get header values
   const limit = response.headers.get("X-RateLimit-Limit");
   const remaining = response.headers.get("X-RateLimit-Remaining");
   const reset = response.headers.get("X-RateLimit-Reset");
-  
+
   if (limit && remaining && reset) {
     // Update cache for this specific endpoint
     updateRateLimitCache(endpoint, {
       limit: parseInt(limit, 10),
       remaining: parseInt(remaining, 10),
-      reset: parseInt(reset, 10)
+      reset: parseInt(reset, 10),
     });
   }
 };
@@ -109,31 +109,31 @@ const useRateLimits = () => {
   const decrementRateLimit = useCallback((endpoint: string) => {
     setRateLimits((current) => {
       if (!current) return current;
-      
+
       // Create a deep copy of the rate limits
       const updated = { ...current };
-      
+
       // Find the appropriate limit category based on endpoint
       const category = mapEndpointToCategory(endpoint);
-      
+
       if (category && updated.limits[category]) {
         // Decrement the remaining count
         updated.limits[category].remaining = Math.max(
-          0, 
-          updated.limits[category].remaining - 1
+          0,
+          updated.limits[category].remaining - 1,
         );
       }
-      
+
       return updated;
     });
   }, []);
-  
+
   return {
     rateLimits,
     isLoading,
     error,
     refetch: fetchData,
-    decrementRateLimit
+    decrementRateLimit,
   };
 };
 ```
@@ -199,4 +199,4 @@ After implementation, we should:
 1. Monitor Redis usage patterns to verify reduced load
 2. Track client-side cache hit rates
 3. Validate the user experience across different devices and browsers
-4. Measure performance impact of the changes 
+4. Measure performance impact of the changes

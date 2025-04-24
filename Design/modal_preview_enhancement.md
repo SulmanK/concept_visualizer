@@ -1,11 +1,13 @@
 # Image Preview Enhancement Design Document
 
 ## Problem Statement
+
 The current image preview functionality in the `ExportOptions` component uses a custom-built modal with basic styling. While functional, it lacks advanced features such as zooming, panning, and smooth transitions that would provide a better user experience. Using a specialized image viewer library would be more efficient both from a development and performance perspective.
 
 ## Requirements
 
 1. Implement a modern image preview functionality with:
+
    - Zooming capabilities
    - Panning/dragging
    - Smooth transitions and animations
@@ -14,6 +16,7 @@ The current image preview functionality in the `ExportOptions` component uses a 
    - Keyboard navigation
 
 2. Maintain compatibility with the existing image export workflow:
+
    - Preview should work with blob URLs
    - Modal should close properly and clean up resources
 
@@ -31,12 +34,14 @@ After evaluating several options, we recommend using **Material UI (MUI)** compo
 6. **Accessibility**: Strong focus on accessibility standards
 
 Instead of adding a new dependency, we'll leverage existing MUI components:
+
 - `Modal` for the dialog container
 - `IconButton` for controls
 - `Fade` and `Zoom` for transitions
 - Custom zoom and pan functionality using React hooks
 
 Other libraries considered:
+
 - react-image-lightbox: Compatibility issues with React 19
 - react-viewer: More complex, larger bundle size
 - react-image-gallery: Focus on galleries rather than single image viewing
@@ -60,6 +65,7 @@ Replace the current custom `PreviewModal` with MUI components:
 ### 3. Styling Customization
 
 Use MUI's styling system to match our application's design language:
+
 - Use the theme's color palette
 - Add appropriate transitions
 - Ensure consistent spacing
@@ -94,11 +100,11 @@ The main changes will be in the `ExportOptions.tsx` file:
 Here's a sketch of the proposed implementation:
 
 ```tsx
-import { Modal, IconButton, Box, Paper } from '@mui/material';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import CloseIcon from '@mui/icons-material/Close';
-import { useState, useRef, useEffect } from 'react';
+import { Modal, IconButton, Box, Paper } from "@mui/material";
+import ZoomInIcon from "@mui/icons-material/ZoomIn";
+import ZoomOutIcon from "@mui/icons-material/ZoomOut";
+import CloseIcon from "@mui/icons-material/Close";
+import { useState, useRef, useEffect } from "react";
 
 interface EnhancedImagePreviewProps {
   isOpen: boolean;
@@ -111,40 +117,38 @@ const EnhancedImagePreview: React.FC<EnhancedImagePreviewProps> = ({
   isOpen,
   onClose,
   imageUrl,
-  format
+  format,
 }) => {
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  
+
   // Pan and zoom implementation...
-  
+
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      closeAfterTransition
-    >
-      <Box sx={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '90%',
-        maxWidth: 1000,
-        bgcolor: 'background.paper',
-        boxShadow: 24,
-        p: 2,
-        outline: 'none',
-      }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+    <Modal open={isOpen} onClose={onClose} closeAfterTransition>
+      <Box
+        sx={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "90%",
+          maxWidth: 1000,
+          bgcolor: "background.paper",
+          boxShadow: 24,
+          p: 2,
+          outline: "none",
+        }}
+      >
+        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
           <h3>Preview ({format.toUpperCase()})</h3>
           <Box>
-            <IconButton onClick={() => setScale(s => Math.max(0.5, s - 0.5))}>
+            <IconButton onClick={() => setScale((s) => Math.max(0.5, s - 0.5))}>
               <ZoomOutIcon />
             </IconButton>
-            <IconButton onClick={() => setScale(s => Math.min(3, s + 0.5))}>
+            <IconButton onClick={() => setScale((s) => Math.min(3, s + 0.5))}>
               <ZoomInIcon />
             </IconButton>
             <IconButton onClick={onClose}>
@@ -152,13 +156,13 @@ const EnhancedImagePreview: React.FC<EnhancedImagePreviewProps> = ({
             </IconButton>
           </Box>
         </Box>
-        
+
         <Box
           sx={{
-            overflow: 'hidden',
-            position: 'relative',
-            height: '70vh',
-            bgcolor: 'grey.100',
+            overflow: "hidden",
+            position: "relative",
+            height: "70vh",
+            bgcolor: "grey.100",
           }}
           // Pan handlers...
         >
@@ -167,12 +171,12 @@ const EnhancedImagePreview: React.FC<EnhancedImagePreviewProps> = ({
             src={imageUrl}
             alt="Preview"
             sx={{
-              position: 'absolute',
+              position: "absolute",
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-              maxWidth: '100%',
-              maxHeight: '100%',
-              transition: isDragging ? 'none' : 'transform 0.2s',
-              transformOrigin: 'center',
+              maxWidth: "100%",
+              maxHeight: "100%",
+              transition: isDragging ? "none" : "transform 0.2s",
+              transformOrigin: "center",
             }}
           />
         </Box>
@@ -200,4 +204,4 @@ const EnhancedImagePreview: React.FC<EnhancedImagePreviewProps> = ({
 2. Adding zoom/pan functionality: 2 hours
 3. Testing and bug fixes: 1 hour
 
-Total estimated time: 5 hours 
+Total estimated time: 5 hours

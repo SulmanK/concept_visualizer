@@ -12,11 +12,11 @@ React Context is used in this application to provide state management for cross-
 
 ## Available Contexts
 
-| Context | Purpose | Key Features |
-|---------|---------|-------------|
-| [AuthContext](./AuthContext.md) | Manages user authentication state | User sign-in/sign-out, session management, auth state persistence |
-| [RateLimitContext](./RateLimitContext.md) | Tracks API rate limits | Rate limit tracking, limit enforcement, real-time updates |
-| [TaskContext](./TaskContext.md) | Manages background tasks | Task tracking, notifications, progress updates |
+| Context                                   | Purpose                           | Key Features                                                      |
+| ----------------------------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| [AuthContext](./AuthContext.md)           | Manages user authentication state | User sign-in/sign-out, session management, auth state persistence |
+| [RateLimitContext](./RateLimitContext.md) | Tracks API rate limits            | Rate limit tracking, limit enforcement, real-time updates         |
+| [TaskContext](./TaskContext.md)           | Manages background tasks          | Task tracking, notifications, progress updates                    |
 
 ## Design Principles
 
@@ -34,15 +34,15 @@ Contexts are typically consumed using custom hooks:
 
 ```tsx
 // Example of using the AuthContext
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "../contexts/AuthContext";
 
 function ProfileComponent() {
   const { user, isLoading, signOut } = useAuth();
-  
+
   if (isLoading) return <LoadingIndicator />;
-  
+
   if (!user) return <NotSignedInMessage />;
-  
+
   return (
     <div>
       <h1>Welcome, {user.name}</h1>
@@ -58,17 +58,15 @@ The context providers are typically mounted near the root of the application in 
 
 ```tsx
 // In App.tsx or similar root component
-import { AuthProvider } from './contexts/AuthContext';
-import { RateLimitProvider } from './contexts/RateLimitContext';
-import { TaskProvider } from './contexts/TaskContext';
+import { AuthProvider } from "./contexts/AuthContext";
+import { RateLimitProvider } from "./contexts/RateLimitContext";
+import { TaskProvider } from "./contexts/TaskContext";
 
 function App() {
   return (
     <AuthProvider>
       <RateLimitProvider>
-        <TaskProvider>
-          {/* Rest of the application */}
-        </TaskProvider>
+        <TaskProvider>{/* Rest of the application */}</TaskProvider>
       </RateLimitProvider>
     </AuthProvider>
   );
@@ -78,4 +76,4 @@ function App() {
 ## Related
 
 - [hooks](../hooks/README.md) - Custom hooks that often work with contexts
-- [services](../services/README.md) - Service layer that contexts often use for data access 
+- [services](../services/README.md) - Service layer that contexts often use for data access

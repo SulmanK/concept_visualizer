@@ -1,6 +1,6 @@
-import React from 'react';
-import { ConceptForm } from '../../../components/concept/ConceptForm';
-import { FormStatus } from '../../../types';
+import React from "react";
+import { ConceptForm } from "../../../components/concept/ConceptForm";
+import { FormStatus } from "../../../types";
 
 interface ConceptFormSectionProps {
   id?: string;
@@ -23,11 +23,11 @@ export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
   errorMessage,
   onReset,
   isProcessing,
-  processingMessage
+  processingMessage,
 }) => {
   return (
     <div id={id} className="mb-8 sm:mb-16 w-full">
-      <ConceptForm 
+      <ConceptForm
         onSubmit={onSubmit}
         status={status}
         error={errorMessage}
@@ -37,4 +37,4 @@ export const ConceptFormSection: React.FC<ConceptFormSectionProps> = ({
       />
     </div>
   );
-}; 
+};

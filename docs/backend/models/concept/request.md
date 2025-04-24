@@ -13,7 +13,7 @@ The `request.py` module in `app/models/concept/` defines Pydantic models for val
 ```python
 class PromptRequest(APIBaseModel):
     """Request model for concept generation."""
-    
+
     logo_description: str = Field(
         ...,
         min_length=5,
@@ -47,7 +47,7 @@ This model is used for concept generation requests and requires two fields:
 ```python
 class RefinementRequest(APIBaseModel):
     """Request model for concept refinement."""
-    
+
     original_image_url: HttpUrl = Field(
         ...,
         description="URL of the original image to refine"
@@ -111,4 +111,4 @@ Both models extend `APIBaseModel`, which includes common validation and serializ
 
 - [Response Models](response.md): Models for structuring API responses
 - [Domain Models](domain.md): Core domain models for concepts
-- [Base Models](../common/base.md): Common base models and utilities 
+- [Base Models](../common/base.md): Common base models and utilities

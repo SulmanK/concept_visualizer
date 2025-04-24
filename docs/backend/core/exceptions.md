@@ -5,11 +5,13 @@ The `exceptions.py` module defines a comprehensive hierarchy of custom exception
 ## Overview
 
 The exception system follows a hierarchical structure:
+
 - `ApplicationError` - The base class for all application exceptions
-- Domain-specific errors (e.g., `ConceptError`, `JigsawStackError`) 
+- Domain-specific errors (e.g., `ConceptError`, `JigsawStackError`)
 - Specific error cases (e.g., `ConceptNotFoundError`, `JigsawStackGenerationError`)
 
 All exceptions include:
+
 - Descriptive error messages
 - Additional context in a `details` dictionary
 - Consistent serialization to JSON/dictionary for API responses
@@ -58,11 +60,11 @@ ApplicationError
 ```python
 class ApplicationError(Exception):
     """Base class for all application-specific exceptions."""
-    
+
     def __init__(self, message: str, details: Optional[Dict[str, Any]] = None):
         """
         Initialize with error message and optional details.
-        
+
         Args:
             message: Human-readable error message
             details: Optional dictionary with additional error context
@@ -86,10 +88,10 @@ class ApplicationError(Exception):
 ```python
 class AuthenticationError(ApplicationError):
     """Exception raised for authentication-related errors."""
-    
+
     def __init__(
-        self, 
-        message: str = "Authentication error", 
+        self,
+        message: str = "Authentication error",
         token: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
     ):
@@ -101,10 +103,10 @@ class AuthenticationError(ApplicationError):
 ```python
 class DatabaseError(ApplicationError):
     """Exception raised when a database operation fails."""
-    
+
     def __init__(
-        self, 
-        message: str = "Database operation failed", 
+        self,
+        message: str = "Database operation failed",
         operation: Optional[str] = None,
         table: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
@@ -117,10 +119,10 @@ class DatabaseError(ApplicationError):
 ```python
 class JigsawStackError(ApplicationError):
     """Base exception for JigsawStack API errors."""
-    
+
     def __init__(
-        self, 
-        message: str = "JigsawStack API error", 
+        self,
+        message: str = "JigsawStack API error",
         status_code: Optional[int] = None,
         endpoint: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
@@ -133,10 +135,10 @@ class JigsawStackError(ApplicationError):
 ```python
 class RateLimitError(ApplicationError):
     """Exception raised when internal rate limiting is exceeded."""
-    
+
     def __init__(
-        self, 
-        message: str = "Rate limit exceeded", 
+        self,
+        message: str = "Rate limit exceeded",
         endpoint: Optional[str] = None,
         limit: Optional[str] = None,
         reset_after: Optional[str] = None,
@@ -150,10 +152,10 @@ class RateLimitError(ApplicationError):
 ```python
 class ConfigurationError(ApplicationError):
     """Exception raised for configuration issues."""
-    
+
     def __init__(
-        self, 
-        message: str = "Configuration error", 
+        self,
+        message: str = "Configuration error",
         config_key: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
     ):
@@ -213,11 +215,11 @@ When exceptions are converted to API responses, they follow this structure:
 
 The exceptions module implements security practices:
 
-1. **Sensitive Data Masking**: Tokens, passwords, and other sensitive information are masked in error details 
+1. **Sensitive Data Masking**: Tokens, passwords, and other sensitive information are masked in error details
 2. **Limited Information Disclosure**: Full prompts and other potentially sensitive input are truncated
 3. **Production Error Handling**: Different behavior in production to avoid revealing implementation details
 
 ## Related Documentation
 
 - [Config](config.md): Configuration system that uses these exceptions
-- [API Errors](../api/errors.md): How exceptions are translated to API responses 
+- [API Errors](../api/errors.md): How exceptions are translated to API responses

@@ -15,31 +15,31 @@ Fetches and tracks the status of a specific task. This hook is particularly usef
 #### Usage
 
 ```tsx
-import { useTaskStatusQuery } from '../hooks/useTaskQueries';
+import { useTaskStatusQuery } from "../hooks/useTaskQueries";
 
 function TaskTracker({ taskId }) {
-  const { 
-    data: task, 
-    isLoading, 
-    error 
+  const {
+    data: task,
+    isLoading,
+    error,
   } = useTaskStatusQuery(taskId, {
     // Poll every second while task is running
     refetchInterval: (data) => {
-      return data?.status === 'completed' || data?.status === 'failed' 
-        ? false 
+      return data?.status === "completed" || data?.status === "failed"
+        ? false
         : 1000;
     },
     onSuccess: (data) => {
-      if (data.status === 'completed') {
+      if (data.status === "completed") {
         // Handle task completion
-        console.log('Task completed:', data.result);
+        console.log("Task completed:", data.result);
       }
-    }
+    },
   });
 
   if (isLoading) return <LoadingIndicator />;
   if (error) return <ErrorMessage error={error} />;
-  
+
   return (
     <div>
       <h3>Task: {task?.name}</h3>
@@ -53,13 +53,13 @@ function TaskTracker({ taskId }) {
 
 #### Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `taskId` | `string \| null \| undefined` | Yes | The ID of the task to fetch |
-| `options` | Object | No | Additional query options |
-| `options.enabled` | `boolean` | No | Whether the query should execute |
-| `options.refetchInterval` | `number \| false \| ((data: TaskResponse) => number \| false)` | No | How often to refetch (in ms) |
-| `options.onSuccess` | `(data: TaskResponse) => void` | No | Callback when fetch succeeds |
+| Parameter                 | Type                                                           | Required | Description                      |
+| ------------------------- | -------------------------------------------------------------- | -------- | -------------------------------- |
+| `taskId`                  | `string \| null \| undefined`                                  | Yes      | The ID of the task to fetch      |
+| `options`                 | Object                                                         | No       | Additional query options         |
+| `options.enabled`         | `boolean`                                                      | No       | Whether the query should execute |
+| `options.refetchInterval` | `number \| false \| ((data: TaskResponse) => number \| false)` | No       | How often to refetch (in ms)     |
+| `options.onSuccess`       | `(data: TaskResponse) => void`                                 | No       | Callback when fetch succeeds     |
 
 #### Return Value
 
@@ -82,26 +82,23 @@ Provides a mutation for canceling a task that is in progress.
 #### Usage
 
 ```tsx
-import { useTaskCancelMutation } from '../hooks/useTaskQueries';
+import { useTaskCancelMutation } from "../hooks/useTaskQueries";
 
 function TaskController({ taskId }) {
   const cancelTask = useTaskCancelMutation();
-  
+
   const handleCancelClick = () => {
     cancelTask.mutate(taskId, {
       onSuccess: () => {
-        console.log('Task was canceled successfully');
+        console.log("Task was canceled successfully");
         // Update UI or notify user
-      }
+      },
     });
   };
-  
+
   return (
-    <button 
-      onClick={handleCancelClick}
-      disabled={cancelTask.isLoading}
-    >
-      {cancelTask.isLoading ? 'Canceling...' : 'Cancel Task'}
+    <button onClick={handleCancelClick} disabled={cancelTask.isLoading}>
+      {cancelTask.isLoading ? "Canceling..." : "Cancel Task"}
     </button>
   );
 }
@@ -129,16 +126,16 @@ The `TaskResponse` object returned by these hooks has the following structure:
 
 ```typescript
 interface TaskResponse {
-  id: string;           // Task ID
-  task_id?: string;     // Alternative task ID field (normalized to 'id')
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-  name?: string;        // Human-readable task name
-  progress?: number;    // Progress percentage (0-100)
-  message?: string;     // Status message
-  result?: any;         // Task result data when completed
-  error?: string;       // Error message if failed
-  created_at: string;   // ISO timestamp of task creation
-  updated_at: string;   // ISO timestamp of last update
+  id: string; // Task ID
+  task_id?: string; // Alternative task ID field (normalized to 'id')
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
+  name?: string; // Human-readable task name
+  progress?: number; // Progress percentage (0-100)
+  message?: string; // Status message
+  result?: any; // Task result data when completed
+  error?: string; // Error message if failed
+  created_at: string; // ISO timestamp of task creation
+  updated_at: string; // ISO timestamp of last update
 }
 ```
 
@@ -154,4 +151,4 @@ interface TaskResponse {
 
 - `TaskContext` - Provides application-wide task tracking
 - `TaskStatusBar` - UI component that displays task status
-- `useTaskSubscription` - Companion hook for real-time task updates via WebSockets 
+- `useTaskSubscription` - Companion hook for real-time task updates via WebSockets

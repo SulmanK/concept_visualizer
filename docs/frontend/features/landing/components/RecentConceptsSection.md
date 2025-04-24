@@ -22,16 +22,16 @@ const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
 }) => {
   // Show only up to maxDisplay concepts
   const displayConcepts = concepts.slice(0, maxDisplay);
-  
+
   if (displayConcepts.length === 0) {
     return null; // Don't render if no concepts
   }
-  
+
   return (
     <section className="recent-concepts-section">
       <div className="section-header">
         <h2 className="section-title">Your Recent Concepts</h2>
-        
+
         {showViewAllLink && concepts.length > maxDisplay && (
           <Link href="/concepts/recent" className="view-all-link">
             View All Concepts
@@ -39,13 +39,13 @@ const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
           </Link>
         )}
       </div>
-      
+
       <div className="recent-concepts-grid">
         {displayConcepts.map((concept) => (
           <ConceptCard
             key={concept.id}
             concept={concept}
-            onClick={() => window.location.href = `/concepts/${concept.id}`}
+            onClick={() => (window.location.href = `/concepts/${concept.id}`)}
           />
         ))}
       </div>
@@ -56,11 +56,11 @@ const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `concepts` | `Concept[]` | Yes | - | Array of concept objects to display |
-| `maxDisplay` | `number` | No | 3 | Maximum number of concepts to display |
-| `showViewAllLink` | `boolean` | No | true | Whether to show the "View All" link |
+| Prop              | Type        | Required | Default | Description                           |
+| ----------------- | ----------- | -------- | ------- | ------------------------------------- |
+| `concepts`        | `Concept[]` | Yes      | -       | Array of concept objects to display   |
+| `maxDisplay`      | `number`    | No       | 3       | Maximum number of concepts to display |
+| `showViewAllLink` | `boolean`   | No       | true    | Whether to show the "View All" link   |
 
 ## Features
 
@@ -83,7 +83,7 @@ interface Concept {
   title: string;
   createdAt: string;
   thumbnailUrl: string;
-  status: 'draft' | 'complete' | 'in-progress';
+  status: "draft" | "complete" | "in-progress";
   // Other concept properties
 }
 ```
@@ -113,17 +113,14 @@ This component is typically used on the landing page to show the user's recent w
 const LandingPage: React.FC = () => {
   const { data: recentConcepts } = useConceptQueries.useRecentConcepts({
     limit: 3,
-    sortOrder: 'newest'
+    sortOrder: "newest",
   });
-  
+
   return (
     <MainLayout>
       {/* Other sections */}
       {recentConcepts?.items.length > 0 && (
-        <RecentConceptsSection 
-          concepts={recentConcepts.items}
-          maxDisplay={3}
-        />
+        <RecentConceptsSection concepts={recentConcepts.items} maxDisplay={3} />
       )}
     </MainLayout>
   );
@@ -133,6 +130,7 @@ const LandingPage: React.FC = () => {
 ## Conditional Rendering
 
 The component automatically handles these edge cases:
+
 - Returns `null` if no concepts are available (prevents rendering empty sections)
 - Hides the "View All" link if there aren't more concepts than the display limit
-- Limits display to the specified maximum number of concepts 
+- Limits display to the specified maximum number of concepts

@@ -23,19 +23,17 @@ The `ApiToastListener` component is a utility component that listens for API eve
 The component is typically included once at a high level in the application component tree:
 
 ```tsx
-import { ApiToastListener } from '../components/ui/ApiToastListener';
-import { ToastContainer } from '../components/ui/ToastContainer';
+import { ApiToastListener } from "../components/ui/ApiToastListener";
+import { ToastContainer } from "../components/ui/ToastContainer";
 
 const App = () => {
   return (
     <>
       {/* Rest of your app */}
       <div className="app-container">
-        <Router>
-          {/* Routes and other components */}
-        </Router>
+        <Router>{/* Routes and other components */}</Router>
       </div>
-      
+
       {/* Toast system components */}
       <ApiToastListener />
       <ToastContainer position="bottom-right" />
@@ -67,4 +65,4 @@ The component listens for several types of API events:
 - [`Toast`](./Toast.md) - Individual toast notification component
 - [`ToastContainer`](./ToastContainer.md) - Container for managing multiple toasts
 - [`useToast`](../../hooks/useToast.md) - Hook for creating toast notifications
-- `eventService` - Service for application-wide event communication 
+- `eventService` - Service for application-wide event communication

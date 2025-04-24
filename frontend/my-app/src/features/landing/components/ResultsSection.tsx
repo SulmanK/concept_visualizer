@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ConceptData } from '../../../services/supabaseClient';
-import { SkeletonLoader } from '../../../components/ui/SkeletonLoader';
-import { Button } from '../../../components/ui/Button';
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { ConceptData } from "../../../services/supabaseClient";
+import { SkeletonLoader } from "../../../components/ui/SkeletonLoader";
+import { Button } from "../../../components/ui/Button";
 
 interface ResultsSectionProps {
   conceptId: string;
@@ -20,7 +20,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   conceptData,
   isLoading = false,
   onExportSelected,
-  onStartOver
+  onStartOver,
 }) => {
   // State to track the index of the selected variation (0 for original, 1+ for variations)
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -35,38 +35,38 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
     if (!conceptData) return [];
 
     const items = [];
-    
+
     // Add original concept image if available
     if (conceptData.image_url || conceptData.base_image_url) {
       // Get colors from the first color variation if available
       const originalColors = conceptData.color_variations?.[0]?.colors || [];
-      
+
       items.push({
-        id: 'original', // Special ID for the original
-        name: 'Original',
-        imageUrl: conceptData.image_url || conceptData.base_image_url || '',
+        id: "original", // Special ID for the original
+        name: "Original",
+        imageUrl: conceptData.image_url || conceptData.base_image_url || "",
         colors: Array.isArray(originalColors) ? originalColors : [],
       });
     }
 
     // Try color_variations as the primary source of variations
     const variationsData = conceptData.color_variations || [];
-    
+
     // Use only array data
     const variations = Array.isArray(variationsData) ? variationsData : [];
-    
+
     // Add variations
     variations.forEach((variation, index) => {
       if (!variation) return; // Skip if variation is null or undefined
-      
-      const variationColors = Array.isArray(variation.colors) 
-        ? variation.colors 
+
+      const variationColors = Array.isArray(variation.colors)
+        ? variation.colors
         : [];
-      
+
       items.push({
         id: variation.id || `variation-${index}`,
         name: variation.palette_name || `Variation ${index + 1}`,
-        imageUrl: variation.image_url || '',
+        imageUrl: variation.image_url || "",
         colors: variationColors,
       });
     });
@@ -75,12 +75,16 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
   }, [conceptData]);
 
   const handleExportClick = useCallback(() => {
-    if (!conceptData || selectedIndex < 0 || selectedIndex >= displayItems.length) {
+    if (
+      !conceptData ||
+      selectedIndex < 0 ||
+      selectedIndex >= displayItems.length
+    ) {
       return;
     }
 
     const selectedItem = displayItems[selectedIndex];
-    const variationId = selectedItem.id === 'original' ? null : selectedItem.id;
+    const variationId = selectedItem.id === "original" ? null : selectedItem.id;
 
     onExportSelected(conceptId, variationId);
   }, [selectedIndex, displayItems, conceptId, conceptData, onExportSelected]);
@@ -133,25 +137,36 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                 Generated Concept & Variations
               </h2>
               <span className="text-sm text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                {displayItems.length} {displayItems.length === 1 ? 'result' : 'results'}
+                {displayItems.length}{" "}
+                {displayItems.length === 1 ? "result" : "results"}
               </span>
             </div>
             {onStartOver && (
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleStartOver}
                 className="mt-2 sm:mt-0"
               >
-                <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 4V9H4.58152M19.9381 11C19.446 7.05369 16.0796 4 12 4C8.64262 4 5.76829 6.06817 4.58152 9M4.58152 9H9M20 20V15H19.4185M19.4185 15C18.2317 17.9318 15.3574 20 12 20C7.92038 20 4.55399 16.9463 4.06189 13M19.4185 15H15" 
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <svg
+                  className="w-4 h-4 mr-1"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 4V9H4.58152M19.9381 11C19.446 7.05369 16.0796 4 12 4C8.64262 4 5.76829 6.06817 4.58152 9M4.58152 9H9M20 20V15H19.4185M19.4185 15C18.2317 17.9318 15.3574 20 12 20C7.92038 20 4.55399 16.9463 4.06189 13M19.4185 15H15"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Start Over
               </Button>
             )}
           </div>
-          
+
           {/* Grid for images */}
           {displayItems.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
@@ -161,7 +176,11 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                   className={`
                     border-2 rounded-lg overflow-hidden cursor-pointer transition-all duration-200
                     hover:shadow-lg hover:border-indigo-500
-                    ${selectedIndex === index ? 'border-indigo-500 ring-2 ring-indigo-200 shadow-lg' : 'border-indigo-100'}
+                    ${
+                      selectedIndex === index
+                        ? "border-indigo-500 ring-2 ring-indigo-200 shadow-lg"
+                        : "border-indigo-100"
+                    }
                   `}
                   onClick={() => setSelectedIndex(index)}
                   title={`Select ${item.name}`}
@@ -180,14 +199,17 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
                     </p>
                     {/* Mini color palette */}
                     <div className="flex justify-center mt-1 space-x-1">
-                      {Array.isArray(item.colors) && item.colors.slice(0, 5).map((color, cIdx) => (
-                        <div
-                          key={cIdx}
-                          className="w-2 h-2 rounded-full border border-gray-300"
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
+                      {Array.isArray(item.colors) &&
+                        item.colors
+                          .slice(0, 5)
+                          .map((color, cIdx) => (
+                            <div
+                              key={cIdx}
+                              className="w-2 h-2 rounded-full border border-gray-300"
+                              style={{ backgroundColor: color }}
+                              title={color}
+                            />
+                          ))}
                     </div>
                   </div>
                 </div>
@@ -195,7 +217,9 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
             </div>
           ) : (
             <div className="text-center py-6 bg-indigo-50 rounded-lg">
-              <p className="text-indigo-600">No variations available for this concept</p>
+              <p className="text-indigo-600">
+                No variations available for this concept
+              </p>
             </div>
           )}
 
@@ -207,8 +231,19 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
               onClick={handleExportClick}
               disabled={displayItems.length === 0}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               Export Selected
             </Button>
@@ -217,4 +252,4 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
       </div>
     </div>
   );
-}; 
+};

@@ -45,4 +45,5 @@ async def generate_concept(
     try:
         return await service.generate_concept(request.prompt)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+```

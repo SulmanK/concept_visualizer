@@ -36,7 +36,7 @@ window.__vite_plugin_react_preamble_installed__ = true
         display: flex !important;
         flex-direction: column !important;
       }
-      
+
       /* Override any potential Vite/React default styles */
       body > div:first-child {
         margin: 0 !important;
@@ -44,351 +44,351 @@ window.__vite_plugin_react_preamble_installed__ = true
         max-width: 100% !important;
       }
     </style>
-  <style type="text/css" data-vite-dev-id="C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/src/components/layout/header.module.css">/* 
- * Header styles for the Concept Visualizer application
- * Combined and organized styles from both header.module.css and header-fix.css
- */
-
-/* Container styling */
-._headerContainer_176vl_13 {
-  width: 100%;
-  background-color: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(4px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid #e0e7ff;
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  margin: 0;
-  padding: 0;
-}
-
-._innerContainer_176vl_43 {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-._headerRow_176vl_57 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 4rem;
-}
-
-/* Logo and branding */
-._logoWrapper_176vl_73 {
-  display: flex;
-  align-items: center;
-}
-
-._logoLink_176vl_83 {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-._logoCircle_176vl_95 {
-  height: 2.5rem;
-  width: 2.5rem;
-  background: linear-gradient(to right, #4F46E5, #4338CA);
-  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  border-radius: 9999px;
-}
-
-._titleText_176vl_121 {
-  margin-left: 0.75rem;
-  font-size: 1.25rem;
-  font-weight: 700;
-  background: linear-gradient(to right, #4F46E5, #818CF8);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Navigation styling */
-._navContainer_176vl_143 {
-  display: flex;
-  gap: 1rem;
-}
-
-._activeNavLink_176vl_153 {
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  background: linear-gradient(to right, #4F46E5, #4338CA);
-  color: white;
-  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
-  text-decoration: none;
-}
-
-._inactiveNavLink_176vl_175 {
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #4338CA;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-._inactiveNavLink_176vl_175:hover {
-  background-color: rgba(243, 244, 246, 0.8);
-  color: #4F46E5;
-}
-
-._navIcon_176vl_205 {
-  margin-right: 0.5rem;
-} </style><style type="text/css" data-vite-dev-id="C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/src/styles/global.css">:root {
-  /* Colors - Primary */
-  --color-primary: #4F46E5;
-  --color-primary-dark: #4338CA;
-  --color-primary-light: #818CF8;
-  
-  /* Colors - Secondary */
-  --color-secondary: #7E22CE;
-  --color-secondary-dark: #6B21A8;
-  --color-secondary-light: #A78BFA;
-  
-  /* Colors - Neutrals */
-  --color-indigo-50: #EEF2FF;
-  --color-indigo-100: #E0E7FF;
-  --color-indigo-200: #C7D2FE;
-  --color-indigo-600: #4F46E5;
-  --color-indigo-700: #4338CA;
-  --color-indigo-900: #312E81;
-  
-  /* Colors - Accents */
-  --color-blue-100: #DBEAFE;
-  --color-blue-400: #60A5FA;
-  --color-blue-500: #3B82F6;
-  
-  /* Sizes */
-  --spacing-1: 0.25rem;
-  --spacing-2: 0.5rem;
-  --spacing-3: 0.75rem;
-  --spacing-4: 1rem;
-  --spacing-6: 1.5rem;
-  --spacing-8: 2rem;
-  --spacing-12: 3rem;
-  --spacing-16: 4rem;
-  
-  /* Font Sizes */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.25rem;
-  --text-2xl: 1.5rem;
-  --text-3xl: 1.875rem;
-  --text-4xl: 2.25rem;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-modern: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
-  --shadow-modern-hover: 0 20px 35px -10px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.04);
-  
-  /* Border Radius */
-  --radius-sm: 0.125rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
-  --radius-full: 9999px;
-  
-  /* Transitions */
-  --transition-fast: 150ms;
-  --transition-normal: 200ms;
-  --transition-slow: 300ms;
-}
-
-/* CSS Reset to remove default margins */
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-}
-
-body {
-  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
-}
-
-@tailwind base;
-
-@tailwind components;
-
-@tailwind utilities;
-
-@layer base {
-  body {
-    @apply bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen;
-    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold text-indigo-900;
-  }
-
-  h1 {
-    @apply text-3xl md:text-4xl;
-  }
-
-  h2 {
-    @apply text-2xl md:text-3xl;
-  }
-
-  h3 {
-    @apply text-xl md:text-2xl;
-  }
-
-  a {
-    @apply text-primary hover:text-primary-dark transition-colors;
-  }
-}
-
-@layer components {
-  /* Buttons */
-  .btn-primary {
-    @apply bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
-  }
-  
-  .btn-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
-  }
-  
-  .btn-outline {
-    @apply border-2 border-primary/50 bg-white/80 hover:bg-white text-primary px-6 py-3 rounded-lg shadow-sm hover:shadow-modern transition-all duration-200 font-semibold;
-  }
-
-  /* Cards */
-  .card {
-    @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden;
-  }
-
-  .card-gradient {
-    @apply bg-gradient-to-br from-indigo-50/90 to-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden;
-  }
-
-  .card-title {
-    @apply text-xl font-semibold text-indigo-900 mb-6;
-  }
-
-  /* Nav links */
-  .nav-link {
-    @apply px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200;
-  }
-
-  .nav-link-active {
-    @apply bg-gradient-to-r from-primary to-primary-dark text-white shadow-modern;
-  }
-
-  .nav-link-inactive {
-    @apply text-indigo-700 hover:bg-indigo-50 hover:text-primary transition-colors;
-  }
-
-  /* Form elements */
-  .input {
-    @apply w-full px-4 py-3 rounded-lg border border-indigo-200 focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all duration-200;
-  }
-
-  .label {
-    @apply block text-sm font-medium text-indigo-700 mb-2;
-  }
-
-  /* Helper text */
-  .helper-text {
-    @apply mt-2 text-xs text-gray-500;
-  }
-
-  /* Error messages */
-  .error-message {
-    @apply flex items-center p-4 rounded-lg text-sm bg-gradient-to-r from-red-50 to-indigo-50 text-red-600 border border-indigo-100 shadow-lg;
-  }
-
-  /* Gradient backgrounds */
-  .bg-gradient-primary {
-    @apply bg-gradient-to-r from-primary to-primary-dark;
-  }
-
-  .bg-gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-secondary-dark;
-  }
-  
-  .bg-gradient-page {
-    @apply bg-gradient-to-br from-indigo-50 to-blue-100;
-  }
-
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
-  }
-  
-  /* Interactive elements animations */
-  .hover-lift {
-    @apply transition-transform duration-300 hover:-translate-y-1;
-  }
-  
-  .hover-scale {
-    @apply transition-transform duration-300 hover:scale-105;
-  }
-  
-  .hover-bright {
-    @apply transition-all duration-300 hover:brightness-110;
-  }
-}
-
-/* Animations */
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.scale-in {
-  animation: scaleIn 0.3s ease-out;
+  <style type="text/css" data-vite-dev-id="C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/src/components/layout/header.module.css">/*
+ * Header styles for the Concept Visualizer application
+ * Combined and organized styles from both header.module.css and header-fix.css
+ */
+
+/* Container styling */
+._headerContainer_176vl_13 {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #e0e7ff;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  margin: 0;
+  padding: 0;
+}
+
+._innerContainer_176vl_43 {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+._headerRow_176vl_57 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 4rem;
+}
+
+/* Logo and branding */
+._logoWrapper_176vl_73 {
+  display: flex;
+  align-items: center;
+}
+
+._logoLink_176vl_83 {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+._logoCircle_176vl_95 {
+  height: 2.5rem;
+  width: 2.5rem;
+  background: linear-gradient(to right, #4F46E5, #4338CA);
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  border-radius: 9999px;
+}
+
+._titleText_176vl_121 {
+  margin-left: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #4F46E5, #818CF8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Navigation styling */
+._navContainer_176vl_143 {
+  display: flex;
+  gap: 1rem;
+}
+
+._activeNavLink_176vl_153 {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: linear-gradient(to right, #4F46E5, #4338CA);
+  color: white;
+  box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.2);
+  text-decoration: none;
+}
+
+._inactiveNavLink_176vl_175 {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4338CA;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+._inactiveNavLink_176vl_175:hover {
+  background-color: rgba(243, 244, 246, 0.8);
+  color: #4F46E5;
+}
+
+._navIcon_176vl_205 {
+  margin-right: 0.5rem;
+} </style><style type="text/css" data-vite-dev-id="C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/src/styles/global.css">:root {
+  /* Colors - Primary */
+  --color-primary: #4F46E5;
+  --color-primary-dark: #4338CA;
+  --color-primary-light: #818CF8;
+
+  /* Colors - Secondary */
+  --color-secondary: #7E22CE;
+  --color-secondary-dark: #6B21A8;
+  --color-secondary-light: #A78BFA;
+
+  /* Colors - Neutrals */
+  --color-indigo-50: #EEF2FF;
+  --color-indigo-100: #E0E7FF;
+  --color-indigo-200: #C7D2FE;
+  --color-indigo-600: #4F46E5;
+  --color-indigo-700: #4338CA;
+  --color-indigo-900: #312E81;
+
+  /* Colors - Accents */
+  --color-blue-100: #DBEAFE;
+  --color-blue-400: #60A5FA;
+  --color-blue-500: #3B82F6;
+
+  /* Sizes */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-modern: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  --shadow-modern-hover: 0 20px 35px -10px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.04);
+
+  /* Border Radius */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-normal: 200ms;
+  --transition-slow: 300ms;
+}
+
+/* CSS Reset to remove default margins */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+}
+
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-indigo-900;
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl;
+  }
+
+  h3 {
+    @apply text-xl md:text-2xl;
+  }
+
+  a {
+    @apply text-primary hover:text-primary-dark transition-colors;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
+  }
+
+  .btn-secondary {
+    @apply bg-gradient-to-r from-secondary to-secondary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary/50 bg-white/80 hover:bg-white text-primary px-6 py-3 rounded-lg shadow-sm hover:shadow-modern transition-all duration-200 font-semibold;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden;
+  }
+
+  .card-gradient {
+    @apply bg-gradient-to-br from-indigo-50/90 to-white/90 backdrop-blur-sm rounded-lg shadow-modern border border-indigo-100 overflow-hidden;
+  }
+
+  .card-title {
+    @apply text-xl font-semibold text-indigo-900 mb-6;
+  }
+
+  /* Nav links */
+  .nav-link {
+    @apply px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200;
+  }
+
+  .nav-link-active {
+    @apply bg-gradient-to-r from-primary to-primary-dark text-white shadow-modern;
+  }
+
+  .nav-link-inactive {
+    @apply text-indigo-700 hover:bg-indigo-50 hover:text-primary transition-colors;
+  }
+
+  /* Form elements */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg border border-indigo-200 focus:ring-2 focus:ring-primary/30 focus:border-primary focus:outline-none transition-all duration-200;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-indigo-700 mb-2;
+  }
+
+  /* Helper text */
+  .helper-text {
+    @apply mt-2 text-xs text-gray-500;
+  }
+
+  /* Error messages */
+  .error-message {
+    @apply flex items-center p-4 rounded-lg text-sm bg-gradient-to-r from-red-50 to-indigo-50 text-red-600 border border-indigo-100 shadow-lg;
+  }
+
+  /* Gradient backgrounds */
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary-dark;
+  }
+
+  .bg-gradient-secondary {
+    @apply bg-gradient-to-r from-secondary to-secondary-dark;
+  }
+
+  .bg-gradient-page {
+    @apply bg-gradient-to-br from-indigo-50 to-blue-100;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+  }
+
+  /* Interactive elements animations */
+  .hover-lift {
+    @apply transition-transform duration-300 hover:-translate-y-1;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-300 hover:scale-105;
+  }
+
+  .hover-bright {
+    @apply transition-all duration-300 hover:brightness-110;
+  }
+}
+
+/* Animations */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.scale-in {
+  animation: scaleIn 0.3s ease-out;
 } </style></head>
   <body class="bg-gradient-page" data-new-gr-c-s-check-loaded="8.929.0" data-gr-ext-installed="" data-gr-ext-disabled="forever">
     <div id="root"><div style="margin: 0px; padding: 0px; width: 100%; min-height: 100vh; display: flex; flex-direction: column; position: relative; overflow: hidden; background: linear-gradient(135deg, rgb(245, 247, 255) 0%, rgb(195, 207, 226) 100%); font-family: &quot;Inter&quot;, sans-serif;"><div style="display: flex; flex-direction: column; min-height: 100vh; width: 100%; margin: 0px; padding: 0px; background: linear-gradient(to right bottom, rgb(238, 242, 255), rgb(199, 210, 254));"><header class="_headerContainer_176vl_13"><div class="_innerContainer_176vl_43"><div class="_headerRow_176vl_57"><div class="_logoWrapper_176vl_73"><a class="_logoLink_176vl_83" href="http://localhost:5173/"><div class="_logoCircle_176vl_95">CV</div><h1 class="_titleText_176vl_121">Concept Visualizer</h1></a></div><nav class="_navContainer_176vl_143"><a class="_activeNavLink_176vl_153" href="http://localhost:5173/create"><span class="_navIcon_176vl_205">✨</span>Create</a><a class="_inactiveNavLink_176vl_175" href="http://localhost:5173/concepts/refine"><span class="_navIcon_176vl_205">🔄</span>Refine</a><a class="_inactiveNavLink_176vl_175" href="http://localhost:5173/recent"><span class="_navIcon_176vl_205">📚</span>Recent</a></nav></div></div></header><main style="flex: 1 1 auto; width: 100%; max-width: 1280px; margin: 0px auto; padding: 2rem;"><div class="space-y-12"><div class="text-left mb-8"><h1 class="text-4xl font-bold text-indigo-900 mb-4">Create Visual Concepts</h1><p style="color: rgb(99, 102, 241); font-size: 1rem; line-height: 1.5; margin-bottom: 2rem;">Describe
- your logo and theme to generate visual concepts. Our AI will create a 
+ your logo and theme to generate visual concepts. Our AI will create a
 logo design and color palette based on your descriptions.</p></div><div style="background-color: white; border-radius: 0.75rem; box-shadow: rgba(0, 0, 0, 0.05) 0px 10px 25px -5px, rgba(0, 0, 0, 0.02) 0px 8px 10px -6px; padding: 2rem; margin-bottom: 3rem;" class="mt-8"><h2 class="text-2xl font-bold text-indigo-900 mb-16">How It Works</h2><div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-bottom: 2rem; margin-top: 2rem; position: relative;"><div style="position: absolute; top: 30px; left: calc(16% + 35px); width: calc(33.3% - 70px); height: 2px; background-color: rgb(99, 102, 241); z-index: 0;"><div style="position: absolute; right: -8px; top: -4px; width: 0px; height: 0px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid rgb(99, 102, 241);"></div></div><div style="position: absolute; top: 30px; left: calc(50% + 35px); width: calc(33.3% - 70px); height: 2px; background-color: rgb(99, 102, 241); z-index: 0;"><div style="position: absolute; right: -8px; top: -4px; width: 0px; height: 0px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid rgb(99, 102, 241);"></div></div><div style="text-align: center; position: relative; z-index: 1;"><div style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;">1</div><h3 style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;">Describe Your Vision</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;">Provide detailed descriptions of your logo concept and color preferences.</p></div><div style="text-align: center; position: relative; z-index: 1;"><div style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;">2</div><h3 style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;">AI Generation</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;">Our AI processes your description and creates unique visual concepts.</p></div><div style="text-align: center; position: relative; z-index: 1;"><div style="width: 60px; height: 60px; background-color: rgb(238, 242, 255); color: rgb(99, 102, 241); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 600; margin: 0px auto;">3</div><h3 style="font-size: 1.125rem; font-weight: 600; color: rgb(30, 41, 59); margin-bottom: 1rem;">Refine &amp; Download</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem;">Refine the generated concepts and download your final designs.</p></div></div><div style="text-align: center; margin-top: 2rem;"><button style="background-color: rgb(79, 70, 229); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; font-size: 0.875rem; border: medium; cursor: pointer; transition: background-color 0.2s;">Get Started</button></div></div><div id="create-form"><div style="background-color: white; border-radius: 0.75rem; box-shadow: rgba(0, 0, 0, 0.05) 0px 10px 25px -5px, rgba(0, 0, 0, 0.02) 0px 8px 10px -6px; padding: 2rem; margin-bottom: 2rem;"><h2 class="text-xl font-semibold text-indigo-900 mb-6">Create New Concept</h2><form class="space-y-6"><div><div class="mb-6"><label style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;">Logo Description</label><textarea placeholder="Describe the logo you want to generate..." style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"></textarea><p style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;">Be descriptive about style, symbols, and colors you want</p></div><div class="mb-6"><label style="display: block; font-size: 0.875rem; font-weight: 600; color: rgb(67, 56, 202); margin-bottom: 0.5rem;">Theme/Color Scheme Description</label><textarea placeholder="Describe the theme or color scheme..." style="width: 100%; padding: 0.75rem; border: 1px solid rgb(224, 231, 255); border-radius: 0.375rem; font-size: 0.875rem; background-color: rgb(245, 247, 255); resize: vertical; min-height: 7rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;"></textarea><p style="font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;">Describe mood, colors, and style of your brand</p></div></div><div style="display: flex; justify-content: flex-end;"><button type="submit" style="background-color: rgb(79, 70, 229); color: white; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; border: medium; cursor: pointer; transition: background-color 0.2s; margin-top: 1rem;">Generate Concept</button></div></form></div></div><div class="mt-32"><h2 style="font-size: 1.25rem; font-weight: bold; color: rgb(17, 24, 39); margin-bottom: 1rem;">Recent Concepts</h2><div style="background-color: white; border-radius: 0.75rem; box-shadow: rgba(0, 0, 0, 0.05) 0px 10px 25px -5px, rgba(0, 0, 0, 0.02) 0px 8px 10px -6px; padding: 2rem; margin-bottom: 2rem;"><div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin: 0px; padding: 0px; width: 100%;"><div style="display: flex; flex-direction: column; background-color: rgb(245, 247, 255); border-radius: 0.5rem; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px; height: 100%;"><div style="background: linear-gradient(to right, rgb(79, 70, 229), rgb(96, 165, 250)); height: 200px; display: flex; align-items: center; justify-content: center;"><div style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(79, 70, 229);">TC</div></div><div style="padding: 1.25rem 1.5rem; flex-grow: 1;"><h3 style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;">Tech Company</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;">Modern minimalist tech logo with abstract elements</p><div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"><span style="background-color: rgb(79, 70, 229); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#4F46E5"></span><span style="background-color: rgb(96, 165, 250); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#60A5FA"></span><span style="background-color: rgb(30, 41, 59); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#1E293B"></span></div><div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgb(226, 232, 240);"><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">Edit</a><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">View Details</a></div></div></div><div style="display: flex; flex-direction: column; background-color: rgb(245, 247, 255); border-radius: 0.5rem; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px; height: 100%;"><div style="background: linear-gradient(to right, rgb(126, 34, 206), rgb(129, 140, 248)); height: 200px; display: flex; align-items: center; justify-content: center;"><div style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(126, 34, 206);">FS</div></div><div style="padding: 1.25rem 1.5rem; flex-grow: 1;"><h3 style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;">Fashion Studio</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;">Elegant fashion brand with clean typography</p><div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"><span style="background-color: rgb(126, 34, 206); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#7E22CE"></span><span style="background-color: rgb(129, 140, 248); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#818CF8"></span><span style="background-color: rgb(249, 168, 212); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#F9A8D4"></span></div><div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgb(226, 232, 240);"><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">Edit</a><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">View Details</a></div></div></div><div style="display: flex; flex-direction: column; background-color: rgb(245, 247, 255); border-radius: 0.5rem; overflow: hidden; box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 6px -1px; height: 100%;"><div style="background: linear-gradient(to right, rgb(5, 150, 105), rgb(96, 165, 250)); height: 200px; display: flex; align-items: center; justify-content: center;"><div style="width: 70px; height: 70px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; color: rgb(5, 150, 105);">EP</div></div><div style="padding: 1.25rem 1.5rem; flex-grow: 1;"><h3 style="font-weight: 600; font-size: 1rem; color: rgb(30, 41, 59); margin-bottom: 0.5rem;">Eco Product</h3><p style="font-size: 0.875rem; color: rgb(100, 116, 139); line-height: 1.25rem; margin-bottom: 1rem;">Sustainable brand with natural elements</p><div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;"><span style="background-color: rgb(5, 150, 105); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#059669"></span><span style="background-color: rgb(96, 165, 250); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#60A5FA"></span><span style="background-color: rgb(16, 185, 129); width: 1.5rem; height: 1.5rem; border-radius: 9999px; display: inline-block;" title="#10B981"></span></div><div style="display: flex; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgb(226, 232, 240);"><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">Edit</a><a href="#" style="color: rgb(99, 102, 241); font-weight: 500; font-size: 0.875rem; text-decoration: none; cursor: pointer; padding: 0.25rem 0px;">View Details</a></div></div></div></div></div></div></div></main><footer style="background-color: rgb(49, 46, 129); color: rgb(224, 231, 255); padding: 2rem 0px; margin-top: 3rem; box-shadow: rgba(0, 0, 0, 0.1) 0px -4px 6px -1px; width: 100%;"><div style="width: 100%; max-width: 1280px; margin: 0px auto; padding: 0px 2rem;"><div style="display: flex; flex-flow: wrap; justify-content: space-between; gap: 2rem;"><div style="flex: 1 1 0%; min-width: 250px;"><div style="display: flex; align-items: center;"><div style="height: 2.5rem; width: 2.5rem; border-radius: 9999px; background: linear-gradient(to right, rgb(139, 92, 246), rgb(124, 58, 237)); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; box-shadow: rgba(139, 92, 246, 0.2) 0px 10px 30px -5px;">CV</div><h2 style="margin-left: 0.75rem; font-size: 1.25rem; font-weight: 700; color: white;">Concept Visualizer</h2></div><p style="margin-top: 0.75rem; font-size: 0.875rem; color: rgb(199, 210, 254);">Create and refine visual concepts with AI</p><div style="margin-top: 1rem;"><a href="https://jigsawstack.com/?ref=powered-by" rel="follow"><img alt="Powered by JigsawStack. The One API for your next big thing." style="height: 60px; max-width: 100%;" src="Concept%20Visualizer_files/badge.svg"></a></div></div><div style="flex: 1 1 0%; min-width: 250px;"><h3 style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;">Features</h3><ul style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"><li><a style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s;" href="http://localhost:5173/create">Create Concepts</a></li><li><a style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s;" href="http://localhost:5173/refine">Refine Concepts</a></li></ul></div><div style="flex: 1 1 0%; min-width: 250px;"><h3 style="font-size: 0.875rem; font-weight: 600; color: white; text-transform: uppercase;">Resources</h3><ul style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;"><li><a href="https://github.com/username/concept-visualizer" target="_blank" rel="noopener noreferrer" style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s;">GitHub Repository</a></li><li><a href="https://jigsawstack.com/" target="_blank" rel="noopener noreferrer" style="font-size: 0.875rem; color: rgb(199, 210, 254); text-decoration: none; transition: color 0.15s;">JigsawStack API</a></li></ul></div></div><div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgb(79, 70, 229); text-align: center;"><p style="font-size: 0.875rem; color: rgb(165, 180, 252);">© 2025 Concept Visualizer. All rights reserved.</p></div></div></footer></div><div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0, 0, 0, 0.7); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; z-index: 9999; cursor: pointer;">Session: ✅ | Supabase: ✅</div></div></div>
     <script type="module" src="Concept%20Visualizer_files/main.tsx"></script>
-  
+
 
 </body></html>

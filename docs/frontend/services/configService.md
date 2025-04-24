@@ -38,10 +38,10 @@ interface AppConfig {
 
 ## Key Functions
 
-| Function | Description |
-|----------|-------------|
-| `fetchConfig()` | Asynchronously fetches configuration from the backend API |
-| `getConfig()` | Returns the current configuration, falling back to defaults if needed |
+| Function              | Description                                                                  |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `fetchConfig()`       | Asynchronously fetches configuration from the backend API                    |
+| `getConfig()`         | Returns the current configuration, falling back to defaults if needed        |
 | `getBucketName(type)` | Returns the bucket name for a specific storage type ('concept' or 'palette') |
 
 ## React Hooks
@@ -57,21 +57,19 @@ A custom React hook that provides the application configuration with loading and
 ## Usage Example
 
 ```tsx
-import { useConfig } from '../services/configService';
+import { useConfig } from "../services/configService";
 
 const FeatureFlagExample = () => {
   const { config, loading } = useConfig();
-  
+
   if (loading) return <div>Loading configuration...</div>;
-  
+
   return (
     <div>
-      {config.features.refinement && (
-        <button>Refine Concept</button>
-      )}
-      
+      {config.features.refinement && <button>Refine Concept</button>}
+
       <p>Maximum upload size: {config.maxUploadSize / (1024 * 1024)}MB</p>
-      <p>Supported file types: {config.supportedFileTypes.join(', ')}</p>
+      <p>Supported file types: {config.supportedFileTypes.join(", ")}</p>
     </div>
   );
 };
@@ -80,4 +78,4 @@ const FeatureFlagExample = () => {
 ## Notes
 
 - For React components, prefer using the `useConfigQuery` hook from `src/hooks/useConfigQuery.ts` for React Query integration
-- The service initializes configuration on module load to ensure it's available early in the application lifecycle 
+- The service initializes configuration on module load to ensure it's available early in the application lifecycle

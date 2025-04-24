@@ -64,16 +64,16 @@ app/services/storage/
 ```python
 class SessionAuthService:
     """Service for session authentication operations."""
-    
+
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize with a Supabase client."""
         self.supabase_client = supabase_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def validate_session(self, session_id: str) -> bool:
         """Validate that a session exists and is active."""
         # Implementation...
-    
+
     def get_session_client(self, session_id: str) -> SupabaseClient:
         """Get a Supabase client configured with the session ID in headers."""
         # Implementation...
@@ -84,24 +84,24 @@ class SessionAuthService:
 ```python
 class SessionPersistenceService:
     """Service for session storage operations."""
-    
+
     def __init__(self, session_storage: SessionStorage):
         """Initialize with a SessionStorage instance."""
         self.session_storage = session_storage
         self.logger = logging.getLogger(__name__)
-    
+
     async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         """Get a session by ID."""
         # Implementation...
-    
+
     async def create_session(self) -> Dict[str, Any]:
         """Create a new session."""
         # Implementation...
-    
+
     async def create_session_with_id(self, session_id: str) -> Dict[str, Any]:
         """Create a new session with a specific ID."""
         # Implementation...
-    
+
     async def update_session_activity(self, session_id: str) -> bool:
         """Update the last activity timestamp of a session."""
         # Implementation...
@@ -112,20 +112,20 @@ class SessionPersistenceService:
 ```python
 class SessionLifecycleService:
     """Service for session lifecycle management."""
-    
+
     def __init__(self, session_storage: SessionStorage):
         """Initialize with a SessionStorage instance."""
         self.session_storage = session_storage
         self.logger = logging.getLogger(__name__)
-    
+
     async def expire_session(self, session_id: str) -> bool:
         """Mark a session as expired."""
         # Implementation...
-    
+
     async def clean_expired_sessions(self, max_age_days: int = 30) -> int:
         """Clean up expired sessions older than specified days."""
         # Implementation...
-    
+
     def _set_session_cookie(self, response: Response, session_id: str, max_age: int = 2592000) -> None:
         """Set a session cookie in the response."""
         # Implementation (2592000 = 30 days)...
@@ -136,7 +136,7 @@ class SessionLifecycleService:
 ```python
 class SessionService:
     """Main service for session management using composition."""
-    
+
     def __init__(
         self,
         auth_service: SessionAuthService,
@@ -148,16 +148,16 @@ class SessionService:
         self.persistence = persistence_service
         self.lifecycle = lifecycle_service
         self.logger = logging.getLogger(__name__)
-    
+
     async def get_or_create_session(
-        self, 
+        self,
         response: Response,
         session_id: Optional[str] = Cookie(None, alias="concept_session"),
         client_session_id: Optional[str] = None
     ) -> Tuple[str, bool]:
         """Get existing session or create a new one."""
         # Implementation using composition...
-    
+
     # Other methods delegating to specialized services...
 ```
 
@@ -168,20 +168,20 @@ class SessionService:
 ```python
 class ConceptPersistenceService:
     """Service for basic concept persistence operations."""
-    
+
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize with a Supabase client."""
         self.supabase_client = supabase_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def store_concept(self, concept_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Store a new concept."""
         # Implementation...
-    
+
     async def update_concept(self, concept_id: str, concept_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update an existing concept."""
         # Implementation...
-    
+
     async def delete_concept(self, concept_id: str, session_id: str) -> bool:
         """Delete a concept."""
         # Implementation...
@@ -192,26 +192,26 @@ class ConceptPersistenceService:
 ```python
 class ConceptQueryService:
     """Service for concept retrieval operations."""
-    
+
     def __init__(self, supabase_client: SupabaseClient, image_storage: ImageStorage):
         """Initialize with a Supabase client and image storage."""
         self.supabase_client = supabase_client
         self.image_storage = image_storage
         self.logger = logging.getLogger(__name__)
-    
+
     async def get_recent_concepts(self, session_id: str, limit: int = 10) -> List[ConceptSummary]:
         """Get recent concepts for a session."""
         # Implementation...
-    
+
     async def get_concept_detail(self, concept_id: str, session_id: str) -> Optional[ConceptDetail]:
         """Get detailed information about a specific concept."""
         # Implementation...
-    
+
     async def search_concepts(
-        self, 
-        session_id: str, 
-        query: str, 
-        limit: int = 10, 
+        self,
+        session_id: str,
+        query: str,
+        limit: int = 10,
         offset: int = 0
     ) -> Tuple[List[ConceptSummary], int]:
         """Search concepts by text query."""
@@ -223,26 +223,26 @@ class ConceptQueryService:
 ```python
 class PalettePersistenceService:
     """Service for palette persistence operations."""
-    
+
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize with a Supabase client."""
         self.supabase_client = supabase_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def store_color_variations(
-        self, 
+        self,
         concept_id: str,
         variations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Store color variations for a concept."""
         # Implementation...
-    
+
     async def get_color_variations(self, concept_id: str) -> List[Dict[str, Any]]:
         """Get color variations for a concept."""
         # Implementation...
-    
+
     async def update_color_variation(
-        self, 
+        self,
         variation_id: str,
         variation_data: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
@@ -259,7 +259,7 @@ def get_concept_persistence_service(
     """Get a concept persistence service instance."""
     if supabase_client is None:
         supabase_client = get_supabase_client()
-    
+
     return ConceptPersistenceService(supabase_client)
 
 def get_concept_query_service(
@@ -271,7 +271,7 @@ def get_concept_query_service(
         supabase_client = get_supabase_client()
     if image_storage is None:
         image_storage = get_image_storage(supabase_client)
-    
+
     return ConceptQueryService(supabase_client, image_storage)
 
 # Legacy support
@@ -281,11 +281,11 @@ def get_concept_storage_service(
     """Get the main concept storage service (for backward compatibility)."""
     if supabase_client is None:
         supabase_client = get_supabase_client()
-    
+
     persistence = get_concept_persistence_service(supabase_client)
     query = get_concept_query_service(supabase_client)
     palette = get_palette_persistence_service(supabase_client)
-    
+
     return ConceptStorageService(persistence, query, palette)
 ```
 
@@ -296,20 +296,20 @@ Define clear interfaces for each service:
 ```python
 class SessionAuthInterface(Protocol):
     """Interface for session authentication services."""
-    
+
     async def validate_session(self, session_id: str) -> bool: ...
-    
+
     def get_session_client(self, session_id: str) -> SupabaseClient: ...
 
 class SessionPersistenceInterface(Protocol):
     """Interface for session persistence services."""
-    
+
     async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]: ...
-    
+
     async def create_session(self) -> Dict[str, Any]: ...
-    
+
     async def create_session_with_id(self, session_id: str) -> Dict[str, Any]: ...
-    
+
     async def update_session_activity(self, session_id: str) -> bool: ...
 
 # Other interfaces...
@@ -376,4 +376,4 @@ To maintain backward compatibility:
 - Phase 3 (Integration): 1 day
 - Testing: 2 days
 
-Total: 8 days 
+Total: 8 days

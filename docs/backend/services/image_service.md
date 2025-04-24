@@ -19,9 +19,9 @@ The Image Service provides a high-level API for:
 ```python
 class ImageService:
     """Service for image generation and manipulation."""
-    
+
     def __init__(
-        self, 
+        self,
         image_persistence: ImagePersistenceService,
         ai_client: JigsawStackClient,
         storage_provider: StorageProvider,
@@ -31,6 +31,7 @@ class ImageService:
 ```
 
 **Dependencies:**
+
 - `image_persistence`: Service for persisting image data in the database
 - `ai_client`: Client for interacting with AI image generation APIs
 - `storage_provider`: Provider for storing image files
@@ -54,6 +55,7 @@ async def generate_image(
 Generates an image using AI based on the provided prompt.
 
 **Parameters:**
+
 - `prompt`: Text description of the image to generate
 - `width`: Width of the generated image
 - `height`: Height of the generated image
@@ -62,6 +64,7 @@ Generates an image using AI based on the provided prompt.
 - `negative_prompt`: Text description of what to avoid in the image
 
 **Returns:**
+
 - `GeneratedImage`: The generated image with metadata
 
 ```python
@@ -77,11 +80,13 @@ async def generate_variations(
 Generates variations of an existing image.
 
 **Parameters:**
+
 - `base_image_id`: ID of the base image
 - `num_variations`: Number of variations to generate
 - `variation_strength`: Strength of variation (0.0 to 1.0)
 
 **Returns:**
+
 - List of generated image variations
 
 ### Image Refinement
@@ -100,12 +105,14 @@ async def refine_image(
 Refines an existing image based on a refinement prompt.
 
 **Parameters:**
+
 - `image_id`: ID of the image to refine
 - `refinement_prompt`: Text description of the refinements to make
 - `preserve_structure`: Whether to preserve the overall structure of the image
 - `refinement_strength`: Strength of the refinement (0.0 to 1.0)
 
 **Returns:**
+
 - `GeneratedImage`: The refined image with metadata
 
 ### Color Palette Management
@@ -123,11 +130,13 @@ async def generate_color_palette(
 Generates a color palette from an image.
 
 **Parameters:**
+
 - `image_id`: ID of the image to extract colors from
 - `num_colors`: Number of colors in the palette
 - `palette_type`: Type of palette to generate (e.g., "dominant", "vibrant", "muted")
 
 **Returns:**
+
 - `Palette`: Color palette extracted from the image
 
 ```python
@@ -142,10 +151,12 @@ async def generate_multiple_palettes(
 Generates multiple color palette options from an image.
 
 **Parameters:**
+
 - `image_id`: ID of the image to extract colors from
 - `palette_options`: Options for palette generation
 
 **Returns:**
+
 - List of color palettes extracted from the image
 
 ```python
@@ -161,11 +172,13 @@ async def apply_palette_to_image(
 Applies a color palette to an image.
 
 **Parameters:**
+
 - `image_id`: ID of the image to modify
 - `palette_id`: ID of the palette to apply
 - `strength`: Strength of the application (0.0 to 1.0)
 
 **Returns:**
+
 - `GeneratedImage`: Image with the palette applied
 
 ### Image Processing
@@ -184,12 +197,14 @@ async def resize_image(
 Resizes an image to the specified dimensions.
 
 **Parameters:**
+
 - `image_id`: ID of the image to resize
 - `width`: Target width
 - `height`: Target height
 - `maintain_aspect_ratio`: Whether to maintain the aspect ratio
 
 **Returns:**
+
 - `ProcessedImage`: Resized image with metadata
 
 ```python
@@ -207,6 +222,7 @@ async def crop_image(
 Crops an image to the specified region.
 
 **Parameters:**
+
 - `image_id`: ID of the image to crop
 - `x`: X-coordinate of the top-left corner
 - `y`: Y-coordinate of the top-left corner
@@ -214,6 +230,7 @@ Crops an image to the specified region.
 - `height`: Height of the crop region
 
 **Returns:**
+
 - `ProcessedImage`: Cropped image with metadata
 
 ```python
@@ -229,11 +246,13 @@ async def apply_filter(
 Applies a filter to an image.
 
 **Parameters:**
+
 - `image_id`: ID of the image to filter
 - `filter_type`: Type of filter to apply
 - `filter_params`: Parameters for the filter
 
 **Returns:**
+
 - `ProcessedImage`: Filtered image with metadata
 
 ### Image Storage and Retrieval
@@ -252,12 +271,14 @@ async def upload_image(
 Uploads a user-provided image.
 
 **Parameters:**
+
 - `file_data`: Binary data of the image
 - `filename`: Name of the file
 - `content_type`: MIME type of the image
 - `metadata`: Additional metadata for the image
 
 **Returns:**
+
 - `UploadedImage`: Uploaded image with metadata
 
 ```python
@@ -271,9 +292,11 @@ async def get_image(
 Retrieves an image by ID.
 
 **Parameters:**
+
 - `image_id`: ID of the image to retrieve
 
 **Returns:**
+
 - `ImageAsset`: Image with metadata
 
 ```python
@@ -288,10 +311,12 @@ async def get_image_url(
 Gets a temporary URL for accessing an image.
 
 **Parameters:**
+
 - `image_id`: ID of the image
 - `expiration`: Expiration time of the URL in seconds
 
 **Returns:**
+
 - Temporary URL for accessing the image
 
 ### Image Export and Format Conversion
@@ -310,12 +335,14 @@ async def export_image(
 Exports an image in the specified format.
 
 **Parameters:**
+
 - `image_id`: ID of the image to export
 - `format`: Format to export to (e.g., "png", "jpg", "webp")
 - `quality`: Quality of the export (0 to 100)
 - `include_metadata`: Whether to include metadata in the export
 
 **Returns:**
+
 - Binary data of the exported image
 
 ## Data Models
@@ -325,7 +352,7 @@ Exports an image in the specified format.
 ```python
 class ImageAsset(BaseModel):
     """Represents an image asset in the system."""
-    
+
     image_id: str
     filename: str
     content_type: str
@@ -345,7 +372,7 @@ Represents an image asset in the system.
 ```python
 class GeneratedImage(ImageAsset):
     """Represents an AI-generated image."""
-    
+
     prompt: str
     model: str
     generation_params: Dict[str, Any] = {}
@@ -361,7 +388,7 @@ Represents an AI-generated image.
 ```python
 class ProcessedImage(ImageAsset):
     """Represents a processed image."""
-    
+
     source_image_id: str
     processing_type: str
     processing_params: Dict[str, Any] = {}
@@ -374,7 +401,7 @@ Represents a processed image.
 ```python
 class UploadedImage(ImageAsset):
     """Represents a user-uploaded image."""
-    
+
     uploader_id: str
     original_filename: str
 ```
@@ -386,7 +413,7 @@ Represents a user-uploaded image.
 ```python
 class PaletteColor(BaseModel):
     """Represents a color in a palette."""
-    
+
     hex: str
     rgb: Tuple[int, int, int]
     hsv: Tuple[float, float, float]
@@ -401,7 +428,7 @@ Represents a color in a palette.
 ```python
 class Palette(BaseModel):
     """Represents a color palette."""
-    
+
     palette_id: str
     name: str
     source_image_id: Optional[str] = None
@@ -588,4 +615,4 @@ The `ImageService` implements several optimizations for better performance:
 - [JigsawStack Client](../clients/jigsaw_stack_client.md): Client for AI image generation
 - [Storage Provider](../storage/storage_provider.md): Provider for storing image files
 - [Image API Routes](../api/routes/image_routes.md): API endpoints for image operations
-- [Color Palette API Routes](../api/routes/palette_routes.md): API endpoints for color palette operations 
+- [Color Palette API Routes](../api/routes/palette_routes.md): API endpoints for color palette operations

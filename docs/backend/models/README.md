@@ -37,7 +37,7 @@ from datetime import datetime
 class ConceptRequest(BaseModel):
     prompt: str = Field(..., min_length=10, max_length=1000)
     style: Optional[str] = Field(None, examples=["minimal", "vibrant", "dark"])
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -52,7 +52,8 @@ class Concept:
     prompt: str
     image_url: str
     created_at: datetime
-    
+
     # Domain logic methods
     def is_recent(self) -> bool:
-        return (datetime.now() - self.created_at).days < 7 
+        return (datetime.now() - self.created_at).days < 7
+```

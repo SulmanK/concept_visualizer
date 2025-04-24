@@ -57,26 +57,26 @@ The `validationUtils.ts` module provides input validation functions:
 ### Error Handling
 
 ```typescript
-import { parseApiError, createErrorHandler } from '../utils/errorUtils';
-import { logger } from '../utils/logger';
+import { parseApiError, createErrorHandler } from "../utils/errorUtils";
+import { logger } from "../utils/logger";
 
 const fetchData = async () => {
   try {
-    const response = await api.get('/data');
+    const response = await api.get("/data");
     return response.data;
   } catch (error) {
     const errorMessage = parseApiError(error);
-    logger.error('Failed to fetch data', { error: errorMessage });
+    logger.error("Failed to fetch data", { error: errorMessage });
     throw new Error(errorMessage);
   }
 };
 
 // Or using the error handler creator
-const handleError = createErrorHandler('Failed to fetch data');
+const handleError = createErrorHandler("Failed to fetch data");
 
 const fetchDataSafe = async () => {
   try {
-    const response = await api.get('/data');
+    const response = await api.get("/data");
     return response.data;
   } catch (error) {
     handleError(error);
@@ -87,10 +87,10 @@ const fetchDataSafe = async () => {
 ### Formatting
 
 ```typescript
-import { formatDate, truncateString } from '../utils/formatUtils';
+import { formatDate, truncateString } from "../utils/formatUtils";
 
 const FormattedDate = ({ date }) => {
-  return <span>{formatDate(date, 'MMM DD, YYYY')}</span>;
+  return <span>{formatDate(date, "MMM DD, YYYY")}</span>;
 };
 
 const TruncatedText = ({ text, maxLength = 100 }) => {
@@ -101,21 +101,24 @@ const TruncatedText = ({ text, maxLength = 100 }) => {
 ### Validation
 
 ```typescript
-import { isValidEmail, validateConceptInput } from '../utils/validationUtils';
+import { isValidEmail, validateConceptInput } from "../utils/validationUtils";
 
 const validateForm = (formData) => {
   const errors = {};
-  
+
   if (!isValidEmail(formData.email)) {
-    errors.email = 'Please enter a valid email address';
+    errors.email = "Please enter a valid email address";
   }
-  
-  const conceptErrors = validateConceptInput(formData.logoDescription, formData.themeDescription);
+
+  const conceptErrors = validateConceptInput(
+    formData.logoDescription,
+    formData.themeDescription,
+  );
   if (conceptErrors) {
     errors.logoDescription = conceptErrors.logoDescription;
     errors.themeDescription = conceptErrors.themeDescription;
   }
-  
+
   return Object.keys(errors).length > 0 ? errors : null;
 };
 ```
@@ -128,4 +131,4 @@ const validateForm = (formData) => {
 4. **Documentation**: Document utility functions with JSDoc comments
 5. **Testing**: Write unit tests for utility functions
 6. **Consistency**: Maintain consistent naming and parameter order
-7. **Single Responsibility**: Each utility file should focus on a specific domain 
+7. **Single Responsibility**: Each utility file should focus on a specific domain

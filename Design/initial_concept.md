@@ -109,36 +109,36 @@ The Visual Moodboard Generator holds significant potential as a tool that effect
 
 **Table 1: JigsawStack API Parameters for Image Generation**
 
-|   |   |   |   |   |
-|---|---|---|---|---|
-|**Parameter Name**|**Description**|**Data Type**|**Optional/Required**|**Default Value**|
-|`prompt`|The text prompt to generate the image from.|string|Required|None|
-|`aspect_ratio`|The aspect ratio of the generated image (e.g., "1:1", "16:9").|string|Optional|"1:1"|
-|`width`|The width of the image in pixels (256-1920).|number|Optional|None|
-|`height`|The height of the image in pixels (256-1920).|number|Optional|None|
-|`steps`|The number of denoising steps (1-90).|number|Optional|"4"|
-|`advance_config`|An object containing advanced configuration options.|object|Optional|None|
-|`negative_prompt`|Text describing what you don’t want in the image (within `advance_config`).|string|Optional|None|
-|`guidance`|Higher guidance forces the model to better follow the prompt (1-28, within `advance_config`).|number|Optional|None|
-|`seed`|Makes generation deterministic; using the same seed and parameters will produce an identical image (within `advance_config`).|number|Optional|None|
+|                    |                                                                                                                               |               |                       |                   |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------- | --------------------- | ----------------- |
+| **Parameter Name** | **Description**                                                                                                               | **Data Type** | **Optional/Required** | **Default Value** |
+| `prompt`           | The text prompt to generate the image from.                                                                                   | string        | Required              | None              |
+| `aspect_ratio`     | The aspect ratio of the generated image (e.g., "1:1", "16:9").                                                                | string        | Optional              | "1:1"             |
+| `width`            | The width of the image in pixels (256-1920).                                                                                  | number        | Optional              | None              |
+| `height`           | The height of the image in pixels (256-1920).                                                                                 | number        | Optional              | None              |
+| `steps`            | The number of denoising steps (1-90).                                                                                         | number        | Optional              | "4"               |
+| `advance_config`   | An object containing advanced configuration options.                                                                          | object        | Optional              | None              |
+| `negative_prompt`  | Text describing what you don’t want in the image (within `advance_config`).                                                   | string        | Optional              | None              |
+| `guidance`         | Higher guidance forces the model to better follow the prompt (1-28, within `advance_config`).                                 | number        | Optional              | None              |
+| `seed`             | Makes generation deterministic; using the same seed and parameters will produce an identical image (within `advance_config`). | number        | Optional              | None              |
 
 **Table 2: Potential Target Audiences and Value Propositions**
 
-|   |   |   |
-|---|---|---|
-|**Target Audience**|**Specific Use Case**|**Key Business Value**|
-|Interior designers|Quick concept visualization|Reduced initial concept presentation time, faster iteration on design ideas.|
-|Event planners|Initial theme brainstorming|Accelerated theme brainstorming, improved client communication through visuals.|
-|Writers and game developers|Scene setting|Enhanced visualization of settings and characters, inspiration for world-building.|
-|Marketing teams|Rapid campaign moodboarding|Speed up campaign ideation, ensure visual consistency across marketing materials.|
-|Individuals|Personal creative projects|Easy-to-use tool for visualizing ideas, gathering inspiration for personal projects.|
+|                             |                             |                                                                                      |
+| --------------------------- | --------------------------- | ------------------------------------------------------------------------------------ |
+| **Target Audience**         | **Specific Use Case**       | **Key Business Value**                                                               |
+| Interior designers          | Quick concept visualization | Reduced initial concept presentation time, faster iteration on design ideas.         |
+| Event planners              | Initial theme brainstorming | Accelerated theme brainstorming, improved client communication through visuals.      |
+| Writers and game developers | Scene setting               | Enhanced visualization of settings and characters, inspiration for world-building.   |
+| Marketing teams             | Rapid campaign moodboarding | Speed up campaign ideation, ensure visual consistency across marketing materials.    |
+| Individuals                 | Personal creative projects  | Easy-to-use tool for visualizing ideas, gathering inspiration for personal projects. |
 
 **Table 3: Monetization Strategies and Considerations**
 
-|   |   |   |   |
-|---|---|---|---|
-|**Monetization Model**|**Description**|**Potential Benefits**|**Potential Challenges**|
-|Freemium model|Offer basic features for free, charge for premium features or higher usage.|Attracts a large user base, lowers the barrier to entry.|May have low conversion rates if the free tier is too generous.|
-|Subscription plans|Tiered plans offering different usage limits and features.|Recurring revenue stream, caters to diverse user needs.|Requires careful feature tiering to incentivize upgrades.|
-|Integration with other tools|Integrate as a paid feature within existing design or project management software.|Reaches an established user base, enhances the value of other platforms.|Dependence on other platforms, potential for complex partnerships.|
-|API for other applications|Provide an API for developers to integrate the moodboard generation functionality into their own apps.|Generates new revenue streams, extends the tool's reach to other applications.|Requires API documentation and support, potential for managing usage and billing.|
+|                              |                                                                                                        |                                                                                |                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| **Monetization Model**       | **Description**                                                                                        | **Potential Benefits**                                                         | **Potential Challenges**                                                          |
+| Freemium model               | Offer basic features for free, charge for premium features or higher usage.                            | Attracts a large user base, lowers the barrier to entry.                       | May have low conversion rates if the free tier is too generous.                   |
+| Subscription plans           | Tiered plans offering different usage limits and features.                                             | Recurring revenue stream, caters to diverse user needs.                        | Requires careful feature tiering to incentivize upgrades.                         |
+| Integration with other tools | Integrate as a paid feature within existing design or project management software.                     | Reaches an established user base, enhances the value of other platforms.       | Dependence on other platforms, potential for complex partnerships.                |
+| API for other applications   | Provide an API for developers to integrate the moodboard generation functionality into their own apps. | Generates new revenue streams, extends the tool's reach to other applications. | Requires API documentation and support, potential for managing usage and billing. |

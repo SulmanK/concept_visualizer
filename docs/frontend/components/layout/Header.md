@@ -9,7 +9,7 @@ The Header is a fixed component that appears on all pages, providing consistent 
 ## Usage
 
 ```tsx
-import { Header } from 'components/layout/Header';
+import { Header } from "components/layout/Header";
 
 function App() {
   return (
@@ -24,153 +24,176 @@ function App() {
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `''` | Additional CSS class to apply to the header |
+| Prop          | Type      | Default | Description                                             |
+| ------------- | --------- | ------- | ------------------------------------------------------- |
+| `className`   | `string`  | `''`    | Additional CSS class to apply to the header             |
 | `transparent` | `boolean` | `false` | Whether the header should have a transparent background |
 
 ## Implementation Details
 
 ```tsx
-import React, { useState } from 'react';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  IconButton, 
-  Box, 
-  Menu, 
-  MenuItem, 
+import React, { useState } from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Box,
+  Menu,
+  MenuItem,
   Container,
   useScrollTrigger,
-  useMediaQuery
-} from '@mui/material';
-import { Menu as MenuIcon, AccountCircle } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
-import { useAuth } from 'contexts/AuthContext';
-import logoImage from 'assets/logos/logo.svg';
+  useMediaQuery,
+} from "@mui/material";
+import { Menu as MenuIcon, AccountCircle } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { useTheme } from "@mui/material/styles";
+import { useAuth } from "contexts/AuthContext";
+import logoImage from "assets/logos/logo.svg";
 
 interface HeaderProps {
   className?: string;
   transparent?: boolean;
 }
 
-export function Header({ className = '', transparent = false }: HeaderProps) {
+export function Header({ className = "", transparent = false }: HeaderProps) {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   // Change header appearance on scroll
   const scrollTrigger = useScrollTrigger({
     disableHysteresis: true,
     threshold: 50,
   });
-  
+
   // Mobile menu state
-  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
+  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
   const isMobileMenuOpen = Boolean(mobileMenuAnchor);
-  
+
   // User menu state
-  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(
+    null,
+  );
   const isUserMenuOpen = Boolean(userMenuAnchor);
-  
+
   // Handle mobile menu
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setMobileMenuAnchor(event.currentTarget);
   };
-  
+
   const handleMobileMenuClose = () => {
     setMobileMenuAnchor(null);
   };
-  
+
   // Handle user menu
   const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setUserMenuAnchor(event.currentTarget);
   };
-  
+
   const handleUserMenuClose = () => {
     setUserMenuAnchor(null);
   };
-  
+
   // Navigation handlers
   const navigateTo = (path: string) => {
     navigate(path);
     handleMobileMenuClose();
     handleUserMenuClose();
   };
-  
+
   const handleSignOut = () => {
     signOut();
     handleUserMenuClose();
-    navigate('/');
+    navigate("/");
   };
-  
+
   return (
-    <AppBar 
-      position="fixed" 
+    <AppBar
+      position="fixed"
       className={className}
       elevation={scrollTrigger || !transparent ? 4 : 0}
-      sx={{ 
-        backgroundColor: transparent && !scrollTrigger 
-          ? 'transparent' 
-          : theme.palette.background.paper,
-        transition: theme.transitions.create(['background-color', 'box-shadow']),
+      sx={{
+        backgroundColor:
+          transparent && !scrollTrigger
+            ? "transparent"
+            : theme.palette.background.paper,
+        transition: theme.transitions.create([
+          "background-color",
+          "box-shadow",
+        ]),
       }}
     >
       <Container maxWidth="lg">
         <Toolbar disableGutters>
           {/* Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: { xs: 1, md: 0 } }}>
-            <img 
-              src={logoImage} 
-              alt="Concept Visualizer Logo" 
-              height={40} 
-              onClick={() => navigateTo('/')}
-              style={{ cursor: 'pointer' }}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              flexGrow: { xs: 1, md: 0 },
+            }}
+          >
+            <img
+              src={logoImage}
+              alt="Concept Visualizer Logo"
+              height={40}
+              onClick={() => navigateTo("/")}
+              style={{ cursor: "pointer" }}
             />
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                ml: 1, 
-                display: { xs: 'none', sm: 'block' },
-                color: transparent && !scrollTrigger 
-                  ? theme.palette.common.white 
-                  : theme.palette.text.primary,
+            <Typography
+              variant="h6"
+              sx={{
+                ml: 1,
+                display: { xs: "none", sm: "block" },
+                color:
+                  transparent && !scrollTrigger
+                    ? theme.palette.common.white
+                    : theme.palette.text.primary,
               }}
             >
               Concept Visualizer
             </Typography>
           </Box>
-          
+
           {/* Desktop Navigation */}
           {!isMobile && (
-            <Box sx={{ display: 'flex', flexGrow: 1, justifyContent: 'center' }}>
-              <Button 
-                color="inherit" 
-                onClick={() => navigateTo('/')}
-                sx={{ color: transparent && !scrollTrigger 
-                  ? theme.palette.common.white 
-                  : theme.palette.text.primary }}
+            <Box
+              sx={{ display: "flex", flexGrow: 1, justifyContent: "center" }}
+            >
+              <Button
+                color="inherit"
+                onClick={() => navigateTo("/")}
+                sx={{
+                  color:
+                    transparent && !scrollTrigger
+                      ? theme.palette.common.white
+                      : theme.palette.text.primary,
+                }}
               >
                 Home
               </Button>
-              <Button 
-                color="inherit" 
-                onClick={() => navigateTo('/concepts')}
-                sx={{ color: transparent && !scrollTrigger 
-                  ? theme.palette.common.white 
-                  : theme.palette.text.primary }}
+              <Button
+                color="inherit"
+                onClick={() => navigateTo("/concepts")}
+                sx={{
+                  color:
+                    transparent && !scrollTrigger
+                      ? theme.palette.common.white
+                      : theme.palette.text.primary,
+                }}
               >
                 My Concepts
               </Button>
             </Box>
           )}
-          
+
           {/* User Actions */}
-          <Box sx={{ display: 'flex' }}>
+          <Box sx={{ display: "flex" }}>
             {user ? (
               <>
                 <IconButton
@@ -180,9 +203,12 @@ export function Header({ className = '', transparent = false }: HeaderProps) {
                   aria-haspopup="true"
                   onClick={handleUserMenuOpen}
                   color="inherit"
-                  sx={{ color: transparent && !scrollTrigger 
-                    ? theme.palette.common.white 
-                    : theme.palette.text.primary }}
+                  sx={{
+                    color:
+                      transparent && !scrollTrigger
+                        ? theme.palette.common.white
+                        : theme.palette.text.primary,
+                  }}
                 >
                   <AccountCircle />
                 </IconButton>
@@ -193,21 +219,25 @@ export function Header({ className = '', transparent = false }: HeaderProps) {
                   open={isUserMenuOpen}
                   onClose={handleUserMenuClose}
                 >
-                  <MenuItem onClick={() => navigateTo('/profile')}>Profile</MenuItem>
-                  <MenuItem onClick={() => navigateTo('/settings')}>Settings</MenuItem>
+                  <MenuItem onClick={() => navigateTo("/profile")}>
+                    Profile
+                  </MenuItem>
+                  <MenuItem onClick={() => navigateTo("/settings")}>
+                    Settings
+                  </MenuItem>
                   <MenuItem onClick={handleSignOut}>Sign Out</MenuItem>
                 </Menu>
               </>
             ) : (
-              <Button 
-                color="primary" 
-                variant="contained" 
-                onClick={() => navigateTo('/login')}
+              <Button
+                color="primary"
+                variant="contained"
+                onClick={() => navigateTo("/login")}
               >
                 Sign In
               </Button>
             )}
-            
+
             {/* Mobile Menu Button */}
             {isMobile && (
               <>
@@ -218,9 +248,13 @@ export function Header({ className = '', transparent = false }: HeaderProps) {
                   aria-controls="mobile-menu"
                   aria-haspopup="true"
                   onClick={handleMobileMenuOpen}
-                  sx={{ ml: 1, color: transparent && !scrollTrigger 
-                    ? theme.palette.common.white 
-                    : theme.palette.text.primary }}
+                  sx={{
+                    ml: 1,
+                    color:
+                      transparent && !scrollTrigger
+                        ? theme.palette.common.white
+                        : theme.palette.text.primary,
+                  }}
                 >
                   <MenuIcon />
                 </IconButton>
@@ -231,8 +265,10 @@ export function Header({ className = '', transparent = false }: HeaderProps) {
                   open={isMobileMenuOpen}
                   onClose={handleMobileMenuClose}
                 >
-                  <MenuItem onClick={() => navigateTo('/')}>Home</MenuItem>
-                  <MenuItem onClick={() => navigateTo('/concepts')}>My Concepts</MenuItem>
+                  <MenuItem onClick={() => navigateTo("/")}>Home</MenuItem>
+                  <MenuItem onClick={() => navigateTo("/concepts")}>
+                    My Concepts
+                  </MenuItem>
                 </Menu>
               </>
             )}
@@ -267,4 +303,4 @@ The Header can be customized through:
 1. **Props**: Using the `transparent` prop to control background transparency
 2. **CSS**: Using the `className` prop to apply custom styles
 3. **Theme**: Customizing appearance through the Material-UI theme
-4. **Extension**: Creating a wrapped version with additional navigation items 
+4. **Extension**: Creating a wrapped version with additional navigation items

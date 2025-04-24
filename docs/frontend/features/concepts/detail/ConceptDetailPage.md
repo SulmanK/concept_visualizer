@@ -52,7 +52,7 @@ The component is typically accessed via a route like:
 
 ```tsx
 // In route configuration
-<Route path="/concepts/:conceptId" element={<ConceptDetailPage />} />
+<Route path="/concepts/:conceptId" element={<ConceptDetailPage />} />;
 
 // Navigating to the page
 navigate(`/concepts/${conceptId}`);
@@ -96,4 +96,4 @@ navigate(`/concepts/${conceptId}?showExport=true`);
 
 - Lazy loading for EnhancedImagePreview component
 - Optimized image loading with OptimizedImage component
-- Error boundaries to prevent cascading failures 
+- Error boundaries to prevent cascading failures

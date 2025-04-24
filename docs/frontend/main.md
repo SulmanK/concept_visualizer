@@ -9,22 +9,22 @@ This file initializes the React application by mounting the root component to th
 ## Implementation
 
 ```tsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
 
 // Initialize any required globals or polyfills here
 const initApp = () => {
   // Create root element and render the application
   const root = ReactDOM.createRoot(
-    document.getElementById('root') as HTMLElement
+    document.getElementById("root") as HTMLElement,
   );
-  
+
   root.render(
     <React.StrictMode>
       <App />
-    </React.StrictMode>
+    </React.StrictMode>,
   );
 };
 
@@ -50,15 +50,17 @@ While not explicitly shown in the example above, the main entry point can be ext
 ```tsx
 // Example of global error handler
 const handleGlobalError = (error: Error, errorInfo: React.ErrorInfo) => {
-  console.error('Global error:', error);
+  console.error("Global error:", error);
   // Report error to monitoring service
 };
 
-window.addEventListener('error', (event) => {
-  handleGlobalError(event.error, { componentStack: '' });
+window.addEventListener("error", (event) => {
+  handleGlobalError(event.error, { componentStack: "" });
 });
 
-window.addEventListener('unhandledrejection', (event) => {
-  handleGlobalError(new Error(event.reason || 'Unhandled Promise rejection'), { componentStack: '' });
+window.addEventListener("unhandledrejection", (event) => {
+  handleGlobalError(new Error(event.reason || "Unhandled Promise rejection"), {
+    componentStack: "",
+  });
 });
-``` 
+```

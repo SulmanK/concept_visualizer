@@ -17,7 +17,7 @@ The primary class for interacting with Supabase:
 ```python
 class SupabaseClient:
     """Base client for interacting with Supabase."""
-    
+
     def __init__(self, url: str = None, key: str = None, session_id: Optional[str] = None):
         """Initialize Supabase client with configured settings."""
         # Implementation...
@@ -61,7 +61,7 @@ Specialized client for authentication operations:
 ```python
 class SupabaseAuthClient:
     """Client for Supabase authentication."""
-    
+
     def __init__(self, url: str = None, key: str = None):
         """Initialize the Supabase authentication client."""
         # Implementation...
@@ -110,10 +110,10 @@ The module provides convenient factory functions to get client instances:
 ```python
 def get_supabase_client(session_id: Optional[str] = None) -> SupabaseClient:
     """Get a configured Supabase client.
-    
+
     Args:
         session_id: Optional session ID to associate with the client
-        
+
     Returns:
         Configured SupabaseClient instance
     """
@@ -125,7 +125,7 @@ def get_supabase_client(session_id: Optional[str] = None) -> SupabaseClient:
 ```python
 def get_supabase_auth_client() -> SupabaseAuthClient:
     """Get a configured Supabase authentication client.
-    
+
     Returns:
         Configured SupabaseAuthClient instance
     """
@@ -155,9 +155,10 @@ The Supabase client is a critical component in several persistence services:
 ### Persistence Services
 
 - **ConceptPersistenceService**: Uses the client to store and retrieve concept data
+
   ```python
   from app.core.supabase.client import SupabaseClient
-  
+
   class ConceptPersistenceService:
       def __init__(self, client: SupabaseClient):
           self.client = client
@@ -182,6 +183,7 @@ def get_concept_persistence_service(
 ```
 
 This pattern ensures that:
+
 - Services have access to a properly configured Supabase client
 - Session IDs can be propagated through the dependency chain
 - Client configurations are centrally managed
@@ -192,4 +194,4 @@ This pattern ensures that:
 - [Image Storage](image_storage.md): Uses the client for image storage operations
 - [Configuration](../config.md): Application settings used by the client
 - [Exceptions](../exceptions.md): Custom exceptions used for error handling
-- [Persistence Services](../../services/persistence/interface.md): Services that use the Supabase client 
+- [Persistence Services](../../services/persistence/interface.md): Services that use the Supabase client

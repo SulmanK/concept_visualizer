@@ -18,7 +18,7 @@ This service acts as a facade for the concept subsystem, simplifying interaction
 ```python
 class ConceptService(ConceptServiceInterface):
     """Main implementation of the concept service interface."""
-    
+
     def __init__(
         self,
         client: JigsawStackClient,
@@ -31,12 +31,12 @@ class ConceptService(ConceptServiceInterface):
         self.persistence_service = persistence_service
         self.image_persistence_service = image_persistence_service
         self.task_service = task_service
-        
+
         # Create specialized components
         self.generator = ConceptGenerator(client)
         self.refiner = ConceptRefiner(client, persistence_service)
         self.palette_generator = PaletteGenerator(client)
-        
+
         self.logger = logging.getLogger("concept_service")
 ```
 
@@ -62,13 +62,16 @@ This method orchestrates the concept generation process:
 5. Returns a comprehensive response with the generated concept details
 
 **Parameters:**
+
 - `logo_description`: Text description of the logo to generate
 - `theme_description`: Text description of the theme/color scheme
 
 **Returns:**
+
 - `GenerationResponse`: Contains the generated image URL, color palettes, and metadata
 
 **Raises:**
+
 - `ValidationError`: If the input descriptions are invalid
 - `GenerationError`: If concept generation fails
 - `ServiceUnavailableError`: If required services are unavailable
@@ -91,13 +94,16 @@ This method handles the concept refinement workflow:
 5. Returns the refinement results with comparison information
 
 **Parameters:**
+
 - `concept_id`: ID of the concept to refine
 - `refinement_prompt`: Text instructions for refining the concept
 
 **Returns:**
+
 - `RefinementResponse`: Contains the refined image URL, original image URL, and metadata
 
 **Raises:**
+
 - `ResourceNotFoundError`: If the concept doesn't exist
 - `ValidationError`: If the refinement prompt is invalid
 - `RefinementError`: If the refinement process fails
@@ -118,13 +124,16 @@ This method handles palette generation:
 3. Returns the generated palettes
 
 **Parameters:**
+
 - `theme_description`: Text description of the desired color theme
 - `count`: Number of palettes to generate (default: 3)
 
 **Returns:**
+
 - List of `Palette` objects containing colors and metadata
 
 **Raises:**
+
 - `ValidationError`: If the theme description is invalid
 - `PaletteError`: If palette generation fails
 
@@ -146,13 +155,16 @@ This method applies a palette to an existing concept:
 5. Returns the result with the recolored image URL
 
 **Parameters:**
+
 - `concept_id`: ID of the concept to recolor
 - `palette_id`: ID of the palette to apply
 
 **Returns:**
+
 - `PaletteApplicationResponse`: Contains the recolored image URL and palette details
 
 **Raises:**
+
 - `ResourceNotFoundError`: If the concept or palette doesn't exist
 - `PaletteApplicationError`: If applying the palette fails
 
@@ -237,4 +249,4 @@ refined_url = refinement.refined_image_url
 - [Concept Refinement](refinement.md): Details on the refinement implementation
 - [Palette Generator](palette.md): Component for palette operations
 - [JigsawStack Client](../jigsawstack/client.md): Client for the external AI service
-- [Generation API Routes](../../api/routes/concept/generation.md): API routes that use this service 
+- [Generation API Routes](../../api/routes/concept/generation.md): API routes that use this service

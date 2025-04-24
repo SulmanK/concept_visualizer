@@ -1,5 +1,5 @@
-import React from 'react';
-import { Button } from '../../../components/ui/Button';
+import React from "react";
+import { Button } from "../../../components/ui/Button";
 
 interface ConceptHeaderProps {
   onGetStarted: () => void;
@@ -8,7 +8,9 @@ interface ConceptHeaderProps {
 /**
  * Header component for the landing page
  */
-export const ConceptHeader: React.FC<ConceptHeaderProps> = ({ onGetStarted }) => {
+export const ConceptHeader: React.FC<ConceptHeaderProps> = ({
+  onGetStarted,
+}) => {
   return (
     <div className="py-12 sm:py-16 mb-8">
       <div className="container mx-auto px-4 text-center">
@@ -16,7 +18,8 @@ export const ConceptHeader: React.FC<ConceptHeaderProps> = ({ onGetStarted }) =>
           Create Visual Concepts
         </h1>
         <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed mb-8 max-w-3xl mx-auto">
-          Describe your logo and theme to generate visual concepts. Our AI will create a logo design and color palette based on your descriptions.
+          Describe your logo and theme to generate visual concepts. Our AI will
+          create a logo design and color palette based on your descriptions.
         </p>
         <Button
           variant="primary"
@@ -29,4 +32,4 @@ export const ConceptHeader: React.FC<ConceptHeaderProps> = ({ onGetStarted }) =>
       </div>
     </div>
   );
-}; 
+};

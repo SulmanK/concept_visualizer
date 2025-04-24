@@ -31,7 +31,7 @@ export interface ColorVariation {
 export interface GenerationResponse {
   // Backend API schema uses snake_case, while frontend uses camelCase
   // We need to support both naming conventions for compatibility
-  
+
   // Primary fields that come from the backend
   prompt_id: string;
   logo_description: string;
@@ -44,7 +44,7 @@ export interface GenerationResponse {
   original_image_url?: string | null;
   refinement_prompt?: string | null;
   id?: string; // ID of the saved concept in the database
-  
+
   // These are aliases for frontend compatibility
   // They might not be in the API response
   imageUrl?: string;
@@ -66,4 +66,4 @@ export interface StoredConcept {
   image_path?: string;
   created_at: string;
   color_variations?: ColorVariation[];
-} 
+}

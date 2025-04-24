@@ -73,4 +73,4 @@ BEGIN
     AND t.status IN ('pending', 'processing')
     ORDER BY t.created_at DESC;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER; 
+$$ LANGUAGE plpgsql SECURITY DEFINER;

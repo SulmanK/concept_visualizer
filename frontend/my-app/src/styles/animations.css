@@ -24,7 +24,8 @@
 }
 
 .transition-colors {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-property: color, background-color, border-color,
+    text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 300ms;
 }
@@ -52,7 +53,9 @@
 
 .hover-lift:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 8px 10px -6px rgba(79, 70, 229, 0.05);
+  box-shadow:
+    0 10px 25px -5px rgba(79, 70, 229, 0.1),
+    0 8px 10px -6px rgba(79, 70, 229, 0.05);
 }
 
 .hover-bright {
@@ -189,7 +192,8 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -203,7 +207,8 @@
 }
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
   }
@@ -231,7 +236,7 @@
 }
 
 .btn-hover::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -256,15 +261,15 @@
   .transition-colors {
     transition-duration: 200ms; /* Faster transitions on mobile */
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-2px); /* Smaller transform on mobile */
   }
-  
+
   .hover-scale:hover {
     transform: scale(1.03); /* Smaller scale on mobile */
   }
-  
+
   /* Reduce animation duration on mobile */
   .fade-in,
   .slide-in-up,
@@ -321,7 +326,10 @@
   contain: content;
   opacity: 0;
   visibility: hidden;
-  transition: opacity var(--duration) ease-out, visibility var(--duration) ease-out, transform var(--duration) ease-out;
+  transition:
+    opacity var(--duration) ease-out,
+    visibility var(--duration) ease-out,
+    transform var(--duration) ease-out;
 }
 
 .animated-transition[style*="visibility: visible"] {
@@ -336,15 +344,23 @@
 }
 
 /* Update animation states to include visibility */
-.fade-enter, .fade-exit,
-.slide-up-enter, .slide-up-exit,
-.slide-down-enter, .slide-down-exit,
-.slide-left-enter, .slide-left-exit,
-.slide-right-enter, .slide-right-exit {
+.fade-enter,
+.fade-exit,
+.slide-up-enter,
+.slide-up-exit,
+.slide-down-enter,
+.slide-down-exit,
+.slide-left-enter,
+.slide-left-exit,
+.slide-right-enter,
+.slide-right-exit {
   will-change: opacity, transform, visibility;
   backface-visibility: hidden;
   transform-style: preserve-3d;
   contain: content;
   visibility: hidden;
-  transition: opacity var(--duration) ease-out, visibility var(--duration) ease-out, transform var(--duration) ease-out;
-} 
+  transition:
+    opacity var(--duration) ease-out,
+    visibility var(--duration) ease-out,
+    transform var(--duration) ease-out;
+}

@@ -113,6 +113,7 @@ Content-Type: application/json
 ```
 
 Parameters:
+
 - `num_palettes`: Number of palette variations to generate (default: 7, max: 10)
 
 #### Response
@@ -213,6 +214,7 @@ async def generate_concept_background_task(
 ```
 
 This function:
+
 1. Updates the task status to "processing"
 2. Generates the base concept
 3. Creates palette variations
@@ -247,28 +249,28 @@ The endpoints handle various error cases:
 async function generateConcept(logoDescription, themeDescription) {
   try {
     // Submit the generation request
-    const response = await fetch('/api/concepts/generate-with-palettes', {
-      method: 'POST',
+    const response = await fetch("/api/concepts/generate-with-palettes", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify({
         logo_description: logoDescription,
-        theme_description: themeDescription
-      })
+        theme_description: themeDescription,
+      }),
     });
-    
+
     if (!response.ok) {
-      throw new Error('Concept generation failed');
+      throw new Error("Concept generation failed");
     }
-    
+
     const taskData = await response.json();
-    
+
     // Start polling for task status
     return pollTaskStatus(taskData.task_id);
   } catch (error) {
-    console.error('Failed to start concept generation:', error);
+    console.error("Failed to start concept generation:", error);
     return null;
   }
 }
@@ -279,30 +281,30 @@ async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
     try {
       const response = await fetch(`/api/concepts/task/${taskId}`, {
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`
-        }
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to check task status');
+        throw new Error("Failed to check task status");
       }
-      
+
       const taskData = await response.json();
-      
+
       // If task is complete or failed, return the result
-      if (taskData.status === 'completed' || taskData.status === 'failed') {
+      if (taskData.status === "completed" || taskData.status === "failed") {
         return taskData;
       }
-      
+
       // Wait before polling again
-      await new Promise(resolve => setTimeout(resolve, interval));
+      await new Promise((resolve) => setTimeout(resolve, interval));
     } catch (error) {
-      console.error('Error polling task status:', error);
+      console.error("Error polling task status:", error);
       // Continue polling despite errors
     }
   }
-  
-  throw new Error('Task polling timed out');
+
+  throw new Error("Task polling timed out");
 }
 ```
 
@@ -310,4 +312,4 @@ async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
 
 - [Refinement](refinement.md): Endpoints for refining generated concepts
 - [Error Handling](example_error_handling.md): Examples of proper error handling
-- [Concept Models](../../../models/concept/request.md): Request models for concept generation 
+- [Concept Models](../../../models/concept/request.md): Request models for concept generation

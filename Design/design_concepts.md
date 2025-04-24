@@ -5,6 +5,7 @@ This document outlines various design approaches we can explore for the Concept 
 ## Current Design
 
 Our current implementation uses the "Modern Gradient Violet" theme featuring:
+
 - Gradient backgrounds (violet/purple)
 - Montserrat font family
 - Clean, rounded components
@@ -26,16 +27,19 @@ We've created several mockups to showcase different design approaches:
 - [Theme Selector](/Design/theme_selector.html) - Interactive tool to preview and apply different theme variations
 
 ### Theme Variations
+
 - [Modern Gradient Indigo](/Design/theme_variations/modern_gradient_indigo_custom.html) - A custom implementation using deep blue/indigo color scheme
 - [Dark Mode Pro](/Design/theme_variations/dark_mode_pro_custom.html) - Professional dark theme with violet accents
 
 ### Layout Variations
+
 - [Dashboard Layouts](/Design/component_mockups/dashboard_layouts.html) - Showcasing different dashboard layout options:
   - Card Grid
   - Split View
   - Tabbed Interface
 
 ### Component Variations
+
 - [Input Variations](/Design/component_mockups/input_variations.html) - Different input field styles:
   - Standard Input
   - Floating Label Input
@@ -46,6 +50,7 @@ We've created several mockups to showcase different design approaches:
 ## Potential Design Variations
 
 ### 1. Modern Gradient Series
+
 Different color schemes using the same modern gradient approach:
 
 - **Modern Gradient Indigo** - Deep blue to indigo gradients
@@ -63,11 +68,13 @@ Different color schemes using the same modern gradient approach:
 ### 3. Layout Variations
 
 #### Dashboard Layouts
+
 - **Card Grid** - Main content displayed as interactive cards
 - **Split View** - Navigation sidebar with main content area
 - **Tabbed Interface** - Content organized in accessible tabs
 
 #### Concept Display Layouts
+
 - **Gallery View** - Image-focused grid layout for browsing concepts
 - **Detail View** - Expanded view with concept details and metadata
 - **Comparison View** - Side-by-side comparison of multiple concepts
@@ -75,11 +82,13 @@ Different color schemes using the same modern gradient approach:
 ### 4. Component Variations
 
 #### Input Styles
+
 - **Floating Labels** - Labels that float when input is focused
 - **Underlined Inputs** - Minimal inputs with underline only
 - **Filled Inputs** - Inputs with background fill
 
 #### Button Styles
+
 - **Pill Buttons** - Fully rounded button ends
 - **Icon + Text** - Buttons with supporting icons
 - **Gradient Buttons** - Buttons with gradient backgrounds
@@ -99,4 +108,4 @@ Different color schemes using the same modern gradient approach:
 - Implement responsive layouts for mobile and tablet views
 - Develop component documentation with usage examples
 - Add a theme switcher component to let users preview different designs
-- Integrate design system into the React component library 
+- Integrate design system into the React component library

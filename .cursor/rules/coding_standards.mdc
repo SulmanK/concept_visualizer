@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 ---
@@ -106,12 +106,12 @@ interface ButtonProps {
    * The text to display inside the button
    */
   label: string;
-  
+
   /**
    * Optional click handler
    */
   onClick?: () => void;
-  
+
   /**
    * Whether the button is in a loading state
    */
@@ -121,27 +121,27 @@ interface ButtonProps {
 /**
  * Primary button component for user interaction
  */
-export const Button: FC<ButtonProps> = ({ 
-  label, 
-  onClick, 
+export const Button: FC<ButtonProps> = ({
+  label,
+  onClick,
   isLoading = false,
 }) => {
   const [isPressed, setIsPressed] = useState<boolean>(false);
-  
+
   useEffect(() => {
     if (isPressed) {
       const timer = setTimeout(() => setIsPressed(false), 200);
       return () => clearTimeout(timer);
     }
   }, [isPressed]);
-  
+
   const handleClick = (): void => {
     setIsPressed(true);
     if (onClick && !isLoading) {
       onClick();
     }
   };
-  
+
   return (
     <button
       className={`btn ${isLoading ? 'btn-loading' : ''}`}

@@ -1,7 +1,7 @@
-import { useMutation, UseMutationResult } from '@tanstack/react-query';
-import { apiClient } from '../services/apiClient';
-import { useErrorHandling } from './useErrorHandling';
-import { createQueryErrorHandler } from '../utils/errorUtils';
+import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import { apiClient } from "../services/apiClient";
+import { useErrorHandling } from "./useErrorHandling";
+import { createQueryErrorHandler } from "../utils/errorUtils";
 
 interface SessionResponse {
   session_id: string;
@@ -15,7 +15,7 @@ interface SyncSessionInput {
 
 /**
  * Hook for syncing the session with the backend
- * 
+ *
  * @returns Mutation for syncing the session
  */
 export function useSessionSyncMutation(): UseMutationResult<
@@ -26,13 +26,20 @@ export function useSessionSyncMutation(): UseMutationResult<
 > {
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
-    defaultErrorMessage: 'Failed to sync session. Please try again.'
+    defaultErrorMessage: "Failed to sync session. Please try again.",
   });
 
   return useMutation<SessionResponse, Error, SyncSessionInput>({
     mutationFn: async (input: SyncSessionInput) => {
-      console.log(`[useSessionSyncMutation] Syncing session (masked ID: ${maskSessionId(input.client_session_id)})`);
-      const { data } = await apiClient.post<SessionResponse>('/sessions/sync', input);
+      console.log(
+        `[useSessionSyncMutation] Syncing session (masked ID: ${maskSessionId(
+          input.client_session_id,
+        )})`,
+      );
+      const { data } = await apiClient.post<SessionResponse>(
+        "/sessions/sync",
+        input,
+      );
       return data;
     },
     onError: onQueryError,
@@ -44,10 +51,10 @@ export function useSessionSyncMutation(): UseMutationResult<
  * Helper to mask a session ID for logging (security/privacy)
  */
 function maskSessionId(sessionId: string, visibleChars: number = 4): string {
-  if (!sessionId) return 'null';
-  if (sessionId.length <= visibleChars * 2) return '***';
-  
+  if (!sessionId) return "null";
+  if (sessionId.length <= visibleChars * 2) return "***";
+
   const start = sessionId.substring(0, visibleChars);
   const end = sessionId.substring(sessionId.length - visibleChars);
   return `${start}...${end}`;
-} 
+}

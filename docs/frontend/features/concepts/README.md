@@ -70,4 +70,4 @@ Concepts have the following key properties:
 - `palette`: Color palette extracted from the image
 - `createdAt`: Creation timestamp
 - `userId`: ID of the user who created the concept
-- `refinements`: Array of refinement objects associated with the concept 
+- `refinements`: Array of refinement objects associated with the concept

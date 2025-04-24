@@ -23,7 +23,7 @@ class ImagePersistenceService:
     def __init__(self, client: Client):
         """
         Initialize the image persistence service.
-        
+
         Args:
             client: Supabase client instance
         """
@@ -40,8 +40,8 @@ class ImagePersistenceService:
 
 ```python
 def store_image(
-    self, 
-    image_data: Union[bytes, BytesIO, UploadFile], 
+    self,
+    image_data: Union[bytes, BytesIO, UploadFile],
     user_id: str,
     concept_id: Optional[str] = None,
     file_name: Optional[str] = None,
@@ -50,7 +50,7 @@ def store_image(
 ) -> Tuple[str, str]:
     """
     Store an image in the storage bucket with user ID metadata.
-    
+
     Args:
         image_data: Image data as bytes, BytesIO or UploadFile
         user_id: User ID for access control
@@ -58,10 +58,10 @@ def store_image(
         file_name: Optional file name (generated if not provided)
         metadata: Optional metadata to store with the image
         is_palette: Whether the image is a palette (uses palette-images bucket)
-        
+
     Returns:
         Tuple[str, str]: (image_path, image_url)
-        
+
     Raises:
         ImageStorageError: If image storage fails
     """
@@ -69,6 +69,7 @@ def store_image(
 ```
 
 This comprehensive method handles:
+
 - Different input formats (bytes, BytesIO, UploadFile)
 - Automatic format detection
 - Filename generation
@@ -83,14 +84,14 @@ This comprehensive method handles:
 def get_image(self, image_path: str, is_palette: bool = False) -> bytes:
     """
     Retrieve an image from storage.
-    
+
     Args:
         image_path: Path of the image in storage
         is_palette: Whether the image is a palette (uses palette-images bucket)
-        
+
     Returns:
         Image data as bytes
-        
+
     Raises:
         ImageNotFoundError: If image is not found
         ImageStorageError: If image retrieval fails
@@ -102,14 +103,14 @@ def get_image(self, image_path: str, is_palette: bool = False) -> bytes:
 async def get_image_async(self, image_path_or_url: str, is_palette: bool = False) -> bytes:
     """
     Asynchronously retrieve an image from storage or URL.
-    
+
     Args:
         image_path_or_url: Path or URL of the image
         is_palette: Whether the image is a palette (uses palette-images bucket)
-        
+
     Returns:
         Image data as bytes
-        
+
     Raises:
         ImageNotFoundError: If image is not found
         ImageStorageError: If image retrieval fails
@@ -125,15 +126,15 @@ The service provides both synchronous and asynchronous retrieval options.
 def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 259200) -> str:
     """
     Get a signed URL for an image.
-    
+
     Args:
         path: Path of the image in storage
         is_palette: Whether the image is a palette (uses palette-images bucket)
         expiry_seconds: Expiry time in seconds (default: 3 days)
-        
+
     Returns:
         Signed URL for the image
-        
+
     Raises:
         ImageStorageError: If URL signing fails
     """
@@ -144,11 +145,11 @@ def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: in
 def get_image_url(self, image_path: str, is_palette: bool = False) -> str:
     """
     Get a signed URL for an image in storage.
-    
+
     Args:
         image_path: Path to the image in storage
         is_palette: Whether this is a palette image
-        
+
     Returns:
         Signed URL for the image
     """
@@ -161,14 +162,14 @@ def get_image_url(self, image_path: str, is_palette: bool = False) -> str:
 def delete_image(self, image_path: str, is_palette: bool = False) -> bool:
     """
     Delete an image from storage.
-    
+
     Args:
         image_path: Path of the image in storage
         is_palette: Whether the image is a palette (uses palette-images bucket)
-        
+
     Returns:
         True if deletion was successful
-        
+
     Raises:
         ImageStorageError: If image deletion fails
     """
@@ -179,11 +180,11 @@ def delete_image(self, image_path: str, is_palette: bool = False) -> bool:
 def list_images(self, concept_id: Optional[str] = None, is_palette: bool = False) -> List[Dict[str, Any]]:
     """
     List images in storage.
-    
+
     Args:
         concept_id: Optional concept ID to filter by
         is_palette: Whether to list palette images
-        
+
     Returns:
         List of image metadata objects
     """
@@ -196,12 +197,12 @@ def list_images(self, concept_id: Optional[str] = None, is_palette: bool = False
 async def authenticate_url(self, path: str, user_id: str, is_palette: bool = False) -> str:
     """
     Create an authenticated URL for an image.
-    
+
     Args:
         path: Path to the image in storage
         user_id: User ID for access control
         is_palette: Whether this is a palette image
-        
+
     Returns:
         Authenticated URL for the image
     """
@@ -212,15 +213,15 @@ async def authenticate_url(self, path: str, user_id: str, is_palette: bool = Fal
 def get_image_with_token(self, path: str, token: str, is_palette: bool = False) -> bytes:
     """
     Get an image using a token for authentication.
-    
+
     Args:
         path: Path to the image in storage
         token: Authentication token
         is_palette: Whether this is a palette image
-        
+
     Returns:
         Image data as bytes
-        
+
     Raises:
         ImageNotFoundError: If image is not found
         ImageStorageError: If image retrieval fails
@@ -257,10 +258,10 @@ try:
         concept_id="concept-456",
         metadata={"description": "Test image"}
     )
-    
+
     print(f"Image stored at {path}")
     print(f"Access URL: {url}")
-    
+
 except Exception as e:
     print(f"Error storing image: {str(e)}")
 ```
@@ -271,14 +272,14 @@ except Exception as e:
 # Retrieve the image
 try:
     image_data = service.get_image(path)
-    
+
     # Use the image data
     from PIL import Image
     from io import BytesIO
-    
+
     img = Image.open(BytesIO(image_data))
     img.show()
-    
+
 except Exception as e:
     print(f"Error retrieving image: {str(e)}")
 ```
@@ -289,12 +290,12 @@ except Exception as e:
 # List all images for a concept
 try:
     images = service.list_images(concept_id="concept-456")
-    
+
     for image in images:
         print(f"Image path: {image['name']}")
         print(f"Created: {image['created_at']}")
         print(f"Size: {image['metadata'].get('size', 'Unknown')}")
-        
+
 except Exception as e:
     print(f"Error listing images: {str(e)}")
 ```
@@ -318,10 +319,10 @@ try:
 except Exception as e:
     error_msg = f"Failed to perform operation: {str(e)}"
     self.logger.error(error_msg)
-    
+
     if "404" in str(e) or "not found" in str(e).lower():
         raise ImageNotFoundError(f"Image not found: {image_path}")
-        
+
     raise ImageStorageError(error_msg)
 ```
 
@@ -376,4 +377,4 @@ image_data = await service.get_image_async(path)
 - [Image Storage](../../../core/supabase/image_storage.md): Low-level storage operations
 - [Supabase Client](../../../core/supabase/client.md): Base client for Supabase
 - [Image Service](../../image/service.md): Image processing service
-- [Concept Persistence Service](concept_persistence_service.md): Persistence for concept data 
+- [Concept Persistence Service](concept_persistence_service.md): Persistence for concept data

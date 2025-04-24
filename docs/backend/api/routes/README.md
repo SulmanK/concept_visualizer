@@ -8,14 +8,14 @@ The `routes` directory contains all the route definitions for the API endpoints.
 
 ## Route Categories
 
-| Category | Directory | Description |
-|----------|-----------|-------------|
-| [Authentication](auth/auth_routes.md) | `auth/` | User authentication and session management |
-| [Concept Generation](concept/generation.md) | `concept/` | Generate and refine concepts |
-| [Concept Storage](concept_storage/storage_routes.md) | `concept_storage/` | Store and retrieve concepts |
-| [Export](export/export_routes.md) | `export/` | Export concepts to different formats |
-| [Health](health/endpoints.md) | `health/` | API health checks and rate limit information |
-| [Task](task/routes.md) | `task/` | Background task management |
+| Category                                             | Directory          | Description                                  |
+| ---------------------------------------------------- | ------------------ | -------------------------------------------- |
+| [Authentication](auth/auth_routes.md)                | `auth/`            | User authentication and session management   |
+| [Concept Generation](concept/generation.md)          | `concept/`         | Generate and refine concepts                 |
+| [Concept Storage](concept_storage/storage_routes.md) | `concept_storage/` | Store and retrieve concepts                  |
+| [Export](export/export_routes.md)                    | `export/`          | Export concepts to different formats         |
+| [Health](health/endpoints.md)                        | `health/`          | API health checks and rate limit information |
+| [Task](task/routes.md)                               | `task/`            | Background task management                   |
 
 ## Route Structure
 
@@ -94,4 +94,4 @@ Most routes require authentication via the AuthMiddleware. Exceptions include:
 
 ## Rate Limiting
 
-Routes are subject to rate limiting as defined in the rate limit middleware. See the [Rate Limit Apply Middleware](../middleware/rate_limit_apply.md) documentation for details. 
+Routes are subject to rate limiting as defined in the rate limit middleware. See the [Rate Limit Apply Middleware](../middleware/rate_limit_apply.md) documentation for details.

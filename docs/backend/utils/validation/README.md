@@ -11,11 +11,13 @@ The `validation` utilities module is intended to provide functions for validatin
 The following functionalities are planned for this module:
 
 1. **Custom Validators**
+
    - Complex business rule validation
    - Cross-field validation functions
    - Contextual validation (validation that depends on application state)
 
 2. **Sanitization**
+
    - Input sanitization for security
    - Data cleaning utilities
    - Normalization functions
@@ -57,46 +59,46 @@ from typing import Dict, Any, List, Optional
 import re
 
 def validate_prompt_content(
-    prompt: str, 
-    min_length: int = 10, 
+    prompt: str,
+    min_length: int = 10,
     max_length: int = 1000,
     disallowed_patterns: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Validate a concept generation prompt for compliance with content guidelines.
-    
+
     Args:
         prompt: The text prompt to validate
         min_length: Minimum acceptable length
         max_length: Maximum acceptable length
         disallowed_patterns: List of regex patterns for content that is not allowed
-        
+
     Returns:
         Dictionary with validation result:
           - valid: Boolean indicating if the prompt is valid
           - errors: List of error messages (empty if valid)
-          
+
     Example:
         >>> validate_prompt_content("Generate a logo", min_length=20)
         {"valid": False, "errors": ["Prompt too short, minimum length is 20 characters"]}
     """
     errors = []
-    
+
     # Length validation
     if len(prompt) < min_length:
         errors.append(f"Prompt too short, minimum length is {min_length} characters")
-    
+
     if len(prompt) > max_length:
         errors.append(f"Prompt too long, maximum length is {max_length} characters")
-    
+
     # Content validation
     if disallowed_patterns:
         for pattern in disallowed_patterns:
             if re.search(pattern, prompt, re.IGNORECASE):
                 errors.append(f"Prompt contains disallowed content matching pattern: {pattern}")
-    
+
     return {
         "valid": len(errors) == 0,
         "errors": errors
     }
-``` 
+```

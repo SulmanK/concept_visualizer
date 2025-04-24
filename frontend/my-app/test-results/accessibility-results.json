@@ -15,10 +15,7 @@
     },
     "preserveOutput": "always",
     "reporter": [
-      [
-        "html",
-        null
-      ],
+      ["html", null],
       [
         "json",
         {
@@ -43,9 +40,7 @@
         "name": "chromium",
         "testDir": "C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/tests/e2e",
         "testIgnore": [],
-        "testMatch": [
-          "**/*accessibility.spec.ts"
-        ],
+        "testMatch": ["**/*accessibility.spec.ts"],
         "timeout": 60000
       },
       {
@@ -59,9 +54,7 @@
         "name": "firefox",
         "testDir": "C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/tests/e2e",
         "testIgnore": [],
-        "testMatch": [
-          "**/*accessibility.spec.ts"
-        ],
+        "testMatch": ["**/*accessibility.spec.ts"],
         "timeout": 60000
       },
       {
@@ -75,9 +68,7 @@
         "name": "webkit",
         "testDir": "C:/Users/sulma/OneDrive/Documents/Data Science/concept_visualizer/frontend/my-app/tests/e2e",
         "testIgnore": [],
-        "testMatch": [
-          "**/*accessibility.spec.ts"
-        ],
+        "testMatch": ["**/*accessibility.spec.ts"],
         "timeout": 60000
       }
     ],
@@ -161,9 +152,7 @@
                                       "relatedNodes": [
                                         {
                                           "html": "<div style=\"background-color: white; border-radius: 0.75rem; box-shadow: rgba(0, 0, 0, 0.05) 0px 10px 25px -5px, rgba(0, 0, 0, 0.02) 0px 8px 10px -6px; padding: 2rem; margin-bottom: 2rem;\">",
-                                          "target": [
-                                            "#create-form > div"
-                                          ]
+                                          "target": ["#create-form > div"]
                                         }
                                       ],
                                       "impact": "serious",
@@ -174,9 +163,7 @@
                                   "none": [],
                                   "impact": "serious",
                                   "html": "<p style=\"font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;\">Be descriptive about style, symbols, and colors you want</p>",
-                                  "target": [
-                                    ".mb-6:nth-child(1) > p"
-                                  ],
+                                  "target": [".mb-6:nth-child(1) > p"],
                                   "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.46 (foreground color: #6366f1, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
                                 },
                                 {
@@ -195,9 +182,7 @@
                                       "relatedNodes": [
                                         {
                                           "html": "<div style=\"background-color: white; border-radius: 0.75rem; box-shadow: rgba(0, 0, 0, 0.05) 0px 10px 25px -5px, rgba(0, 0, 0, 0.02) 0px 8px 10px -6px; padding: 2rem; margin-bottom: 2rem;\">",
-                                          "target": [
-                                            "#create-form > div"
-                                          ]
+                                          "target": ["#create-form > div"]
                                         }
                                       ],
                                       "impact": "serious",
@@ -208,9 +193,7 @@
                                   "none": [],
                                   "impact": "serious",
                                   "html": "<p style=\"font-size: 0.75rem; color: rgb(99, 102, 241); margin-top: 0.25rem;\">Describe mood, colors, and style of your brand</p>",
-                                  "target": [
-                                    ".mb-6:nth-child(2) > p"
-                                  ],
+                                  "target": [".mb-6:nth-child(2) > p"],
                                   "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.46 (foreground color: #6366f1, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
                                 },
                                 {

@@ -1,5 +1,4 @@
-"""
-Constants used throughout the application.
+"""Constants used throughout the application.
 
 This module defines constants used throughout the application to
 avoid hardcoding values and ensure consistency.
@@ -21,4 +20,4 @@ TASK_TYPE_REFINEMENT = "concept_refinement"
 BUCKET_NAME_CONCEPTS = settings.STORAGE_BUCKET_CONCEPT
 BUCKET_NAME_PALETTES = settings.STORAGE_BUCKET_PALETTE
 
-# Rate Limit Keys/Strings were removed - these should be defined in api/middleware/rate_limit_apply.py 
+# Rate Limit Keys/Strings were removed - these should be defined in api/middleware/rate_limit_apply.py

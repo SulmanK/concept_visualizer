@@ -11,14 +11,14 @@ The `ConceptImage` component is a wrapper for displaying concept-related images 
 
 ## Props
 
-| Prop        | Type      | Required | Default | Description                                     |
-|-------------|-----------|----------|---------|-------------------------------------------------|
+| Prop        | Type      | Required | Default | Description                                           |
+| ----------- | --------- | -------- | ------- | ----------------------------------------------------- |
 | `path`      | `string`  | No       | -       | Legacy path to the image (for backward compatibility) |
-| `url`       | `string`  | No       | -       | URL of the image (preferred over path)          |
-| `isPalette` | `boolean` | No       | `false` | Whether the image is a color palette            |
-| `alt`       | `string`  | Yes      | -       | Alt text for the image for accessibility        |
-| `className` | `string`  | No       | -       | Additional CSS classes                          |
-| `lazy`      | `boolean` | No       | `true`  | Whether to lazy-load the image                  |
+| `url`       | `string`  | No       | -       | URL of the image (preferred over path)                |
+| `isPalette` | `boolean` | No       | `false` | Whether the image is a color palette                  |
+| `alt`       | `string`  | Yes      | -       | Alt text for the image for accessibility              |
+| `className` | `string`  | No       | -       | Additional CSS classes                                |
+| `lazy`      | `boolean` | No       | `true`  | Whether to lazy-load the image                        |
 
 ## State
 
@@ -34,18 +34,18 @@ The `ConceptImage` component is a wrapper for displaying concept-related images 
 ## Usage Example
 
 ```tsx
-import ConceptImage from '../components/concept/ConceptImage';
+import ConceptImage from "../components/concept/ConceptImage";
 
 const ConceptDisplay = ({ concept }) => {
   return (
     <div className="concept-container">
-      <ConceptImage 
+      <ConceptImage
         url={concept.imageUrl}
         alt={`Generated concept for ${concept.title}`}
         className="rounded-lg shadow-md w-full"
       />
       <div className="palette-container mt-4">
-        <ConceptImage 
+        <ConceptImage
           url={concept.paletteUrl}
           isPalette={true}
           alt="Color palette for this concept"
@@ -59,4 +59,4 @@ const ConceptDisplay = ({ concept }) => {
 
 ## Related Components
 
-- [`OptimizedImage`](../ui/OptimizedImage.md) - Base component used for image display 
+- [`OptimizedImage`](../ui/OptimizedImage.md) - Base component used for image display

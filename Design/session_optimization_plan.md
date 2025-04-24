@@ -24,15 +24,15 @@ Create a single point of session initialization at the application root level:
 
 ```typescript
 // In App.tsx or root component
-import { useEffect } from 'react';
-import { initializeSession } from './services/sessionManager';
+import { useEffect } from "react";
+import { initializeSession } from "./services/sessionManager";
 
 function App() {
   useEffect(() => {
     // Initialize session once at application startup
     initializeSession();
   }, []);
-  
+
   // Rest of the application...
 }
 ```
@@ -58,17 +58,19 @@ const SYNC_COOLDOWN_MS = 5000; // 5 seconds minimum between syncs
  */
 export const initializeSession = async (): Promise<boolean> => {
   const currentSessionId = getSessionId();
-  
+
   // If we already have a session ID, just sync it
   if (currentSessionId) {
     return syncSession();
   }
-  
+
   // Otherwise create a new session
   const newSessionId = uuidv4();
-  console.log(`Generated new client-side session (masked: ${maskValue(newSessionId)})`);
+  console.log(
+    `Generated new client-side session (masked: ${maskValue(newSessionId)})`,
+  );
   setSessionId(newSessionId);
-  
+
   return syncWithBackend(newSessionId);
 };
 
@@ -78,18 +80,18 @@ export const initializeSession = async (): Promise<boolean> => {
 export const syncSession = async (): Promise<boolean> => {
   const currentSessionId = getSessionId();
   const now = Date.now();
-  
+
   if (!currentSessionId) {
-    console.error('No session ID to sync');
+    console.error("No session ID to sync");
     return false;
   }
-  
+
   // Don't sync if another sync is in progress or if we synced recently
-  if (syncInProgress || (now - lastSyncTime < SYNC_COOLDOWN_MS)) {
-    console.log('Session sync skipped: already in progress or too recent');
+  if (syncInProgress || now - lastSyncTime < SYNC_COOLDOWN_MS) {
+    console.log("Session sync skipped: already in progress or too recent");
     return true;
   }
-  
+
   syncInProgress = true;
   try {
     const result = await syncWithBackend(currentSessionId);
@@ -105,36 +107,42 @@ export const syncSession = async (): Promise<boolean> => {
  */
 const syncWithBackend = async (sessionId: string): Promise<boolean> => {
   try {
-    console.log(`Syncing session with backend (masked: ${maskValue(sessionId)})`);
-    
+    console.log(
+      `Syncing session with backend (masked: ${maskValue(sessionId)})`,
+    );
+
     const response = await fetch(`${API_BASE_URL}/sessions/sync`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      credentials: 'include',
-      body: JSON.stringify({ 
-        client_session_id: sessionId 
-      })
+      credentials: "include",
+      body: JSON.stringify({
+        client_session_id: sessionId,
+      }),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed to sync session: ${errorText}`);
       return false;
     }
-    
+
     const data = await response.json();
-    
+
     // If the server returned a different session ID, update our cookie
     if (data.session_id && data.session_id !== sessionId) {
-      console.log(`Updating session ID (masked from: ${maskValue(sessionId)} to: ${maskValue(data.session_id)})`);
+      console.log(
+        `Updating session ID (masked from: ${maskValue(
+          sessionId,
+        )} to: ${maskValue(data.session_id)})`,
+      );
       setSessionId(data.session_id);
     }
-    
+
     return true;
   } catch (error) {
-    console.error('Error syncing session:', error);
+    console.error("Error syncing session:", error);
     return false;
   }
 };
@@ -146,10 +154,11 @@ Update the ConceptContext to rely on the centralized session initialization:
 
 ```typescript
 // In ConceptContext.tsx
-const ConceptProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ConceptProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   // Remove direct syncSession() call from here
   // It will be handled by the App component initialization
-  
   // Rest of the provider implementation...
 };
 ```
@@ -160,12 +169,12 @@ Create a custom hook for components that need session access:
 
 ```typescript
 // In hooks/useSession.ts
-import { useState, useEffect } from 'react';
-import { getSessionId } from '../services/sessionManager';
+import { useState, useEffect } from "react";
+import { getSessionId } from "../services/sessionManager";
 
 export const useSession = () => {
   const [sessionId, setSessionId] = useState<string | null>(getSessionId());
-  
+
   useEffect(() => {
     // Update state if cookie changes
     const checkSession = () => {
@@ -174,12 +183,12 @@ export const useSession = () => {
         setSessionId(currentId);
       }
     };
-    
+
     // Check periodically (not for sync, just for local state)
     const interval = setInterval(checkSession, 5000);
     return () => clearInterval(interval);
   }, [sessionId]);
-  
+
   return sessionId;
 };
 ```
@@ -198,7 +207,7 @@ CACHE_DURATION = 60  # Cache for 60 seconds instead of 30
 def _get_cached_session(session_id: str) -> Optional[Dict[str, Any]]:
     """Get a session from the cache if available and not expired."""
     now = datetime.utcnow()
-    if (session_id in _session_cache and 
+    if (session_id in _session_cache and
         now < _session_cache[session_id]["expires_at"]):
         return _session_cache[session_id]["data"]
     return None
@@ -209,7 +218,7 @@ def _cache_session(session_id: str, session_data: Dict[str, Any]) -> None:
         "data": session_data,
         "expires_at": datetime.utcnow() + timedelta(seconds=CACHE_DURATION)
     }
-    
+
     # Limit cache size to prevent memory issues
     if len(_session_cache) > 1000:  # Arbitrary limit
         # Remove oldest entries
@@ -264,16 +273,16 @@ async def sync_session(
                     session_service.session_storage.update_session_activity(request.client_session_id)
                 except Exception:
                     pass
-                    
+
                 # Set cookie to ensure consistency
                 session_service.set_session_cookie(response, request.client_session_id)
-                
+
                 return SessionResponse(
                     session_id=request.client_session_id,
                     is_new_session=False,
                     message="Session valid (from cache)"
                 )
-        
+
         # Continue with existing implementation
         # ...
     except Exception as e:
@@ -292,12 +301,12 @@ def get_cached_session(self, session_id: str) -> Optional[Dict[str, Any]]:
     cached = _get_cached_session(session_id)
     if cached:
         return cached
-        
+
     # If not in cache, get from database
     session = self.get_session(session_id)
     if session:
         _cache_session(session_id, session)
-    
+
     return session
 ```
 
@@ -332,8 +341,8 @@ def get_cached_session(self, session_id: str) -> Optional[Dict[str, Any]]:
 
 ## Risks and Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Cache invalidation issues | Session inconsistency | Ensure cache expiry is relatively short |
-| Excessive throttling | User experiencing outdated session | Allow manual sync on important user actions |
-| Race conditions | Multiple competing session states | Use atomic operations and status flags | 
+| Risk                      | Impact                             | Mitigation                                  |
+| ------------------------- | ---------------------------------- | ------------------------------------------- |
+| Cache invalidation issues | Session inconsistency              | Ensure cache expiry is relatively short     |
+| Excessive throttling      | User experiencing outdated session | Allow manual sync on important user actions |
+| Race conditions           | Multiple competing session states  | Use atomic operations and status flags      |

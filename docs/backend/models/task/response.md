@@ -13,31 +13,31 @@ The `response.py` module in `app/models/task/` defines Pydantic models for struc
 ```python
 class TaskResponse(APIBaseModel):
     """Response model for task creation and status updates."""
-    
+
     task_id: str = Field(..., description="Unique task identifier")
     status: str = Field(..., description="Current task status (pending, processing, completed, failed)")
     type: str = Field(..., description="Task type (e.g., concept_generation, concept_refinement)")
     message: str = Field(..., description="Human-readable status message")
-    
+
     created_at: Optional[str] = Field(None, description="Task creation timestamp")
     updated_at: Optional[str] = Field(None, description="Last status update timestamp")
     completed_at: Optional[str] = Field(None, description="Task completion timestamp")
-    
+
     metadata: Optional[Dict[str, Any]] = Field(
         default={},
         description="Task-specific metadata (e.g., prompt info)"
     )
-    
+
     result_id: Optional[str] = Field(
-        None, 
+        None,
         description="ID of the result resource (e.g., concept ID for generation tasks)"
     )
-    
+
     image_url: Optional[str] = Field(
         None,
         description="URL of the generated image (for completed tasks)"
     )
-    
+
     error_message: Optional[str] = Field(
         None,
         description="Error message if the task failed"
@@ -155,5 +155,5 @@ The `TaskResponse` model is used by various task-related endpoints in the API:
 - [Task Service](../../services/task/service.md): Service implementing task management
 - [Task Interface](../../services/task/interface.md): Interface definition for task services
 - [Task Routes](../../api/routes/task/routes.md): API routes for task management
-- [Concept Generation](../../api/routes/concept/generation.md): Uses tasks for asynchronous generation 
-- [Concept Refinement](../../api/routes/concept/refinement.md): Uses tasks for asynchronous refinement 
+- [Concept Generation](../../api/routes/concept/generation.md): Uses tasks for asynchronous generation
+- [Concept Refinement](../../api/routes/concept/refinement.md): Uses tasks for asynchronous refinement

@@ -10,25 +10,26 @@ This component is the primary landing page that introduces users to the applicat
 
 ```tsx
 const LandingPage: React.FC = () => {
-  const { data: recentConcepts, isLoading } = useConceptQueries.useRecentConcepts({
-    limit: 3,
-    sortOrder: 'newest'
-  });
-  
+  const { data: recentConcepts, isLoading } =
+    useConceptQueries.useRecentConcepts({
+      limit: 3,
+      sortOrder: "newest",
+    });
+
   return (
     <MainLayout>
       <ConceptHeader />
-      
+
       <section className="main-content">
         <ConceptFormSection />
-        
+
         <HowItWorks />
-        
+
         {!isLoading && recentConcepts?.items.length > 0 && (
           <RecentConceptsSection concepts={recentConcepts.items} />
         )}
       </section>
-      
+
       <section className="results-section">
         <ResultsSection />
       </section>
@@ -86,4 +87,4 @@ This page is typically the default route for unauthenticated users and is access
 - Performance optimizations include:
   - Lazy loading of images
   - Conditional rendering of recent concepts
-  - Optimized asset loading 
+  - Optimized asset loading

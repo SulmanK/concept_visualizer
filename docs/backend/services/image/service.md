@@ -18,7 +18,7 @@ As a primary service in the application, it abstracts away the complexities of t
 ```python
 class ImageService(ImageServiceInterface):
     """Main implementation of the image service interface."""
-    
+
     def __init__(
         self,
         processing_service: Optional[ImageProcessingService] = None,
@@ -46,15 +46,18 @@ async def convert_format(
 This method implements the interface method for format conversion, delegating to the appropriate specialized functions.
 
 **Parameters:**
+
 - `image_data`: Binary image data to convert
 - `source_format`: Format of the input image (e.g., "png", "jpeg")
 - `target_format`: Desired output format (e.g., "png", "jpeg", "webp", "svg")
 - `**kwargs`: Additional format-specific parameters (e.g., quality for JPEG)
 
 **Returns:**
+
 - Binary data of the converted image
 
 **Raises:**
+
 - `UnsupportedFormatError`: If the format conversion is not supported
 - `FormatConversionError`: If the conversion fails
 
@@ -70,15 +73,18 @@ async def resize_image(
 This method implements the interface method for image resizing.
 
 **Parameters:**
+
 - `image_data`: Binary image data to resize
 - `width`: Target width in pixels
 - `height`: Target height in pixels
 - `preserve_aspect_ratio`: Whether to maintain the original aspect ratio
 
 **Returns:**
+
 - Binary data of the resized image
 
 **Raises:**
+
 - `ResizeError`: If the resize operation fails
 
 ### Optimize Image
@@ -93,14 +99,17 @@ async def optimize_image(
 This method implements the interface method for image optimization.
 
 **Parameters:**
+
 - `image_data`: Binary image data to optimize
 - `format`: Format of the image (e.g., "png", "jpeg", "webp")
 - `quality`: Quality level for lossy formats (0-100)
 
 **Returns:**
+
 - Binary data of the optimized image
 
 **Raises:**
+
 - `OptimizationError`: If the optimization fails
 
 ### Create Thumbnail
@@ -115,13 +124,16 @@ async def create_thumbnail(
 This method implements the interface method for thumbnail creation.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `max_size`: Maximum dimension (width or height) in pixels
 
 **Returns:**
+
 - Binary data of the thumbnail image
 
 **Raises:**
+
 - `ImageProcessingError`: If thumbnail creation fails
 
 ### Extract Dominant Colors
@@ -136,13 +148,16 @@ async def extract_dominant_colors(
 This method implements the interface method for color extraction.
 
 **Parameters:**
+
 - `image_data`: Binary image data to analyze
 - `num_colors`: Number of dominant colors to extract
 
 **Returns:**
+
 - List of color dictionaries with hex, rgb, and hsl values
 
 **Raises:**
+
 - `ImageProcessingError`: If color extraction fails
 
 ## Additional Methods
@@ -159,13 +174,16 @@ async def apply_effects(
 This method applies multiple visual effects to an image in sequence.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `effects`: List of effect configurations
 
 **Returns:**
+
 - Binary data of the processed image
 
 **Raises:**
+
 - `UnsupportedEffectError`: If an effect is not supported
 - `ImageProcessingError`: If effect application fails
 
@@ -181,14 +199,17 @@ async def generate_preview(
 This method creates specialized preview images for different contexts.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `preview_type`: Type of preview to generate (e.g., "web", "print", "social")
 - `params`: Preview-specific parameters
 
 **Returns:**
+
 - Binary data of the preview image
 
 **Raises:**
+
 - `UnsupportedPreviewTypeError`: If the preview type is not supported
 - `ImageProcessingError`: If preview generation fails
 
@@ -230,13 +251,13 @@ The service implements a comprehensive error handling strategy:
 
 The service supports the following image formats:
 
-| Format | Read Support | Write Support | Notes |
-|--------|--------------|--------------|-------|
-| PNG    | Full         | Full         | Supports transparency |
-| JPEG   | Full         | Full         | Configurable quality |
-| WebP   | Full         | Full         | Modern efficient format |
-| SVG    | Limited      | Full         | Vector format |
-| GIF    | Limited      | Limited      | Static images only |
+| Format | Read Support | Write Support | Notes                   |
+| ------ | ------------ | ------------- | ----------------------- |
+| PNG    | Full         | Full          | Supports transparency   |
+| JPEG   | Full         | Full          | Configurable quality    |
+| WebP   | Full         | Full          | Modern efficient format |
+| SVG    | Limited      | Full          | Vector format           |
+| GIF    | Limited      | Limited       | Static images only      |
 
 ## Usage Examples
 
@@ -325,4 +346,4 @@ with open("processed.png", "wb") as f:
 - [Image Processing](processing.md): Core image processing functions
 - [Image Conversion](conversion.md): Image format conversion details
 - [Processing Service](processing_service.md): Advanced processing service
-- [Export Service](../export/service.md): Service that uses image service for exports 
+- [Export Service](../export/service.md): Service that uses image service for exports

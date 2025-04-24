@@ -1,6 +1,6 @@
 /**
  * Logger utility that conditionally logs based on environment
- * 
+ *
  * In production, debug and info logs are suppressed
  * Warnings and errors are always shown
  */
@@ -50,4 +50,4 @@ export function logDev(message: string, ...args: any[]) {
   if (isDev) {
     console.log(message, ...args);
   }
-} 
+}

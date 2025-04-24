@@ -1,52 +1,49 @@
-"""
-Image processing utilities.
+"""Image processing utilities.
 
 This module provides utilities for image color processing, including
 dominant color extraction, color masking, and palette application.
 """
 
 import logging
-import numpy as np
-import cv2
 from io import BytesIO
-from typing import List, Dict, Any, Tuple, Union
-from PIL import Image
+from typing import List, Tuple
 
-from app.utils.http_utils import download_image
+import cv2
+import numpy as np
+import qrcode
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
 
 def hex_to_bgr(hex_color: str) -> Tuple[int, int, int]:
-    """
-    Convert hex color code to BGR tuple (OpenCV format).
-    
+    """Convert hex color code to BGR tuple (OpenCV format).
+
     Args:
         hex_color: Hexadecimal color code (e.g., '#FF5733')
-        
+
     Returns:
         BGR tuple (Blue, Green, Red)
     """
     # Remove # if present
-    if hex_color.startswith('#'):
+    if hex_color.startswith("#"):
         hex_color = hex_color[1:]
-    
+
     # Parse hex values
     red = int(hex_color[0:2], 16)
     green = int(hex_color[2:4], 16)
     blue = int(hex_color[4:6], 16)
-    
+
     # Return in BGR order for OpenCV
     return (blue, green, red)
 
 
 def bgr_to_hex(bgr: Tuple[int, int, int]) -> str:
-    """
-    Convert BGR tuple to hex color code.
-    
+    """Convert BGR tuple to hex color code.
+
     Args:
         bgr: BGR tuple (Blue, Green, Red)
-        
+
     Returns:
         Hexadecimal color code (e.g., '#FF5733')
     """
@@ -55,48 +52,57 @@ def bgr_to_hex(bgr: Tuple[int, int, int]) -> str:
 
 
 def find_dominant_colors(image: np.ndarray, num_colors: int = 5) -> List[Tuple[Tuple[int, int, int], float]]:
-    """
-    Find dominant colors in an image.
-    
+    """Find dominant colors in an image.
+
     Args:
         image: Image as numpy array in BGR format
         num_colors: Number of dominant colors to find
-        
+
     Returns:
         List of tuples containing ((B,G,R), percentage) for each dominant color
     """
     # Reshape the image to be a list of pixels
     pixels = image.reshape(-1, 3).astype(np.float32)
-    
+
     # Define criteria and apply kmeans
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 200, 0.1)
-    _, labels, centers = cv2.kmeans(pixels, num_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-    
+
+    # Convert None to np.array for proper typing
+    best_labels = np.array([])
+    # OpenCV kmeans will initialize and populate centers
+    centers = np.array([])
+
+    # Apply kmeans clustering
+    _, labels, centers = cv2.kmeans(pixels, num_colors, best_labels, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
     # Count labels to find percentages
     unique_labels, counts = np.unique(labels, return_counts=True)
     total_pixels = len(labels)
-    
+
     # Create list of ((B,G,R), percentage) tuples
-    colors = []
+    colors: List[Tuple[Tuple[int, int, int], float]] = []
     for i in range(len(centers)):
-        bgr = tuple(map(int, centers[i]))
-        percentage = counts[i] / total_pixels
+        # Ensure we get exactly 3 integers for BGR
+        b = int(centers[i][0])
+        g = int(centers[i][1])
+        r = int(centers[i][2])
+        bgr = (b, g, r)
+        percentage = float(counts[i] / total_pixels)
         colors.append((bgr, percentage))
-    
+
     # Sort by percentage (most dominant first)
     colors.sort(key=lambda x: x[1], reverse=True)
-    
+
     return colors[:num_colors]
 
 
 async def extract_dominant_colors(image_data: bytes, num_colors: int = 8) -> List[str]:
-    """
-    Extract dominant colors from an image and return as hex codes.
-    
+    """Extract dominant colors from an image and return as hex codes.
+
     Args:
         image_data: Binary image data
         num_colors: Number of colors to extract
-        
+
     Returns:
         List of color hex codes
     """
@@ -104,233 +110,181 @@ async def extract_dominant_colors(image_data: bytes, num_colors: int = 8) -> Lis
     img = Image.open(BytesIO(image_data))
     img_rgb = np.array(img.convert("RGB"))
     img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-    
+
     # Find dominant colors
     dominant_colors = find_dominant_colors(img_bgr, num_colors)
-    
+
     # Convert to hex strings
     hex_colors = [bgr_to_hex(color[0]) for color in dominant_colors]
-    
+
     return hex_colors
 
 
 def create_color_mask(image: np.ndarray, target_color: Tuple[int, int, int], threshold: int = 18) -> np.ndarray:
-    """
-    Create a binary mask for pixels close to the target color.
-    
+    """Create a binary mask for pixels close to the target color.
+
     Args:
         image: Image as numpy array in BGR format
         target_color: Target BGR color to mask
         threshold: Color distance threshold in each channel
-        
+
     Returns:
         Binary mask as numpy array
     """
     # Convert to HSV for better color detection
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    target_hsv = cv2.cvtColor(np.uint8([[target_color]]), cv2.COLOR_BGR2HSV)[0][0]
-    
+
+    # Create a properly shaped array with the target color and convert to HSV
+    target_color_array = np.array([[[target_color[0], target_color[1], target_color[2]]]], dtype=np.uint8)
+    target_hsv = cv2.cvtColor(target_color_array, cv2.COLOR_BGR2HSV)[0][0]
+
     # Create range for target color
     # Explicitly convert to uint8 to avoid type mismatches and overflows
     h_thresh = min(threshold, 90)  # Limit hue threshold to avoid wrapping issues
-    
+
     # Create bounds with proper types and clamping
-    lower_bound = np.array([
-        max(0, int(target_hsv[0]) - h_thresh),
-        max(0, int(target_hsv[1]) - threshold),
-        max(0, int(target_hsv[2]) - threshold)
-    ], dtype=np.uint8)
-    
-    upper_bound = np.array([
-        min(179, int(target_hsv[0]) + h_thresh),
-        min(255, int(target_hsv[1]) + threshold),
-        min(255, int(target_hsv[2]) + threshold)
-    ], dtype=np.uint8)
-    
+    lower_bound = np.array(
+        [
+            max(0, int(target_hsv[0]) - h_thresh),
+            max(0, int(target_hsv[1]) - threshold),
+            max(0, int(target_hsv[2]) - threshold),
+        ],
+        dtype=np.uint8,
+    )
+
+    upper_bound = np.array(
+        [
+            min(179, int(target_hsv[0]) + h_thresh),
+            min(255, int(target_hsv[1]) + threshold),
+            min(255, int(target_hsv[2]) + threshold),
+        ],
+        dtype=np.uint8,
+    )
+
     # Create mask
     mask = cv2.inRange(hsv_image, lower_bound, upper_bound)
-    
+
     # Apply morphological operations to clean up the mask
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
-    
+
     return mask
 
 
 def hex_to_lab(hex_color: str) -> Tuple[float, float, float]:
-    """
-    Convert hex color code to LAB tuple.
-    
+    """Convert hex color code to LAB tuple.
+
     Args:
         hex_color: Hexadecimal color code (e.g., '#FF5733')
-        
+
     Returns:
         LAB tuple (L*, a*, b*)
     """
     # Convert hex to BGR first
     bgr = hex_to_bgr(hex_color)
-    
+
     # Convert BGR to LAB
     # Need to reshape for OpenCV color conversion
     bgr_array = np.array([[bgr]], dtype=np.uint8)
     lab_array = cv2.cvtColor(bgr_array, cv2.COLOR_BGR2LAB)
-    
-    # Return as tuple
-    return tuple(map(float, lab_array[0][0]))
+
+    # Return as a properly sized tuple of exactly 3 float values
+    lab_values = lab_array[0][0]
+    return (float(lab_values[0]), float(lab_values[1]), float(lab_values[2]))
 
 
-async def apply_palette_with_masking_optimized(
-    image_url_or_data: Union[str, BytesIO, bytes], 
-    palette_colors: List[str], 
-    blend_strength: float = 0.75
-) -> bytes:
-    """Apply palette colors to an image using optimized color mapping.
-    
-    This implementation uses a combination of k-means clustering and LAB color space
-    adjustments to map palette colors while preserving texture details.
-    
+def create_qr_code(data: str, fill_color: Tuple[int, int, int], back_color: Tuple[int, int, int]) -> np.ndarray:
+    """Create a QR code image with specified colors.
+
     Args:
-        image_url_or_data: Image as URL string or bytes
-        palette_colors: List of hex color codes for the palette
-        blend_strength: How strongly to apply the new colors (0.0-1.0)
-        
+        data: Data to encode in the QR code
+        fill_color: Fill color as (r, g, b)
+        back_color: Background color as (r, g, b)
+
     Returns:
-        Processed image as bytes
-        
-    Raises:
-        Exception: If processing fails
+        QR code image as numpy array
     """
-    try:
-        import cv2
-        import numpy as np
-        from app.utils.http_utils import download_image
-        
-        # Download/read image
-        logger.info("Converting image to OpenCV format...")
-        
-        # First, determine if input is URL or bytes
-        if isinstance(image_url_or_data, str) and (image_url_or_data.startswith('http://') or image_url_or_data.startswith('https://')):
-            # It's a URL, download it asynchronously
-            image_data = await download_image(image_url_or_data)
-            # Convert to OpenCV format
-            nparr = np.frombuffer(image_data, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        else:
-            # It's already bytes or BytesIO
-            if isinstance(image_url_or_data, BytesIO):
-                image_data = image_url_or_data.getvalue()
-            else:
-                image_data = image_url_or_data
-                
-            # Convert to OpenCV format
-            nparr = np.frombuffer(image_data, np.uint8)
-            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
-        # Verify image data
-        if image is None:
-            logger.error("Failed to load image, returned None from cv2.imdecode")
-            raise ValueError("Image could not be loaded or decoded")
-            
-        logger.info(f"Image loaded successfully, shape: {image.shape}, dtype: {image.dtype}")
-        
-        # Clone image for later blending if needed
-        original_image = image.copy()
-        
-        # Get number of palette colors
-        num_colors = min(5, len(palette_colors))
-        palette_colors = palette_colors[:num_colors]
-        logger.info(f"Using {num_colors} palette colors")
-        
-        # 1. Use K-means clustering for better initial segmentation
-        # This helps determine regions more semantically than just lightness
-        pixels = image.reshape(-1, 3).astype(np.float32)
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.2)
-        _, labels, centers = cv2.kmeans(pixels, num_colors, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
-        
-        # 2. Convert palette colors to BGR
-        palette_bgr = [hex_to_bgr(color) for color in palette_colors]
-        
-        # 3. Sort both centers and palette colors by brightness (sum of BGR)
-        centers_with_idx = [(sum(center), i, center) for i, center in enumerate(centers)]
-        centers_with_idx.sort(key=lambda x: x[0])
-        
-        palette_with_idx = [(sum(color), i, color) for i, color in enumerate(palette_bgr)]
-        palette_with_idx.sort(key=lambda x: x[0])
-        
-        # 4. Create mapping from center index to palette color
-        center_to_palette = {}
-        for i in range(num_colors):
-            center_idx = centers_with_idx[i][1]
-            palette_idx = palette_with_idx[i][1]
-            center_to_palette[center_idx] = palette_bgr[palette_idx]
-        
-        # 5. Create a new image
-        result = np.zeros_like(image)
-        
-        # 6. Map each pixel to its new color based on the cluster it belongs to
-        labels = labels.reshape(-1)
-        for i in range(num_colors):
-            # Create mask for this cluster
-            mask = (labels == i)
-            # Get the original cluster center
-            center_color = centers[i]
-            # Get the target palette color
-            target_color = center_to_palette[i]
-            
-            # Convert to LAB for better color transfer
-            original_bgr = np.uint8([[center_color]])
-            target_bgr = np.uint8([[target_color]])
-            
-            original_lab = cv2.cvtColor(original_bgr, cv2.COLOR_BGR2LAB)[0][0]
-            target_lab = cv2.cvtColor(target_bgr, cv2.COLOR_BGR2LAB)[0][0]
-            
-            # Get the pixels for this cluster
-            cluster_pixels = image.reshape(-1, 3)[mask]
-            
-            # Convert cluster pixels to LAB
-            cluster_lab = cv2.cvtColor(cluster_pixels.reshape(-1, 1, 3), cv2.COLOR_BGR2LAB).reshape(-1, 3)
-            
-            # Calculate LAB difference between original center and target color
-            l_diff = float(target_lab[0]) - float(original_lab[0])
-            a_diff = float(target_lab[1]) - float(original_lab[1])
-            b_diff = float(target_lab[2]) - float(original_lab[2])
-            
-            # Apply the difference to all pixels in this cluster
-            # But preserve relative variations in lightness for better texture
-            cluster_lab[:, 0] = np.clip(cluster_lab[:, 0] + l_diff * 0.7, 0, 255)  # Partial L adjustment
-            cluster_lab[:, 1] = np.clip(cluster_lab[:, 1] + a_diff, 0, 255)        # Full a adjustment
-            cluster_lab[:, 2] = np.clip(cluster_lab[:, 2] + b_diff, 0, 255)        # Full b adjustment
-            
-            # Convert back to BGR
-            cluster_bgr = cv2.cvtColor(cluster_lab.reshape(-1, 1, 3), cv2.COLOR_LAB2BGR).reshape(-1, 3)
-            
-            # Update the result image for this cluster
-            result.reshape(-1, 3)[mask] = cluster_bgr
-        
-        # 7. Optional: Blend with original for texture preservation
-        # Higher blend strength = more of the new colors
-        final_result = cv2.addWeighted(
-            result, blend_strength,
-            original_image, 1.0 - blend_strength,
-            0
-        )
-        
-        # 8. Apply a slight saturation boost to make the colors more vibrant
-        hsv_result = cv2.cvtColor(final_result, cv2.COLOR_BGR2HSV).astype(np.float32)
-        # Increase saturation by 20%
-        hsv_result[:, :, 1] = np.clip(hsv_result[:, :, 1] * 1.2, 0, 255)
-        final_result = cv2.cvtColor(hsv_result.astype(np.uint8), cv2.COLOR_HSV2BGR)
-        
-        # 9. Encode the result to PNG format
-        _, buffer = cv2.imencode('.png', final_result)
-        result_bytes = buffer.tobytes()
-        
-        logger.info(f"Successfully encoded result, size: {len(result_bytes)} bytes")
-        return result_bytes
-        
-    except Exception as e:
-        logger.error(f"Error applying palette with LAB mapping: {str(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        raise 
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(data)
+    qr.make(fit=True)
+
+    # Create QR code image with PIL
+    img = qr.make_image(fill_color=fill_color, back_color=back_color)
+    img = img.convert("RGB")
+
+    # Convert PIL image to numpy array
+    img_array = np.array(img)
+
+    # Convert RGB to BGR for OpenCV compatibility
+    img_bgr = cv2.cvtColor(img_array.astype(np.uint8), cv2.COLOR_RGB2BGR)
+
+    return img_bgr
+
+
+def apply_palette_with_masking_optimized(image: np.ndarray, palette: List[Tuple[int, int, int]], k: int = 10) -> np.ndarray:
+    """Apply color palette to an image with optimized masking.
+
+    Args:
+        image: Input image as numpy array in BGR format
+        palette: List of BGR colors to use
+        k: Number of clusters for segmentation
+
+    Returns:
+        Processed image with palette colors
+    """
+    # Convert to LAB color space for better clustering
+    lab_image = cv2.cvtColor(image.astype(np.uint8), cv2.COLOR_BGR2LAB)
+
+    # Reshape for clustering
+    pixels = lab_image.reshape(-1, 3).astype(np.float32)
+
+    # Define criteria and apply kmeans
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.1)
+
+    # Initialize centers with shape (k, 3) for k clusters of 3D points
+    initial_centers = np.zeros((k, 3), dtype=np.float32)
+
+    # Apply KMeans clustering
+    _, labels, centers = cv2.kmeans(pixels, k, initial_centers, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+    # Reshape labels to original image dimensions
+    segmented_lab = centers[labels.flatten()].reshape(image.shape)
+
+    # Convert back to BGR
+    segmented_bgr = cv2.cvtColor(segmented_lab.astype(np.uint8), cv2.COLOR_LAB2BGR)
+
+    # Create output image
+    result = segmented_bgr.copy()
+
+    # For each segment, find the closest palette color
+    for i in range(k):
+        # Create mask for this segment
+        mask = (labels.reshape(image.shape[0], image.shape[1]) == i).astype(np.uint8)
+        mask_expanded = np.expand_dims(mask, axis=2).repeat(3, axis=2)
+
+        # Calculate average color of this segment in BGR
+        segment_indices = np.where(mask == 1)
+        if len(segment_indices[0]) == 0:
+            continue  # Skip empty segments
+
+        segment_colors = segmented_bgr[segment_indices]
+        avg_color = np.mean(segment_colors, axis=0)
+
+        # Find closest color in palette
+        closest_color = min(palette, key=lambda color: np.sum((np.array(color) - avg_color) ** 2))
+
+        # Apply palette color to this segment
+        color_img = np.zeros_like(result)
+        color_img[:] = closest_color
+
+        # Apply mask
+        np.copyto(result, color_img, where=mask_expanded.astype(bool))
+
+    # Ensure we return the correct type
+    return np.asarray(result, dtype=np.uint8)

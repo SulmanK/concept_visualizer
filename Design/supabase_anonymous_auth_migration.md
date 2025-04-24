@@ -67,18 +67,18 @@ from typing import Optional, Dict, Any
 
 class SupabaseAuthClient:
     """Client for Supabase authentication."""
-    
+
     def __init__(self):
         """Initialize the Supabase authentication client."""
         self.url = os.environ.get("CONCEPT_SUPABASE_URL")
         self.key = os.environ.get("CONCEPT_SUPABASE_KEY")
         self.jwt_secret = os.environ.get("CONCEPT_SUPABASE_JWT_SECRET")
-        
+
         if not self.url or not self.key:
             raise ValueError("Supabase URL and key must be provided")
-        
+
         self.client = create_client(self.url, self.key)
-    
+
     def verify_token(self, token: str) -> Dict[str, Any]:
         """Verify a JWT token and return the payload."""
         try:
@@ -91,13 +91,13 @@ class SupabaseAuthClient:
             return payload
         except jwt.PyJWTError as e:
             raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
-    
+
     def get_user_from_request(self, request: Request) -> Optional[Dict[str, Any]]:
         """Extract user information from request authorization header."""
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             return None
-            
+
         token = auth_header.replace("Bearer ", "")
         return self.verify_token(token)
 ```
@@ -117,18 +117,18 @@ logger = logging.getLogger("auth_middleware")
 
 class AuthMiddleware(BaseHTTPMiddleware):
     """Middleware to handle authentication."""
-    
+
     def __init__(self, app):
         """Initialize the middleware with Supabase client."""
         super().__init__(app)
         self.auth_client = SupabaseAuthClient()
-    
+
     async def dispatch(self, request: Request, call_next):
         """Process the request to check authentication."""
         # Skip authentication for certain paths
         if self._should_skip_auth(request.url.path):
             return await call_next(request)
-        
+
         # Verify the token
         try:
             user = self.auth_client.get_user_from_request(request)
@@ -141,10 +141,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 # Set user data in request state
                 request.state.user = user
                 request.state.is_anonymous = user.get("is_anonymous", False)
-                
+
             # Continue processing
             return await call_next(request)
-            
+
         except HTTPException as e:
             # Handle auth errors
             logger.warning(f"Auth error: {str(e)}")
@@ -159,7 +159,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 content={"detail": "Internal server error during authentication"}
             )
-    
+
     def _should_skip_auth(self, path: str) -> bool:
         """Determine if authentication should be skipped for this path."""
         public_paths = [
@@ -167,11 +167,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/docs",
             "/api/openapi.json",
         ]
-        
+
         for public_path in public_paths:
             if path.startswith(public_path):
                 return True
-                
+
         return False
 ```
 
@@ -202,6 +202,7 @@ def get_verified_user(
 #### 1.4 Remove Legacy Session Routes
 
 Delete or deprecate the following files:
+
 - `app/api/routes/session/session_routes.py`
 - `app/services/session/manager.py`
 
@@ -212,9 +213,9 @@ Delete or deprecate the following files:
 
 # Update methods to use user_id instead of session_id
 def get_concepts_by_user(
-    self, 
-    user_id: str, 
-    limit: int = 20, 
+    self,
+    user_id: str,
+    limit: int = 20,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
     """Get concepts by user ID."""
@@ -240,11 +241,11 @@ def create_concept(
 ```typescript
 // src/services/supabaseClient.ts
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 // Environment variables for Supabase
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 // Create default client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -260,24 +261,26 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
  */
 export const initializeAnonymousAuth = async () => {
   // Check if we have an existing session
-  let { data: { session } } = await supabase.auth.getSession();
-  
+  let {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   // If no session exists, sign in anonymously
   if (!session) {
-    console.log('No session found, signing in anonymously');
+    console.log("No session found, signing in anonymously");
     const { data, error } = await supabase.auth.signInAnonymously();
-    
+
     if (error) {
-      console.error('Error signing in anonymously:', error);
+      console.error("Error signing in anonymously:", error);
       throw error;
     }
-    
+
     session = data.session;
-    console.log('Anonymous sign-in successful');
+    console.log("Anonymous sign-in successful");
   } else {
-    console.log('Using existing session');
+    console.log("Using existing session");
   }
-  
+
   return session;
 };
 
@@ -286,7 +289,9 @@ export const initializeAnonymousAuth = async () => {
  * @returns User ID string or null if not authenticated
  */
 export const getUserId = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return session?.user?.id || null;
 };
 
@@ -295,9 +300,11 @@ export const getUserId = async () => {
  * @returns Boolean indicating if user is anonymous
  */
 export const isAnonymousUser = async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   if (!session) return false;
-  
+
   // Check is_anonymous claim in JWT
   const claims = session.user.app_metadata;
   return claims.is_anonymous === true;
@@ -326,9 +333,9 @@ export const signOut = async () => {
 ```typescript
 // src/contexts/AuthContext.tsx
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase, initializeAnonymousAuth } from '../services/supabaseClient';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Session, User } from "@supabase/supabase-js";
+import { supabase, initializeAnonymousAuth } from "../services/supabaseClient";
 
 interface AuthContextType {
   session: Session | null;
@@ -341,80 +348,78 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
   useEffect(() => {
     // Initialize auth once on mount
     const initAuth = async () => {
       try {
         setIsLoading(true);
-        
+
         // Initialize anonymous authentication
         const session = await initializeAnonymousAuth();
         setSession(session);
         setUser(session?.user || null);
         setIsAnonymous(session?.user?.app_metadata?.is_anonymous || false);
-        
+
         // Set up auth state listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            setSession(session);
-            setUser(session?.user || null);
-            setIsAnonymous(session?.user?.app_metadata?.is_anonymous || false);
-          }
-        );
-        
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          setSession(session);
+          setUser(session?.user || null);
+          setIsAnonymous(session?.user?.app_metadata?.is_anonymous || false);
+        });
+
         // Return cleanup function
         return () => {
           subscription.unsubscribe();
         };
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error("Error initializing auth:", error);
         setError(error as Error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     initAuth();
   }, []);
-  
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
       // After sign out, initialize a new anonymous session
       await initializeAnonymousAuth();
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       setError(error as Error);
     }
   };
-  
+
   const value = {
     session,
     user,
     isAnonymous,
     isLoading,
     error,
-    signOut
+    signOut,
   };
-  
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -425,10 +430,10 @@ export const useAuth = () => {
 ```typescript
 // src/App.tsx
 
-import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import Routes from './Routes';
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import Routes from "./Routes";
 
 const App: React.FC = () => {
   return (
@@ -448,10 +453,11 @@ export default App;
 ```typescript
 // src/services/apiClient.ts
 
-import { supabase } from './supabaseClient';
+import { supabase } from "./supabaseClient";
 
 // Base URL for API
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 /**
  * Make an authenticated API request
@@ -460,33 +466,35 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
  * @returns Promise with response data
  */
 export const apiRequest = async (
-  endpoint: string, 
-  options: RequestInit = {}
+  endpoint: string,
+  options: RequestInit = {},
 ) => {
   try {
     // Get the current session
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const token = session?.access_token;
-    
+
     // Prepare headers with auth token
     const headers = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
     };
-    
+
     // Make the request
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
-    
+
     // Handle non-OK responses
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`API error (${response.status}): ${errorText}`);
     }
-    
+
     // Parse JSON response
     const data = await response.json();
     return data;
@@ -500,31 +508,32 @@ export const apiRequest = async (
  * Convenience methods for common HTTP methods
  */
 export const api = {
-  get: (endpoint: string, options?: RequestInit) => 
-    apiRequest(endpoint, { method: 'GET', ...options }),
-    
-  post: (endpoint: string, body: any, options?: RequestInit) => 
-    apiRequest(endpoint, { 
-      method: 'POST',
+  get: (endpoint: string, options?: RequestInit) =>
+    apiRequest(endpoint, { method: "GET", ...options }),
+
+  post: (endpoint: string, body: any, options?: RequestInit) =>
+    apiRequest(endpoint, {
+      method: "POST",
       body: JSON.stringify(body),
-      ...options
+      ...options,
     }),
-    
-  put: (endpoint: string, body: any, options?: RequestInit) => 
-    apiRequest(endpoint, { 
-      method: 'PUT',
+
+  put: (endpoint: string, body: any, options?: RequestInit) =>
+    apiRequest(endpoint, {
+      method: "PUT",
       body: JSON.stringify(body),
-      ...options
+      ...options,
     }),
-    
-  delete: (endpoint: string, options?: RequestInit) => 
-    apiRequest(endpoint, { method: 'DELETE', ...options }),
+
+  delete: (endpoint: string, options?: RequestInit) =>
+    apiRequest(endpoint, { method: "DELETE", ...options }),
 };
 ```
 
 #### 2.5 Remove Legacy Session Manager
 
 Delete or refactor:
+
 - `src/services/sessionManager.ts`
 
 #### 2.6 Update Concept Fetching Logic
@@ -532,8 +541,8 @@ Delete or refactor:
 ```typescript
 // src/services/conceptService.ts
 
-import { api } from './apiClient';
-import { getUserId } from './supabaseClient';
+import { api } from "./apiClient";
+import { getUserId } from "./supabaseClient";
 
 /**
  * Fetch recent concepts for the current user
@@ -543,12 +552,12 @@ import { getUserId } from './supabaseClient';
 export const fetchRecentConcepts = async (limit = 10) => {
   // Get the current user ID
   const userId = await getUserId();
-  
+
   // If no user ID, return empty array
   if (!userId) {
     return [];
   }
-  
+
   // Fetch concepts using the API client
   return await api.get(`/concepts?user_id=${userId}&limit=${limit}`);
 };
@@ -662,7 +671,7 @@ CREATE POLICY "Users can view their own concept images"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (
-  bucket_id = 'concept-images' AND 
+  bucket_id = 'concept-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -670,7 +679,7 @@ CREATE POLICY "Users can upload their own concept images"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
-  bucket_id = 'concept-images' AND 
+  bucket_id = 'concept-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -678,7 +687,7 @@ CREATE POLICY "Users can update their own concept images"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (
-  bucket_id = 'concept-images' AND 
+  bucket_id = 'concept-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -686,7 +695,7 @@ CREATE POLICY "Users can delete their own concept images"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
-  bucket_id = 'concept-images' AND 
+  bucket_id = 'concept-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -695,7 +704,7 @@ CREATE POLICY "Users can view their own palette images"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (
-  bucket_id = 'palette-images' AND 
+  bucket_id = 'palette-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -703,7 +712,7 @@ CREATE POLICY "Users can upload their own palette images"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
-  bucket_id = 'palette-images' AND 
+  bucket_id = 'palette-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -711,7 +720,7 @@ CREATE POLICY "Users can update their own palette images"
 ON storage.objects FOR UPDATE
 TO authenticated
 USING (
-  bucket_id = 'palette-images' AND 
+  bucket_id = 'palette-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -719,12 +728,13 @@ CREATE POLICY "Users can delete their own palette images"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (
-  bucket_id = 'palette-images' AND 
+  bucket_id = 'palette-images' AND
   (storage.foldername(name))[1] = auth.uid()::text
 );
 ```
 
 Note: For storage buckets, we're organizing files by user ID as the first folder level:
+
 - `concept-images/[user-id]/image1.png`
 - `palette-images/[user-id]/palette1.png`
 
@@ -735,11 +745,13 @@ This ensures proper segmentation of files by user through RLS.
 #### 4.1 Test Plan
 
 1. **Unit Tests**
+
    - Test JWT verification in backend
    - Test anonymous authentication flow in frontend
    - Test API client with auth tokens
 
 2. **Integration Tests**
+
    - Test end-to-end authentication flow
    - Test concept creation and retrieval with anonymous users
    - Test session persistence across page reloads
@@ -752,11 +764,13 @@ This ensures proper segmentation of files by user through RLS.
 #### 4.2 Rollout Plan
 
 1. **Development Phase**
+
    - Implement all changes in development environment
    - Run database migration in development
    - Complete all tests in development
 
 2. **Staging Phase**
+
    - Deploy to staging environment
    - Run database migration in staging
    - Conduct UAT in staging
@@ -770,6 +784,7 @@ This ensures proper segmentation of files by user through RLS.
 #### 4.3 Rollback Plan
 
 1. **Frontend Rollback**
+
    - Keep the old sessionManager.ts code in place during initial deployment
    - If issues occur, revert to using the original session implementation
 
@@ -780,16 +795,19 @@ This ensures proper segmentation of files by user through RLS.
 ## Benefits of Migration
 
 1. **Improved Security**
+
    - JWT-based authentication with proper claims
    - Built-in session management with expiration
    - Row-level security based on authenticated users
 
 2. **Reduced Code Complexity**
+
    - Less custom code to maintain
    - Standard authentication patterns
    - Simplified API client logic
 
 3. **Enhanced User Experience**
+
    - Seamless authentication across page reloads
    - Less network traffic for session management
    - Potential for easier user account creation
@@ -801,21 +819,21 @@ This ensures proper segmentation of files by user through RLS.
 
 ## Risks and Mitigations
 
-| Risk | Mitigation |
-|------|------------|
-| Data migration issues | Run test migrations in development and staging first |
-| User session disruption | Implement gradual rollout with fallback mechanisms |
-| Performance issues | Monitor response times and optimize as needed |
-| JWT verification overhead | Use appropriate caching strategies |
-| Security vulnerabilities | Follow Supabase security best practices |
+| Risk                      | Mitigation                                           |
+| ------------------------- | ---------------------------------------------------- |
+| Data migration issues     | Run test migrations in development and staging first |
+| User session disruption   | Implement gradual rollout with fallback mechanisms   |
+| Performance issues        | Monitor response times and optimize as needed        |
+| JWT verification overhead | Use appropriate caching strategies                   |
+| Security vulnerabilities  | Follow Supabase security best practices              |
 
 ## Timeline
 
-| Phase | Estimated Duration |
-|-------|-------------------|
-| Backend Changes | 3 days |
-| Frontend Changes | 3 days |
-| Database Migration | 1 day |
-| Testing | 2 days |
-| Rollout | 1 day |
-| **Total** | **10 days** | 
+| Phase              | Estimated Duration |
+| ------------------ | ------------------ |
+| Backend Changes    | 3 days             |
+| Frontend Changes   | 3 days             |
+| Database Migration | 1 day              |
+| Testing            | 2 days             |
+| Rollout            | 1 day              |
+| **Total**          | **10 days**        |

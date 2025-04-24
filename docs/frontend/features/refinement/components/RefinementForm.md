@@ -33,28 +33,36 @@ const RefinementForm: React.FC<RefinementFormProps> = ({
   const addPreserveElement = useCallback(() => {
     onChange({
       ...formData,
-      preserveElements: [...formData.preserveElements, ''],
+      preserveElements: [...formData.preserveElements, ""],
     });
   }, [formData, onChange]);
-  
-  const updatePreserveElement = useCallback((index: number, value: string) => {
-    const newPreserveElements = [...formData.preserveElements];
-    newPreserveElements[index] = value;
-    onChange({
-      ...formData,
-      preserveElements: newPreserveElements,
-    });
-  }, [formData, onChange]);
-  
-  const removePreserveElement = useCallback((index: number) => {
-    onChange({
-      ...formData,
-      preserveElements: formData.preserveElements.filter((_, i) => i !== index),
-    });
-  }, [formData, onChange]);
-  
+
+  const updatePreserveElement = useCallback(
+    (index: number, value: string) => {
+      const newPreserveElements = [...formData.preserveElements];
+      newPreserveElements[index] = value;
+      onChange({
+        ...formData,
+        preserveElements: newPreserveElements,
+      });
+    },
+    [formData, onChange],
+  );
+
+  const removePreserveElement = useCallback(
+    (index: number) => {
+      onChange({
+        ...formData,
+        preserveElements: formData.preserveElements.filter(
+          (_, i) => i !== index,
+        ),
+      });
+    },
+    [formData, onChange],
+  );
+
   // Similar methods for change requests...
-  
+
   return (
     <form onSubmit={onSubmit} className="refinement-form">
       <div className="form-section">
@@ -63,20 +71,22 @@ const RefinementForm: React.FC<RefinementFormProps> = ({
           <p>{originalPrompt}</p>
         </div>
       </div>
-      
+
       <div className="form-section">
         <h3>Additional Feedback</h3>
         <TextArea
           value={formData.additionalFeedback}
-          onChange={(e) => onChange({
-            ...formData,
-            additionalFeedback: e.target.value,
-          })}
+          onChange={(e) =>
+            onChange({
+              ...formData,
+              additionalFeedback: e.target.value,
+            })
+          }
           placeholder="Provide overall feedback about the concept..."
           rows={4}
         />
       </div>
-      
+
       <div className="form-section">
         <div className="section-header">
           <h3>Elements to Preserve</h3>
@@ -90,7 +100,7 @@ const RefinementForm: React.FC<RefinementFormProps> = ({
             Add Element
           </Button>
         </div>
-        
+
         {formData.preserveElements.map((element, index) => (
           <div key={`preserve-${index}`} className="list-item">
             <Input
@@ -107,16 +117,16 @@ const RefinementForm: React.FC<RefinementFormProps> = ({
             />
           </div>
         ))}
-        
+
         {formData.preserveElements.length === 0 && (
           <p className="help-text">
             Specify elements you want to keep in the refined version.
           </p>
         )}
       </div>
-      
+
       {/* Similar section for change requests */}
-      
+
       <div className="form-actions">
         <Button
           type="submit"
@@ -134,13 +144,13 @@ const RefinementForm: React.FC<RefinementFormProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `formData` | `RefinementFormData` | Yes | - | Current form data values |
-| `onChange` | `(data: RefinementFormData) => void` | Yes | - | Callback when form data changes |
-| `onSubmit` | `(e: React.FormEvent) => void` | Yes | - | Callback when form is submitted |
-| `isSubmitting` | `boolean` | Yes | - | Whether form submission is in progress |
-| `originalPrompt` | `string` | Yes | - | The original prompt used for concept generation |
+| Prop             | Type                                 | Required | Default | Description                                     |
+| ---------------- | ------------------------------------ | -------- | ------- | ----------------------------------------------- |
+| `formData`       | `RefinementFormData`                 | Yes      | -       | Current form data values                        |
+| `onChange`       | `(data: RefinementFormData) => void` | Yes      | -       | Callback when form data changes                 |
+| `onSubmit`       | `(e: React.FormEvent) => void`       | Yes      | -       | Callback when form is submitted                 |
+| `isSubmitting`   | `boolean`                            | Yes      | -       | Whether form submission is in progress          |
+| `originalPrompt` | `string`                             | Yes      | -       | The original prompt used for concept generation |
 
 ## Features
 
@@ -190,16 +200,16 @@ interface RefinementFormData {
 ```tsx
 const RefinementPageContent: React.FC = () => {
   const [formData, setFormData] = useState<RefinementFormData>({
-    additionalFeedback: '',
+    additionalFeedback: "",
     preserveElements: [],
     changeRequests: [],
   });
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Submit refinement request
   };
-  
+
   return (
     <div className="refinement-container">
       <RefinementForm
@@ -219,4 +229,4 @@ const RefinementPageContent: React.FC = () => {
 - Form sections clearly separated
 - List items have consistent styling
 - Add/remove controls are visually distinguished
-- Proper spacing between form elements 
+- Proper spacing between form elements

@@ -11,14 +11,14 @@ The `OfflineStatus` component displays a banner notification when a user is offl
 
 ## Props
 
-| Prop                    | Type                     | Required | Default                      | Description                                      |
-|-------------------------|--------------------------|----------|------------------------------|--------------------------------------------------|
-| `position`              | `'top' \| 'bottom'`      | No       | `'top'`                     | Position of the banner on screen                 |
-| `className`             | `string`                 | No       | `''`                         | Additional CSS classes                           |
-| `showRetry`             | `boolean`                | No       | `true`                       | Whether to show a retry connection button        |
-| `showConnectionInfo`    | `boolean`                | No       | `false`                      | Whether to show connection type information      |
-| `offlineMessage`        | `string`                 | No       | `'You are currently offline'`| Message to display when offline                  |
-| `slowConnectionMessage` | `string`                 | No       | `'You are on a slow connection'`| Message when on slow connection               |
+| Prop                    | Type                | Required | Default                          | Description                                 |
+| ----------------------- | ------------------- | -------- | -------------------------------- | ------------------------------------------- |
+| `position`              | `'top' \| 'bottom'` | No       | `'top'`                          | Position of the banner on screen            |
+| `className`             | `string`            | No       | `''`                             | Additional CSS classes                      |
+| `showRetry`             | `boolean`           | No       | `true`                           | Whether to show a retry connection button   |
+| `showConnectionInfo`    | `boolean`           | No       | `false`                          | Whether to show connection type information |
+| `offlineMessage`        | `string`            | No       | `'You are currently offline'`    | Message to display when offline             |
+| `slowConnectionMessage` | `string`            | No       | `'You are on a slow connection'` | Message when on slow connection             |
 
 ## Features
 
@@ -34,18 +34,18 @@ The `OfflineStatus` component displays a banner notification when a user is offl
 ## Usage Example
 
 ```tsx
-import { OfflineStatus } from '../components/ui/OfflineStatus';
+import { OfflineStatus } from "../components/ui/OfflineStatus";
 
 const AppLayout = ({ children }) => {
   return (
     <div className="app-container">
       {/* The OfflineStatus will automatically appear when needed */}
-      <OfflineStatus 
+      <OfflineStatus
         position="top"
         showConnectionInfo={true}
         offlineMessage="No internet connection available"
       />
-      
+
       <header>...</header>
       <main>{children}</main>
       <footer>...</footer>
@@ -74,4 +74,4 @@ The component uses the `useNetworkStatus` hook to access the following informati
 
 ## Related Components and Hooks
 
-- [`useNetworkStatus`](../../hooks/useNetworkStatus.md) - Hook providing network connectivity information 
+- [`useNetworkStatus`](../../hooks/useNetworkStatus.md) - Hook providing network connectivity information

@@ -25,8 +25,8 @@ API modules typically follow this pattern:
 Example:
 
 ```tsx
-import { apiClient } from 'services/apiClient';
-import type { Task, TaskStatus } from 'types';
+import { apiClient } from "services/apiClient";
+import type { Task, TaskStatus } from "types";
 
 // Get a specific task by ID
 export const getTask = async (taskId: string): Promise<Task> => {
@@ -35,16 +35,19 @@ export const getTask = async (taskId: string): Promise<Task> => {
 
 // Get all tasks for current user
 export const getTasks = async (): Promise<Task[]> => {
-  return apiClient.get<Task[]>('/api/tasks');
+  return apiClient.get<Task[]>("/api/tasks");
 };
 
 // Create a new task
-export const createTask = async (task: Omit<Task, 'id'>): Promise<Task> => {
-  return apiClient.post<Task>('/api/tasks', task);
+export const createTask = async (task: Omit<Task, "id">): Promise<Task> => {
+  return apiClient.post<Task>("/api/tasks", task);
 };
 
 // Update a task's status
-export const updateTaskStatus = async (taskId: string, status: TaskStatus): Promise<Task> => {
+export const updateTaskStatus = async (
+  taskId: string,
+  status: TaskStatus,
+): Promise<Task> => {
   return apiClient.patch<Task>(`/api/tasks/${taskId}/status`, { status });
 };
 
@@ -60,37 +63,37 @@ API modules are typically used by hooks that handle data fetching and mutations:
 
 ```tsx
 // Example usage in a hook
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getTasks, createTask, updateTaskStatus, deleteTask } from 'api/task';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getTasks, createTask, updateTaskStatus, deleteTask } from "api/task";
 
 export const useTasksQuery = () => {
-  return useQuery(['tasks'], getTasks);
+  return useQuery(["tasks"], getTasks);
 };
 
 export const useTaskMutations = () => {
   const queryClient = useQueryClient();
-  
+
   const createMutation = useMutation(createTask, {
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks']);
+      queryClient.invalidateQueries(["tasks"]);
     },
   });
-  
+
   const updateStatusMutation = useMutation(
     ({ taskId, status }) => updateTaskStatus(taskId, status),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['tasks']);
+        queryClient.invalidateQueries(["tasks"]);
       },
-    }
+    },
   );
-  
+
   const deleteMutation = useMutation(deleteTask, {
     onSuccess: () => {
-      queryClient.invalidateQueries(['tasks']);
+      queryClient.invalidateQueries(["tasks"]);
     },
   });
-  
+
   return {
     createTask: createMutation.mutate,
     updateTaskStatus: updateStatusMutation.mutate,
@@ -105,4 +108,4 @@ export const useTaskMutations = () => {
 - Request and response types should be clearly defined
 - API modules should not contain business logic
 - Authentication and authorization should be handled at the API client level
-- Rate limiting concerns should be handled at the API client level 
+- Rate limiting concerns should be handled at the API client level

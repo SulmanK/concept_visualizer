@@ -3,7 +3,7 @@
  * This file provides helpers to setup and reset mock services between tests.
  */
 
-import { mockApiService, MockApiConfig } from './mockApiService';
+import { mockApiService, MockApiConfig } from "./mockApiService";
 
 /**
  * Setup the mock API for a test.
@@ -37,7 +37,9 @@ export function mockApiFailure(): void {
 /**
  * Configure the mock API with custom responses.
  */
-export function mockApiCustomResponse(customResponses: MockApiConfig['customResponses']): void {
+export function mockApiCustomResponse(
+  customResponses: MockApiConfig["customResponses"],
+): void {
   mockApiService.configure({
     customResponses,
   });
@@ -52,8 +54,8 @@ export function setupTestMocks(): void {
     resetMockApi();
     jest.clearAllMocks();
   });
-  
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
-} 
+}

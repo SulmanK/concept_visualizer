@@ -32,7 +32,7 @@ const RecentConceptsHeader: React.FC<RecentConceptsHeaderProps> = ({
           <span className="concept-count">{totalConcepts} concepts</span>
         )}
       </div>
-      
+
       <div className="header-controls">
         <div className="sort-controls">
           <label htmlFor="sort-select">Sort by:</label>
@@ -41,25 +41,22 @@ const RecentConceptsHeader: React.FC<RecentConceptsHeaderProps> = ({
             value={currentSort}
             onChange={(e) => onSortChange(e.target.value as SortOrder)}
             options={[
-              { value: 'newest', label: 'Newest first' },
-              { value: 'oldest', label: 'Oldest first' },
-              { value: 'name', label: 'Name (A-Z)' },
-              { value: 'name-desc', label: 'Name (Z-A)' },
+              { value: "newest", label: "Newest first" },
+              { value: "oldest", label: "Oldest first" },
+              { value: "name", label: "Name (A-Z)" },
+              { value: "name-desc", label: "Name (Z-A)" },
             ]}
           />
         </div>
-        
+
         {onFilterChange && (
-          <FilterControls 
-            filters={currentFilters}
-            onChange={onFilterChange}
-          />
+          <FilterControls filters={currentFilters} onChange={onFilterChange} />
         )}
-        
-        <Button 
+
+        <Button
           variant="primary"
           icon="plus"
-          onClick={() => window.location.href = '/concepts/new'}
+          onClick={() => (window.location.href = "/concepts/new")}
         >
           New Concept
         </Button>
@@ -71,18 +68,18 @@ const RecentConceptsHeader: React.FC<RecentConceptsHeaderProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `onSortChange` | `(sort: SortOrder) => void` | Yes | - | Callback when sorting option changes |
-| `currentSort` | `SortOrder` | Yes | - | Current sort order value |
-| `onFilterChange` | `(filters: ConceptFilters) => void` | No | - | Callback when filters change |
-| `currentFilters` | `ConceptFilters` | No | `{}` | Current applied filters |
-| `totalConcepts` | `number` | No | 0 | Total number of concepts (for displaying count) |
+| Prop             | Type                                | Required | Default | Description                                     |
+| ---------------- | ----------------------------------- | -------- | ------- | ----------------------------------------------- |
+| `onSortChange`   | `(sort: SortOrder) => void`         | Yes      | -       | Callback when sorting option changes            |
+| `currentSort`    | `SortOrder`                         | Yes      | -       | Current sort order value                        |
+| `onFilterChange` | `(filters: ConceptFilters) => void` | No       | -       | Callback when filters change                    |
+| `currentFilters` | `ConceptFilters`                    | No       | `{}`    | Current applied filters                         |
+| `totalConcepts`  | `number`                            | No       | 0       | Total number of concepts (for displaying count) |
 
 ## Types
 
 ```tsx
-type SortOrder = 'newest' | 'oldest' | 'name' | 'name-desc';
+type SortOrder = "newest" | "oldest" | "name" | "name-desc";
 
 interface ConceptFilters {
   status?: ConceptStatus[];
@@ -93,7 +90,7 @@ interface ConceptFilters {
   };
 }
 
-type ConceptStatus = 'draft' | 'complete' | 'in-progress';
+type ConceptStatus = "draft" | "complete" | "in-progress";
 ```
 
 ## Features
@@ -118,15 +115,15 @@ type ConceptStatus = 'draft' | 'complete' | 'in-progress';
 
 ```tsx
 const RecentConceptsPage = () => {
-  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [filters, setFilters] = useState<ConceptFilters>({});
-  
+
   // Data fetching with filters and sorting
   const { data } = useConceptQueries.useRecentConcepts({
     sortOrder,
     ...filters,
   });
-  
+
   return (
     <div className="recent-concepts-page">
       <RecentConceptsHeader
@@ -136,7 +133,7 @@ const RecentConceptsPage = () => {
         currentFilters={filters}
         totalConcepts={data?.totalItems}
       />
-      
+
       {/* ... rest of the page */}
     </div>
   );
@@ -147,4 +144,4 @@ const RecentConceptsPage = () => {
 
 - Sort select input has proper labeling
 - Interactive elements have appropriate ARIA attributes
-- Focus management follows best practices 
+- Focus management follows best practices

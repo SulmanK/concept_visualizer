@@ -41,6 +41,7 @@ This endpoint handles processing an export request, converting the image to the 
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Request Body:**
+
 - `image_identifier`: Path to the image to export
 - `storage_bucket`: Storage bucket where the image is stored (e.g., "concept-images", "palette-images")
 - `target_format`: Desired output format (e.g., "png", "jpg", "svg")
@@ -48,6 +49,7 @@ This endpoint handles processing an export request, converting the image to the 
 - `svg_params`: Optional parameters for SVG export
 
 **Response:**
+
 - A streaming response containing the processed file with appropriate headers for download
 - Content-Type header set according to the target format
 - Content-Disposition header with appropriate filename
@@ -109,11 +111,11 @@ Authorization: Bearer {token}
 
 The export service supports conversion between the following formats:
 
-| Source Format | Target Formats |
-|---------------|----------------|
+| Source Format | Target Formats  |
+| ------------- | --------------- |
 | PNG           | JPEG, WebP, SVG |
-| JPEG          | PNG, WebP, SVG |
-| WebP          | PNG, JPEG, SVG |
+| JPEG          | PNG, WebP, SVG  |
+| WebP          | PNG, JPEG, SVG  |
 | SVG           | PNG, JPEG, WebP |
 
 ## Integration with Services
@@ -136,4 +138,4 @@ The export system is designed with performance in mind:
 - [Export Models](../../../models/export/request.md): Data models for export requests
 - [Export Service](../../../services/export/service.md): Service for handling exports
 - [Image Service](../../../services/image/service.md): Service for image processing
-- [Image Conversion](../../../services/image/conversion.md): Details on image format conversion 
+- [Image Conversion](../../../services/image/conversion.md): Details on image format conversion

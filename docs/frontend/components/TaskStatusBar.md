@@ -32,8 +32,8 @@ This component primarily relies on the `TaskContext` to access information about
 The component is typically included once in the application layout to provide a consistent status display:
 
 ```tsx
-import { TaskStatusBar } from '../components/TaskStatusBar';
-import { MainLayout } from '../components/layout/MainLayout';
+import { TaskStatusBar } from "../components/TaskStatusBar";
+import { MainLayout } from "../components/layout/MainLayout";
 
 const App = () => {
   return (
@@ -45,7 +45,7 @@ const App = () => {
           {/* Other routes */}
         </Routes>
       </MainLayout>
-      
+
       {/* The TaskStatusBar is outside the main layout so it can be fixed at the bottom */}
       <TaskStatusBar />
     </>
@@ -67,4 +67,4 @@ The component uses CSS transitions and animations to:
 - [`Spinner`](./ui/Spinner.md) - Used for loading indicators
 - [`Button`](./ui/Button.md) - Used for the cancel button
 - `useTaskContext` - Hook providing task information
-- `useTaskSubscription` - Hook for subscribing to task updates 
+- `useTaskSubscription` - Hook for subscribing to task updates

@@ -24,17 +24,17 @@ This constant defines the default interval in milliseconds for polling operation
 ```typescript
 export const TASK_STATUS = {
   /** Base path for task endpoints */
-  BASE_PATH: 'tasks',
+  BASE_PATH: "tasks",
   /** Task is waiting to be processed */
-  PENDING: 'pending',
+  PENDING: "pending",
   /** Task is currently being processed */
-  PROCESSING: 'processing',
+  PROCESSING: "processing",
   /** Task has been completed successfully */
-  COMPLETED: 'completed',
+  COMPLETED: "completed",
   /** Task has failed */
-  FAILED: 'failed',
+  FAILED: "failed",
   /** Task has been canceled */
-  CANCELED: 'canceled'
+  CANCELED: "canceled",
 };
 ```
 
@@ -44,14 +44,14 @@ These constants define the possible task statuses and the base path for task-rel
 
 ```typescript
 export const API_ENDPOINTS = {
-  GENERATE_CONCEPT: 'concepts/generate-with-palettes',
-  REFINE_CONCEPT: 'concepts/refine',
+  GENERATE_CONCEPT: "concepts/generate-with-palettes",
+  REFINE_CONCEPT: "concepts/refine",
   TASK_STATUS_BY_ID: (taskId: string) => `${TASK_STATUS.BASE_PATH}/${taskId}`,
   TASK_CANCEL: (taskId: string) => `${TASK_STATUS.BASE_PATH}/${taskId}/cancel`,
-  EXPORT_IMAGE: 'export/process',
-  RECENT_CONCEPTS: 'storage/recent',
+  EXPORT_IMAGE: "export/process",
+  RECENT_CONCEPTS: "storage/recent",
   CONCEPT_DETAIL: (id: string) => `storage/concept/${id}`,
-  RATE_LIMITS: 'health/rate-limits-status'
+  RATE_LIMITS: "health/rate-limits-status",
 };
 ```
 
@@ -60,8 +60,11 @@ This object contains endpoint paths for various API operations. Some entries are
 ## Usage
 
 ```typescript
-import { API_ENDPOINTS, DEFAULT_POLLING_INTERVAL } from '../config/apiEndpoints';
-import { apiClient } from '../services/apiClient';
+import {
+  API_ENDPOINTS,
+  DEFAULT_POLLING_INTERVAL,
+} from "../config/apiEndpoints";
+import { apiClient } from "../services/apiClient";
 
 // Using a simple endpoint
 const fetchRecentConcepts = async () => {
@@ -80,12 +83,15 @@ const pollTaskStatus = (taskId: string, callback: (status: any) => void) => {
   const interval = setInterval(async () => {
     const status = await fetchTaskStatus(taskId);
     callback(status);
-    
-    if (status.status === TASK_STATUS.COMPLETED || status.status === TASK_STATUS.FAILED) {
+
+    if (
+      status.status === TASK_STATUS.COMPLETED ||
+      status.status === TASK_STATUS.FAILED
+    ) {
       clearInterval(interval);
     }
   }, DEFAULT_POLLING_INTERVAL);
-  
+
   return () => clearInterval(interval);
 };
 ```
@@ -96,4 +102,4 @@ const pollTaskStatus = (taskId: string, callback: (status: any) => void) => {
 2. **Make endpoint URLs descriptive** to clearly indicate their purpose
 3. **Use functions for parameterized endpoints** to ensure consistent formatting
 4. **Export constants individually** to allow for selective imports
-5. **Add JSDoc comments** to explain the purpose and usage of each endpoint 
+5. **Add JSDoc comments** to explain the purpose and usage of each endpoint

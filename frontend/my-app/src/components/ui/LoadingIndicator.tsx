@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 
-export type LoadingIndicatorSize = 'small' | 'medium' | 'large';
+export type LoadingIndicatorSize = "small" | "medium" | "large";
 
 export interface LoadingIndicatorProps {
   /**
@@ -30,38 +30,38 @@ export interface LoadingIndicatorProps {
    * Color theme for the spinner
    * @default 'primary'
    */
-  variant?: 'primary' | 'light' | 'dark';
+  variant?: "primary" | "light" | "dark";
 }
 
 /**
  * Loading indicator component that displays a spinner with optional label
  */
 export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
-  size = 'medium',
-  className = '',
+  size = "medium",
+  className = "",
   showLabel = false,
-  labelText = 'Loading...',
-  variant = 'primary',
+  labelText = "Loading...",
+  variant = "primary",
 }) => {
   // Size mapping for spinner dimensions
   const sizeClasses = {
-    small: 'h-4 w-4',
-    medium: 'h-8 w-8',
-    large: 'h-12 w-12',
+    small: "h-4 w-4",
+    medium: "h-8 w-8",
+    large: "h-12 w-12",
   };
 
   // Color variants
   const colorClasses = {
-    primary: 'text-indigo-600',
-    light: 'text-white',
-    dark: 'text-gray-800',
+    primary: "text-indigo-600",
+    light: "text-white",
+    dark: "text-gray-800",
   };
 
   // Text size mapping based on spinner size
   const textSizeClasses = {
-    small: 'text-xs',
-    medium: 'text-sm',
-    large: 'text-base',
+    small: "text-xs",
+    medium: "text-sm",
+    large: "text-base",
   };
 
   return (
@@ -88,9 +88,11 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
           ></path>
         </svg>
-        
+
         {showLabel && (
-          <span className={`${textSizeClasses[size]} font-medium ${colorClasses[variant]}`}>
+          <span
+            className={`${textSizeClasses[size]} font-medium ${colorClasses[variant]}`}
+          >
             {labelText}
           </span>
         )}
@@ -99,4 +101,4 @@ export const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
   );
 };
 
-export default LoadingIndicator; 
+export default LoadingIndicator;

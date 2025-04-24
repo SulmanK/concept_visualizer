@@ -23,12 +23,14 @@ The rate limiter is built on Redis and provides:
 The rate limiting system follows these principles:
 
 1. **Separation of Concerns**:
+
    - Configuration (limit definitions)
    - Storage (tracking limit state)
    - Key generation (identifying resources)
    - Application (enforcing limits)
 
 2. **Middleware + Decorator Pattern**:
+
    - Middleware applies global rate limits and adds headers
    - Decorators apply endpoint-specific limits
 
@@ -88,4 +90,4 @@ To add a new rate limit:
 
 - [Rate Limit Apply Middleware](../../api/middleware/rate_limit_apply.md): Middleware that enforces limits
 - [Rate Limit Headers Middleware](../../api/middleware/rate_limit_headers.md): Middleware that adds limit headers
-- [Health Endpoints](../../api/routes/health/limits.md): Endpoints for checking rate limit status 
+- [Health Endpoints](../../api/routes/health/limits.md): Endpoints for checking rate limit status

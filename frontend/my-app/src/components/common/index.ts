@@ -1,1 +1,1 @@
-export { QueryResultHandler } from './QueryResultHandler'; 
+export { QueryResultHandler } from "./QueryResultHandler";

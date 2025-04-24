@@ -58,9 +58,9 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
           >
             <div
               class="
-                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                h-8 w-8 rounded-full shadow-sm border border-dark-200
                 cursor-pointer hover:scale-110 transition-transform
-                
+
               "
               style="background-color: rgb(79, 70, 229);"
               title="Primary: #4F46E5"
@@ -76,9 +76,9 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
           >
             <div
               class="
-                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                h-8 w-8 rounded-full shadow-sm border border-dark-200
                 cursor-pointer hover:scale-110 transition-transform
-                
+
               "
               style="background-color: rgb(96, 165, 250);"
               title="Secondary: #60A5FA"
@@ -94,9 +94,9 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
           >
             <div
               class="
-                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                h-8 w-8 rounded-full shadow-sm border border-dark-200
                 cursor-pointer hover:scale-110 transition-transform
-                
+
               "
               style="background-color: rgb(238, 242, 255);"
               title="Accent: #EEF2FF"
@@ -112,9 +112,9 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
           >
             <div
               class="
-                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                h-8 w-8 rounded-full shadow-sm border border-dark-200
                 cursor-pointer hover:scale-110 transition-transform
-                
+
               "
               style="background-color: rgb(255, 255, 255);"
               title="Background: #FFFFFF"
@@ -130,9 +130,9 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
           >
             <div
               class="
-                h-8 w-8 rounded-full shadow-sm border border-dark-200 
+                h-8 w-8 rounded-full shadow-sm border border-dark-200
                 cursor-pointer hover:scale-110 transition-transform
-                
+
               "
               style="background-color: rgb(30, 41, 59);"
               title="Text: #1E293B"
@@ -162,7 +162,7 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
                 class="
                     h-8 w-8 rounded-full shadow-sm border border-dark-200
                     cursor-pointer hover:scale-110 transition-transform
-                    
+
                   "
                 style="background-color: rgb(129, 140, 248);"
                 title="Additional color: #818CF8"
@@ -181,7 +181,7 @@ exports[`ConceptResult Component > matches snapshot 1`] = `
                 class="
                     h-8 w-8 rounded-full shadow-sm border border-dark-200
                     cursor-pointer hover:scale-110 transition-transform
-                    
+
                   "
                 style="background-color: rgb(99, 102, 241);"
                 title="Additional color: #6366F1"

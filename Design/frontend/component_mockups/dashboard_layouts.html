@@ -43,14 +43,14 @@
 <body class="bg-gradient-to-br from-violet-50 to-indigo-100 min-h-screen font-sans text-gray-800">
   <div class="container mx-auto p-4">
     <h1 class="text-3xl font-bold text-center my-8 text-violet-900">Dashboard Layout Options</h1>
-    
+
     <!-- Layout Selector -->
     <div class="flex justify-center mb-8 gap-4">
       <button class="btn-primary" onclick="showLayout('card-grid')">Card Grid</button>
       <button class="btn-primary" onclick="showLayout('split-view')">Split View</button>
       <button class="btn-primary" onclick="showLayout('tabbed-interface')">Tabbed Interface</button>
     </div>
-    
+
     <!-- Card Grid Layout -->
     <div id="card-grid" class="layout-option">
       <h2 class="text-2xl font-semibold mb-6 text-violet-800">Card Grid Layout</h2>
@@ -67,7 +67,7 @@
             <button class="text-sm text-primary hover:text-primary-dark">View</button>
           </div>
         </div>
-        
+
         <!-- Card 2 -->
         <div class="card">
           <div class="h-40 bg-gradient-to-r from-purple-400 to-pink-500 rounded-md mb-4 flex items-center justify-center text-white font-bold">
@@ -80,7 +80,7 @@
             <button class="text-sm text-primary hover:text-primary-dark">View</button>
           </div>
         </div>
-        
+
         <!-- Card 3 -->
         <div class="card">
           <div class="h-40 bg-gradient-to-r from-green-400 to-teal-500 rounded-md mb-4 flex items-center justify-center text-white font-bold">
@@ -95,7 +95,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Split View Layout -->
     <div id="split-view" class="layout-option hidden">
       <h2 class="text-2xl font-semibold mb-6 text-violet-800">Split View Layout</h2>
@@ -130,7 +130,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="lg:col-span-3">
           <div class="card mb-6">
@@ -140,7 +140,7 @@
               <button class="btn-primary">Create New Concept</button>
             </div>
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Activity Card -->
             <div class="card">
@@ -169,7 +169,7 @@
                 </li>
               </ul>
             </div>
-            
+
             <!-- Stats Card -->
             <div class="card">
               <h3 class="text-lg font-semibold text-violet-900">Statistics</h3>
@@ -196,7 +196,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Tabbed Interface Layout -->
     <div id="tabbed-interface" class="layout-option hidden">
       <h2 class="text-2xl font-semibold mb-6 text-violet-800">Tabbed Interface Layout</h2>
@@ -208,7 +208,7 @@
           <button class="tab-button py-3 px-6 font-medium text-gray-500 hover:text-violet-900 transition-colors" data-tab="create">Create New</button>
           <button class="tab-button py-3 px-6 font-medium text-gray-500 hover:text-violet-900 transition-colors" data-tab="settings">Settings</button>
         </div>
-        
+
         <!-- Tab Content -->
         <div class="tab-content" id="dashboard-tab">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -240,7 +240,7 @@
               </div>
             </div>
           </div>
-          
+
           <h3 class="text-lg font-semibold text-violet-900 mt-8 mb-4">Recent Concepts</h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Recent Concept 1 -->
@@ -257,7 +257,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Recent Concept 2 -->
             <div class="border border-gray-200 rounded-lg overflow-hidden">
               <div class="h-32 bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
@@ -272,7 +272,7 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Recent Concept 3 -->
             <div class="border border-gray-200 rounded-lg overflow-hidden">
               <div class="h-32 bg-gradient-to-r from-green-400 to-teal-500 flex items-center justify-center text-white font-bold">
@@ -289,22 +289,22 @@
             </div>
           </div>
         </div>
-        
+
         <div class="tab-content hidden" id="my-concepts-tab">
           <p class="text-gray-600">My Concepts content would go here...</p>
         </div>
-        
+
         <div class="tab-content hidden" id="create-tab">
           <p class="text-gray-600">Create New content would go here...</p>
         </div>
-        
+
         <div class="tab-content hidden" id="settings-tab">
           <p class="text-gray-600">Settings content would go here...</p>
         </div>
       </div>
     </div>
   </div>
-  
+
   <script>
     // Show selected layout
     function showLayout(layoutId) {
@@ -313,7 +313,7 @@
       });
       document.getElementById(layoutId).classList.remove('hidden');
     }
-    
+
     // Tab functionality
     document.querySelectorAll('.tab-button').forEach(button => {
       button.addEventListener('click', () => {
@@ -322,16 +322,16 @@
           tab.classList.remove('active', 'border-violet-600', 'text-violet-900');
           tab.classList.add('text-gray-500');
         });
-        
+
         // Add active state to clicked tab
         button.classList.add('active', 'border-violet-600', 'text-violet-900');
         button.classList.remove('text-gray-500');
-        
+
         // Hide all tab content
         document.querySelectorAll('.tab-content').forEach(content => {
           content.classList.add('hidden');
         });
-        
+
         // Show selected tab content
         const tabId = button.getAttribute('data-tab');
         document.getElementById(tabId + '-tab').classList.remove('hidden');
@@ -339,4 +339,4 @@
     });
   </script>
 </body>
-</html> 
+</html>

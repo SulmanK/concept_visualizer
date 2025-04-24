@@ -29,6 +29,7 @@ def __init__(self, app: ASGIApp):
 ```
 
 Parameters:
+
 - `app`: The ASGI application instance
 
 #### Dispatch Method
@@ -39,6 +40,7 @@ async def dispatch(self, request: Request, call_next: Callable) -> Response:
 ```
 
 The dispatch method:
+
 1. Processes the request by calling the next middleware or route handler
 2. Checks if rate limit information is available in `request.state.limiter_info`
 3. Extracts limit, remaining, and reset values
@@ -48,11 +50,11 @@ The dispatch method:
 
 The middleware adds the following headers to responses:
 
-| Header | Description |
-|--------|-------------|
-| `X-RateLimit-Limit` | The maximum number of requests allowed in the current time window |
-| `X-RateLimit-Remaining` | The number of requests remaining in the current time window |
-| `X-RateLimit-Reset` | The time at which the current rate limit window resets (Unix timestamp) |
+| Header                  | Description                                                             |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `X-RateLimit-Limit`     | The maximum number of requests allowed in the current time window       |
+| `X-RateLimit-Remaining` | The number of requests remaining in the current time window             |
+| `X-RateLimit-Reset`     | The time at which the current rate limit window resets (Unix timestamp) |
 
 ## Usage Example
 
@@ -95,4 +97,4 @@ X-RateLimit-Remaining: 8
 X-RateLimit-Reset: 1672531200
 ```
 
-In this example, the client is allowed 10 requests per time period, has 8 requests remaining, and the current time window resets at Unix timestamp 1672531200. 
+In this example, the client is allowed 10 requests per time period, has 8 requests remaining, and the current time window resets at Unix timestamp 1672531200.

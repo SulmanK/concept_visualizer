@@ -12,42 +12,42 @@
       background-color: #f0f2f5;
       color: #333;
     }
-    
+
     .page-container {
       max-width: 100%;
       min-height: 100vh;
       background-color: #EDF0FD;
       padding: 1rem;
     }
-    
+
     .content-container {
       max-width: 1024px;
       margin: 0 auto;
     }
-    
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
     }
-    
+
     .title {
       font-size: 1.5rem;
       font-weight: bold;
       color: #111827;
       margin: 0;
     }
-    
+
     .date {
       font-size: 0.875rem;
       color: #6B7280;
     }
-    
+
     .section {
       margin-bottom: 1.5rem;
     }
-    
+
     .section-title {
       font-size: 1.125rem;
       font-weight: 600;
@@ -55,60 +55,60 @@
       margin-bottom: 0.75rem;
       text-align: center;
     }
-    
+
     .card {
       background-color: white;
       border-radius: 0.5rem;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
       padding: 1rem;
     }
-    
+
     .main-image-container {
       display: flex;
       justify-content: center;
       align-items: center;
       margin-bottom: 1rem;
     }
-    
+
     .main-image {
       max-width: 100%;
       max-height: 300px;
       object-fit: contain;
     }
-    
+
     .color-palette-container {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 1.5rem;
     }
-    
+
     .color-item {
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    
+
     .color-swatch {
       width: 36px;
       height: 36px;
       border-radius: 50%;
       cursor: pointer;
     }
-    
+
     .color-label {
       margin-top: 0.25rem;
       font-size: 0.75rem;
       color: #4B5563;
       text-align: center;
     }
-    
+
     .variations-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 0.75rem;
     }
-    
+
     .variation-card {
       background-color: white;
       border-radius: 0.375rem;
@@ -116,54 +116,54 @@
       border: 1px solid #E5E7EB;
       cursor: pointer;
     }
-    
+
     .variation-card.selected {
       border: 2px solid #4F46E5;
     }
-    
+
     .variation-header {
       padding: 0.375rem;
       border-bottom: 1px solid #F3F4F6;
       text-align: center;
       background-color: #F9FAFB;
     }
-    
+
     .variation-title {
       font-weight: 500;
       font-size: 0.75rem;
       color: #111827;
     }
-    
+
     .variation-content {
       padding: 0.5rem;
     }
-    
+
     .variation-image {
       width: 100%;
       height: 80px;
       object-fit: contain;
       margin-bottom: 0.5rem;
     }
-    
+
     .color-dots-container {
       display: flex;
       justify-content: center;
       gap: 4px;
     }
-    
+
     .color-dot {
       width: 10px;
       height: 10px;
       border-radius: 50%;
     }
-    
+
     .actions-container {
       display: flex;
       justify-content: center;
       gap: 0.75rem;
       margin-top: 1rem;
     }
-    
+
     .button {
       padding: 0.5rem 1rem;
       border-radius: 0.375rem;
@@ -172,13 +172,13 @@
       cursor: pointer;
       transition: background-color 0.2s;
     }
-    
+
     .primary-button {
       background-color: #4F46E5;
       color: white;
       border: none;
     }
-    
+
     .secondary-button {
       background-color: white;
       color: #4F46E5;
@@ -200,15 +200,15 @@
         <h2 class="section-title">Main concept</h2>
         <div class="card">
           <div class="main-image-container">
-            <img 
-              src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/concept-images/megaman_neon.png" 
-              alt="Generated concept" 
+            <img
+              src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/concept-images/megaman_neon.png"
+              alt="Generated concept"
               class="main-image"
             />
           </div>
         </div>
       </div>
-      
+
       <!-- Color Palette Section -->
       <div class="section">
         <h2 class="section-title">Color Palette</h2>
@@ -237,7 +237,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Color Variations Section -->
       <div class="section">
         <h2 class="section-title">Color Variations</h2>
@@ -249,9 +249,9 @@
                 <span class="variation-title">Original</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/concept-images/megaman_neon.png" 
-                  alt="Original concept" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/concept-images/megaman_neon.png"
+                  alt="Original concept"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -263,16 +263,16 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Other variations -->
             <div class="variation-card">
               <div class="variation-header">
                 <span class="variation-title">Primary Palette</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_vintage.png" 
-                  alt="Primary Palette" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_vintage.png"
+                  alt="Primary Palette"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -284,15 +284,15 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="variation-card">
               <div class="variation-header">
                 <span class="variation-title">Accent Palette</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_retro.png" 
-                  alt="Accent Palette" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_retro.png"
+                  alt="Accent Palette"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -304,15 +304,15 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="variation-card">
               <div class="variation-header">
                 <span class="variation-title">Neutral Palette</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_sepia.png" 
-                  alt="Neutral Palette" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_sepia.png"
+                  alt="Neutral Palette"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -324,15 +324,15 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="variation-card">
               <div class="variation-header">
                 <span class="variation-title">Vibrant Palette</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_neon.png" 
-                  alt="Vibrant Palette" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_neon.png"
+                  alt="Vibrant Palette"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -344,15 +344,15 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="variation-card">
               <div class="variation-header">
                 <span class="variation-title">Complementary</span>
               </div>
               <div class="variation-content">
-                <img 
-                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_green.png" 
-                  alt="Complementary" 
+                <img
+                  src="https://pstdcfittpjhxzynbdbu.supabase.co/storage/v1/object/public/palette-images/megaman_green.png"
+                  alt="Complementary"
                   class="variation-image"
                 />
                 <div class="color-dots-container">
@@ -367,7 +367,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Actions -->
       <div class="actions-container">
         <button class="button secondary-button">Refine This Concept</button>
@@ -376,4 +376,4 @@
     </div>
   </div>
 </body>
-</html> 
+</html>

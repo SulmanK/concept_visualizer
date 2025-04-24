@@ -9,20 +9,14 @@ This hook is a cornerstone of the application's error management strategy. It pr
 ## Usage
 
 ```tsx
-import { useErrorHandling } from '../hooks/useErrorHandling';
+import { useErrorHandling } from "../hooks/useErrorHandling";
 
 function MyComponent() {
-  const { 
-    error, 
-    hasError, 
-    handleError, 
-    setError, 
-    clearError, 
-    showErrorToast 
-  } = useErrorHandling({
-    showToasts: true
-  });
-  
+  const { error, hasError, handleError, setError, clearError, showErrorToast } =
+    useErrorHandling({
+      showToasts: true,
+    });
+
   const handleSubmit = async (data) => {
     try {
       clearError(); // Clear any previous errors
@@ -32,31 +26,33 @@ function MyComponent() {
       handleError(err);
     }
   };
-  
+
   const handleManualError = () => {
     // Manually set a specific error with category
-    setError('Please fill out all required fields', 'validation');
+    setError("Please fill out all required fields", "validation");
   };
-  
+
   return (
     <div>
       {hasError && (
         <div className="error-container">
           <h3>Error: {error.message}</h3>
           {error.details && <p>{error.details}</p>}
-          {error.category === 'validation' && (
+          {error.category === "validation" && (
             <div className="validation-errors">
-              {Object.entries(error.validationErrors || {}).map(([field, errors]) => (
-                <p key={field}>
-                  {field}: {errors.join(', ')}
-                </p>
-              ))}
+              {Object.entries(error.validationErrors || {}).map(
+                ([field, errors]) => (
+                  <p key={field}>
+                    {field}: {errors.join(", ")}
+                  </p>
+                ),
+              )}
             </div>
           )}
           <button onClick={clearError}>Dismiss</button>
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         {/* Form fields... */}
         <button type="submit">Submit</button>
@@ -70,8 +66,8 @@ function MyComponent() {
 
 The hook accepts an optional configuration object:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+| Parameter    | Type    | Default | Description                                                  |
+| ------------ | ------- | ------- | ------------------------------------------------------------ |
 | `showToasts` | boolean | `false` | Whether to automatically show toast notifications for errors |
 
 ## Return Value
@@ -82,22 +78,27 @@ The hook returns an object with the following properties:
 interface UseErrorHandlingResult {
   // Current error state
   error: ErrorWithCategory | null;
-  
+
   // Whether there is an active error
   hasError: boolean;
-  
+
   // Set an error with a specific category
-  setError: (message: string, category?: ErrorCategory, details?: string, originalError?: unknown) => void;
-  
+  setError: (
+    message: string,
+    category?: ErrorCategory,
+    details?: string,
+    originalError?: unknown,
+  ) => void;
+
   // Clear the current error
   clearError: () => void;
-  
+
   // Handle an error and categorize it automatically
   handleError: (error: unknown) => void;
-  
+
   // Show the current error in a toast notification
   showErrorToast: () => void;
-  
+
   // Show the current error in a toast and clear the error state
   showAndClearError: () => void;
 }
@@ -107,17 +108,17 @@ interface UseErrorHandlingResult {
 
 The hook categorizes errors into the following types:
 
-| Category | Description | Toast Type |
-|----------|-------------|------------|
-| `'validation'` | Form validation errors | warning |
-| `'network'` | Network/API request errors | info |
-| `'permission'` | Permission/authorization errors | error |
-| `'notFound'` | Resource not found errors | warning |
-| `'server'` | Server-side errors | error |
-| `'client'` | Client-side errors | error |
-| `'rateLimit'` | Rate limit errors | warning |
-| `'auth'` | Authentication errors | error |
-| `'unknown'` | Uncategorized errors | error |
+| Category       | Description                     | Toast Type |
+| -------------- | ------------------------------- | ---------- |
+| `'validation'` | Form validation errors          | warning    |
+| `'network'`    | Network/API request errors      | info       |
+| `'permission'` | Permission/authorization errors | error      |
+| `'notFound'`   | Resource not found errors       | warning    |
+| `'server'`     | Server-side errors              | error      |
+| `'client'`     | Client-side errors              | error      |
+| `'rateLimit'`  | Rate limit errors               | warning    |
+| `'auth'`       | Authentication errors           | error      |
+| `'unknown'`    | Uncategorized errors            | error      |
 
 ## Error Object Structure
 
@@ -125,23 +126,23 @@ The `error` state uses the `ErrorWithCategory` interface:
 
 ```typescript
 interface ErrorWithCategory {
-  message: string;               // Primary error message
-  details?: string;              // Additional error details
-  category: ErrorCategory;       // Error category
-  originalError?: unknown;       // Original error object
-  
+  message: string; // Primary error message
+  details?: string; // Additional error details
+  category: ErrorCategory; // Error category
+  originalError?: unknown; // Original error object
+
   // Rate limit specific properties
-  limit?: number;                // Maximum allowed requests
-  current?: number;              // Current request count
-  period?: string;               // Time period (e.g., "1m", "1h")
-  resetAfterSeconds?: number;    // Seconds until reset
-  
+  limit?: number; // Maximum allowed requests
+  current?: number; // Current request count
+  period?: string; // Time period (e.g., "1m", "1h")
+  resetAfterSeconds?: number; // Seconds until reset
+
   // Validation specific properties
   validationErrors?: Record<string, string[]>; // Field-specific errors
-  
+
   // API error specific properties
-  status?: number;               // HTTP status code
-  url?: string;                  // Request URL
+  status?: number; // HTTP status code
+  url?: string; // Request URL
 }
 ```
 
@@ -159,6 +160,7 @@ The `handleError` method automatically detects the error type based on its prope
 ### Toast Integration
 
 When `showToasts` is enabled:
+
 - Automatically displays toast notifications for errors
 - Maps error categories to appropriate toast types (error, warning, info)
 - For rate limit errors, shows time remaining until reset
@@ -184,4 +186,4 @@ For specialized errors, the hook extracts and preserves additional context:
 - `useToast` - Used for showing error notifications
 - `apiClient` - Source of API errors with standard error types
 - `ErrorBoundary` - Component-level error handling
-- `ErrorMessage` - Standardized error display component 
+- `ErrorMessage` - Standardized error display component

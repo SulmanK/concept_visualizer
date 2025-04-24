@@ -1,9 +1,9 @@
 // This file is kept for backward compatibility
 // New code should use the hooks in src/hooks/useTaskQueries.ts
 
-import { TaskResponse } from '../types/api.types';
-import { apiClient } from '../services/apiClient';
-import { API_ENDPOINTS } from '../config/apiEndpoints';
+import { TaskResponse } from "../types/api.types";
+import { apiClient } from "../services/apiClient";
+import { API_ENDPOINTS } from "../config/apiEndpoints";
 
 /**
  * @deprecated Use useTaskStatusQuery from src/hooks/useTaskQueries.ts instead
@@ -13,18 +13,22 @@ import { API_ENDPOINTS } from '../config/apiEndpoints';
  */
 export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
   if (!taskId) {
-    throw new Error('No task ID provided for status check');
+    throw new Error("No task ID provided for status check");
   }
-  
+
   console.log(`[API] Fetching status for task ${taskId}`);
-  const response = await apiClient.get<TaskResponse>(API_ENDPOINTS.TASK_STATUS_BY_ID(taskId));
-  
+  const response = await apiClient.get<TaskResponse>(
+    API_ENDPOINTS.TASK_STATUS_BY_ID(taskId),
+  );
+
   // Normalize the response by ensuring the id field is set properly
   if (response.data.task_id && !response.data.id) {
     response.data.id = response.data.task_id;
   }
-  
-  console.log(`[API] Received status for task ${taskId}: ${response.data.status}`);
+
+  console.log(
+    `[API] Received status for task ${taskId}: ${response.data.status}`,
+  );
   return response.data;
 }
 
@@ -36,10 +40,13 @@ export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
  */
 export async function cancelTask(taskId: string): Promise<TaskResponse> {
   if (!taskId) {
-    throw new Error('No task ID provided for cancellation');
+    throw new Error("No task ID provided for cancellation");
   }
-  
+
   console.log(`[API] Cancelling task ${taskId}`);
-  const response = await apiClient.post<TaskResponse>(API_ENDPOINTS.TASK_CANCEL(taskId), {});
+  const response = await apiClient.post<TaskResponse>(
+    API_ENDPOINTS.TASK_CANCEL(taskId),
+    {},
+  );
   return response.data;
-} 
+}

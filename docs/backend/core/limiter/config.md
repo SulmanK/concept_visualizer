@@ -5,6 +5,7 @@ The `config.py` module in the limiter package provides the configuration and set
 ## Overview
 
 This module:
+
 1. Configures a Redis-backed rate limiter using SlowAPI
 2. Defines non-counting endpoints (health checks, etc.)
 3. Provides fallback options for when Redis is unavailable
@@ -21,22 +22,22 @@ The `configure_limiter` function creates a SlowAPI Limiter instance with appropr
 def configure_limiter(debug: bool = False) -> Limiter:
     """
     Configure the rate limiter with appropriate settings.
-    
+
     Args:
         debug: Whether to enable debug mode
-        
+
     Returns:
         Configured Limiter instance
     """
     # Set up Redis store
     redis_client = get_redis_client()
-    
+
     # Default rate limits if not configured in settings
     default_limits = getattr(settings, "DEFAULT_RATE_LIMITS", ["200/day", "50/hour", "10/minute"])
-    
+
     # Rate limiting enabled by default
     rate_limiting_enabled = getattr(settings, "RATE_LIMITING_ENABLED", True)
-    
+
     # Create limiter with Redis or memory backend
     # ...
 ```
@@ -49,19 +50,19 @@ The `setup_limiter_for_app` function installs the rate limiter into a FastAPI ap
 def setup_limiter_for_app(app: FastAPI) -> None:
     """
     Set up rate limiting for a FastAPI application.
-    
+
     Args:
         app: FastAPI application instance
     """
     # Configure limiter
     limiter = configure_limiter()
-    
+
     # Add limiter to app state
     app.state.limiter = limiter
-    
+
     # Register rate limit exceeded handler
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-    
+
     # Load non-counting endpoints
     # ...
 ```
@@ -74,21 +75,21 @@ The module tracks paths that should not count against rate limits:
 def is_non_counting_endpoint(request: Request) -> bool:
     """
     Check if the current request is for a non-counting endpoint.
-    
+
     Args:
         request: The FastAPI request
-    
+
     Returns:
         True if the endpoint should not count against rate limits
     """
     path = request.url.path
-    
+
     # Check if the path is in the non-counting list
     for endpoint in NON_COUNTING_ENDPOINTS:
         if path == endpoint or path.startswith(endpoint):
             logger.debug(f"Request to non-counting endpoint: {path}")
             return True
-    
+
     return False
 ```
 
@@ -100,16 +101,16 @@ The module patches the SlowAPI limiter to handle Redis failures gracefully:
 def safe_limit(*args, **kwargs):
     """Wrap the limit method to handle Redis connection errors."""
     limit_decorator = original_limit(*args, **kwargs)
-    
+
     def wrapper(func):
         # Apply our safe_ratelimit decorator first, then the original limit
         safe_func = safe_ratelimit(func)
-        
+
         # Modified handler that checks for non-counting endpoints
         # ...
-        
+
         return wrapped
-        
+
     return wrapper
 ```
 
@@ -124,10 +125,10 @@ from app.core.limiter.config import setup_limiter_for_app
 
 def create_app() -> FastAPI:
     app = FastAPI()
-    
+
     # Set up rate limiting
     setup_limiter_for_app(app)
-    
+
     return app
 ```
 
@@ -172,6 +173,6 @@ This ensures rate limiting continues to function even if Redis is down, although
 ## Related Documentation
 
 - [Redis Store](redis_store.md): Redis client used by the rate limiter
-- [Decorators](decorators.md): Endpoint-specific rate limit decorators 
+- [Decorators](decorators.md): Endpoint-specific rate limit decorators
 - [Keys](keys.md): Key functions used to identify rate-limited resources
-- [Application Config](../config.md): General application settings 
+- [Application Config](../config.md): General application settings

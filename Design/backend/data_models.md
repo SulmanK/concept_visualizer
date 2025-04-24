@@ -1,6 +1,7 @@
 # Data Models Design Document
 
 ## Current Context
+
 - The Concept Visualizer requires well-defined data models for request/response handling
 - Pydantic will be used for data validation and serialization
 - Models must support both API interactions and internal data flow
@@ -8,6 +9,7 @@
 ## Requirements
 
 ### Functional Requirements
+
 - Define data structures for API requests and responses
 - Provide validation for user inputs
 - Ensure proper serialization/deserialization of data
@@ -15,6 +17,7 @@
 - Represent internal data structures for business logic
 
 ### Non-Functional Requirements
+
 - Type safety through proper annotations
 - Self-documenting code with clear field descriptions
 - Consistent naming conventions
@@ -24,20 +27,26 @@
 ## Design Decisions
 
 ### 1. Model Organization
+
 Will organize models into logical categories:
+
 - Request models for API inputs
 - Response models for API outputs
 - Internal models for service layer
 
 ### 2. Validation Strategy
+
 Will implement validation using:
+
 - Field constraints (min/max length, regex patterns)
 - Field descriptions for documentation
 - Example values for API documentation
 - Custom validators where needed
 
 ### 3. Serialization Strategy
+
 Will implement serialization using:
+
 - Pydantic's built-in JSON serialization
 - Custom serializers for complex types
 - Configuration for controlling output format
@@ -53,21 +62,21 @@ from typing import Optional
 
 class PromptRequest(BaseModel):
     """Request model for generating a concept."""
-    
+
     logo_description: str = Field(
         ...,
         min_length=3,
         max_length=500,
         description="Description of the logo to generate"
     )
-    
+
     theme_description: str = Field(
         ...,
         min_length=3,
         max_length=500,
         description="Description of the theme/style for color palettes"
     )
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -75,22 +84,22 @@ class PromptRequest(BaseModel):
                 "theme_description": "Professional corporate theme with a touch of creativity"
             }
         }
-        
+
 class RefinementRequest(BaseModel):
     """Request model for refining an existing concept."""
-    
+
     original_prompt_id: str = Field(
         ...,
         description="ID of the original prompt to refine"
     )
-    
+
     additional_details: str = Field(
         ...,
         min_length=3,
         max_length=500,
         description="Additional details to refine the concept"
     )
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -109,11 +118,11 @@ from typing import List, Optional
 
 class ColorPalette(BaseModel):
     """Model for a color palette."""
-    
+
     name: str = Field(..., description="Name of the color palette")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the color palette")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -125,11 +134,11 @@ class ColorPalette(BaseModel):
 
 class GenerationResponse(BaseModel):
     """Response model for concept generation/refinement."""
-    
+
     prompt_id: str = Field(..., description="Unique identifier for the prompt")
     image_url: str = Field(..., description="URL of the generated image")
     color_palettes: List[ColorPalette] = Field(..., description="Generated color palettes")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -147,11 +156,11 @@ class GenerationResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """Response model for health check."""
-    
+
     status: str = Field(..., description="API status")
     version: str = Field(..., description="API version")
     environment: str = Field(..., description="Deployment environment")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -163,9 +172,9 @@ class HealthResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Response model for error responses."""
-    
+
     detail: str = Field(..., description="Error message")
-    
+
     class Config:
         schema_extra = {
             "example": {
@@ -184,42 +193,42 @@ import re
 
 class StoredPrompt(BaseModel):
     """Internal model for storing prompt information."""
-    
+
     logo_description: str
     theme_description: str
     original_prompt_id: Optional[str] = None
-    
+
 class HexColor(str):
     """Custom type for validating hex color codes."""
-    
+
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
-        
+
     @classmethod
     def validate(cls, v):
         if not isinstance(v, str):
             raise TypeError("string required")
-            
+
         # Check if it's a valid hex color code
         if not re.match(r"^#(?:[0-9a-fA-F]{3}){1,2}$", v):
             raise ValueError("invalid hex color format")
-            
+
         return v
-        
+
 class ValidatedColorPalette(BaseModel):
     """Internal model for color palette with validation."""
-    
+
     name: str
     colors: List[HexColor]
     description: Optional[str] = None
-    
+
     @validator("colors")
     def validate_colors_count(cls, v):
         if len(v) < 3 or len(v) > 10:
             raise ValueError("color palette must have between 3 and 10 colors")
         return v
-        
+
     class Config:
         json_encoders = {
             HexColor: lambda v: str(v)
@@ -240,7 +249,7 @@ router = APIRouter()
 async def generate_concept(request: PromptRequest):
     """
     Generate a new concept based on text descriptions.
-    
+
     This endpoint takes a logo description and theme description,
     and returns a generated image and color palettes.
     """
@@ -258,7 +267,7 @@ from app.models.request import PromptRequest
 try:
     # This will fail validation due to short logo_description
     prompt = PromptRequest(
-        logo_description="", 
+        logo_description="",
         theme_description="Professional theme"
     )
 except ValidationError as e:
@@ -379,30 +388,30 @@ def test_prompt_request_validation():
         "logo_description": "A modern tech startup logo",
         "theme_description": "Professional corporate theme"
     }
-    
+
     prompt = PromptRequest(**valid_data)
     assert prompt.logo_description == valid_data["logo_description"]
     assert prompt.theme_description == valid_data["theme_description"]
-    
+
     # Invalid data: logo_description too short
     invalid_data = {
         "logo_description": "Ab",  # Too short
         "theme_description": "Professional corporate theme"
     }
-    
+
     with pytest.raises(ValidationError) as excinfo:
         PromptRequest(**invalid_data)
-    
+
     errors = excinfo.value.errors()
     assert any(e["loc"][0] == "logo_description" for e in errors)
-    
+
 def test_refinement_request_validation():
     # Valid data
     valid_data = {
         "original_prompt_id": "abc123",
         "additional_details": "Make it more blue"
     }
-    
+
     refinement = RefinementRequest(**valid_data)
     assert refinement.original_prompt_id == valid_data["original_prompt_id"]
     assert refinement.additional_details == valid_data["additional_details"]
@@ -411,6 +420,7 @@ def test_refinement_request_validation():
 ## Future Considerations
 
 ### Potential Enhancements
+
 - Add versioning to models for API evolution
 - Implement caching for frequently used models
 - Support additional color formats (RGB, HSL)
@@ -418,6 +428,7 @@ def test_refinement_request_validation():
 - Implement serialization optimizations for large responses
 
 ### Known Limitations
+
 - Limited validation for creative inputs
 - No localization support for error messages
 - Simple in-memory storage of prompts
@@ -426,15 +437,18 @@ def test_refinement_request_validation():
 ## Dependencies
 
 ### Runtime Dependencies
+
 - Pydantic (for model validation and serialization)
 - FastAPI (for API schema generation)
 - typing_extensions (for advanced type annotations)
 
 ### Development Dependencies
+
 - Pytest (for testing)
 - JSON Schema validator (for schema validation)
 
 ## References
+
 - [Pydantic Documentation](https://pydantic-docs.helpmanual.io/)
 - [FastAPI Schema Documentation](https://fastapi.tiangolo.com/tutorial/schema/)
-- [JSON Schema](https://json-schema.org/) 
+- [JSON Schema](https://json-schema.org/)

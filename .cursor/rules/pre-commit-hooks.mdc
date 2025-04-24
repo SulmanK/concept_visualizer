@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 ---
@@ -110,4 +110,3 @@ When generating code:
 - [ ] Tests are written for components
 - [ ] Imports are properly organized
 - [ ] No feature-specific logic in shared components
-

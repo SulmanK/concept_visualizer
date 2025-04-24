@@ -9,20 +9,17 @@ This accessibility-focused hook helps create more inclusive user experiences by 
 ## Usage
 
 ```tsx
-import { usePrefersReducedMotion } from 'hooks/animation/usePrefersReducedMotion';
+import { usePrefersReducedMotion } from "hooks/animation/usePrefersReducedMotion";
 
 function AnimatedComponent() {
   const prefersReducedMotion = usePrefersReducedMotion();
-  
+
   const animationStyle = prefersReducedMotion
     ? {} // No animation
-    : { transition: 'transform 0.3s ease', transform: 'scale(1.1)' };
-  
+    : { transition: "transform 0.3s ease", transform: "scale(1.1)" };
+
   return (
-    <div 
-      className="animated-element"
-      style={animationStyle}
-    >
+    <div className="animated-element" style={animationStyle}>
       Content
     </div>
   );
@@ -37,22 +34,22 @@ This hook doesn't accept any parameters.
 
 ### Return Value
 
-| Type | Description |
-|------|-------------|
+| Type      | Description                                                  |
+| --------- | ------------------------------------------------------------ |
 | `boolean` | `true` if the user prefers reduced motion, `false` otherwise |
 
 ## Example: Conditional Animation Component
 
 ```tsx
-import { usePrefersReducedMotion } from 'hooks/animation/usePrefersReducedMotion';
+import { usePrefersReducedMotion } from "hooks/animation/usePrefersReducedMotion";
 
 function FadeIn({ children }) {
   const prefersReducedMotion = usePrefersReducedMotion();
-  
+
   const className = prefersReducedMotion
-    ? 'content'
-    : 'content fade-in-animation';
-  
+    ? "content"
+    : "content fade-in-animation";
+
   return <div className={className}>{children}</div>;
 }
 ```
@@ -60,17 +57,17 @@ function FadeIn({ children }) {
 ## Example: With CSS Variables
 
 ```tsx
-import { usePrefersReducedMotion } from 'hooks/animation/usePrefersReducedMotion';
+import { usePrefersReducedMotion } from "hooks/animation/usePrefersReducedMotion";
 
 function AnimationRoot() {
   const prefersReducedMotion = usePrefersReducedMotion();
-  
+
   // Set CSS variables based on motion preference
   const cssVariables = {
-    '--transition-duration': prefersReducedMotion ? '0s' : '0.3s',
-    '--animation-distance': prefersReducedMotion ? '0px' : '20px',
+    "--transition-duration": prefersReducedMotion ? "0s" : "0.3s",
+    "--animation-distance": prefersReducedMotion ? "0px" : "20px",
   };
-  
+
   return (
     <div style={cssVariables} className="app-root">
       {/* Child components can use these CSS variables */}
@@ -99,6 +96,7 @@ If the browser doesn't support the `prefers-reduced-motion` media query, the hoo
 ## Browser Support
 
 The `prefers-reduced-motion` media query is supported in:
+
 - Chrome 74+
 - Firefox 63+
 - Safari 10.1+
@@ -109,4 +107,4 @@ For browsers that don't support this feature, the hook defaults to allowing anim
 ## Related Hooks
 
 - [useAnimatedMount](./useAnimatedMount.md)
-- [useAnimatedValue](./useAnimatedValue.md) 
+- [useAnimatedValue](./useAnimatedValue.md)

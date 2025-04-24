@@ -17,6 +17,7 @@ The error handling system is designed to:
 The error system has two main layers:
 
 1. **Domain/Application Errors** (`app.core.exceptions.ApplicationError`)
+
    - Define business logic errors independent of API concerns
    - Contain detailed error context in the `details` property
    - Located in `app/core/exceptions.py`
@@ -43,7 +44,7 @@ async def get_resource(resource_id: str):
         except ResourceNotFoundError as e:
             # Re-raise domain errors - they will be mapped automatically
             raise
-            
+
     except ApplicationError as e:
         # Optional: Add custom logging based on error type
         if isinstance(e, ValidationError):
@@ -52,7 +53,7 @@ async def get_resource(resource_id: str):
             logger.error(f"Application error: {e.message}", exc_info=True)
         # Re-raise for automatic mapping by the global handler
         raise
-        
+
     except Exception as e:
         # For unexpected errors, wrap in InternalServerError
         error_msg = f"Unexpected error: {str(e)}"
@@ -61,6 +62,7 @@ async def get_resource(resource_id: str):
 ```
 
 This pattern ensures:
+
 - Domain errors are properly mapped to API errors
 - Appropriate logging occurs
 - Unexpected errors are caught and presented consistently
@@ -96,6 +98,7 @@ All API errors inherit from `APIError` and include:
 Application errors are automatically mapped to appropriate API errors through the `map_application_error_to_api_error` function and the global exception handler.
 
 For example:
+
 - `AuthenticationError` → 401 Unauthorized
 - `ResourceNotFoundError` → 404 Not Found
 - `ValidationError` → 422 Unprocessable Entity
@@ -106,11 +109,13 @@ For example:
 1. **Raise Domain Errors**: In services and other business logic, raise the most specific `ApplicationError` subclass with helpful details
 
 2. **Log Appropriately**: Log errors at the appropriate level based on severity:
+
    - INFO: Normal operations
    - WARNING: Client errors (400-level)
    - ERROR: Server errors (500-level)
 
 3. **Include Context**: When raising errors, include relevant context in the `details` parameter:
+
    ```python
    raise ResourceNotFoundError(
        message="User not found",
@@ -143,4 +148,4 @@ All error responses follow this JSON format:
 }
 ```
 
-The `details` field is optional and only included when relevant. 
+The `details` field is optional and only included when relevant.

@@ -29,6 +29,9 @@ dependencies = [
     "upstash-redis>=1.0.0",
     "python-jose>=3.3.0",
     "pytest-asyncio>=0.26.0",
+    "pre-commit>=4.2.0",
+    "types-python-dateutil>=2.9.0.20241206",
+    "qrcode>=7.4.2",
 ]
 
 [project.optional-dependencies]
@@ -65,7 +68,11 @@ strict_optional = true
 warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
+explicit_package_bases = true
+mypy_path = "."
+namespace_packages = true
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py" 
+python_files = "test_*.py"

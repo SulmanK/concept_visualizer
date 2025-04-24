@@ -57,8 +57,6 @@ Specific File Changes:
 
         No significant changes expected here, as it just calls the processing function. Ensure the parameters passed match the updated processing function.
 
-
-
 Part 2: Refactor Export Rate Limiting
 
 Goal: Consolidate the rate limits for image export (PNG, JPG, SVG) into a single category and counter, triggered by calls to the POST /api/export/process endpoint.
@@ -83,7 +81,7 @@ Proposed Approach:
 
             Example:
 
-                  
+
             # Inside process_export function, before the main try block
             await apply_rate_limit(
                 req=req,
@@ -94,7 +92,7 @@ Proposed Approach:
             try:
                 # ... rest of the export logic ...
 
-                
+
 
             IGNORE_WHEN_COPYING_START
 
@@ -127,14 +125,14 @@ Frontend Changes:
 
         Call decrementLimit with the single new category name for all formats.
 
-              
+
         // Inside mutationFn, before the try block
         decrementLimit('export_action'); // Use the new unified category name
         try {
           // ... rest of the API call logic ...
         } // ... etc
 
-            
+
 
         IGNORE_WHEN_COPYING_START
 
@@ -147,16 +145,14 @@ Update Rate Limits Panel (frontend/my-app/src/components/RateLimitsPanel/RateLim
 
     Add a renderRateLimitItem call for the new unified category.
 
-          
+
     {renderRateLimitItem('Image Export', 'export_action')} // Use new category key and display name
 
-        
+
 
     IGNORE_WHEN_COPYING_START
 
             Use code with caution.Jsx
             IGNORE_WHEN_COPYING_END
-
-
 
 This plan first addresses the core image processing logic with a potentially more robust and simpler LAB-based method. Then, it refactors the rate limiting for exports to be consistent and easier to manage. Let me know if you'd like to refine any part of this plan!

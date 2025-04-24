@@ -109,4 +109,4 @@ Supabase integration is configured through environment variables:
 - [Client](client.md): Base Supabase client implementation
 - [Concept Storage](concept_storage.md): Concept data storage implementation
 - [Image Storage](image_storage.md): Image storage implementation
-- [Configuration](../config.md): Application configuration including Supabase settings 
+- [Configuration](../config.md): Application configuration including Supabase settings

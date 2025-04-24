@@ -1,6 +1,6 @@
-import React from 'react';
-import { ConceptRefinementForm } from '../../../components/concept/ConceptRefinementForm';
-import { FormStatus } from '../../../types';
+import React from "react";
+import { ConceptRefinementForm } from "../../../components/concept/ConceptRefinementForm";
+import { FormStatus } from "../../../types";
 
 interface RefinementFormProps {
   originalImageUrl: string;
@@ -8,7 +8,7 @@ interface RefinementFormProps {
     refinementPrompt: string,
     logoDescription: string,
     themeDescription: string,
-    preserveAspects: string[]
+    preserveAspects: string[],
   ) => void;
   status: FormStatus;
   error?: string;
@@ -38,7 +38,7 @@ export const RefinementForm: React.FC<RefinementFormProps> = ({
   initialThemeDescription,
   colorVariation,
   isProcessing,
-  processingMessage
+  processingMessage,
 }) => {
   // Get placeholder text based on whether we're refining a color variation
   const getRefinementPlaceholder = () => {
@@ -51,7 +51,7 @@ export const RefinementForm: React.FC<RefinementFormProps> = ({
   // Get default preserve aspects based on whether we're refining a color variation
   const getDefaultPreserveAspects = () => {
     if (colorVariation) {
-      return ['color_scheme'];
+      return ["color_scheme"];
     }
     return [];
   };
@@ -68,12 +68,16 @@ export const RefinementForm: React.FC<RefinementFormProps> = ({
       refinementPlaceholder={getRefinementPlaceholder()}
       defaultPreserveAspects={getDefaultPreserveAspects()}
       isColorVariation={!!colorVariation}
-      colorInfo={colorVariation?.colors ? {
-        colors: colorVariation.colors,
-        name: colorVariation.palette_name || 'Color Variation'
-      } : undefined}
+      colorInfo={
+        colorVariation?.colors
+          ? {
+              colors: colorVariation.colors,
+              name: colorVariation.palette_name || "Color Variation",
+            }
+          : undefined
+      }
       isProcessing={isProcessing}
       processingMessage={processingMessage}
     />
   );
-}; 
+};

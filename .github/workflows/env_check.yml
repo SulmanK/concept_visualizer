@@ -13,19 +13,19 @@ jobs:
   scan-secrets:
     name: Scan for hardcoded secrets
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
+
     - name: Install GitLeaks
       run: |
         wget https://github.com/zricethezav/gitleaks/releases/download/v8.16.1/gitleaks_8.16.1_linux_x64.tar.gz
         tar -xzf gitleaks_8.16.1_linux_x64.tar.gz
         sudo mv gitleaks /usr/local/bin/
-        
+
     - name: Run GitLeaks
       run: |
         # Create a .gitleaksignore file to exclude terminal logs and design files
@@ -34,7 +34,7 @@ jobs:
         echo "Context/" >> .gitleaksignore
         echo "TODO/" >> .gitleaksignore
         echo "terminal_log.txt" >> .gitleaksignore
-        
+
         # Create a custom config to avoid false positives
         cat > gitleaks.toml << 'EOL'
         [allowlist]
@@ -46,10 +46,10 @@ jobs:
           '''.git/'''
         ]
         EOL
-        
+
         # Run gitleaks with the custom config and ignore file
         gitleaks detect --config=gitleaks.toml --report-format json --report-path gitleaks-report.json || true
-        
+
     - name: Check for secrets found
       run: |
         if [ -s gitleaks-report.json ]; then
@@ -65,22 +65,22 @@ jobs:
         else
           echo "No secrets found by GitLeaks"
         fi
-        
+
     - name: Upload scan results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: gitleaks-report
         path: gitleaks-report.json
-        
+
   check-env-examples:
     name: Check environment files
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-        
+
     - name: Verify .env.example files exist
       run: |
         # Check backend has .env.example
@@ -88,13 +88,13 @@ jobs:
           echo "::error::Missing backend/.env.example file"
           exit 1
         fi
-        
+
         # Check frontend has .env.example
         if [ ! -f frontend/my-app/.env.example ]; then
           echo "::error::Missing frontend/my-app/.env.example file"
           exit 1
         fi
-        
+
     - name: Check for actual secrets in example files
       run: |
         # Define patterns to look for actual credentials (not placeholders)
@@ -105,7 +105,7 @@ jobs:
           "access[_-]?key[_-]?id[\"']?[=:][\"']?[A-Z0-9]{16,}[\"']"
           "access[_-]?secret[\"']?[=:][\"']?[A-Za-z0-9/+]{16,}[\"']"
         )
-        
+
         FOUND_SECRETS=0
         for pattern in "${PATTERNS[@]}"; do
           # Check .env.example files for actual secrets
@@ -115,10 +115,10 @@ jobs:
             FOUND_SECRETS=1
           fi
         done
-        
+
         if [ $FOUND_SECRETS -eq 1 ]; then
           echo "::error::Found potential real credentials in example files!"
           exit 1
         else
           echo "No actual secrets found in example files"
-        fi 
+        fi

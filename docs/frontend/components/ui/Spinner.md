@@ -29,27 +29,34 @@ import { Spinner } from 'components/ui/Spinner';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `size` | `number` | `24` | Size of the spinner in pixels |
-| `color` | `'primary' \| 'secondary' \| 'success' \| 'error' \| 'warning' \| 'info' \| 'inherit'` | `'primary'` | Color of the spinner |
-| `variant` | `'circular' \| 'dots' \| 'pulse'` | `'circular'` | Style variant of the spinner |
-| `thickness` | `number` | `2` | Thickness of the spinner (for circular variant) |
-| `className` | `string` | `''` | Additional CSS class to apply |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for additional styling |
+| Prop        | Type                                                                                   | Default      | Description                                     |
+| ----------- | -------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------- |
+| `size`      | `number`                                                                               | `24`         | Size of the spinner in pixels                   |
+| `color`     | `'primary' \| 'secondary' \| 'success' \| 'error' \| 'warning' \| 'info' \| 'inherit'` | `'primary'`  | Color of the spinner                            |
+| `variant`   | `'circular' \| 'dots' \| 'pulse'`                                                      | `'circular'` | Style variant of the spinner                    |
+| `thickness` | `number`                                                                               | `2`          | Thickness of the spinner (for circular variant) |
+| `className` | `string`                                                                               | `''`         | Additional CSS class to apply                   |
+| `sx`        | `SxProps<Theme>`                                                                       | `{}`         | MUI system props for additional styling         |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { Box } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { SxProps, Theme } from '@mui/material/styles';
+import React from "react";
+import { Box } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { SxProps, Theme } from "@mui/material/styles";
 
 interface SpinnerProps {
   size?: number;
-  color?: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' | 'inherit';
-  variant?: 'circular' | 'dots' | 'pulse';
+  color?:
+    | "primary"
+    | "secondary"
+    | "success"
+    | "error"
+    | "warning"
+    | "info"
+    | "inherit";
+  variant?: "circular" | "dots" | "pulse";
   thickness?: number;
   className?: string;
   sx?: SxProps<Theme>;
@@ -57,31 +64,30 @@ interface SpinnerProps {
 
 export function Spinner({
   size = 24,
-  color = 'primary',
-  variant = 'circular',
+  color = "primary",
+  variant = "circular",
   thickness = 2,
-  className = '',
+  className = "",
   sx = {},
 }: SpinnerProps) {
   const theme = useTheme();
-  
+
   // Get the color from theme or use directly if 'inherit'
-  const spinnerColor = color === 'inherit' 
-    ? 'currentColor' 
-    : theme.palette[color].main;
-  
+  const spinnerColor =
+    color === "inherit" ? "currentColor" : theme.palette[color].main;
+
   // Render different spinner variants
   const renderSpinner = () => {
     switch (variant) {
-      case 'dots':
+      case "dots":
         return (
           <Box
             className={`spinner-dots ${className}`}
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
               width: size,
               height: size / 2,
               ...sx,
@@ -93,16 +99,16 @@ export function Spinner({
                 sx={{
                   width: size / 6,
                   height: size / 6,
-                  borderRadius: '50%',
+                  borderRadius: "50%",
                   backgroundColor: spinnerColor,
-                  animation: 'spinner-dots 1.4s infinite ease-in-out',
+                  animation: "spinner-dots 1.4s infinite ease-in-out",
                   animationDelay: `${i * 0.16}s`,
-                  '@keyframes spinner-dots': {
-                    '0%, 80%, 100%': {
-                      transform: 'scale(0)',
+                  "@keyframes spinner-dots": {
+                    "0%, 80%, 100%": {
+                      transform: "scale(0)",
                     },
-                    '40%': {
-                      transform: 'scale(1)',
+                    "40%": {
+                      transform: "scale(1)",
                     },
                   },
                 }}
@@ -110,29 +116,30 @@ export function Spinner({
             ))}
           </Box>
         );
-        
-      case 'pulse':
+
+      case "pulse":
         return (
           <Box
             className={`spinner-pulse ${className}`}
             sx={{
               width: size,
               height: size,
-              borderRadius: '50%',
+              borderRadius: "50%",
               backgroundColor: spinnerColor,
-              animation: 'spinner-pulse 1.2s infinite cubic-bezier(0.4, 0, 0.2, 1)',
+              animation:
+                "spinner-pulse 1.2s infinite cubic-bezier(0.4, 0, 0.2, 1)",
               opacity: 0.7,
-              '@keyframes spinner-pulse': {
-                '0%': {
-                  transform: 'scale(0.8)',
+              "@keyframes spinner-pulse": {
+                "0%": {
+                  transform: "scale(0.8)",
                   opacity: 0.7,
                 },
-                '50%': {
-                  transform: 'scale(1)',
+                "50%": {
+                  transform: "scale(1)",
                   opacity: 0.5,
                 },
-                '100%': {
-                  transform: 'scale(0.8)',
+                "100%": {
+                  transform: "scale(0.8)",
                   opacity: 0.7,
                 },
               },
@@ -140,8 +147,8 @@ export function Spinner({
             }}
           />
         );
-        
-      case 'circular':
+
+      case "circular":
       default:
         return (
           <Box
@@ -149,16 +156,16 @@ export function Spinner({
             sx={{
               width: size,
               height: size,
-              borderRadius: '50%',
+              borderRadius: "50%",
               border: `${thickness}px solid ${theme.palette.grey[200]}`,
               borderTopColor: spinnerColor,
-              animation: 'spinner-circular 0.8s linear infinite',
-              '@keyframes spinner-circular': {
-                '0%': {
-                  transform: 'rotate(0deg)',
+              animation: "spinner-circular 0.8s linear infinite",
+              "@keyframes spinner-circular": {
+                "0%": {
+                  transform: "rotate(0deg)",
                 },
-                '100%': {
-                  transform: 'rotate(360deg)',
+                "100%": {
+                  transform: "rotate(360deg)",
                 },
               },
               ...sx,
@@ -167,7 +174,7 @@ export function Spinner({
         );
     }
   };
-  
+
   return renderSpinner();
 }
 ```
@@ -188,22 +195,18 @@ export function Spinner({
 
 ```tsx
 <Typography variant="body1">
-  Loading results 
-  <Spinner size={14} variant="dots" sx={{ display: 'inline-block', ml: 1 }} />
+  Loading results
+  <Spinner size={14} variant="dots" sx={{ display: "inline-block", ml: 1 }} />
 </Typography>
 ```
 
 ### Button Loading State
 
 ```tsx
-<Button 
-  variant="primary" 
-  disabled={isSubmitting}
-  sx={{ minWidth: 120 }}
->
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+<Button variant="primary" disabled={isSubmitting} sx={{ minWidth: 120 }}>
+  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
     {isSubmitting && <Spinner size={16} color="inherit" />}
-    {isSubmitting ? 'Submitting...' : 'Submit'}
+    {isSubmitting ? "Submitting..." : "Submit"}
   </Box>
 </Button>
 ```
@@ -211,7 +214,7 @@ export function Spinner({
 ### Icon Replacement
 
 ```tsx
-<IconButton 
+<IconButton
   disabled={isRefreshing}
   onClick={handleRefresh}
   aria-label="Refresh data"
@@ -224,19 +227,19 @@ export function Spinner({
 
 ```tsx
 <Card>
-  <CardHeader 
+  <CardHeader
     title="Recent Activity"
     action={
-      isLoading ? <Spinner size={20} /> : (
+      isLoading ? (
+        <Spinner size={20} />
+      ) : (
         <IconButton onClick={handleRefresh}>
           <RefreshIcon />
         </IconButton>
       )
     }
   />
-  <CardContent>
-    {/* Content */}
-  </CardContent>
+  <CardContent>{/* Content */}</CardContent>
 </Card>
 ```
 
@@ -245,16 +248,16 @@ export function Spinner({
 ```tsx
 function LoadingStateDemo() {
   return (
-    <Box sx={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-      <Box sx={{ textAlign: 'center' }}>
+    <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+      <Box sx={{ textAlign: "center" }}>
         <Spinner variant="circular" />
         <Typography variant="caption">Circular</Typography>
       </Box>
-      <Box sx={{ textAlign: 'center' }}>
+      <Box sx={{ textAlign: "center" }}>
         <Spinner variant="dots" />
         <Typography variant="caption">Dots</Typography>
       </Box>
-      <Box sx={{ textAlign: 'center' }}>
+      <Box sx={{ textAlign: "center" }}>
         <Spinner variant="pulse" />
         <Typography variant="caption">Pulse</Typography>
       </Box>
@@ -272,4 +275,4 @@ function LoadingStateDemo() {
 5. Keep spinners small when used inline with text to avoid disrupting reading flow
 6. Use the same loading indicator consistently for similar operations
 7. For buttons, use the built-in Button loading state if possible, or ensure consistent placement
-8. Avoid using too many spinners simultaneously as it can be visually distracting 
+8. Avoid using too many spinners simultaneously as it can be visually distracting

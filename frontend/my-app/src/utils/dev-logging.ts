@@ -1,6 +1,6 @@
 /**
  * Utility for conditionally logging based on the environment
- * 
+ *
  * This module creates wrapper functions that only log in development mode,
  * keeping the production console clean.
  */
@@ -50,4 +50,4 @@ export function devInfo(...args: any[]): void {
  */
 export function logError(...args: any[]): void {
   console.error(...args);
-} 
+}

@@ -13,21 +13,21 @@ The `request.py` module in `app/models/export/` defines Pydantic models for vali
 ```python
 class ExportRequest(APIBaseModel):
     """Request model for image export."""
-    
+
     image_identifier: str = Field(
-        ..., 
+        ...,
         description="Storage path identifier for the image (e.g., user_id/.../image.png)"
     )
     target_format: Literal["png", "jpg", "svg"] = Field(
-        ..., 
+        ...,
         description="Target format for export"
     )
     target_size: Literal["small", "medium", "large", "original"] = Field(
-        "original", 
+        "original",
         description="Target size for export"
     )
     svg_params: Optional[Dict] = Field(
-        None, 
+        None,
         description="Optional parameters for SVG conversion (when target_format is 'svg')"
     )
     storage_bucket: str = Field(
@@ -103,4 +103,4 @@ The `ExportRequest` model is primarily used by the export endpoints in the API:
 
 - [Export Service](../../services/export/service.md): Service implementing export functionality
 - [Export Interface](../../services/export/interface.md): Interface definition for export services
-- [Export Routes](../../api/routes/export/export_routes.md): API routes for export functionality 
+- [Export Routes](../../api/routes/export/export_routes.md): API routes for export functionality

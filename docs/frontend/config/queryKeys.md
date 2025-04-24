@@ -14,31 +14,30 @@ The `queryKeys.ts` file defines a structured set of React Query cache keys used 
 ```typescript
 export const queryKeys = {
   concepts: {
-    all: () => ['concepts'] as const,
-    recent: (userId?: string, limit?: number) => 
-      [...queryKeys.concepts.all(), 'recent', userId, limit] as const,
-    detail: (id?: string, userId?: string) => 
-      [...queryKeys.concepts.all(), 'detail', id, userId] as const,
+    all: () => ["concepts"] as const,
+    recent: (userId?: string, limit?: number) =>
+      [...queryKeys.concepts.all(), "recent", userId, limit] as const,
+    detail: (id?: string, userId?: string) =>
+      [...queryKeys.concepts.all(), "detail", id, userId] as const,
   },
-  
+
   tasks: {
-    all: () => ['tasks'] as const,
-    detail: (id?: string) => 
-      [...queryKeys.tasks.all(), 'detail', id] as const,
+    all: () => ["tasks"] as const,
+    detail: (id?: string) => [...queryKeys.tasks.all(), "detail", id] as const,
   },
-  
+
   mutations: {
-    conceptGeneration: () => ['conceptGeneration'] as const,
-    conceptRefinement: () => ['conceptRefinement'] as const,
-    exportImage: () => ['exportImage'] as const,
+    conceptGeneration: () => ["conceptGeneration"] as const,
+    conceptRefinement: () => ["conceptRefinement"] as const,
+    exportImage: () => ["exportImage"] as const,
   },
-  
-  rateLimits: () => ['rateLimits'] as const,
-  
+
+  rateLimits: () => ["rateLimits"] as const,
+
   user: {
-    all: () => ['user'] as const,
-    preferences: (userId?: string) => 
-      [...queryKeys.user.all(), 'preferences', userId] as const,
+    all: () => ["user"] as const,
+    preferences: (userId?: string) =>
+      [...queryKeys.user.all(), "preferences", userId] as const,
   },
 };
 ```
@@ -75,9 +74,9 @@ Each key is a function that returns an array, allowing for parameters to be incl
 ### In Query Hooks
 
 ```typescript
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { queryKeys } from '../config/queryKeys';
-import { conceptService } from '../services/conceptService';
+import { useQuery, useMutation, useQueryClient } from "react-query";
+import { queryKeys } from "../config/queryKeys";
+import { conceptService } from "../services/conceptService";
 
 // Using in a query
 export const useRecentConceptsQuery = (userId?: string, limit?: number) => {
@@ -86,38 +85,35 @@ export const useRecentConceptsQuery = (userId?: string, limit?: number) => {
     () => conceptService.getRecentConcepts(userId, limit),
     {
       staleTime: 5 * 60 * 1000, // 5 minutes
-    }
+    },
   );
 };
 
 // Using in a mutation with cache invalidation
 export const useConceptGenerationMutation = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation(
-    (data) => conceptService.generateConcept(data),
-    {
-      onSuccess: () => {
-        // Invalidate and refetch recent concepts when a new one is created
-        queryClient.invalidateQueries(queryKeys.concepts.all());
-      },
-    }
-  );
+
+  return useMutation((data) => conceptService.generateConcept(data), {
+    onSuccess: () => {
+      // Invalidate and refetch recent concepts when a new one is created
+      queryClient.invalidateQueries(queryKeys.concepts.all());
+    },
+  });
 };
 ```
 
 ### For Cache Invalidation
 
 ```typescript
-import { queryKeys } from '../config/queryKeys';
+import { queryKeys } from "../config/queryKeys";
 
 // In a component or service
 const handleConceptUpdate = async (conceptId) => {
   await updateConcept(conceptId, updatedData);
-  
+
   // Invalidate only the specific concept detail
   queryClient.invalidateQueries(queryKeys.concepts.detail(conceptId));
-  
+
   // Also invalidate the recent concepts list
   queryClient.invalidateQueries(queryKeys.concepts.recent());
 };
@@ -128,6 +124,6 @@ const handleConceptUpdate = async (conceptId) => {
 1. **Always use these functions** instead of hardcoded arrays for query keys
 2. **Structure keys hierarchically** with parent-child relationships
 3. **Include relevant parameters** in keys to properly separate cache entries
-4. **Use TypeScript's `as const`** for type safety 
+4. **Use TypeScript's `as const`** for type safety
 5. **Build related keys from base keys** for consistency
-6. **Include user ID** in keys for user-specific data to ensure proper data isolation 
+6. **Include user ID** in keys for user-specific data to ensure proper data isolation

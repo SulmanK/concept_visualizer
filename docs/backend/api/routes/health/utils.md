@@ -29,6 +29,7 @@ This function calculates the approximate time until a rate limit period resets, 
 - `month`: Seconds until the 1st of the next month
 
 **Example:**
+
 ```python
 # If it's 3:45:30 PM
 seconds_until_reset = get_reset_time("hour")  # Returns 870 (14 minutes and 30 seconds)
@@ -46,10 +47,12 @@ def mask_ip(ip_address: str) -> str:
 ```
 
 Obscures IP addresses to protect user privacy:
+
 - IPv4: `192.168.**.**`
 - IPv6: `2001:****:****`
 
 **Example:**
+
 ```python
 masked = mask_ip("192.168.1.100")  # Returns "192.168.**.**"
 ```
@@ -62,11 +65,13 @@ def mask_id(id_value: str) -> str:
 ```
 
 Obscures different types of identifiers:
+
 - User IDs: `user:1234****`
 - IPs: `ip:192.168.**.**`
 - Other IDs: First 4 characters followed by asterisks
 
 **Example:**
+
 ```python
 masked_user = mask_id("user:1234567890")  # Returns "user:1234******"
 masked_ip = mask_id("ip:192.168.1.100")   # Returns "ip:192.168.**.**"
@@ -82,6 +87,7 @@ def mask_key(key: str) -> str:
 Masks Redis keys that might contain sensitive information like user IDs or IP addresses.
 
 **Example:**
+
 ```python
 masked = mask_key("rate-limit:user:1234567890:generate")  # Returns "rate-limit:user:1234******:generate"
 ```
@@ -121,7 +127,7 @@ def log_request(user_id: str, ip_address: str):
     """Log request details with privacy measures."""
     masked_user = mask_id(user_id) if user_id else "anonymous"
     masked_ip = mask_ip(ip_address)
-    
+
     logger.info(f"Request from {masked_user} ({masked_ip})")
 ```
 
@@ -139,4 +145,4 @@ These measures help comply with privacy regulations like GDPR while still mainta
 
 - [Health Endpoints](endpoints.md): Basic health check endpoints
 - [Rate Limits](limits.md): Rate limit information endpoints
-- [API Middleware](../../middleware/rate_limit_headers.md): Rate limit headers middleware 
+- [API Middleware](../../middleware/rate_limit_headers.md): Rate limit headers middleware

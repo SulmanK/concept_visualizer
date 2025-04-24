@@ -16,20 +16,17 @@ The `errorUtils.ts` module provides standardized error handling utilities across
 
 ```typescript
 const asyncErrorHandler = createAsyncErrorHandler(errorHandler, options);
-const result = await asyncErrorHandler(
-  () => fetchData(),
-  'fetchUserProfile'
-);
+const result = await asyncErrorHandler(() => fetchData(), "fetchUserProfile");
 ```
 
 Creates a standardized error handler function for asynchronous operations with the following options:
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `showToast` | boolean | Whether to show a toast notification on error |
-| `defaultErrorMessage` | string | Fallback error message if none is provided |
-| `onError` | function | Custom error callback function |
-| `context` | string | Context identifier for error logging |
+| Option                | Type     | Description                                   |
+| --------------------- | -------- | --------------------------------------------- |
+| `showToast`           | boolean  | Whether to show a toast notification on error |
+| `defaultErrorMessage` | string   | Fallback error message if none is provided    |
+| `onError`             | function | Custom error callback function                |
+| `context`             | string   | Context identifier for error logging          |
 
 ### createQueryErrorHandler
 
@@ -39,70 +36,64 @@ const { onQueryError } = createQueryErrorHandler(errorHandler, options);
 
 Creates a function to handle errors in React Query mutations with these options:
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `defaultErrorMessage` | string | Fallback error message if none is provided |
-| `showToast` | boolean | Whether to show a toast notification on error |
+| Option                | Type    | Description                                   |
+| --------------------- | ------- | --------------------------------------------- |
+| `defaultErrorMessage` | string  | Fallback error message if none is provided    |
+| `showToast`           | boolean | Whether to show a toast notification on error |
 
 ## Usage Examples
 
 ### Handling Async Operations
 
 ```typescript
-import { useErrorHandling } from '../hooks/useErrorHandling';
-import { createAsyncErrorHandler } from '../utils/errorUtils';
+import { useErrorHandling } from "../hooks/useErrorHandling";
+import { createAsyncErrorHandler } from "../utils/errorUtils";
 
 const MyComponent = () => {
   const errorHandler = useErrorHandling();
-  
+
   const handleAsyncError = createAsyncErrorHandler(errorHandler, {
     showToast: true,
-    defaultErrorMessage: 'Failed to load data',
-    context: 'UserProfile'
+    defaultErrorMessage: "Failed to load data",
+    context: "UserProfile",
   });
-  
+
   const fetchUserData = async () => {
     const result = await handleAsyncError(
-      () => api.get('/user/profile'),
-      'fetchUserProfile'
+      () => api.get("/user/profile"),
+      "fetchUserProfile",
     );
-    
+
     if (result) {
       // Process the result
     }
   };
-  
-  return (
-    <button onClick={fetchUserData}>Load Profile</button>
-  );
+
+  return <button onClick={fetchUserData}>Load Profile</button>;
 };
 ```
 
 ### React Query Error Handling
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
-import { useErrorHandling } from '../hooks/useErrorHandling';
-import { createQueryErrorHandler } from '../utils/errorUtils';
+import { useQuery } from "@tanstack/react-query";
+import { useErrorHandling } from "../hooks/useErrorHandling";
+import { createQueryErrorHandler } from "../utils/errorUtils";
 
 const MyDataComponent = () => {
   const errorHandler = useErrorHandling();
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     showToast: true,
-    defaultErrorMessage: 'Failed to load data'
+    defaultErrorMessage: "Failed to load data",
   });
-  
+
   const { data, isLoading } = useQuery({
-    queryKey: ['userData'],
-    queryFn: () => api.get('/user/data'),
-    onError: onQueryError
+    queryKey: ["userData"],
+    queryFn: () => api.get("/user/data"),
+    onError: onQueryError,
   });
-  
-  return (
-    <div>
-      {isLoading ? <LoadingSpinner /> : <UserData data={data} />}
-    </div>
-  );
+
+  return <div>{isLoading ? <LoadingSpinner /> : <UserData data={data} />}</div>;
 };
 ```
 
@@ -118,4 +109,4 @@ The utilities provide special handling for certain error types:
 - Uses the `useErrorHandling` hook for centralized error state management
 - Logs detailed error information including stack traces in development
 - Dispatches custom events for toast notifications
-- Extracts user-friendly messages from error objects 
+- Extracts user-friendly messages from error objects

@@ -20,9 +20,9 @@ The Concept Service provides a high-level API for:
 ```python
 class ConceptService:
     """Service for creating and managing visual concepts."""
-    
+
     def __init__(
-        self, 
+        self,
         image_service: ImageService,
         concept_persistence: ConceptPersistenceService,
         user_service: UserService,
@@ -32,6 +32,7 @@ class ConceptService:
 ```
 
 **Dependencies:**
+
 - `image_service`: Service for generating and managing images
 - `concept_persistence`: Service for persisting concept data in the database
 - `user_service`: Service for user authentication and management
@@ -55,6 +56,7 @@ async def create_concept(
 Creates a new visual concept from a user prompt, generating an image and extracting color palettes.
 
 **Parameters:**
+
 - `user_id`: ID of the user creating the concept
 - `prompt`: Text description of the concept to generate
 - `name`: Optional name for the concept (defaults to a generated name)
@@ -63,6 +65,7 @@ Creates a new visual concept from a user prompt, generating an image and extract
 - `image_params`: Parameters for image generation (width, height, style, etc.)
 
 **Returns:**
+
 - `Concept`: The created concept with all associated data
 
 ```python
@@ -82,6 +85,7 @@ async def create_concept_variation(
 Creates a variation of an existing concept.
 
 **Parameters:**
+
 - `user_id`: ID of the user creating the variation
 - `base_concept_id`: ID of the concept to create a variation from
 - `variation_prompt`: Optional additional prompt to guide the variation
@@ -91,6 +95,7 @@ Creates a variation of an existing concept.
 - `tags`: List of tags to associate with the variation
 
 **Returns:**
+
 - `Concept`: The created concept variation
 
 ### Concept Refinement
@@ -112,6 +117,7 @@ async def refine_concept(
 Refines an existing concept based on a refinement prompt.
 
 **Parameters:**
+
 - `user_id`: ID of the user refining the concept
 - `concept_id`: ID of the concept to refine
 - `refinement_prompt`: Text description of the refinements to make
@@ -121,6 +127,7 @@ Refines an existing concept based on a refinement prompt.
 - `update_metadata`: Additional metadata to update
 
 **Returns:**
+
 - `Concept`: The refined concept
 
 ### Concept Retrieval
@@ -137,10 +144,12 @@ async def get_concept(
 Retrieves a concept by ID.
 
 **Parameters:**
+
 - `concept_id`: ID of the concept to retrieve
 - `user_id`: ID of the user requesting the concept
 
 **Returns:**
+
 - `Concept`: The requested concept
 
 ```python
@@ -157,12 +166,14 @@ async def list_concepts(
 Lists concepts for a user with filtering and pagination.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concepts
 - `limit`: Maximum number of concepts to return
 - `offset`: Offset for pagination
 - `filter_params`: Parameters for filtering (e.g., tags, date range, search term)
 
 **Returns:**
+
 - List of `ConceptSummary` objects
 
 ```python
@@ -179,12 +190,14 @@ async def search_concepts(
 Searches concepts by name, description, or tags.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concepts
 - `search_term`: Term to search for
 - `limit`: Maximum number of concepts to return
 - `filter_params`: Additional parameters for filtering
 
 **Returns:**
+
 - List of `ConceptSummary` objects matching the search criteria
 
 ### Concept Organization
@@ -203,12 +216,14 @@ async def create_collection(
 Creates a new collection of concepts.
 
 **Parameters:**
+
 - `user_id`: ID of the user creating the collection
 - `name`: Name of the collection
 - `description`: Optional description of the collection
 - `concept_ids`: List of concept IDs to include in the collection
 
 **Returns:**
+
 - `Collection`: The created collection
 
 ```python
@@ -224,11 +239,13 @@ async def add_concept_to_collection(
 Adds a concept to a collection.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the collection
 - `collection_id`: ID of the collection
 - `concept_id`: ID of the concept to add
 
 **Returns:**
+
 - `Collection`: The updated collection
 
 ```python
@@ -244,11 +261,13 @@ async def remove_concept_from_collection(
 Removes a concept from a collection.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the collection
 - `collection_id`: ID of the collection
 - `concept_id`: ID of the concept to remove
 
 **Returns:**
+
 - `Collection`: The updated collection
 
 ### Concept Management
@@ -266,11 +285,13 @@ async def update_concept_metadata(
 Updates metadata for a concept.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concept
 - `concept_id`: ID of the concept to update
 - `metadata`: Metadata to update (name, description, tags, etc.)
 
 **Returns:**
+
 - `Concept`: The updated concept
 
 ```python
@@ -285,10 +306,12 @@ async def delete_concept(
 Deletes a concept.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concept
 - `concept_id`: ID of the concept to delete
 
 **Returns:**
+
 - Boolean indicating success
 
 ```python
@@ -306,6 +329,7 @@ async def clone_concept(
 Clones an existing concept.
 
 **Parameters:**
+
 - `user_id`: ID of the user cloning the concept
 - `source_concept_id`: ID of the concept to clone
 - `new_name`: Optional new name for the cloned concept
@@ -313,6 +337,7 @@ Clones an existing concept.
 - `new_tags`: Optional new tags for the cloned concept
 
 **Returns:**
+
 - `Concept`: The cloned concept
 
 ### Concept Export
@@ -331,12 +356,14 @@ async def export_concept(
 Exports a concept in the specified format.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concept
 - `concept_id`: ID of the concept to export
 - `export_format`: Format for export (e.g., "png", "jpg", "svg", "pdf")
 - `export_options`: Options for the export (e.g., resolution, quality)
 
 **Returns:**
+
 - Binary data of the exported concept
 
 ```python
@@ -352,11 +379,13 @@ async def generate_concept_package(
 Generates a package containing all concept assets.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concept
 - `concept_id`: ID of the concept to package
 - `package_options`: Options for the package (e.g., formats to include)
 
 **Returns:**
+
 - URL to download the package
 
 ### Analytics and Insights
@@ -373,10 +402,12 @@ async def get_concept_usage_metrics(
 Gets usage metrics for a concept.
 
 **Parameters:**
+
 - `user_id`: ID of the user owning the concept
 - `concept_id`: ID of the concept
 
 **Returns:**
+
 - `ConceptMetrics`: Usage metrics for the concept
 
 ```python
@@ -391,10 +422,12 @@ async def analyze_concept_trends(
 Analyzes trends in concept creation and usage.
 
 **Parameters:**
+
 - `user_id`: ID of the user
 - `time_period`: Time period for analysis (e.g., "day", "week", "month", "year")
 
 **Returns:**
+
 - Dictionary containing trend analysis data
 
 ## Data Models
@@ -404,7 +437,7 @@ Analyzes trends in concept creation and usage.
 ```python
 class Concept(BaseModel):
     """Represents a visual concept in the system."""
-    
+
     concept_id: str
     user_id: str
     name: str
@@ -429,7 +462,7 @@ Represents a visual concept in the system.
 ```python
 class ConceptSummary(BaseModel):
     """Summary information about a concept."""
-    
+
     concept_id: str
     name: str
     thumbnail_url: str
@@ -445,7 +478,7 @@ Summary information about a concept for listing and search results.
 ```python
 class ConceptVersion(BaseModel):
     """Represents a version of a concept."""
-    
+
     version_id: str
     concept_id: str
     image_id: str
@@ -465,7 +498,7 @@ Represents a version of a concept, tracking changes over time.
 ```python
 class Collection(BaseModel):
     """Represents a collection of concepts."""
-    
+
     collection_id: str
     user_id: str
     name: str
@@ -483,7 +516,7 @@ Represents a collection of concepts for organization.
 ```python
 class ConceptMetrics(BaseModel):
     """Usage metrics for a concept."""
-    
+
     concept_id: str
     view_count: int = 0
     download_count: int = 0
@@ -719,4 +752,4 @@ The `ConceptService` implements several optimizations for better performance:
 - [User Service](./user_service.md): Service for user authentication and management
 - [Concept Persistence Service](./persistence/concept_persistence.md): Service for concept data persistence
 - [Collection Service](./collection_service.md): Service for managing collections
-- [Concept API Routes](../api/routes/concept_routes.md): API endpoints for concept operations 
+- [Concept API Routes](../api/routes/concept_routes.md): API endpoints for concept operations

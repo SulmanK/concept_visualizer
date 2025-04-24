@@ -1,1 +1,1 @@
-export { ConceptDetailPage } from './ConceptDetailPage'; 
+export { ConceptDetailPage } from "./ConceptDetailPage";

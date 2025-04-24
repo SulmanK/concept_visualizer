@@ -12,15 +12,15 @@ This page serves as an intermediary step in the refinement workflow, allowing us
 const RefinementSelectionPage: React.FC = () => {
   const router = useRouter();
   const [selectedConceptIds, setSelectedConceptIds] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
   const { data: concepts, isLoading } = useConceptQueries.useRecentConcepts({
     sortOrder,
     searchTerm,
     limit: 20,
   });
-  
+
   const handleConceptSelect = useCallback((conceptId: string) => {
     setSelectedConceptIds((prev) => {
       // For single selection, replace the array
@@ -28,24 +28,26 @@ const RefinementSelectionPage: React.FC = () => {
       return [conceptId];
     });
   }, []);
-  
+
   const handleProceedToRefinement = useCallback(() => {
     if (selectedConceptIds.length === 0) {
       // Show error or warning
       return;
     }
-    
+
     // Navigate to refinement page with the selected concept
     router.push(`/concepts/${selectedConceptIds[0]}/refine`);
   }, [selectedConceptIds, router]);
-  
+
   return (
     <MainLayout>
       <header className="refinement-selection-header">
         <h1>Select a Concept to Refine</h1>
-        <p>Choose a concept to refine and improve based on additional feedback</p>
+        <p>
+          Choose a concept to refine and improve based on additional feedback
+        </p>
       </header>
-      
+
       <div className="selection-controls">
         <div className="search-bar">
           <Input
@@ -56,7 +58,7 @@ const RefinementSelectionPage: React.FC = () => {
             icon="search"
           />
         </div>
-        
+
         <div className="sort-control">
           <label htmlFor="sort-select">Sort by:</label>
           <Select
@@ -64,24 +66,27 @@ const RefinementSelectionPage: React.FC = () => {
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as SortOrder)}
             options={[
-              { value: 'newest', label: 'Newest first' },
-              { value: 'oldest', label: 'Oldest first' },
-              { value: 'name', label: 'Name (A-Z)' },
-              { value: 'name-desc', label: 'Name (Z-A)' },
+              { value: "newest", label: "Newest first" },
+              { value: "oldest", label: "Oldest first" },
+              { value: "name", label: "Name (A-Z)" },
+              { value: "name-desc", label: "Name (Z-A)" },
             ]}
           />
         </div>
       </div>
-      
+
       <div className="concepts-grid">
         {isLoading ? (
           <LoadingIndicator />
         ) : concepts?.items.length === 0 ? (
           <div className="empty-state">
-            <p>No concepts found. Try adjusting your search or creating a new concept.</p>
+            <p>
+              No concepts found. Try adjusting your search or creating a new
+              concept.
+            </p>
             <Button
               variant="primary"
-              onClick={() => router.push('/concepts/new')}
+              onClick={() => router.push("/concepts/new")}
             >
               Create New Concept
             </Button>
@@ -98,15 +103,12 @@ const RefinementSelectionPage: React.FC = () => {
           ))
         )}
       </div>
-      
+
       <div className="action-bar">
-        <Button
-          variant="secondary"
-          onClick={() => router.back()}
-        >
+        <Button variant="secondary" onClick={() => router.back()}>
           Cancel
         </Button>
-        
+
         <Button
           variant="primary"
           onClick={handleProceedToRefinement}
@@ -146,7 +148,7 @@ This component does not accept any props as it's a top-level page component.
 ## Types
 
 ```tsx
-type SortOrder = 'newest' | 'oldest' | 'name' | 'name-desc';
+type SortOrder = "newest" | "oldest" | "name" | "name-desc";
 ```
 
 ## State Management
@@ -172,9 +174,7 @@ Users can navigate to this page from various points in the application:
 
 ```tsx
 // From a dashboard or concepts list
-<Button
-  onClick={() => router.push('/concepts/refine')}
->
+<Button onClick={() => router.push("/concepts/refine")}>
   Refine a Concept
 </Button>
 ```
@@ -184,4 +184,4 @@ Users can navigate to this page from various points in the application:
 - Form inputs have proper labels
 - Interactive elements have appropriate ARIA attributes
 - Loading and empty states are properly communicated
-- Keyboard navigation for selection and actions 
+- Keyboard navigation for selection and actions

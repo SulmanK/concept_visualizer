@@ -9,30 +9,33 @@ This module exports the `useSessionSyncMutation` hook, which enables application
 ## Usage
 
 ```tsx
-import { useEffect } from 'react';
-import { useSessionSyncMutation } from '../hooks/useSessionQuery';
-import { generateSessionId } from '../utils/sessionUtils';
+import { useEffect } from "react";
+import { useSessionSyncMutation } from "../hooks/useSessionQuery";
+import { generateSessionId } from "../utils/sessionUtils";
 
 function SessionManager() {
   const sessionSync = useSessionSyncMutation();
-  
+
   useEffect(() => {
     // Get or create client session ID from local storage
-    let clientSessionId = localStorage.getItem('client_session_id');
+    let clientSessionId = localStorage.getItem("client_session_id");
     if (!clientSessionId) {
       clientSessionId = generateSessionId();
-      localStorage.setItem('client_session_id', clientSessionId);
+      localStorage.setItem("client_session_id", clientSessionId);
     }
-    
+
     // Sync session with backend
-    sessionSync.mutate({ client_session_id: clientSessionId }, {
-      onSuccess: (data) => {
-        console.log(`Session synced successfully: ${data.session_id}`);
-        // Store additional session data if needed
-      }
-    });
+    sessionSync.mutate(
+      { client_session_id: clientSessionId },
+      {
+        onSuccess: (data) => {
+          console.log(`Session synced successfully: ${data.session_id}`);
+          // Store additional session data if needed
+        },
+      },
+    );
   }, [sessionSync]);
-  
+
   return null; // This component doesn't render anything
 }
 ```
@@ -76,9 +79,9 @@ The mutation returns a `SessionResponse` object:
 
 ```typescript
 interface SessionResponse {
-  session_id: string;  // The server-side session identifier
-  created: boolean;    // Whether a new session was created on the server
-  [key: string]: any;  // Additional session metadata returned by the server
+  session_id: string; // The server-side session identifier
+  created: boolean; // Whether a new session was created on the server
+  [key: string]: any; // Additional session metadata returned by the server
 }
 ```
 
@@ -99,4 +102,4 @@ interface SessionResponse {
 
 - `apiClient` - Used for making API requests
 - `useErrorHandling` - Used for standardized error handling
-- `AuthContext` - Often used in conjunction with session management 
+- `AuthContext` - Often used in conjunction with session management

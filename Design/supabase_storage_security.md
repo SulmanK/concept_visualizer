@@ -24,11 +24,13 @@ The current implementation of the Concept Visualizer application uses public Sup
 This approach would use Supabase's RLS policies to restrict access to images based on session IDs.
 
 **Pros:**
+
 - Most secure approach
 - Leverages Supabase's built-in security features
 - Can be implemented entirely on the database side
 
 **Cons:**
+
 - Requires significant changes to the authentication flow
 - More complex implementation
 - May impact performance with additional authentication checks
@@ -38,11 +40,13 @@ This approach would use Supabase's RLS policies to restrict access to images bas
 This approach would make storage buckets private and serve images through a backend API endpoint that validates the requesting session.
 
 **Pros:**
+
 - High security - complete control over access
 - Simple to understand and implement
 - Works well with existing session cookie mechanism
 
 **Cons:**
+
 - Additional load on backend server
 - Potential performance impact for image loading
 - Bandwidth used twice (once from Supabase to server, once from server to client)
@@ -52,6 +56,7 @@ This approach would make storage buckets private and serve images through a back
 This approach maintains public buckets but only serves short-lived signed URLs that expire after a set time period.
 
 **Pros:**
+
 - Good balance of security and performance
 - Relatively easy to implement
 - Minimal changes to existing architecture
@@ -59,6 +64,7 @@ This approach maintains public buckets but only serves short-lived signed URLs t
 - No additional server load for serving images
 
 **Cons:**
+
 - URLs could be shared during their validity period
 - May require refreshing URLs for long user sessions
 - Some management overhead for URL regeneration
@@ -80,22 +86,22 @@ Modify the existing storage service to use signed URLs instead of public URLs:
 async def get_public_url(self, image_path: str, is_palette: bool = False, expiry_seconds: int = 3600) -> str:
     """
     Get a signed URL for an image in storage with an expiration time.
-    
+
     Args:
         image_path: Path to the image in storage
         is_palette: Whether this is a palette image (uses palette-images bucket)
         expiry_seconds: Time in seconds until the URL expires (default: 1 hour)
-        
+
     Returns:
         Signed URL for the image with expiration
-        
+
     Raises:
         ImageStorageError: If URL generation fails
     """
     try:
         # Select the appropriate bucket
         bucket_name = self.palette_bucket if is_palette else self.concept_bucket
-        
+
         # Get a signed URL with expiration
         if hasattr(self.supabase, 'client') and hasattr(self.supabase.client, 'storage'):
             response = self.supabase.client.storage.from_(bucket_name).create_signed_url(
@@ -109,7 +115,7 @@ async def get_public_url(self, image_path: str, is_palette: bool = False, expiry
                 expires_in=expiry_seconds
             )
             return response['signedURL']
-            
+
     except Exception as e:
         error_msg = f"Failed to get signed URL for image {image_path}: {str(e)}"
         self.logger.error(error_msg)
@@ -125,29 +131,29 @@ Modify the image service to use the new signed URL functionality:
 def get_image_url(self, image_path: str, bucket_name: str, expiry_seconds: int = 3600) -> str:
     """
     Get a signed URL for an image in storage with an expiration time.
-    
+
     Args:
         image_path: Path to the image in storage
         bucket_name: Name of the bucket (e.g., "concept-images" or "palette-images")
         expiry_seconds: Time in seconds until the URL expires (default: 1 hour)
-        
+
     Returns:
         Signed URL for the image
-        
+
     Raises:
         ImageError: If URL generation fails
     """
     try:
         # Determine if this is a palette image based on the bucket name
         is_palette = bucket_name == settings.STORAGE_BUCKET_PALETTE
-        
+
         # Use the storage service to get the URL
         return self.storage.get_public_url(
-            image_path=image_path, 
+            image_path=image_path,
             is_palette=is_palette,
             expiry_seconds=expiry_seconds
         )
-        
+
     except Exception as e:
         self.logger.error(f"Error getting image URL: {str(e)}")
         raise ImageError(f"Failed to get image URL: {str(e)}")
@@ -182,18 +188,18 @@ async def refresh_image_url(
     """Refresh an expired image URL."""
     # Verify session
     valid_session_id, _ = await session_service.get_or_create_session(session_id)
-    
+
     # Verify the image belongs to this session
     if not image_path.startswith(f"{valid_session_id}/"):
         raise HTTPException(status_code=403, detail="Not authorized to access this image")
-    
+
     # Get a fresh signed URL
     bucket_name = settings.STORAGE_BUCKET_PALETTE if is_palette else settings.STORAGE_BUCKET_CONCEPT
     url = image_service.get_image_url(image_path, bucket_name)
-    
+
     # Calculate expiration time (current time + expiry seconds)
     expires_at = int(time.time()) + 3600  # 1 hour from now
-    
+
     return {
         "url": url,
         "expires_at": expires_at,
@@ -209,7 +215,7 @@ Modify your frontend API client to handle URL expiration and refreshing:
 
 ```typescript
 // frontend/src/services/imageService.ts
-import apiClient from './api';
+import apiClient from "./api";
 
 interface ImageInfo {
   url: string;
@@ -219,35 +225,41 @@ interface ImageInfo {
 
 const imageCache = new Map<string, ImageInfo>();
 
-export const getImageUrl = async (path: string, isPalette: boolean = false): Promise<string> => {
+export const getImageUrl = async (
+  path: string,
+  isPalette: boolean = false,
+): Promise<string> => {
   // Check if we have a cached non-expired URL
   const now = Math.floor(Date.now() / 1000);
   const cached = imageCache.get(path);
-  
+
   if (cached && cached.expiresAt > now) {
     return cached.url;
   }
-  
+
   // If expired or not cached, request a fresh URL
   try {
-    const response = await apiClient.get(`/api/concept/images/refresh-url/${encodeURIComponent(path)}`, {
-      params: { is_palette: isPalette }
-    });
-    
+    const response = await apiClient.get(
+      `/api/concept/images/refresh-url/${encodeURIComponent(path)}`,
+      {
+        params: { is_palette: isPalette },
+      },
+    );
+
     const imageInfo: ImageInfo = {
       url: response.data.url,
       expiresAt: response.data.expires_at,
-      path: response.data.path
+      path: response.data.path,
     };
-    
+
     // Cache the new URL
     imageCache.set(path, imageInfo);
-    
+
     return imageInfo.url;
   } catch (error) {
-    console.error('Error refreshing image URL:', error);
+    console.error("Error refreshing image URL:", error);
     // Return cached URL even if expired as fallback
-    return cached?.url || '';
+    return cached?.url || "";
   }
 };
 ```
@@ -258,8 +270,8 @@ Update your image components to use the new URL service:
 
 ```tsx
 // frontend/src/components/concept/ConceptImage.tsx
-import React, { useState, useEffect } from 'react';
-import { getImageUrl } from '../../services/imageService';
+import React, { useState, useEffect } from "react";
+import { getImageUrl } from "../../services/imageService";
 
 interface ConceptImageProps {
   path: string;
@@ -268,51 +280,54 @@ interface ConceptImageProps {
   className?: string;
 }
 
-const ConceptImage: React.FC<ConceptImageProps> = ({ 
-  path, 
-  isPalette = false, 
-  alt, 
-  className 
+const ConceptImage: React.FC<ConceptImageProps> = ({
+  path,
+  isPalette = false,
+  alt,
+  className,
 }) => {
-  const [imageUrl, setImageUrl] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   useEffect(() => {
     const loadImage = async () => {
       if (!path) return;
-      
+
       setIsLoading(true);
       try {
         const url = await getImageUrl(path, isPalette);
         setImageUrl(url);
         setError(null);
       } catch (err) {
-        console.error('Error loading image:', err);
-        setError('Failed to load image');
+        console.error("Error loading image:", err);
+        setError("Failed to load image");
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadImage();
-    
+
     // Set up a refresh interval for long-lived components (optional)
-    const intervalId = setInterval(() => {
-      loadImage();
-    }, 30 * 60 * 1000); // Refresh every 30 minutes
-    
+    const intervalId = setInterval(
+      () => {
+        loadImage();
+      },
+      30 * 60 * 1000,
+    ); // Refresh every 30 minutes
+
     return () => clearInterval(intervalId);
   }, [path, isPalette]);
-  
+
   if (isLoading) {
     return <div className="image-placeholder">Loading...</div>;
   }
-  
+
   if (error) {
     return <div className="image-error">{error}</div>;
   }
-  
+
   return <img src={imageUrl} alt={alt} className={className} />;
 };
 
@@ -329,8 +344,8 @@ Update your Supabase storage bucket policies to slightly restrict access:
 
 ```sql
 -- RLS policy for concept-images and palette-images
-CREATE POLICY "Allow access with valid session cookie" 
-ON storage.objects FOR SELECT 
+CREATE POLICY "Allow access with valid session cookie"
+ON storage.objects FOR SELECT
 USING (bucket_id IN ('concept-images', 'palette-images') AND request.header('Cookie') IS NOT NULL);
 ```
 
@@ -339,11 +354,13 @@ This simple policy ensures that only requests with a Cookie header can access im
 ## Testing Plan
 
 1. **Unit Tests**:
+
    - Test URL generation and expiration logic
    - Test URL refresh functionality
    - Test session validation for image access
 
 2. **Integration Tests**:
+
    - Verify image loading with signed URLs
    - Test URL refresh behavior when URLs expire
    - Test session-specific access controls
@@ -356,12 +373,14 @@ This simple policy ensures that only requests with a Cookie header can access im
 ## Migration Plan
 
 1. **Stage 1: Implement Backend Changes**
+
    - Update storage service with signed URL functionality
    - Update image service to use signed URLs
    - Add URL refresh endpoint
    - Update response models to include expiration information
 
 2. **Stage 2: Implement Frontend Changes**
+
    - Create image URL service with caching and refresh logic
    - Update image components to use the new service
    - Test with existing images
@@ -373,14 +392,17 @@ This simple policy ensures that only requests with a Cookie header can access im
 ## Risk Assessment
 
 1. **Performance Impact**
+
    - Risk: Additional URL refresh requests might impact performance
    - Mitigation: Implement caching and only refresh when needed
 
 2. **User Experience**
+
    - Risk: Users might experience image loading issues during long sessions
    - Mitigation: Implement automatic URL refreshing before expiration
 
 3. **Implementation Complexity**
+
    - Risk: Changes might introduce bugs in the image loading flow
    - Mitigation: Thorough testing and gradual deployment
 
@@ -394,4 +416,4 @@ Implementing signed URLs with short expiration provides a good balance of securi
 
 The implementation requires moderate changes to the backend and frontend but doesn't fundamentally change the application architecture. This makes it a practical choice for improving security in the near term.
 
-In the future, if the application requires even stronger security, the other options (RLS with session authentication or server-side proxy) could be considered as part of a larger authentication system overhaul. 
+In the future, if the application requires even stronger security, the other options (RLS with session authentication or server-side proxy) could be considered as part of a larger authentication system overhaul.

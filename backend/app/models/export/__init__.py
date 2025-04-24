@@ -1,6 +1,4 @@
-"""
-Export models package containing export-related data models.
-"""
+"""Export models package containing export-related data models."""
 
 from .request import ExportRequest
 

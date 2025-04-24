@@ -13,10 +13,10 @@ The `base.py` module in `app/models/common/` defines base models that provide co
 ```python
 class APIBaseModel(BaseModel):
     """Base model with common API model configuration."""
-    
+
     class Config:
         """Configuration for all API models."""
-        
+
         json_encoders = {
             # Add any custom encoders needed across models
         }
@@ -37,15 +37,15 @@ This is the base model class that all other API models in the application should
 ```python
 class ErrorResponse(APIBaseModel):
     """Standard error response model."""
-    
+
     detail: str = Field(..., description="Error message")
     code: str = Field(..., description="Error code")
     status_code: int = Field(..., description="HTTP status code")
     path: Optional[str] = Field(None, description="Request path")
-    
+
     class Config:
         """Error response model configuration."""
-        
+
         json_schema_extra = {  # Formerly schema_extra
             "example": {
                 "detail": "Resource not found",
@@ -78,7 +78,7 @@ from typing import Optional, List
 
 class ConceptModel(APIBaseModel):
     """Example model inheriting from APIBaseModel."""
-    
+
     id: str = Field(..., description="Unique identifier")
     name: str = Field(..., description="Concept name")
     description: Optional[str] = Field(None, description="Optional description")
@@ -121,4 +121,4 @@ Using these base models provides several benefits:
 
 - [Concept Models](../concept/domain.md): Domain models for concepts
 - [API Errors](../../api/errors.md): API error handling
-- [Exception Types](../../core/exceptions.md): Custom exception types 
+- [Exception Types](../../core/exceptions.md): Custom exception types

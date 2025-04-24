@@ -29,14 +29,17 @@ async def extract_dominant_colors(
 This function analyzes an image and extracts its most prominent colors.
 
 **Parameters:**
+
 - `image_data`: Binary image data to analyze
 - `num_colors`: Number of dominant colors to extract (default: 5)
 - `exclusion_threshold`: Threshold to exclude similar colors (default: 0.05)
 
 **Returns:**
+
 - List of color dictionaries with hex, rgb, and hsl values
 
 **Raises:**
+
 - `ImageProcessingError`: If color extraction fails
 
 ### Apply Color Palette
@@ -53,14 +56,17 @@ async def apply_color_palette(
 This function transforms an image by mapping its colors to a target palette.
 
 **Parameters:**
+
 - `image_data`: Binary image data to transform
 - `palette`: List of hex color codes to apply
 - `preserve_luminance`: Whether to preserve the original brightness values
 
 **Returns:**
+
 - Binary data of the transformed image
 
 **Raises:**
+
 - `ImageProcessingError`: If palette application fails
 
 ### Enhance Image
@@ -79,6 +85,7 @@ async def enhance_image(
 This function improves image quality by adjusting visual parameters.
 
 **Parameters:**
+
 - `image_data`: Binary image data to enhance
 - `brightness`: Brightness adjustment factor (0.0-2.0, default: 1.0)
 - `contrast`: Contrast adjustment factor (0.0-2.0, default: 1.0)
@@ -86,9 +93,11 @@ This function improves image quality by adjusting visual parameters.
 - `sharpness`: Sharpness adjustment factor (0.0-2.0, default: 1.0)
 
 **Returns:**
+
 - Binary data of the enhanced image
 
 **Raises:**
+
 - `ImageProcessingError`: If enhancement fails
 
 ### Generate Image Variations
@@ -105,14 +114,17 @@ async def generate_variations(
 This function creates different versions of an image for various use cases.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `variation_types`: List of variation types to generate (e.g., "thumbnail", "grayscale")
 - `params`: Optional parameters for specific variation types
 
 **Returns:**
+
 - Dictionary mapping variation types to binary image data
 
 **Raises:**
+
 - `ImageProcessingError`: If variation generation fails
 - `UnsupportedVariationError`: If a requested variation type is not supported
 
@@ -252,4 +264,4 @@ The module implements comprehensive error handling:
 - [Image Conversion](conversion.md): Format conversion operations
 - [Processing Service](processing_service.md): Service that orchestrates processing
 - [Image Interface](interface.md): Interface for image services
-- [Concept Service](../concept/service.md): Service that uses image processing for concept generation 
+- [Concept Service](../concept/service.md): Service that uses image processing for concept generation

@@ -11,36 +11,36 @@ The `dev-logging.ts` module provides utility functions for conditional logging b
 
 ## Available Functions
 
-| Function | Description |
-|----------|-------------|
-| `devLog(...args)` | Logs to console only in development mode (wrapper for `console.log`) |
-| `devWarn(...args)` | Logs warnings to console only in development mode (wrapper for `console.warn`) |
+| Function            | Description                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------- |
+| `devLog(...args)`   | Logs to console only in development mode (wrapper for `console.log`)                     |
+| `devWarn(...args)`  | Logs warnings to console only in development mode (wrapper for `console.warn`)           |
 | `devDebug(...args)` | Logs debug information to console only in development mode (wrapper for `console.debug`) |
-| `devInfo(...args)` | Logs info to console only in development mode (wrapper for `console.info`) |
-| `logError(...args)` | Always logs errors to console regardless of environment (wrapper for `console.error`) |
+| `devInfo(...args)`  | Logs info to console only in development mode (wrapper for `console.info`)               |
+| `logError(...args)` | Always logs errors to console regardless of environment (wrapper for `console.error`)    |
 
 ## Usage Examples
 
 ### Basic Logging
 
 ```typescript
-import { devLog, devWarn, logError } from '../utils/dev-logging';
+import { devLog, devWarn, logError } from "../utils/dev-logging";
 
 function processData(data) {
   // Only logs in development mode
-  devLog('Processing data:', data);
-  
+  devLog("Processing data:", data);
+
   try {
     // Process data...
     if (someCondition) {
       // Only logs in development mode
-      devWarn('Unusual condition detected:', someCondition);
+      devWarn("Unusual condition detected:", someCondition);
     }
-    
+
     return processedData;
   } catch (error) {
     // Always logs, even in production
-    logError('Error processing data:', error);
+    logError("Error processing data:", error);
     throw error;
   }
 }
@@ -49,19 +49,19 @@ function processData(data) {
 ### Component Debugging
 
 ```tsx
-import React, { useEffect } from 'react';
-import { devLog } from '../utils/dev-logging';
+import React, { useEffect } from "react";
+import { devLog } from "../utils/dev-logging";
 
 const DebugComponent = ({ data }) => {
   useEffect(() => {
     // Only logs in development mode
-    devLog('Component mounted with data:', data);
-    
+    devLog("Component mounted with data:", data);
+
     return () => {
-      devLog('Component will unmount');
+      devLog("Component will unmount");
     };
   }, [data]);
-  
+
   return <div>{/* Component content */}</div>;
 };
 ```
@@ -87,4 +87,4 @@ export function devLog(...args: any[]): void {
 2. **Use `logError` for Critical Errors**: Always use `logError` for important errors that should be logged in production
 3. **Provide Context**: Include descriptive messages and relevant data with your log calls
 4. **Clean Up**: Remove or convert unnecessary debug logging before shipping to production
-5. **Performance**: Avoid expensive operations in log arguments as they still execute in production 
+5. **Performance**: Avoid expensive operations in log arguments as they still execute in production

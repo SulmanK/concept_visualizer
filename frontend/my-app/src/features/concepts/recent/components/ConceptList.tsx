@@ -1,106 +1,131 @@
-import React, { useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useRecentConcepts } from '../../../../hooks/useConceptQueries';
-import { useUserId } from '../../../../contexts/AuthContext';
-import { useQueryClient } from '@tanstack/react-query';
-import { ConceptCard } from '../../../../components/ui/ConceptCard';
-import { ConceptData } from '../../../../services/supabaseClient';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import React, { useEffect, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useRecentConcepts } from "../../../../hooks/useConceptQueries";
+import { useUserId } from "../../../../contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
+import { ConceptCard } from "../../../../components/ui/ConceptCard";
+import { ConceptData } from "../../../../services/supabaseClient";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 
 /**
  * Custom hook to fetch recent concepts with logging
  * We now rely on standard React Query cache behavior
  */
-function useRecentConceptsWithLogging(userId: string | undefined, limit: number = 10) {
+function useRecentConceptsWithLogging(
+  userId: string | undefined,
+  limit: number = 10,
+) {
   // Get data using the standard hook
   const result = useRecentConcepts(userId, limit);
-  
+
   // Add debug logging
   useEffect(() => {
     if (userId) {
-      console.log('[useRecentConceptsWithLogging] Using recent concepts hook for userId:', userId);
+      console.log(
+        "[useRecentConceptsWithLogging] Using recent concepts hook for userId:",
+        userId,
+      );
     }
   }, [userId]);
-  
+
   return result;
 }
 
 /**
  * Displays a list of recently generated concepts
  */
-export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideViewAllButton }) => {
+export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({
+  hideViewAllButton,
+}) => {
   const userId = useUserId();
-  const { 
+  const {
     data: recentConcepts = [],
     isLoading: loadingConcepts,
     error,
-    refetch: refreshConcepts
+    refetch: refreshConcepts,
   } = useRecentConceptsWithLogging(userId || undefined, 10);
-  
+
   const errorLoadingConcepts = error ? (error as Error).message : null;
   const navigate = useNavigate();
-  
+
   // Handle navigation to the edit/refine page - memoized with useCallback
-  const handleEdit = useCallback((conceptId: string, variationId?: string | null) => {
-    console.log('[ConceptList] Edit clicked:', { conceptId, variationId });
-    
-    // Check if this is a sample concept
-    if (conceptId.startsWith('sample-')) {
-      console.warn('Cannot edit sample concept');
-      return;
-    }
-    
-    // If we have a variation ID, add it as a query parameter
-    if (variationId) {
-      console.log(`Navigating to refine with variation: /refine/${conceptId}?colorId=${variationId}`);
-      navigate(`/refine/${conceptId}?colorId=${variationId}`);
-    } else {
-      // Otherwise navigate to the concept without a variation
-      console.log(`Navigating to refine original: /refine/${conceptId}`);
-      navigate(`/refine/${conceptId}`);
-    }
-  }, [navigate]);
-  
+  const handleEdit = useCallback(
+    (conceptId: string, variationId?: string | null) => {
+      console.log("[ConceptList] Edit clicked:", { conceptId, variationId });
+
+      // Check if this is a sample concept
+      if (conceptId.startsWith("sample-")) {
+        console.warn("Cannot edit sample concept");
+        return;
+      }
+
+      // If we have a variation ID, add it as a query parameter
+      if (variationId) {
+        console.log(
+          `Navigating to refine with variation: /refine/${conceptId}?colorId=${variationId}`,
+        );
+        navigate(`/refine/${conceptId}?colorId=${variationId}`);
+      } else {
+        // Otherwise navigate to the concept without a variation
+        console.log(`Navigating to refine original: /refine/${conceptId}`);
+        navigate(`/refine/${conceptId}`);
+      }
+    },
+    [navigate],
+  );
+
   // Handle navigation to the concept details page - memoized with useCallback
-  const handleViewDetails = useCallback((conceptId: string, variationId?: string | null) => {
-    console.log('[ConceptList] View details clicked:', { conceptId, variationId });
-    
-    // Check if this is a sample concept
-    if (conceptId.startsWith('sample-')) {
-      console.warn('Cannot view sample concept details');
-      return;
-    }
-    
-    // If we have a variation ID, add it as a query parameter
-    if (variationId) {
-      console.log(`Navigating to details with variation: /concepts/${conceptId}?colorId=${variationId}`);
-      navigate(`/concepts/${conceptId}?colorId=${variationId}`);
-    } else {
-      // Otherwise navigate to the concept without a variation
-      console.log(`Navigating to details original: /concepts/${conceptId}`);
-      navigate(`/concepts/${conceptId}`);
-    }
-  }, [navigate]);
-  
+  const handleViewDetails = useCallback(
+    (conceptId: string, variationId?: string | null) => {
+      console.log("[ConceptList] View details clicked:", {
+        conceptId,
+        variationId,
+      });
+
+      // Check if this is a sample concept
+      if (conceptId.startsWith("sample-")) {
+        console.warn("Cannot view sample concept details");
+        return;
+      }
+
+      // If we have a variation ID, add it as a query parameter
+      if (variationId) {
+        console.log(
+          `Navigating to details with variation: /concepts/${conceptId}?colorId=${variationId}`,
+        );
+        navigate(`/concepts/${conceptId}?colorId=${variationId}`);
+      } else {
+        // Otherwise navigate to the concept without a variation
+        console.log(`Navigating to details original: /concepts/${conceptId}`);
+        navigate(`/concepts/${conceptId}`);
+      }
+    },
+    [navigate],
+  );
+
   // Log component state on each render for debugging
-  console.log('ConceptList render state:', { 
-    conceptsCount: recentConcepts.length || 0, 
-    loading: loadingConcepts, 
+  console.log("ConceptList render state:", {
+    conceptsCount: recentConcepts.length || 0,
+    loading: loadingConcepts,
     error: errorLoadingConcepts,
-    firstConcept: recentConcepts.length > 0 ? {
-      id: recentConcepts[0].id,
-      base_image_url: recentConcepts[0].base_image_url,
-      has_variations: (recentConcepts[0].color_variations?.length || 0) > 0
-    } : null
+    firstConcept:
+      recentConcepts.length > 0
+        ? {
+            id: recentConcepts[0].id,
+            base_image_url: recentConcepts[0].base_image_url,
+            has_variations:
+              (recentConcepts[0].color_variations?.length || 0) > 0,
+          }
+        : null,
   });
-  
+
   // Helper function to render the header with conditional View All button
   const renderHeader = () => (
     <div className="flex justify-between items-center mb-6">
       <h2 className="text-xl font-semibold text-gray-800">Recent Concepts</h2>
       {!hideViewAllButton && (
-        <Link 
-          to="/concepts" 
+        <Link
+          to="/concepts"
           className="text-indigo-600 text-sm font-medium hover:text-indigo-700 flex items-center"
         >
           View All
@@ -109,7 +134,7 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       )}
     </div>
   );
-  
+
   // Handle empty state
   if (!loadingConcepts && (!recentConcepts || recentConcepts.length === 0)) {
     return (
@@ -118,12 +143,15 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
 
         <div className="text-center py-10">
           <div className="text-gray-300 text-4xl mb-4">📁</div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">No concepts yet</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            No concepts yet
+          </h3>
           <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Your recently generated concepts will appear here after you create them.
+            Your recently generated concepts will appear here after you create
+            them.
           </p>
-          <Link 
-            to="/create" 
+          <Link
+            to="/create"
             className="btn-primary inline-block px-4 py-2 bg-indigo-600 text-white rounded-md font-medium hover:bg-indigo-700"
           >
             Create New Concept
@@ -132,13 +160,13 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       </div>
     );
   }
-  
+
   // Handle loading state
   if (loadingConcepts) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
         {renderHeader()}
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -149,7 +177,10 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
                 <div className="bg-indigo-50 h-4 w-5/6 rounded mb-4 mx-auto"></div>
                 <div className="flex justify-center space-x-2 mb-4">
                   {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="bg-indigo-200 w-6 h-6 rounded-full"></div>
+                    <div
+                      key={j}
+                      className="bg-indigo-200 w-6 h-6 rounded-full"
+                    ></div>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-4">
@@ -163,17 +194,19 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       </div>
     );
   }
-  
+
   // Handle error state
   if (errorLoadingConcepts) {
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
         {renderHeader()}
-        
+
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-600 mb-4">Error Loading Concepts</h3>
+          <h3 className="text-lg font-semibold text-red-600 mb-4">
+            Error Loading Concepts
+          </h3>
           <p className="text-indigo-600 mb-6">{errorLoadingConcepts}</p>
-          <button 
+          <button
             onClick={() => refreshConcepts()}
             className="btn-primary inline-block px-4 py-2 bg-indigo-600 text-white rounded-md font-medium"
           >
@@ -183,18 +216,22 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       </div>
     );
   }
-  
+
   // Safety check for null concepts array
   if (!recentConcepts || !Array.isArray(recentConcepts)) {
-    console.error('recentConcepts is not an array:', recentConcepts);
+    console.error("recentConcepts is not an array:", recentConcepts);
     return (
       <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
         {renderHeader()}
-        
+
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-red-600 mb-4">Something went wrong</h3>
-          <p className="text-indigo-600 mb-6">Invalid data received from the server</p>
-          <button 
+          <h3 className="text-lg font-semibold text-red-600 mb-4">
+            Something went wrong
+          </h3>
+          <p className="text-indigo-600 mb-6">
+            Invalid data received from the server
+          </p>
+          <button
             onClick={() => refreshConcepts()}
             className="btn-primary inline-block px-4 py-2 bg-indigo-600 text-white rounded-md font-medium"
           >
@@ -204,27 +241,29 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       </div>
     );
   }
-  
+
   // Render the grid of concepts
   return (
     <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-modern border border-indigo-100 p-8 mb-8">
       {renderHeader()}
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {recentConcepts.map((concept: ConceptData) => {
           // Add a safety check for each concept before rendering
           if (!concept || !concept.id) {
-            console.warn('Invalid concept data:', concept);
+            console.warn("Invalid concept data:", concept);
             return null;
           }
-          
+
           // Get gradient colors - first color from the first variation if available
-          const gradientFrom = concept.color_variations?.[0]?.colors?.[0] || '#818CF8';
-          const gradientTo = concept.color_variations?.[0]?.colors?.[1] || '#4F46E5';
-          
+          const gradientFrom =
+            concept.color_variations?.[0]?.colors?.[0] || "#818CF8";
+          const gradientTo =
+            concept.color_variations?.[0]?.colors?.[1] || "#4F46E5";
+
           return (
             <div key={concept.id}>
-              <ConceptCard 
+              <ConceptCard
                 concept={concept}
                 preventNavigation={true}
                 onEdit={handleEdit}
@@ -239,4 +278,4 @@ export const ConceptList: React.FC<{ hideViewAllButton?: boolean }> = ({ hideVie
       </div>
     </div>
   );
-}; 
+};

@@ -31,4 +31,4 @@ The backend follows a layered architecture with strict separation between compon
 - Pydantic: Data validation and settings management
 - Supabase: Database and storage
 - Redis: Rate limiting and caching
-- JigsawStack API: External image generation service 
+- JigsawStack API: External image generation service

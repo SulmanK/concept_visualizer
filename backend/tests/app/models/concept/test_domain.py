@@ -1,31 +1,22 @@
-"""
-Tests for concept domain models.
-"""
+"""Tests for concept domain models."""
 
-import pytest
 import uuid
 from datetime import datetime
-from pydantic import ValidationError
-from app.models.concept.domain import (
-    ColorPalette,
-    ConceptSummary,
-    ConceptDetail,
-    ConceptCreate,
-    ColorVariationCreate
-)
+
+from app.models.concept.domain import ColorPalette, ColorVariationCreate, ConceptCreate, ConceptDetail, ConceptSummary
 
 
 class TestColorPalette:
     """Tests for the ColorPalette domain model."""
 
-    def test_valid_palette(self):
+    def test_valid_palette(self) -> None:
         """Test creating a valid ColorPalette."""
         palette = ColorPalette(
             name="Vibrant Blue",
             colors=["#0000FF", "#00FFFF", "#000088"],
             description="A vibrant blue color scheme",
             image_url="https://example.com/image.png",
-            image_path="user-123/palettes/vibrant-blue.png"
+            image_path="user-123/palettes/vibrant-blue.png",
         )
         assert palette.name == "Vibrant Blue"
         assert palette.colors == ["#0000FF", "#00FFFF", "#000088"]
@@ -33,12 +24,9 @@ class TestColorPalette:
         assert palette.image_url == "https://example.com/image.png"
         assert palette.image_path == "user-123/palettes/vibrant-blue.png"
 
-    def test_minimal_palette(self):
+    def test_minimal_palette(self) -> None:
         """Test creating a minimal ColorPalette."""
-        palette = ColorPalette(
-            name="Minimal",
-            colors=["#000000", "#FFFFFF"]
-        )
+        palette = ColorPalette(name="Minimal", colors=["#000000", "#FFFFFF"], description=None, image_url=None, image_path=None)
         assert palette.name == "Minimal"
         assert palette.colors == ["#000000", "#FFFFFF"]
         assert palette.description is None
@@ -49,7 +37,7 @@ class TestColorPalette:
 class TestConceptSummary:
     """Tests for the ConceptSummary domain model."""
 
-    def test_valid_summary(self):
+    def test_valid_summary(self) -> None:
         """Test creating a valid ConceptSummary."""
         concept_id = uuid.uuid4()
         now = datetime.now()
@@ -64,16 +52,18 @@ class TestConceptSummary:
                 ColorPalette(
                     name="Blue",
                     colors=["#0000FF", "#00FFFF"],
+                    description=None,
                     image_url="https://example.com/var1.png",
-                    image_path="user-123/variations/blue.png"
+                    image_path="user-123/variations/blue.png",
                 ),
                 ColorPalette(
                     name="Green",
                     colors=["#00FF00", "#88FF88"],
+                    description=None,
                     image_url="https://example.com/var2.png",
-                    image_path="user-123/variations/green.png"
-                )
-            ]
+                    image_path="user-123/variations/green.png",
+                ),
+            ],
         )
         assert summary.id == concept_id
         assert summary.created_at == now
@@ -89,7 +79,7 @@ class TestConceptSummary:
 class TestConceptDetail:
     """Tests for the ConceptDetail domain model."""
 
-    def test_valid_detail(self):
+    def test_valid_detail(self) -> None:
         """Test creating a valid ConceptDetail."""
         concept_id = uuid.uuid4()
         session_id = uuid.uuid4()
@@ -106,16 +96,18 @@ class TestConceptDetail:
                 ColorPalette(
                     name="Blue",
                     colors=["#0000FF", "#00FFFF"],
+                    description=None,
                     image_url="https://example.com/var1.png",
-                    image_path="user-123/variations/blue.png"
+                    image_path="user-123/variations/blue.png",
                 ),
                 ColorPalette(
                     name="Green",
                     colors=["#00FF00", "#88FF88"],
+                    description=None,
                     image_url="https://example.com/var2.png",
-                    image_path="user-123/variations/green.png"
-                )
-            ]
+                    image_path="user-123/variations/green.png",
+                ),
+            ],
         )
         assert detail.id == concept_id
         assert detail.created_at == now
@@ -130,7 +122,7 @@ class TestConceptDetail:
 class TestConceptCreate:
     """Tests for the ConceptCreate domain model."""
 
-    def test_valid_create(self):
+    def test_valid_create(self) -> None:
         """Test creating a valid ConceptCreate."""
         session_id = uuid.uuid4()
         create = ConceptCreate(
@@ -138,7 +130,7 @@ class TestConceptCreate:
             logo_description="A modern tech logo",
             theme_description="Blue professional theme",
             image_path="user-123/concepts/logo.png",
-            image_url="https://example.com/image.png"
+            image_url="https://example.com/image.png",
         )
         assert create.session_id == session_id
         assert create.logo_description == "A modern tech logo"
@@ -146,14 +138,15 @@ class TestConceptCreate:
         assert create.image_path == "user-123/concepts/logo.png"
         assert create.image_url == "https://example.com/image.png"
 
-    def test_minimal_create(self):
+    def test_minimal_create(self) -> None:
         """Test creating a minimal ConceptCreate."""
         session_id = uuid.uuid4()
         create = ConceptCreate(
             session_id=session_id,
             logo_description="A modern tech logo",
             theme_description="Blue professional theme",
-            image_path="user-123/concepts/logo.png"
+            image_path="user-123/concepts/logo.png",
+            image_url=None,
         )
         assert create.session_id == session_id
         assert create.logo_description == "A modern tech logo"
@@ -165,7 +158,7 @@ class TestConceptCreate:
 class TestColorVariationCreate:
     """Tests for the ColorVariationCreate domain model."""
 
-    def test_valid_variation_create(self):
+    def test_valid_variation_create(self) -> None:
         """Test creating a valid ColorVariationCreate."""
         concept_id = uuid.uuid4()
         variation = ColorVariationCreate(
@@ -174,7 +167,7 @@ class TestColorVariationCreate:
             colors=["#0000FF", "#00FFFF", "#000088"],
             description="A vibrant blue color scheme",
             image_path="user-123/variations/vibrant-blue.png",
-            image_url="https://example.com/image.png"
+            image_url="https://example.com/image.png",
         )
         assert variation.concept_id == concept_id
         assert variation.palette_name == "Vibrant Blue"
@@ -183,18 +176,20 @@ class TestColorVariationCreate:
         assert variation.image_path == "user-123/variations/vibrant-blue.png"
         assert variation.image_url == "https://example.com/image.png"
 
-    def test_minimal_variation_create(self):
+    def test_minimal_variation_create(self) -> None:
         """Test creating a minimal ColorVariationCreate."""
         concept_id = uuid.uuid4()
         variation = ColorVariationCreate(
             concept_id=concept_id,
             palette_name="Simple",
             colors=["#000000", "#FFFFFF"],
-            image_path="user-123/variations/simple.png"
+            description=None,
+            image_path="user-123/variations/simple.png",
+            image_url=None,
         )
         assert variation.concept_id == concept_id
         assert variation.palette_name == "Simple"
         assert variation.colors == ["#000000", "#FFFFFF"]
         assert variation.description is None
         assert variation.image_path == "user-123/variations/simple.png"
-        assert variation.image_url is None 
+        assert variation.image_url is None

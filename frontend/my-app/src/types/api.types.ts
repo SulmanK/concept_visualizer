@@ -23,7 +23,7 @@ export interface ApiResponse<T> {
 /**
  * Task status type
  */
-export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type TaskStatus = "pending" | "processing" | "completed" | "failed";
 
 /**
  * Task response model
@@ -32,7 +32,7 @@ export interface TaskResponse {
   id: string;
   task_id?: string;
   status: TaskStatus;
-  type: 'generate_concept' | 'refine_concept';
+  type: "generate_concept" | "refine_concept";
   result_id?: string;
   error_message?: string;
   created_at: string;
@@ -56,4 +56,4 @@ export interface RefinementRequest {
   theme_description?: string;
   refinement_prompt: string;
   preserve_aspects: string[];
-} 
+}

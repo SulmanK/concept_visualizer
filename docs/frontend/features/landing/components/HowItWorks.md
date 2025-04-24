@@ -14,25 +14,29 @@ const HowItWorks: React.FC = () => {
     {
       id: 1,
       title: "Describe Your Concept",
-      description: "Enter a detailed description of your brand concept, including the logo vision and theme elements.",
+      description:
+        "Enter a detailed description of your brand concept, including the logo vision and theme elements.",
       icon: "edit",
     },
     {
       id: 2,
       title: "AI Generation",
-      description: "Our AI analyzes your description and creates unique visual concepts tailored to your specifications.",
+      description:
+        "Our AI analyzes your description and creates unique visual concepts tailored to your specifications.",
       icon: "sparkles",
     },
     {
       id: 3,
       title: "Review & Refine",
-      description: "View your generated concepts, select favorites, and refine them with additional feedback.",
+      description:
+        "View your generated concepts, select favorites, and refine them with additional feedback.",
       icon: "refresh",
     },
     {
       id: 4,
       title: "Export & Use",
-      description: "Download your finished concepts in multiple formats ready for professional use.",
+      description:
+        "Download your finished concepts in multiple formats ready for professional use.",
       icon: "download",
     },
   ];
@@ -40,23 +44,23 @@ const HowItWorks: React.FC = () => {
   return (
     <section className="how-it-works-section">
       <h2 className="section-title">How It Works</h2>
-      
+
       <div className="steps-container">
         {steps.map((step) => (
           <div key={step.id} className="step-card">
             <div className="step-icon">
               <Icon name={step.icon} size="large" />
             </div>
-            
+
             <h3 className="step-title">
               {step.id}. {step.title}
             </h3>
-            
+
             <p className="step-description">{step.description}</p>
           </div>
         ))}
       </div>
-      
+
       <div className="process-visualization">
         <FeatureSteps steps={steps} />
       </div>
@@ -133,4 +137,4 @@ const LandingPage: React.FC = () => {
 
 - Static content that doesn't require data fetching
 - Minimal JavaScript for interactive elements
-- SVG icons for crisp rendering at any size 
+- SVG icons for crisp rendering at any size

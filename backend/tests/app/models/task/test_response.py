@@ -1,16 +1,14 @@
-"""
-Tests for task response models.
-"""
+"""Tests for task response models."""
 
-import pytest
-from pydantic import ValidationError
+from typing import Any, Dict
+
 from app.models.task.response import TaskResponse
 
 
 class TestTaskResponse:
     """Tests for the TaskResponse model."""
 
-    def test_valid_task_response(self):
+    def test_valid_task_response(self) -> None:
         """Test creating a valid TaskResponse."""
         response = TaskResponse(
             task_id="task-123",
@@ -22,10 +20,11 @@ class TestTaskResponse:
             completed_at="2023-01-01T12:05:00Z",
             metadata={
                 "logo_description": "A modern tech logo",
-                "theme_description": "Professional blue theme"
+                "theme_description": "Professional blue theme",
             },
             result_id="concept-456",
-            image_url="https://example.com/image.png"
+            image_url="https://example.com/image.png",
+            error_message=None,
         )
         assert response.task_id == "task-123"
         assert response.status == "completed"
@@ -34,13 +33,15 @@ class TestTaskResponse:
         assert response.created_at == "2023-01-01T12:00:00Z"
         assert response.updated_at == "2023-01-01T12:05:00Z"
         assert response.completed_at == "2023-01-01T12:05:00Z"
-        assert response.metadata["logo_description"] == "A modern tech logo"
-        assert response.metadata["theme_description"] == "Professional blue theme"
+        # Check metadata with type checking
+        meta = response.metadata or {}
+        assert meta.get("logo_description") == "A modern tech logo"
+        assert meta.get("theme_description") == "Professional blue theme"
         assert response.result_id == "concept-456"
         assert response.image_url == "https://example.com/image.png"
         assert response.error_message is None
 
-    def test_failed_task_response(self):
+    def test_failed_task_response(self) -> None:
         """Test creating a failed TaskResponse."""
         response = TaskResponse(
             task_id="task-123",
@@ -49,11 +50,14 @@ class TestTaskResponse:
             message="Concept generation failed",
             created_at="2023-01-01T12:00:00Z",
             updated_at="2023-01-01T12:05:00Z",
+            completed_at=None,
             metadata={
                 "logo_description": "A modern tech logo",
-                "theme_description": "Professional blue theme"
+                "theme_description": "Professional blue theme",
             },
-            error_message="Failed to connect to image generation service"
+            result_id=None,
+            image_url=None,
+            error_message="Failed to connect to image generation service",
         )
         assert response.task_id == "task-123"
         assert response.status == "failed"
@@ -62,18 +66,26 @@ class TestTaskResponse:
         assert response.created_at == "2023-01-01T12:00:00Z"
         assert response.updated_at == "2023-01-01T12:05:00Z"
         assert response.completed_at is None
-        assert response.metadata["logo_description"] == "A modern tech logo"
+        # Check metadata with type checking
+        meta = response.metadata or {}
+        assert meta.get("logo_description") == "A modern tech logo"
         assert response.error_message == "Failed to connect to image generation service"
         assert response.result_id is None
         assert response.image_url is None
 
-    def test_minimal_task_response(self):
+    def test_minimal_task_response(self) -> None:
         """Test creating a minimal TaskResponse."""
         response = TaskResponse(
             task_id="task-123",
             status="pending",
             type="concept_generation",
-            message="Task queued"
+            message="Task queued",
+            created_at=None,
+            updated_at=None,
+            completed_at=None,
+            result_id=None,
+            image_url=None,
+            error_message=None,
         )
         assert response.task_id == "task-123"
         assert response.status == "pending"
@@ -87,32 +99,44 @@ class TestTaskResponse:
         assert response.image_url is None
         assert response.error_message is None
 
-    def test_task_response_with_complex_metadata(self):
+    def test_task_response_with_complex_metadata(self) -> None:
         """Test TaskResponse with complex nested metadata."""
+        complex_metadata: Dict[str, Any] = {
+            "original_concept": {
+                "id": "concept-789",
+                "image_url": "https://example.com/original.png",
+            },
+            "refinement_options": {
+                "preserve_aspects": ["colors", "layout"],
+                "refinement_prompt": "Make it more minimalist",
+            },
+            "user_preferences": {"style": "modern", "colors": ["blue", "green"]},
+        }
+
         response = TaskResponse(
             task_id="task-123",
             status="processing",
             type="concept_refinement",
             message="Refining concept",
-            metadata={
-                "original_concept": {
-                    "id": "concept-789",
-                    "image_url": "https://example.com/original.png"
-                },
-                "refinement_options": {
-                    "preserve_aspects": ["colors", "layout"],
-                    "refinement_prompt": "Make it more minimalist"
-                },
-                "user_preferences": {
-                    "style": "modern",
-                    "colors": ["blue", "green"]
-                }
-            }
+            created_at=None,
+            updated_at=None,
+            completed_at=None,
+            metadata=complex_metadata,
+            result_id=None,
+            image_url=None,
+            error_message=None,
         )
         assert response.task_id == "task-123"
         assert response.status == "processing"
         assert response.type == "concept_refinement"
         assert response.message == "Refining concept"
-        assert response.metadata["original_concept"]["id"] == "concept-789"
-        assert response.metadata["refinement_options"]["preserve_aspects"] == ["colors", "layout"]
-        assert response.metadata["user_preferences"]["style"] == "modern" 
+
+        # Check metadata with type checking
+        meta = response.metadata or {}
+        original_concept = meta.get("original_concept", {})
+        refinement_options = meta.get("refinement_options", {})
+        user_preferences = meta.get("user_preferences", {})
+
+        assert original_concept.get("id") == "concept-789"
+        assert refinement_options.get("preserve_aspects") == ["colors", "layout"]
+        assert user_preferences.get("style") == "modern"

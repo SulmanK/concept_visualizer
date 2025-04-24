@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 ---
@@ -142,7 +142,7 @@ import type { PromptInput } from '../../types';
 export const ConceptCreatorPage: React.FC = () => {
   const [input, setInput] = useState<PromptInput>({ logoDescription: '', themeDescription: '' });
   const { generateConcept, isLoading, result } = useConceptGeneration();
-  
+
   // Component implementation...
 };
 ```
@@ -156,13 +156,13 @@ import { generateConcept } from '../../features/conceptCreator/api'; // VIOLATIO
 export const Button: React.FC<{ onClick?: () => void }> = ({ onClick, children }) => {
   // VIOLATION: Feature-specific logic in shared component
   const handleGenerateConcept = async () => {
-    const result = await generateConcept({ 
-      logoDescription: 'Default logo', 
-      themeDescription: 'Default theme' 
+    const result = await generateConcept({
+      logoDescription: 'Default logo',
+      themeDescription: 'Default theme'
     });
     // Do something with result...
   };
-  
+
   return (
     <button onClick={handleGenerateConcept || onClick}>{children}</button>
   );
@@ -185,4 +185,3 @@ These architectural guidelines are enforced through:
 - Documentation
 
 Always consult this document and the project structure document when adding new features or modifying existing code.
-

@@ -54,25 +54,29 @@ Performance-critical routes and components are lazy-loaded using React's `lazy` 
 ## Example
 
 ```tsx
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
-import { ErrorBoundary } from 'components/ui/ErrorBoundary';
-import { LoadingIndicator } from 'components/ui/LoadingIndicator';
-import { theme } from './theme';
-import { AuthProvider } from 'contexts/AuthContext';
-import { RateLimitProvider } from 'contexts/RateLimitContext';
-import { TaskProvider } from 'contexts/TaskContext';
-import { ToastProvider } from 'contexts/ToastProvider';
-import MainLayout from 'components/layout/MainLayout';
+import React, { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "@mui/material/styles";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import { ErrorBoundary } from "components/ui/ErrorBoundary";
+import { LoadingIndicator } from "components/ui/LoadingIndicator";
+import { theme } from "./theme";
+import { AuthProvider } from "contexts/AuthContext";
+import { RateLimitProvider } from "contexts/RateLimitContext";
+import { TaskProvider } from "contexts/TaskContext";
+import { ToastProvider } from "contexts/ToastProvider";
+import MainLayout from "components/layout/MainLayout";
 
 // Lazy-loaded components
-const LandingPage = lazy(() => import('features/landing/LandingPage'));
-const RecentConceptsPage = lazy(() => import('features/concepts/recent/RecentConceptsPage'));
-const ConceptDetailPage = lazy(() => import('features/concepts/detail/ConceptDetailPage'));
-const RefinementPage = lazy(() => import('features/refinement/RefinementPage'));
-const NotFoundPage = lazy(() => import('components/NotFoundPage'));
+const LandingPage = lazy(() => import("features/landing/LandingPage"));
+const RecentConceptsPage = lazy(
+  () => import("features/concepts/recent/RecentConceptsPage"),
+);
+const ConceptDetailPage = lazy(
+  () => import("features/concepts/detail/ConceptDetailPage"),
+);
+const RefinementPage = lazy(() => import("features/refinement/RefinementPage"));
+const NotFoundPage = lazy(() => import("components/NotFoundPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,9 +101,18 @@ function App() {
                       <Suspense fallback={<LoadingIndicator />}>
                         <Routes>
                           <Route path="/" element={<LandingPage />} />
-                          <Route path="/concepts" element={<RecentConceptsPage />} />
-                          <Route path="/concepts/:id" element={<ConceptDetailPage />} />
-                          <Route path="/concepts/:id/refine" element={<RefinementPage />} />
+                          <Route
+                            path="/concepts"
+                            element={<RecentConceptsPage />}
+                          />
+                          <Route
+                            path="/concepts/:id"
+                            element={<ConceptDetailPage />}
+                          />
+                          <Route
+                            path="/concepts/:id/refine"
+                            element={<RefinementPage />}
+                          />
                           <Route path="*" element={<NotFoundPage />} />
                         </Routes>
                       </Suspense>
@@ -115,4 +128,5 @@ function App() {
   );
 }
 
-export default App; 
+export default App;
+```

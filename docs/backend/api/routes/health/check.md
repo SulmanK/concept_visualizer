@@ -153,4 +153,4 @@ while True:
 ## Related Files
 
 - [Health Endpoints](endpoints.md): Basic health and configuration endpoints
-- [Rate Limits](limits.md): Rate limit information endpoints 
+- [Rate Limits](limits.md): Rate limit information endpoints

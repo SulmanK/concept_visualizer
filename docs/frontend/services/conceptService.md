@@ -20,20 +20,23 @@ Retrieves a list of recently generated concepts for a user.
 ```typescript
 function fetchRecentConceptsFromApi(
   userId: string,
-  limit: number = 10
-): Promise<ConceptData[]>
+  limit: number = 10,
+): Promise<ConceptData[]>;
 ```
 
 **Parameters:**
+
 - `userId`: The ID of the user whose concepts to fetch
 - `limit`: Maximum number of concepts to return (default: 10)
 
 **Returns:**
+
 - `Promise<ConceptData[]>`: A promise that resolves to an array of concept data objects
 
 **Example:**
+
 ```typescript
-import { fetchRecentConceptsFromApi } from '../services/conceptService';
+import { fetchRecentConceptsFromApi } from "../services/conceptService";
 
 // Usage in a component
 async function getRecentConcepts(userId) {
@@ -42,7 +45,7 @@ async function getRecentConcepts(userId) {
     console.log(`Found ${concepts.length} recent concepts`);
     return concepts;
   } catch (error) {
-    console.error('Failed to fetch recent concepts:', error);
+    console.error("Failed to fetch recent concepts:", error);
     return [];
   }
 }
@@ -54,19 +57,22 @@ Retrieves detailed information about a specific concept.
 
 ```typescript
 function fetchConceptDetailFromApi(
-  conceptId: string
-): Promise<ConceptData | null>
+  conceptId: string,
+): Promise<ConceptData | null>;
 ```
 
 **Parameters:**
+
 - `conceptId`: The ID of the concept to fetch
 
 **Returns:**
+
 - `Promise<ConceptData | null>`: A promise that resolves to the concept data or null if not found
 
 **Example:**
+
 ```typescript
-import { fetchConceptDetailFromApi } from '../services/conceptService';
+import { fetchConceptDetailFromApi } from "../services/conceptService";
 
 // Usage in a component
 async function getConceptDetail(id) {
@@ -75,11 +81,11 @@ async function getConceptDetail(id) {
     if (concept) {
       return concept;
     } else {
-      console.log('Concept not found');
+      console.log("Concept not found");
       return null;
     }
   } catch (error) {
-    console.error('Error fetching concept detail:', error);
+    console.error("Error fetching concept detail:", error);
     return null;
   }
 }
@@ -97,13 +103,13 @@ interface ConceptData {
   theme_text?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Main concept image
   image_url?: string;
-  
+
   // Color variations of the concept
   color_variations?: ColorVariation[];
-  
+
   // Additional metadata
   metadata?: {
     generation_params?: any;
@@ -145,14 +151,14 @@ This service is typically used with custom hooks for data fetching:
 
 ```typescript
 // In a custom hook
-import { useQuery } from '@tanstack/react-query';
-import { fetchRecentConceptsFromApi } from '../services/conceptService';
+import { useQuery } from "@tanstack/react-query";
+import { fetchRecentConceptsFromApi } from "../services/conceptService";
 
 export function useRecentConcepts(userId: string, limit: number = 10) {
   return useQuery({
-    queryKey: ['concepts', 'recent', userId, limit],
+    queryKey: ["concepts", "recent", userId, limit],
     queryFn: () => fetchRecentConceptsFromApi(userId, limit),
-    staleTime: 60000 // 1 minute
+    staleTime: 60000, // 1 minute
   });
 }
 ```
@@ -161,4 +167,4 @@ export function useRecentConcepts(userId: string, limit: number = 10) {
 
 - [apiClient](./apiClient.md) - The underlying HTTP client used by this service
 - [useConceptQueries](../hooks/useConceptQueries.md) - React Query hooks for concepts
-- [useConceptMutations](../hooks/useConceptMutations.md) - Mutation hooks for concepts 
+- [useConceptMutations](../hooks/useConceptMutations.md) - Mutation hooks for concepts

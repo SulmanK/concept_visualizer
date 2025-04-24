@@ -13,6 +13,7 @@ per-file-ignores =
     # D100-D107: Missing docstrings in different contexts
     # Allow missing docstrings in tests
     tests/*: D100,D101,D102,D103,D104,D105,D106,D107
+    backend/tests/*: D100,D101,D102,D103,D104,D105,D106,D107
     # Ignore abstract class instantiation in service factories
     app/services/*/service.py: F821
     app/services/*/__init__.py: F821

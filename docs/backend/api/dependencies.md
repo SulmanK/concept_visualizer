@@ -78,12 +78,12 @@ async def get_resource(
 ):
     # Access injected services
     result = await deps.concept_service.get_concept(resource_id)
-    
+
     # Check if user is authenticated
     if deps.user_id:
         # Perform authorized operation
         pass
-        
+
     return result
 ```
 
@@ -99,7 +99,7 @@ async def get_user_info(
 ):
     # Process the request to extract user information
     deps.process_request(request)
-    
+
     # Return user information
     return {"user": deps.user}
 ```
@@ -109,4 +109,4 @@ async def get_user_info(
 1. **Use CommonDependencies**: Instead of injecting individual services, use the `CommonDependencies` class to access all required services.
 2. **Process Requests**: Call `process_request` when you need to extract user information from the request.
 3. **Check Authentication**: Always check `deps.user_id` before performing authorized operations.
-4. **Security**: Remember that JWT token decoding is done without verification for development purposes. Use proper auth middleware for production. 
+4. **Security**: Remember that JWT token decoding is done without verification for development purposes. Use proper auth middleware for production.

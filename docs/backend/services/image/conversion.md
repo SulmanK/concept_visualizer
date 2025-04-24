@@ -30,15 +30,18 @@ async def convert_image_format(
 This function converts image data from one format to another while maintaining quality.
 
 **Parameters:**
+
 - `image_data`: Binary image data to convert
 - `source_format`: Original image format (e.g., "png", "jpeg", "webp")
 - `target_format`: Desired output format (e.g., "png", "jpeg", "webp", "svg")
 - `quality`: Quality level for lossy formats (0-100, default: 90)
 
 **Returns:**
+
 - Binary data of the converted image
 
 **Raises:**
+
 - `UnsupportedFormatError`: If the source or target format is not supported
 - `ImageConversionError`: If the conversion fails
 
@@ -57,15 +60,18 @@ async def convert_to_svg(
 This function transforms raster images (PNG, JPEG, WebP) into scalable vector graphics.
 
 **Parameters:**
+
 - `image_data`: Binary image data to convert
 - `mode`: SVG color mode ("color", "grayscale", or "lineart")
 - `path_precision`: Decimal places for path coordinates (1-3)
 - `simplify_paths`: Whether to simplify paths for smaller file size
 
 **Returns:**
+
 - Binary data of the SVG image
 
 **Raises:**
+
 - `ImageConversionError`: If the conversion fails
 - `InvalidParameterError`: If parameters are invalid
 
@@ -85,6 +91,7 @@ async def optimize_image(
 This function optimizes images for efficient delivery by resizing and compressing them.
 
 **Parameters:**
+
 - `image_data`: Binary image data to optimize
 - `format`: Image format (e.g., "png", "jpeg", "webp")
 - `width`: Optional target width (maintains aspect ratio if only width is specified)
@@ -92,22 +99,24 @@ This function optimizes images for efficient delivery by resizing and compressin
 - `quality`: Compression quality for lossy formats (0-100)
 
 **Returns:**
+
 - Binary data of the optimized image
 
 **Raises:**
+
 - `ImageProcessingError`: If optimization fails
 
 ## Format Support
 
 The conversion module supports the following formats:
 
-| Format | Extensions | Support Level |
-|--------|------------|---------------|
-| PNG    | .png       | Full support for reading and writing |
-| JPEG   | .jpg, .jpeg | Full support for reading and writing |
-| WebP   | .webp      | Full support for reading and writing |
-| SVG    | .svg       | Support for writing (via tracing) |
-| GIF    | .gif       | Limited support (conversion to static formats) |
+| Format | Extensions  | Support Level                                  |
+| ------ | ----------- | ---------------------------------------------- |
+| PNG    | .png        | Full support for reading and writing           |
+| JPEG   | .jpg, .jpeg | Full support for reading and writing           |
+| WebP   | .webp       | Full support for reading and writing           |
+| SVG    | .svg        | Support for writing (via tracing)              |
+| GIF    | .gif        | Limited support (conversion to static formats) |
 
 ## Implementation Details
 
@@ -201,4 +210,4 @@ The conversion module implements comprehensive error handling:
 - [Image Processing](processing.md): Image processing techniques used in conversion
 - [Processing Service](processing_service.md): Service that orchestrates image processing
 - [Image Interface](interface.md): Interface for image services
-- [Export Service](../export/service.md): Service that uses image conversion for exports 
+- [Export Service](../export/service.md): Service that uses image conversion for exports

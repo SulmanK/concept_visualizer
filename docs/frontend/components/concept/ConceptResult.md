@@ -11,15 +11,15 @@ The `ConceptResult` component displays the results of a concept generation reque
 
 ## Props
 
-| Prop             | Type                  | Required | Default      | Description                                      |
-|------------------|----------------------|----------|--------------|--------------------------------------------------|
-| `concept`        | `ConceptWithPalettes` | Yes      | -            | Generated concept data with palettes             |
-| `isLoading`      | `boolean`            | No       | `false`      | Whether the concept is still loading             |
-| `error`          | `string \| null`     | No       | `null`       | Error message if generation failed               |
-| `onRefinement`   | `() => void`         | No       | `undefined`  | Handler for refinement request                   |
-| `onSave`         | `() => void`         | No       | `undefined`  | Handler for saving the concept                   |
-| `onExport`       | `() => void`         | No       | `undefined`  | Handler for exporting the concept                |
-| `className`      | `string`             | No       | `''`         | Additional CSS classes                           |
+| Prop           | Type                  | Required | Default     | Description                          |
+| -------------- | --------------------- | -------- | ----------- | ------------------------------------ |
+| `concept`      | `ConceptWithPalettes` | Yes      | -           | Generated concept data with palettes |
+| `isLoading`    | `boolean`             | No       | `false`     | Whether the concept is still loading |
+| `error`        | `string \| null`      | No       | `null`      | Error message if generation failed   |
+| `onRefinement` | `() => void`          | No       | `undefined` | Handler for refinement request       |
+| `onSave`       | `() => void`          | No       | `undefined` | Handler for saving the concept       |
+| `onExport`     | `() => void`          | No       | `undefined` | Handler for exporting the concept    |
+| `className`    | `string`              | No       | `''`        | Additional CSS classes               |
 
 ## Features
 
@@ -33,24 +33,24 @@ The `ConceptResult` component displays the results of a concept generation reque
 ## Usage Example
 
 ```tsx
-import { ConceptResult } from '../components/concept/ConceptResult';
+import { ConceptResult } from "../components/concept/ConceptResult";
 
 const GenerationPage = () => {
   const { data: concept, isLoading, error } = useConceptQuery(conceptId);
-  
+
   const handleRefinement = () => {
     navigate(`/refine/${conceptId}`);
   };
-  
+
   const handleSave = async () => {
     await saveConcept(conceptId);
-    showToast('Concept saved successfully!');
+    showToast("Concept saved successfully!");
   };
-  
+
   const handleExport = () => {
     navigate(`/export/${conceptId}`);
   };
-  
+
   return (
     <ConceptResult
       concept={concept}
@@ -71,4 +71,4 @@ const GenerationPage = () => {
 - [`ColorPalette`](../ui/ColorPalette.md) - Used to display the color palette
 - [`Button`](../ui/Button.md) - Used for action buttons
 - [`LoadingIndicator`](../ui/LoadingIndicator.md) - Displays loading state
-- [`ErrorMessage`](../ui/ErrorMessage.md) - Displays error messages 
+- [`ErrorMessage`](../ui/ErrorMessage.md) - Displays error messages

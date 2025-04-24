@@ -1,9 +1,9 @@
-import React, { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React, { ReactElement } from "react";
+import { render, RenderOptions } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Create a custom render method that includes providers
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
   queryClient?: QueryClient;
 }
 
@@ -13,10 +13,11 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  */
 export function customRender(
   ui: ReactElement,
-  options: CustomRenderOptions = {}
+  options: CustomRenderOptions = {},
 ) {
   // Use the global queryClient if available or create a new one
-  const queryClient = options.queryClient || 
+  const queryClient =
+    options.queryClient ||
     (global as any).queryClient ||
     new QueryClient({
       defaultOptions: {
@@ -29,9 +30,7 @@ export function customRender(
 
   const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   };
 
@@ -39,7 +38,7 @@ export function customRender(
 }
 
 // re-export everything from testing-library
-export * from '@testing-library/react';
+export * from "@testing-library/react";
 
 // Override render method
-export { customRender as render }; 
+export { customRender as render };

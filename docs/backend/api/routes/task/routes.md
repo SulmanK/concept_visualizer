@@ -40,10 +40,12 @@ This endpoint retrieves a list of background tasks for the authenticated user, w
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Query Parameters:**
+
 - `status`: Optional filter for task status (e.g., "pending", "running", "completed", "failed")
 - `limit`: Maximum number of tasks to return (default: 10, max: 50)
 
 **Response:**
+
 - Array of task responses with the following information:
   - `task_id`: Unique identifier for the task
   - `status`: Current status of the task
@@ -72,9 +74,11 @@ This endpoint retrieves detailed information about a specific task by its ID.
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Path Parameters:**
+
 - `task_id`: ID of the task to retrieve
 
 **Response:**
+
 - Detailed task information with the same structure as in the list endpoint
 
 ### Delete Task
@@ -94,22 +98,24 @@ This endpoint deletes a specific task by its ID.
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Path Parameters:**
+
 - `task_id`: ID of the task to delete
 
 **Response:**
+
 - 204 No Content on successful deletion (no response body)
 
 ## Task Statuses
 
 Tasks can have the following statuses:
 
-| Status | Description |
-|--------|-------------|
-| pending | Task has been created but not yet started |
-| running | Task is currently in progress |
-| completed | Task has finished successfully |
-| failed | Task has encountered an error and failed |
-| cancelled | Task was cancelled before completion |
+| Status    | Description                               |
+| --------- | ----------------------------------------- |
+| pending   | Task has been created but not yet started |
+| running   | Task is currently in progress             |
+| completed | Task has finished successfully            |
+| failed    | Task has encountered an error and failed  |
+| cancelled | Task was cancelled before completion      |
 
 ## Error Handling
 
@@ -173,4 +179,4 @@ The task routes integrate with the TaskService through dependency injection, whi
 - [Task Models](../../../models/task/response.md): Data models for task responses
 - [Task Service](../../../services/task/service.md): Service for managing background tasks
 - [Concept Generation](../concept/generation.md): Routes that create background tasks
-- [Task Service Interface](../../../services/task/interface.md): Interface defining task service capabilities 
+- [Task Service Interface](../../../services/task/interface.md): Interface defining task service capabilities

@@ -58,15 +58,15 @@ from app.core.constants import TASK_STATUS_PENDING, TASK_STATUS_COMPLETED
 async def update_task_status(task_id: str, status: str):
     """Update the status of a task."""
     # Validate status using constants
-    valid_statuses = [TASK_STATUS_PENDING, TASK_STATUS_PROCESSING, 
+    valid_statuses = [TASK_STATUS_PENDING, TASK_STATUS_PROCESSING,
                      TASK_STATUS_COMPLETED, TASK_STATUS_FAILED]
-    
+
     if status not in valid_statuses:
         raise ValueError(f"Invalid status: {status}")
-    
+
     # Update database
     await db.update_task(task_id, {"status": status})
-    
+
     # If task is complete, perform additional actions
     if status == TASK_STATUS_COMPLETED:
         await notify_task_completion(task_id)
@@ -80,7 +80,7 @@ from app.core.constants import BUCKET_NAME_CONCEPTS
 async def store_concept_image(concept_id: str, image_data: bytes):
     """Store a concept image in the appropriate bucket."""
     path = f"{concept_id}/image.png"
-    
+
     # Use the constant for bucket name
     await storage_client.upload(
         bucket=BUCKET_NAME_CONCEPTS,
@@ -88,7 +88,7 @@ async def store_concept_image(concept_id: str, image_data: bytes):
         data=image_data,
         content_type="image/png"
     )
-    
+
     return f"{BUCKET_NAME_CONCEPTS}/{path}"
 ```
 
@@ -103,4 +103,4 @@ When using constants from this module:
 ## Related Documentation
 
 - [Config](config.md): Settings module that provides values for some constants
-- [Task Service](../services/task/service.md): Service that uses task status constants 
+- [Task Service](../services/task/service.md): Service that uses task status constants

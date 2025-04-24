@@ -19,21 +19,35 @@ This service acts as the foundation for all API interactions in the application.
 
 ```typescript
 // GET request
-async function get<T>(endpoint: string, options?: RequestOptions): Promise<{ data: T }>;
+async function get<T>(
+  endpoint: string,
+  options?: RequestOptions,
+): Promise<{ data: T }>;
 
 // POST request
-async function post<T>(endpoint: string, body: any, options?: RequestOptions): Promise<{ data: T }>;
+async function post<T>(
+  endpoint: string,
+  body: any,
+  options?: RequestOptions,
+): Promise<{ data: T }>;
 
 // PUT request
-async function put<T>(endpoint: string, body: any, options?: RequestOptions): Promise<{ data: T }>;
+async function put<T>(
+  endpoint: string,
+  body: any,
+  options?: RequestOptions,
+): Promise<{ data: T }>;
 
 // DELETE request
-async function del<T>(endpoint: string, options?: RequestOptions): Promise<{ data: T }>;
+async function del<T>(
+  endpoint: string,
+  options?: RequestOptions,
+): Promise<{ data: T }>;
 
 // Generic request (used internally by other methods)
 async function request<T>(
   endpoint: string,
-  options: RequestOptions & { method: string }
+  options: RequestOptions & { method: string },
 ): Promise<{ data: T }>;
 ```
 
@@ -42,11 +56,11 @@ async function request<T>(
 ```typescript
 // Export image as a blob
 async function exportImage(
-  imageIdentifier: string, 
-  format: ExportFormat, 
+  imageIdentifier: string,
+  format: ExportFormat,
   size: ExportSize,
   svgParams?: Record<string, any>,
-  bucket?: string
+  bucket?: string,
 ): Promise<Blob>;
 
 // Get authentication headers (used internally)
@@ -56,16 +70,16 @@ async function getAuthHeaders(): Promise<Record<string, string>>;
 ## Usage
 
 ```typescript
-import { apiClient } from '../services/apiClient';
+import { apiClient } from "../services/apiClient";
 
 // Basic GET request
 async function fetchConcepts() {
   try {
-    const { data } = await apiClient.get('/concepts/recent');
+    const { data } = await apiClient.get("/concepts/recent");
     return data;
   } catch (error) {
     // Handle error
-    console.error('Failed to fetch concepts:', error);
+    console.error("Failed to fetch concepts:", error);
     throw error;
   }
 }
@@ -73,11 +87,11 @@ async function fetchConcepts() {
 // POST request with body
 async function createConcept(conceptData) {
   try {
-    const { data } = await apiClient.post('/concepts', conceptData);
+    const { data } = await apiClient.post("/concepts", conceptData);
     return data;
   } catch (error) {
     // Handle error
-    console.error('Failed to create concept:', error);
+    console.error("Failed to create concept:", error);
     throw error;
   }
 }
@@ -86,14 +100,14 @@ async function createConcept(conceptData) {
 async function fetchConceptWithOptions(id) {
   try {
     const { data } = await apiClient.get(`/concepts/${id}`, {
-      responseType: 'json',
+      responseType: "json",
       showToastOnRateLimit: false,
-      signal: abortController.signal
+      signal: abortController.signal,
     });
     return data;
   } catch (error) {
     // Handle error
-    console.error('Failed to fetch concept:', error);
+    console.error("Failed to fetch concept:", error);
     throw error;
   }
 }
@@ -101,16 +115,16 @@ async function fetchConceptWithOptions(id) {
 // Export an image
 async function downloadImage(imageId) {
   try {
-    const blob = await apiClient.exportImage(imageId, 'png', 'large');
+    const blob = await apiClient.exportImage(imageId, "png", "large");
     const url = URL.createObjectURL(blob);
     // Create download link
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `concept-${imageId}.png`;
     a.click();
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Failed to export image:', error);
+    console.error("Failed to export image:", error);
     throw error;
   }
 }
@@ -124,25 +138,25 @@ The `RequestOptions` interface allows customizing requests:
 interface RequestOptions {
   // Custom headers to include in the request
   headers?: Record<string, string>;
-  
+
   // Request body (for POST/PUT)
   body?: any;
-  
+
   // Whether to include credentials
   withCredentials?: boolean;
-  
+
   // Whether to retry with fresh auth token on 401
   retryAuth?: boolean;
-  
+
   // Whether to show a toast on rate limit errors
   showToastOnRateLimit?: boolean;
-  
+
   // Custom message for rate limit toasts
   rateLimitToastMessage?: string;
-  
+
   // Response type to expect
-  responseType?: 'json' | 'blob' | 'text';
-  
+  responseType?: "json" | "blob" | "text";
+
   // AbortSignal for cancellation
   signal?: AbortSignal;
 }
@@ -191,7 +205,7 @@ class RateLimitError extends Error {
   resetAfterSeconds: number;
   category?: RateLimitCategory;
   retryAfter?: Date;
-  
+
   getUserFriendlyMessage(): string;
   getCategoryDisplayName(): string;
 }
@@ -201,21 +215,23 @@ When using the apiClient, catch errors and check their type:
 
 ```typescript
 try {
-  const { data } = await apiClient.get('/concepts/recent');
+  const { data } = await apiClient.get("/concepts/recent");
   return data;
 } catch (error) {
   if (error instanceof RateLimitError) {
     // Handle rate limit specifically
-    console.log(`Rate limit reached. Try again in ${error.resetAfterSeconds} seconds`);
+    console.log(
+      `Rate limit reached. Try again in ${error.resetAfterSeconds} seconds`,
+    );
   } else if (error instanceof AuthError) {
     // Handle authentication error
-    console.log('Authentication error, please log in again');
+    console.log("Authentication error, please log in again");
   } else if (error instanceof ValidationError) {
     // Handle validation errors
-    console.log('Validation errors:', error.errors);
+    console.log("Validation errors:", error.errors);
   } else {
     // Handle other errors
-    console.error('An error occurred:', error.message);
+    console.error("An error occurred:", error.message);
   }
   throw error;
 }
@@ -255,7 +271,7 @@ const toast = (options: {
   rateLimitResetTime?: number;
 }) => {
   document.dispatchEvent(
-    new CustomEvent('show-api-toast', { detail: options })
+    new CustomEvent("show-api-toast", { detail: options }),
   );
 };
 ```
@@ -266,4 +282,4 @@ These toast events are captured by the `ApiToastListener` component.
 
 - [rateLimitService](./rateLimitService.md) - Service for handling rate limits
 - [supabaseClient](./supabaseClient.md) - Client for authentication tokens
-- [useErrorHandling](../hooks/useErrorHandling.md) - Hook for processing API errors 
+- [useErrorHandling](../hooks/useErrorHandling.md) - Hook for processing API errors

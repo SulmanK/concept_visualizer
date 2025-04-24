@@ -1,17 +1,15 @@
-"""
-Supabase client module package.
+"""Supabase integration components.
 
-This package provides clients for interacting with Supabase for data persistence,
-user authentication, and image storage.
+This module provides client and utilities for interacting with Supabase.
 """
 
-from .client import SupabaseClient, get_supabase_client
-from .concept_storage import ConceptStorage
-from .image_storage import ImageStorage
+from app.core.supabase.client import SupabaseClient, get_supabase_client
+from app.core.supabase.concept_storage import ConceptStorage
+from app.core.supabase.image_storage import ImageStorage
 
 __all__ = [
-    "SupabaseClient", 
+    "SupabaseClient",
     "get_supabase_client",
     "ConceptStorage",
     "ImageStorage",
-] 
+]

@@ -53,4 +53,4 @@ If the workflow fails:
 1. Check if your Edge Function is deployed correctly and accessible
 2. Ensure the SUPABASE_ANON_KEY secret is properly set in GitHub
 3. Verify that your Edge Function doesn't require additional authorization headers
-4. Look at the Edge Function logs in Supabase for any errors 
+4. Look at the Edge Function logs in Supabase for any errors

@@ -19,11 +19,11 @@ The primary class for managing concept data:
 ```python
 class ConceptStorage:
     """Handles concept-related operations in Supabase database."""
-    
+
     def __init__(self, client: SupabaseClient):
         """
         Initialize with a Supabase client.
-        
+
         Args:
             client: SupabaseClient instance
         """
@@ -42,7 +42,7 @@ def store_concept(
 ) -> Optional[Dict[str, Any]]:
     """
     Store a new concept in the database.
-    
+
     Args:
         concept_data: Dictionary containing:
             - user_id: UUID of the user who created the concept
@@ -51,10 +51,10 @@ def store_concept(
             - image_path: Path to the image in Storage
             - image_url: Optional URL to the image (signed URL)
             - is_anonymous: Whether the user is anonymous
-            
+
     Returns:
         The created concept object or None if creation failed
-        
+
     Raises:
         DatabaseError: If database operation fails
     """
@@ -72,7 +72,7 @@ def store_color_variations(
 ) -> Optional[List[Dict[str, Any]]]:
     """
     Store color variations for a concept.
-    
+
     Args:
         variations: List of variation dictionaries, each containing:
             - concept_id: UUID of the parent concept
@@ -80,10 +80,10 @@ def store_color_variations(
             - colors: JSON array of hex color codes
             - image_path: Path to the variation image in Storage
             - image_url: Optional URL to the image (signed URL)
-            
+
     Returns:
         List of created variation objects or None if creation failed
-        
+
     Raises:
         DatabaseError: If database operation fails
     """
@@ -102,14 +102,14 @@ def get_recent_concepts(
 ) -> List[Dict[str, Any]]:
     """
     Get most recent concepts for a user with their variations.
-    
+
     Args:
         user_id: UUID of the user
         limit: Maximum number of concepts to return
-        
+
     Returns:
         List of concept objects with their color variations
-        
+
     Raises:
         DatabaseError: If database operation fails
     """
@@ -128,14 +128,14 @@ def get_concept_detail(
 ) -> Optional[Dict[str, Any]]:
     """
     Get detailed information about a specific concept.
-    
+
     Args:
         concept_id: UUID of the concept
         user_id: UUID of the requesting user
-        
+
     Returns:
         Concept object with color variations or None if not found
-        
+
     Raises:
         DatabaseError: If database operation fails
     """
@@ -155,10 +155,10 @@ def _store_concept_with_service_role(
 ) -> Optional[Dict[str, Any]]:
     """
     Store a concept using the service role to bypass RLS.
-    
+
     Args:
         concept_data: Concept data to store
-        
+
     Returns:
         Created concept or None if failed
     """
@@ -173,11 +173,11 @@ def _get_recent_concepts_with_service_role(
 ) -> List[Dict[str, Any]]:
     """
     Get recent concepts using the service role to bypass RLS.
-    
+
     Args:
         user_id: UUID of the user
         limit: Maximum number of concepts to return
-        
+
     Returns:
         List of concept objects with variations
     """
@@ -246,13 +246,13 @@ concept_data = {
 # Store the concept
 try:
     new_concept = storage.store_concept(concept_data)
-    
+
     if new_concept:
         concept_id = new_concept["id"]
         print(f"Created concept with ID: {concept_id}")
     else:
         print("Failed to create concept")
-        
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -283,12 +283,12 @@ variations = [
 # Store the variations
 try:
     new_variations = storage.store_color_variations(variations)
-    
+
     if new_variations:
         print(f"Created {len(new_variations)} color variations")
     else:
         print("Failed to create color variations")
-        
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -300,15 +300,15 @@ except Exception as e:
 try:
     user_id = "550e8400-e29b-41d4-a716-446655440000"
     recent_concepts = storage.get_recent_concepts(user_id, limit=5)
-    
+
     print(f"Retrieved {len(recent_concepts)} recent concepts")
-    
+
     for concept in recent_concepts:
         print(f"Concept ID: {concept['id']}")
         print(f"Description: {concept['logo_description']}")
         print(f"Variations: {len(concept.get('variations', []))}")
         print()
-        
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -320,20 +320,20 @@ except Exception as e:
 try:
     concept_id = "a1b2c3d4-e5f6-4a5b-9c8d-1a2b3c4d5e6f"
     user_id = "550e8400-e29b-41d4-a716-446655440000"
-    
+
     concept_detail = storage.get_concept_detail(concept_id, user_id)
-    
+
     if concept_detail:
         print(f"Concept: {concept_detail['logo_description']}")
         print(f"Theme: {concept_detail.get('theme_description', 'No theme')}")
         print(f"Created: {concept_detail['created_at']}")
         print(f"Variations:")
-        
+
         for variation in concept_detail.get('variations', []):
             print(f"  - {variation['palette_name']}: {variation['colors']}")
     else:
         print("Concept not found or access denied")
-        
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -369,7 +369,7 @@ def get_concept_with_variations(self, concept_id: str):
         "get_concept_with_variations",
         {"p_concept_id": concept_id}
     ).execute()
-    
+
     # Process and return the result...
 ```
 
@@ -395,11 +395,11 @@ The module validates input data before storing it:
 # Example validation
 def _validate_concept_data(self, concept_data: Dict[str, Any]) -> bool:
     required_fields = ["user_id", "logo_description", "image_path"]
-    
+
     for field in required_fields:
         if field not in concept_data or not concept_data[field]:
             return False
-            
+
     return True
 ```
 
@@ -411,18 +411,18 @@ The module includes comprehensive error handling:
 try:
     # Attempt database operation
     result = self.client.from_("concepts").insert(concept_data).execute()
-    
+
     if "error" in result:
         self.logger.error(f"Database error: {result['error']}")
         return None
-        
+
     return result["data"][0] if result.get("data") else None
-    
+
 except Exception as e:
     # Log the error with masked sensitive data
     masked_user_id = mask_id(concept_data.get("user_id", ""))
     self.logger.error(f"Failed to store concept for user {masked_user_id}: {str(e)}")
-    
+
     # Propagate as database error
     raise DatabaseError(f"Failed to store concept: {str(e)}")
 ```
@@ -432,4 +432,4 @@ except Exception as e:
 - [Supabase Client](client.md): Base client used by the concept storage
 - [Image Storage](image_storage.md): Storage for concept images
 - [Concept Persistence Service](../../services/persistence/concept_persistence_service.md): Higher-level service that uses this storage
-- [Concept Service](../../services/concept/service.md): Business logic for concepts 
+- [Concept Service](../../services/concept/service.md): Business logic for concepts

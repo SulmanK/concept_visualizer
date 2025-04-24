@@ -13,7 +13,7 @@ The `response.py` module in `app/models/concept/` defines Pydantic models for st
 ```python
 class ColorPalette(APIBaseModel):
     """Color palette model containing hex color codes."""
-    
+
     primary: str = Field(..., description="Primary brand color")
     secondary: str = Field(..., description="Secondary brand color")
     accent: str = Field(..., description="Accent color")
@@ -39,7 +39,7 @@ This model represents a color palette with standard brand color roles:
 ```python
 class PaletteVariation(APIBaseModel):
     """Model for a color palette variation with its own image."""
-    
+
     name: str = Field(..., alias="palette_name", description="Name of the palette variation")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
@@ -58,25 +58,25 @@ This model represents a variation of a concept with a different color palette:
 ```python
 class GenerationResponse(APIBaseModel):
     """Response model for concept generation and refinement."""
-    
+
     prompt_id: str = Field(..., description="Unique ID for the generation")
     logo_description: str = Field(..., description="The logo description prompt")
     theme_description: str = Field(..., description="The theme description prompt")
     created_at: str = Field(..., description="Creation timestamp")
-    
+
     # For backward compatibility - points to the first variation
     image_url: HttpUrl = Field(..., description="URL of the default generated image")
     color_palette: Optional[ColorPalette] = Field(
         None,
         description="Generated color palette (deprecated format, kept for backward compatibility)"
     )
-    
+
     # New field for multiple variations
     variations: List[PaletteVariation] = Field(
         default=[],
         description="List of palette variations with distinct images"
     )
-    
+
     # Optional fields for refinement responses
     original_image_url: Optional[HttpUrl] = Field(
         None,
@@ -105,7 +105,7 @@ This model represents the response from concept generation:
 ```python
 class RefinementResponse(GenerationResponse):
     """Response model specifically for concept refinement."""
-    
+
     original_image_url: HttpUrl = Field(..., description="URL of the original image that was refined")
     refinement_prompt: str = Field(..., description="Prompt used for refinement")
     original_concept_id: Optional[str] = Field(None, description="ID of the original concept")
@@ -122,7 +122,7 @@ This model extends `GenerationResponse` with additional fields specific to refin
 ```python
 class ConceptSummary(APIBaseModel):
     """Summary information about a concept for list views."""
-    
+
     id: str = Field(..., description="Unique concept ID")
     created_at: str = Field(..., description="Creation timestamp")
     logo_description: str = Field(..., description="The logo description prompt")
@@ -143,7 +143,7 @@ This model provides summary information about a concept for list views:
 - `id`: Unique concept identifier
 - `created_at`: Timestamp when the concept was created
 - `logo_description`: The logo description prompt
-- `theme_description`: The theme description prompt 
+- `theme_description`: The theme description prompt
 - `image_url`: URL of the default concept image
 - `has_variations`: Whether the concept has color variations
 - `variations_count`: Number of available color variations
@@ -156,7 +156,7 @@ This model provides summary information about a concept for list views:
 ```python
 class ConceptDetail(ConceptSummary):
     """Detailed information about a concept including all variations."""
-    
+
     variations: List[PaletteVariation] = Field(
         default=[],
         description="List of all color variations with their images"
@@ -226,4 +226,4 @@ This model extends `ConceptSummary` with additional details:
 
 - [Request Models](request.md): Models for validating API requests
 - [Domain Models](domain.md): Core domain models for concepts
-- [Base Models](../common/base.md): Common base models and utilities 
+- [Base Models](../common/base.md): Common base models and utilities

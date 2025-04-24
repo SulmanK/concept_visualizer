@@ -9,13 +9,13 @@ This component simplifies working with data fetching by providing a consistent w
 ## Usage
 
 ```tsx
-import { QueryResultHandler } from 'components/common/QueryResultHandler';
-import { useQuery } from '@tanstack/react-query';
-import { getConceptList } from 'services/conceptService';
+import { QueryResultHandler } from "components/common/QueryResultHandler";
+import { useQuery } from "@tanstack/react-query";
+import { getConceptList } from "services/conceptService";
 
 function ConceptList() {
-  const conceptsQuery = useQuery(['concepts'], getConceptList);
-  
+  const conceptsQuery = useQuery(["concepts"], getConceptList);
+
   return (
     <QueryResultHandler
       query={conceptsQuery}
@@ -25,7 +25,7 @@ function ConceptList() {
     >
       {(data) => (
         <div className="concept-list">
-          {data.map(concept => (
+          {data.map((concept) => (
             <ConceptCard key={concept.id} concept={concept} />
           ))}
         </div>
@@ -37,14 +37,14 @@ function ConceptList() {
 
 ## Props
 
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `query` | `UseQueryResult<TData, TError>` | Yes | The React Query result object |
-| `loadingComponent` | `React.ReactNode` | No | Component to display during loading state |
-| `errorComponent` | `React.ReactNode \| ((error: TError) => React.ReactNode)` | No | Component or render function for error state |
-| `emptyComponent` | `React.ReactNode \| ((data: TData) => React.ReactNode)` | No | Component or render function for empty data state |
-| `emptyCheck` | `(data: TData) => boolean` | No | Function to determine if data is considered empty |
-| `children` | `(data: TData) => React.ReactNode` | Yes | Render function for success state with data |
+| Prop               | Type                                                      | Required | Description                                       |
+| ------------------ | --------------------------------------------------------- | -------- | ------------------------------------------------- |
+| `query`            | `UseQueryResult<TData, TError>`                           | Yes      | The React Query result object                     |
+| `loadingComponent` | `React.ReactNode`                                         | No       | Component to display during loading state         |
+| `errorComponent`   | `React.ReactNode \| ((error: TError) => React.ReactNode)` | No       | Component or render function for error state      |
+| `emptyComponent`   | `React.ReactNode \| ((data: TData) => React.ReactNode)`   | No       | Component or render function for empty data state |
+| `emptyCheck`       | `(data: TData) => boolean`                                | No       | Function to determine if data is considered empty |
+| `children`         | `(data: TData) => React.ReactNode`                        | Yes      | Render function for success state with data       |
 
 ## Implementation Details
 
@@ -56,11 +56,11 @@ The component evaluates the query state in a specific order:
 4. Finally renders the success state with the data
 
 ```tsx
-import React from 'react';
-import { UseQueryResult } from '@tanstack/react-query';
-import { LoadingIndicator } from 'components/ui/LoadingIndicator';
-import { ErrorMessage } from 'components/ui/ErrorMessage';
-import { EmptyState } from 'components/ui/EmptyState';
+import React from "react";
+import { UseQueryResult } from "@tanstack/react-query";
+import { LoadingIndicator } from "components/ui/LoadingIndicator";
+import { ErrorMessage } from "components/ui/ErrorMessage";
+import { EmptyState } from "components/ui/EmptyState";
 
 interface QueryResultHandlerProps<TData, TError> {
   query: UseQueryResult<TData, TError>;
@@ -88,12 +88,24 @@ export function QueryResultHandler<TData, TError>({
 
   // Show error state
   if (isError && error) {
-    return <>{typeof errorComponent === 'function' ? errorComponent(error) : errorComponent}</>;
+    return (
+      <>
+        {typeof errorComponent === "function"
+          ? errorComponent(error)
+          : errorComponent}
+      </>
+    );
   }
 
   // Data should exist at this point
   if (!data) {
-    return <>{typeof emptyComponent === 'function' ? emptyComponent(null as any) : emptyComponent}</>;
+    return (
+      <>
+        {typeof emptyComponent === "function"
+          ? emptyComponent(null as any)
+          : emptyComponent}
+      </>
+    );
   }
 
   // Check if data is empty using the provided function or a default check
@@ -105,7 +117,13 @@ export function QueryResultHandler<TData, TError>({
 
   // Show empty state
   if (isEmpty) {
-    return <>{typeof emptyComponent === 'function' ? emptyComponent(data) : emptyComponent}</>;
+    return (
+      <>
+        {typeof emptyComponent === "function"
+          ? emptyComponent(data)
+          : emptyComponent}
+      </>
+    );
   }
 
   // Show success state with data
@@ -118,17 +136,17 @@ export function QueryResultHandler<TData, TError>({
 ### Basic Usage with Default Components
 
 ```tsx
-import { QueryResultHandler } from 'components/common/QueryResultHandler';
-import { useTasksQuery } from 'hooks/useTaskQueries';
+import { QueryResultHandler } from "components/common/QueryResultHandler";
+import { useTasksQuery } from "hooks/useTaskQueries";
 
 function TaskList() {
   const tasksQuery = useTasksQuery();
-  
+
   return (
     <QueryResultHandler query={tasksQuery}>
       {(tasks) => (
         <ul>
-          {tasks.map(task => (
+          {tasks.map((task) => (
             <li key={task.id}>{task.name}</li>
           ))}
         </ul>
@@ -141,18 +159,18 @@ function TaskList() {
 ### Custom Components for All States
 
 ```tsx
-import { QueryResultHandler } from 'components/common/QueryResultHandler';
-import { useConceptQuery } from 'hooks/useConceptQueries';
+import { QueryResultHandler } from "components/common/QueryResultHandler";
+import { useConceptQuery } from "hooks/useConceptQueries";
 
 function ConceptDetail({ conceptId }) {
   const conceptQuery = useConceptQuery(conceptId);
-  
+
   return (
     <QueryResultHandler
       query={conceptQuery}
       loadingComponent={<ConceptDetailSkeleton />}
       errorComponent={(error) => (
-        <ConceptErrorState 
+        <ConceptErrorState
           message={error.message}
           onRetry={() => conceptQuery.refetch()}
         />
@@ -161,9 +179,7 @@ function ConceptDetail({ conceptId }) {
         <EmptyConceptDetail message="This concept could not be found" />
       }
     >
-      {(concept) => (
-        <ConceptDetailView concept={concept} />
-      )}
+      {(concept) => <ConceptDetailView concept={concept} />}
     </QueryResultHandler>
   );
 }
@@ -172,22 +188,20 @@ function ConceptDetail({ conceptId }) {
 ### Custom Empty Check
 
 ```tsx
-import { QueryResultHandler } from 'components/common/QueryResultHandler';
-import { useUserProfileQuery } from 'hooks/useUserQueries';
+import { QueryResultHandler } from "components/common/QueryResultHandler";
+import { useUserProfileQuery } from "hooks/useUserQueries";
 
 function UserProfile() {
   const profileQuery = useUserProfileQuery();
-  
+
   return (
     <QueryResultHandler
       query={profileQuery}
       emptyCheck={(profile) => !profile.name || !profile.email}
       emptyComponent={<IncompleteProfileNotice />}
     >
-      {(profile) => (
-        <ProfileDisplay profile={profile} />
-      )}
+      {(profile) => <ProfileDisplay profile={profile} />}
     </QueryResultHandler>
   );
 }
-``` 
+```

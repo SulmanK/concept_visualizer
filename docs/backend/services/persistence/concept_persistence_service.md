@@ -19,11 +19,11 @@ The primary class for concept persistence operations:
 ```python
 class ConceptPersistenceService(ConceptPersistenceServiceInterface):
     """Service for storing and retrieving concepts."""
-    
+
     def __init__(self, client: SupabaseClient):
         """
         Initialize the concept persistence service.
-        
+
         Args:
             client: Supabase client instance
         """
@@ -40,7 +40,7 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
 async def store_concept(self, concept_data: Dict[str, Any]) -> str:
     """
     Store a concept and return its ID.
-    
+
     Args:
         concept_data: Concept data to store, including:
             - user_id: User ID to associate with the concept
@@ -49,10 +49,10 @@ async def store_concept(self, concept_data: Dict[str, Any]) -> str:
             - image_path: Path to the generated base image
             - image_url: URL to the generated base image (optional)
             - color_palettes: Optional list of color palette dictionaries
-            
+
     Returns:
         ID of the stored concept
-        
+
     Raises:
         PersistenceError: If storage fails
         DatabaseTransactionError: If a multi-step operation fails and cleanup is required
@@ -61,6 +61,7 @@ async def store_concept(self, concept_data: Dict[str, Any]) -> str:
 ```
 
 This comprehensive method handles:
+
 - Storing the core concept data
 - Attaching color palette variations if provided
 - Transaction management with rollback capabilities
@@ -73,14 +74,14 @@ This comprehensive method handles:
 async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, Any]:
     """
     Get detailed information about a specific concept.
-    
+
     Args:
         concept_id: ID of the concept to retrieve
         user_id: User ID for security validation
-        
+
     Returns:
         Concept detail data including color variations
-        
+
     Raises:
         NotFoundError: If concept not found
         PersistenceError: If retrieval fails
@@ -89,6 +90,7 @@ async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, A
 ```
 
 Retrieves complete concept information including:
+
 - Base concept data
 - Associated color palettes
 - Image paths and URLs
@@ -100,14 +102,14 @@ Retrieves complete concept information including:
 async def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
     """
     Get recent concepts for a user.
-    
+
     Args:
         user_id: User ID to retrieve concepts for
         limit: Maximum number of concepts to return
-        
+
     Returns:
         List of recent concepts
-        
+
     Raises:
         PersistenceError: If retrieval fails
     """
@@ -115,6 +117,7 @@ async def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[
 ```
 
 Retrieves a paginated list of recent concepts with:
+
 - Core concept data
 - Thumbnail image URLs
 - Creation timestamps
@@ -126,13 +129,13 @@ Retrieves a paginated list of recent concepts with:
 async def delete_all_concepts(self, user_id: str) -> bool:
     """
     Delete all concepts for a user.
-    
+
     Args:
         user_id: User ID to delete concepts for
-        
+
     Returns:
         True if successful
-        
+
     Raises:
         PersistenceError: If deletion fails
     """
@@ -140,6 +143,7 @@ async def delete_all_concepts(self, user_id: str) -> bool:
 ```
 
 Handles bulk deletion operations with:
+
 - User validation
 - Cascading deletion (concepts and related color palettes)
 - Result verification
@@ -151,14 +155,14 @@ Handles bulk deletion operations with:
 async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
     """
     Get a concept by its task ID.
-    
+
     Args:
         task_id: Task ID of the concept to retrieve
         user_id: User ID for security validation
-        
+
     Returns:
         Concept data or None if not found
-        
+
     Raises:
         PersistenceError: If retrieval fails
     """
@@ -166,6 +170,7 @@ async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[D
 ```
 
 Supports the asynchronous task workflow by:
+
 - Looking up concepts associated with background tasks
 - Enabling status checking for long-running operations
 - Maintaining security boundaries with user validation
@@ -178,10 +183,10 @@ The service implements sophisticated transaction management to ensure data consi
 async def _delete_concept(self, concept_id: str) -> bool:
     """
     Helper method to delete a concept as part of transaction cleanup.
-    
+
     Args:
         concept_id: ID of the concept to delete
-    
+
     Returns:
         True if deletion was successful, False otherwise
     """
@@ -202,7 +207,7 @@ The service defines custom exception types:
 ```python
 class PersistenceError(Exception):
     """Exception raised for persistence errors."""
-    
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
@@ -210,13 +215,14 @@ class PersistenceError(Exception):
 
 class NotFoundError(Exception):
     """Exception raised when a resource is not found."""
-    
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
 ```
 
 These exceptions provide:
+
 - Specific error types for different failure scenarios
 - Detailed error messages for troubleshooting
 - Clean integration with the API error handling system
@@ -234,7 +240,7 @@ The service implements several security measures:
 ## Related Documentation
 
 - [Persistence Interface](interface.md): Interface definition for this service
-- [ConceptStorage](../../core/supabase/concept_storage.md): Underlying storage used by this service 
+- [ConceptStorage](../../core/supabase/concept_storage.md): Underlying storage used by this service
 - [Supabase Client](../../core/supabase/client.md): Database client used for persistence
 - [Database Exceptions](../../core/exceptions.md): Exceptions used for error handling
-- [Security Masking](../../utils/security/mask.md): PII masking utilities 
+- [Security Masking](../../utils/security/mask.md): PII masking utilities

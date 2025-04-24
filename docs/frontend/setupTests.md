@@ -12,7 +12,7 @@ This file is automatically loaded by Jest before running tests. It configures te
 
 ```tsx
 // Import Jest's extended expect functionality
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
 // Set Jest timeout for all tests
 jest.setTimeout(10000);
@@ -24,9 +24,9 @@ The file sets up mocks for various browser APIs and third-party services that mi
 
 ```tsx
 // Mock browser APIs
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -39,7 +39,7 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock Supabase
-jest.mock('@supabase/supabase-js', () => {
+jest.mock("@supabase/supabase-js", () => {
   return {
     createClient: jest.fn(() => ({
       from: jest.fn(() => ({
@@ -54,18 +54,24 @@ jest.mock('@supabase/supabase-js', () => {
           data: [],
           error: null,
         })),
-        insert: jest.fn(() => ({ data: { id: 'mock-id' }, error: null })),
-        update: jest.fn(() => ({ data: { id: 'mock-id' }, error: null })),
+        insert: jest.fn(() => ({ data: { id: "mock-id" }, error: null })),
+        update: jest.fn(() => ({ data: { id: "mock-id" }, error: null })),
         delete: jest.fn(() => ({ data: null, error: null })),
       })),
       storage: {
         from: jest.fn(() => ({
-          upload: jest.fn(() => ({ data: { path: 'mock-path' }, error: null })),
-          getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://example.com/mock-url' } })),
+          upload: jest.fn(() => ({ data: { path: "mock-path" }, error: null })),
+          getPublicUrl: jest.fn(() => ({
+            data: { publicUrl: "https://example.com/mock-url" },
+          })),
         })),
       },
       auth: {
-        onAuthStateChange: jest.fn(() => ({ data: null, error: null, unsubscribe: jest.fn() })),
+        onAuthStateChange: jest.fn(() => ({
+          data: null,
+          error: null,
+          unsubscribe: jest.fn(),
+        })),
         getSession: jest.fn(() => ({ data: { session: null }, error: null })),
         signOut: jest.fn(() => ({ error: null })),
       },
@@ -78,9 +84,15 @@ global.IntersectionObserver = class IntersectionObserver {
   constructor(callback) {
     this.callback = callback;
   }
-  observe() { return null; }
-  unobserve() { return null; }
-  disconnect() { return null; }
+  observe() {
+    return null;
+  }
+  unobserve() {
+    return null;
+  }
+  disconnect() {
+    return null;
+  }
 };
 ```
 
@@ -89,28 +101,30 @@ global.IntersectionObserver = class IntersectionObserver {
 The file often defines a custom render function that wraps the component under test with all the necessary providers:
 
 ```tsx
-import { render, RenderOptions } from '@testing-library/react';
-import { ThemeProvider } from '@mui/material/styles';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { theme } from './theme';
-import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { RateLimitProvider } from './contexts/RateLimitContext';
-import { TaskProvider } from './contexts/TaskContext';
-import { ToastProvider } from './contexts/ToastProvider';
+import { render, RenderOptions } from "@testing-library/react";
+import { ThemeProvider } from "@mui/material/styles";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { theme } from "./theme";
+import { BrowserRouter } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { RateLimitProvider } from "./contexts/RateLimitContext";
+import { TaskProvider } from "./contexts/TaskContext";
+import { ToastProvider } from "./contexts/ToastProvider";
 
 // Create a custom renderer that includes providers
 const customRender = (
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'> & { queryClient?: QueryClient }
+  options?: Omit<RenderOptions, "wrapper"> & { queryClient?: QueryClient },
 ) => {
-  const queryClient = options?.queryClient || new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
+  const queryClient =
+    options?.queryClient ||
+    new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
       },
-    },
-  });
+    });
 
   const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     return (
@@ -120,9 +134,7 @@ const customRender = (
             <RateLimitProvider>
               <TaskProvider>
                 <ToastProvider>
-                  <BrowserRouter>
-                    {children}
-                  </BrowserRouter>
+                  <BrowserRouter>{children}</BrowserRouter>
                 </ToastProvider>
               </TaskProvider>
             </RateLimitProvider>
@@ -136,7 +148,7 @@ const customRender = (
 };
 
 // Re-export everything
-export * from '@testing-library/react';
+export * from "@testing-library/react";
 // Override render method
 export { customRender as render };
 ```
@@ -148,19 +160,19 @@ To add new configurations to the test setup:
 1. Import any required libraries or modules
 2. Set up mocks for external dependencies
 3. Configure global settings for test environment
-4. Add or modify custom test utilities 
+4. Add or modify custom test utilities
 
 For example, to add a mock for the Fetch API:
 
 ```tsx
 // Mock fetch API
-global.fetch = jest.fn().mockImplementation(() => 
+global.fetch = jest.fn().mockImplementation(() =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
+    text: () => Promise.resolve(""),
     blob: () => Promise.resolve(new Blob()),
-  })
+  }),
 );
 ```
 
@@ -170,20 +182,20 @@ When writing tests, you can import the custom render function and other utilitie
 
 ```tsx
 // Component test example
-import { render, screen, fireEvent } from '../setupTests';
-import { Button } from './Button';
+import { render, screen, fireEvent } from "../setupTests";
+import { Button } from "./Button";
 
-describe('Button component', () => {
-  test('renders correctly', () => {
+describe("Button component", () => {
+  test("renders correctly", () => {
     render(<Button>Click me</Button>);
-    expect(screen.getByText('Click me')).toBeInTheDocument();
+    expect(screen.getByText("Click me")).toBeInTheDocument();
   });
 
-  test('handles click events', () => {
+  test("handles click events", () => {
     const handleClick = jest.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
-    fireEvent.click(screen.getByText('Click me'));
+    fireEvent.click(screen.getByText("Click me"));
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 });
-``` 
+```

@@ -46,10 +46,12 @@ This endpoint provides a comprehensive workflow that:
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Request Body:**
+
 - `logo_description`: Text description of the logo to generate
 - `theme_description`: Text description of the theme/color scheme
 
 **Response:**
+
 - `prompt_id`: Unique identifier for the stored concept
 - `image_url`: URL to the generated image
 - `color_palettes`: Array of generated color palettes with images
@@ -72,9 +74,11 @@ This endpoint retrieves a summary of recently created concepts for the authentic
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Query Parameters:**
+
 - `limit`: Maximum number of concepts to return (default: 10, max: 50)
 
 **Response:**
+
 - Array of concept summaries with basic information:
   - `id`: Concept identifier
   - `created_at`: Timestamp when the concept was created
@@ -101,9 +105,11 @@ This endpoint retrieves detailed information about a specific concept by its ID.
 **Authentication:** Requires a valid user ID from the authenticated request
 
 **Path Parameters:**
+
 - `concept_id`: ID of the concept to retrieve
 
 **Response:**
+
 - Comprehensive concept details including:
   - Base concept information (ID, descriptions, creation time)
   - Image URL for the main concept
@@ -162,4 +168,4 @@ The concept storage routes integrate with several services:
 - [Concept Models](../../../models/concept/domain.md): Data models for concepts
 - [Concept Service](../../../services/concept/service.md): Service for generating concepts
 - [Persistence Service](../../../services/persistence/concept_persistence_service.md): Service for storing concepts
-- [Concept Generation Routes](../concept/generation.md): Routes for on-demand concept generation 
+- [Concept Generation Routes](../concept/generation.md): Routes for on-demand concept generation

@@ -115,7 +115,7 @@ After database records are deleted, we'll remove the associated files from stora
 // Delete concept images
 let deletedConceptFiles = 0;
 for (const path of conceptPaths) {
-  if (path && await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path)) {
+  if (path && (await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path))) {
     deletedConceptFiles++;
   }
 }
@@ -123,7 +123,7 @@ for (const path of conceptPaths) {
 // Delete variation images
 let deletedVariationFiles = 0;
 for (const path of variationPaths) {
-  if (path && await deleteFromStorage(STORAGE_BUCKET_PALETTE, path)) {
+  if (path && (await deleteFromStorage(STORAGE_BUCKET_PALETTE, path))) {
     deletedVariationFiles++;
   }
 }
@@ -147,33 +147,36 @@ Deploy as a Supabase Edge Function and use GitHub Actions for scheduling:
 ### Edge Function (index.ts)
 
 ```typescript
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // Get environment variables
-const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') || '';
-const supabaseKey = Deno.env.get('MY_SERVICE_ROLE_KEY') || '';
+const supabaseUrl = Deno.env.get("MY_SUPABASE_URL") || "";
+const supabaseKey = Deno.env.get("MY_SERVICE_ROLE_KEY") || "";
 
 // Create Supabase client
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Storage bucket names from environment variables
-const STORAGE_BUCKET_CONCEPT = Deno.env.get('STORAGE_BUCKET_CONCEPT') || '';
-const STORAGE_BUCKET_PALETTE = Deno.env.get('STORAGE_BUCKET_PALETTE') || '';
+const STORAGE_BUCKET_CONCEPT = Deno.env.get("STORAGE_BUCKET_CONCEPT") || "";
+const STORAGE_BUCKET_PALETTE = Deno.env.get("STORAGE_BUCKET_PALETTE") || "";
 
 // Function to delete a file from storage
-async function deleteFromStorage(bucketName: string, path: string): Promise<boolean> {
+async function deleteFromStorage(
+  bucketName: string,
+  path: string,
+): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .storage
-      .from(bucketName)
-      .remove([path]);
-    
+    const { error } = await supabase.storage.from(bucketName).remove([path]);
+
     if (error) {
-      console.error(`Error deleting ${path} from ${bucketName}:`, error.message);
+      console.error(
+        `Error deleting ${path} from ${bucketName}:`,
+        error.message,
+      );
       return false;
     }
-    
+
     console.log(`Deleted ${path} from ${bucketName}`);
     return true;
   } catch (err) {
@@ -185,105 +188,136 @@ async function deleteFromStorage(bucketName: string, path: string): Promise<bool
 serve(async (req) => {
   try {
     console.log("Starting data cleanup process");
-    console.log(`Using buckets: ${STORAGE_BUCKET_CONCEPT} and ${STORAGE_BUCKET_PALETTE}`);
-    
+    console.log(
+      `Using buckets: ${STORAGE_BUCKET_CONCEPT} and ${STORAGE_BUCKET_PALETTE}`,
+    );
+
     // 1. Get concepts older than 3 days
     console.log("Fetching concepts older than 3 days...");
-    const { data: oldConcepts, error: conceptsError } = await supabase
-      .rpc('get_old_concepts', { days_threshold: 3 });
-    
+    const { data: oldConcepts, error: conceptsError } = await supabase.rpc(
+      "get_old_concepts",
+      { days_threshold: 3 },
+    );
+
     if (conceptsError) {
       throw new Error(`Error fetching old concepts: ${conceptsError.message}`);
     }
-    
+
     if (!oldConcepts || oldConcepts.length === 0) {
       console.log("No old concepts found");
-      return new Response(JSON.stringify({ 
-        message: "No old concepts to clean up" 
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          message: "No old concepts to clean up",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
-    
-    const conceptIds = oldConcepts.map(c => c.id);
-    const conceptPaths = oldConcepts.map(c => c.image_path).filter(Boolean);
-    
+
+    const conceptIds = oldConcepts.map((c) => c.id);
+    const conceptPaths = oldConcepts.map((c) => c.image_path).filter(Boolean);
+
     console.log(`Found ${conceptIds.length} concepts to delete`);
-    
+
     // 2. Get variations for those concepts
     console.log("Fetching associated color variations...");
-    const { data: variations, error: variationsError } = await supabase
-      .rpc('get_variations_for_concepts', { concept_ids: conceptIds });
-    
+    const { data: variations, error: variationsError } = await supabase.rpc(
+      "get_variations_for_concepts",
+      { concept_ids: conceptIds },
+    );
+
     if (variationsError) {
       throw new Error(`Error fetching variations: ${variationsError.message}`);
     }
-    
-    const variationPaths = variations ? variations.map(v => v.image_path).filter(Boolean) : [];
+
+    const variationPaths = variations
+      ? variations.map((v) => v.image_path).filter(Boolean)
+      : [];
     console.log(`Found ${variationPaths.length} color variations to delete`);
-    
+
     // 3. Delete variations from database
     console.log("Deleting color variations from database...");
-    const { error: deleteVariationsError } = await supabase
-      .rpc('delete_variations_for_concepts', { concept_ids: conceptIds });
-    
+    const { error: deleteVariationsError } = await supabase.rpc(
+      "delete_variations_for_concepts",
+      { concept_ids: conceptIds },
+    );
+
     if (deleteVariationsError) {
-      throw new Error(`Error deleting variations: ${deleteVariationsError.message}`);
+      throw new Error(
+        `Error deleting variations: ${deleteVariationsError.message}`,
+      );
     }
-    
+
     // 4. Delete concepts from database
     console.log("Deleting concepts from database...");
-    const { error: deleteConceptsError } = await supabase
-      .rpc('delete_concepts', { concept_ids: conceptIds });
-    
+    const { error: deleteConceptsError } = await supabase.rpc(
+      "delete_concepts",
+      { concept_ids: conceptIds },
+    );
+
     if (deleteConceptsError) {
-      throw new Error(`Error deleting concepts: ${deleteConceptsError.message}`);
+      throw new Error(
+        `Error deleting concepts: ${deleteConceptsError.message}`,
+      );
     }
-    
+
     // 5. Delete files from storage
     console.log("Deleting files from storage...");
-    
+
     // Delete concept images
     let deletedConceptFiles = 0;
     for (const path of conceptPaths) {
-      if (path && await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path)) {
+      if (path && (await deleteFromStorage(STORAGE_BUCKET_CONCEPT, path))) {
         deletedConceptFiles++;
       }
     }
-    
+
     // Delete variation images
     let deletedVariationFiles = 0;
     for (const path of variationPaths) {
-      if (path && await deleteFromStorage(STORAGE_BUCKET_PALETTE, path)) {
+      if (path && (await deleteFromStorage(STORAGE_BUCKET_PALETTE, path))) {
         deletedVariationFiles++;
       }
     }
-    
-    console.log(`Deleted ${deletedConceptFiles}/${conceptPaths.length} concept files`);
-    console.log(`Deleted ${deletedVariationFiles}/${variationPaths.length} variation files`);
-    
+
+    console.log(
+      `Deleted ${deletedConceptFiles}/${conceptPaths.length} concept files`,
+    );
+    console.log(
+      `Deleted ${deletedVariationFiles}/${variationPaths.length} variation files`,
+    );
+
     // Return success response
-    return new Response(JSON.stringify({
-      message: "Cleanup completed successfully",
-      deleted_concepts: conceptIds.length,
-      deleted_variations: variationPaths.length,
-      deleted_concept_files: deletedConceptFiles,
-      deleted_variation_files: deletedVariationFiles
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-    
+    return new Response(
+      JSON.stringify({
+        message: "Cleanup completed successfully",
+        deleted_concepts: conceptIds.length,
+        deleted_variations: variationPaths.length,
+        deleted_concept_files: deletedConceptFiles,
+        deleted_variation_files: deletedVariationFiles,
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("Error during cleanup:", error);
-    
-    return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "Unknown error during cleanup" 
-    }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+
+    return new Response(
+      JSON.stringify({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unknown error during cleanup",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 });
 ```
@@ -296,26 +330,26 @@ name: Schedule Data Cleanup
 on:
   schedule:
     # Run at midnight every day (UTC)
-    - cron: '0 0 * * *'
-  
+    - cron: "0 0 * * *"
+
   # Allow manual triggering for testing
   workflow_dispatch:
 
 jobs:
   call-cleanup-function:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Call Cleanup Edge Function
         run: |
           curl -L -X POST 'https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data' \
             -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
             -H 'Content-Type: application/json'
-      
+
       - name: Log completion
         if: ${{ success() }}
         run: echo "Data cleanup function executed successfully"
-      
+
       - name: Log failure
         if: ${{ failure() }}
         run: echo "Failed to execute data cleanup function"
@@ -339,28 +373,29 @@ jobs:
    supabase secrets set STORAGE_BUCKET_PALETTE=<your-palette-bucket>
    ```
 5. Schedule the function to run daily:
-    GitHub Actions
+   GitHub Actions
 
-    To ensure secure access to your Supabase Edge Function, you need to add your Supabase anon key as a GitHub secret:
+   To ensure secure access to your Supabase Edge Function, you need to add your Supabase anon key as a GitHub secret:
 
-    1. Go to your GitHub repository
-    2. Click on "Settings" tab
-    3. In the left sidebar, click on "Secrets and variables" > "Actions"
-    4. Click on "New repository secret"
-    5. Enter the following information:
-    - Name: `SUPABASE_ANON_KEY`
-    - Value: ``
-    6. Click "Add secret"
+   1. Go to your GitHub repository
+   2. Click on "Settings" tab
+   3. In the left sidebar, click on "Secrets and variables" > "Actions"
+   4. Click on "New repository secret"
+   5. Enter the following information:
 
-    ## Understanding the Workflow
+   - Name: `SUPABASE_ANON_KEY`
+   - Value: ``
 
-    The GitHub Actions workflow `.github/workflows/schedule-cleanup.yml` does the following:
+   6. Click "Add secret"
 
-    1. Runs at midnight UTC every day (`0 0 * * *`)
-    2. Makes an HTTP POST request to your Supabase Edge Function
-    3. Uses the Supabase anon key for authentication
-    4. Logs the success or failure of the function call
+   ## Understanding the Workflow
 
+   The GitHub Actions workflow `.github/workflows/schedule-cleanup.yml` does the following:
+
+   1. Runs at midnight UTC every day (`0 0 * * *`)
+   2. Makes an HTTP POST request to your Supabase Edge Function
+   3. Uses the Supabase anon key for authentication
+   4. Logs the success or failure of the function call
 
 ## Testing the Implementation
 
@@ -381,10 +416,10 @@ DECLARE
 BEGIN
     SELECT id INTO test_session_id FROM sessions
     ORDER BY created_at ASC LIMIT 1;
-    
+
     -- Insert a test concept
     INSERT INTO concepts (
-        session_id, logo_description, theme_description, 
+        session_id, logo_description, theme_description,
         image_path, image_url, created_at
     )
     VALUES (
@@ -392,7 +427,7 @@ BEGIN
         'test_path.png', 'test_url', NOW() - INTERVAL '4 days'
     )
     RETURNING id INTO test_concept_id;
-    
+
     -- Insert a test color variation
     INSERT INTO color_variations (
         concept_id, palette_name, colors, description,
@@ -445,4 +480,4 @@ After implementing this solution:
 
 ## Conclusion
 
-This implementation will automatically clean up old concepts and their color variations from both the database and storage, helping to keep the application's storage footprint minimal and cost-effective. 
+This implementation will automatically clean up old concepts and their color variations from both the database and storage, helping to keep the application's storage footprint minimal and cost-effective.

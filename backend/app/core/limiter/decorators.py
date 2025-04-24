@@ -1,52 +1,53 @@
-"""
-Rate limiting decorators for the Concept Visualizer API.
+"""Rate limiter decorators.
 
-This module provides decorators to handle rate limiting and Redis connection errors.
+This module provides decorators for custom rate limiting behaviors.
 """
 
+import functools
 import logging
-import redis
-from fastapi import Request
-from typing import Any, Callable, Awaitable
+from typing import Any, Callable, TypeVar, cast
 
-# Configure logging
+from fastapi import Request
+
 logger = logging.getLogger(__name__)
 
-def safe_ratelimit(func: Callable[[Request], Awaitable[Any]]) -> Callable[[Request], Awaitable[Any]]:
-    """
-    Decorator to handle Redis connection errors during rate limiting.
-    
-    This decorator wraps rate-limited endpoint handlers to gracefully handle Redis
-    connection errors, falling back to allowing the request rather than failing.
-    
+# Type variable for route handlers
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def safe_ratelimit(func: F) -> F:
+    """Decorator to safely handle rate limiting errors.
+
+    This decorator wraps a route handler to catch and handle any
+    errors that occur during rate limiting operations to ensure the
+    API endpoint doesn't fail if the rate limiter encounters issues.
+
     Args:
-        func: The endpoint handler function to decorate
-        
+        func: The route handler function to wrap
+
     Returns:
-        Callable: Wrapped function that handles Redis connection errors
+        Wrapped route handler that handles rate limiting errors
     """
-    async def wrapper(request: Request, *args: Any, **kwargs: Any) -> Any:
+
+    @functools.wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
-            # Make sure we're properly awaiting the decorated function
-            result = await func(request, *args, **kwargs)
-            return result
-        except redis.exceptions.ConnectionError as e:
-            logger.error(f"Redis connection error during rate limiting: {str(e)}")
-            logger.warning("Bypassing rate limit due to Redis connection error")
-            # Continue processing the request without rate limiting
-            # Make sure we're also properly awaiting the wrapped function
-            if hasattr(func, '__wrapped__') and callable(func.__wrapped__):
-                return await func.__wrapped__(request, *args, **kwargs)
-            else:
-                # If no wrapped function, just call the original
-                return await func(request, *args, **kwargs)
+            return await func(*args, **kwargs)
         except Exception as e:
-            logger.error(f"Unexpected error during rate limiting: {str(e)}")
-            # Re-raise other exceptions
-            raise
-    
-    # Preserve metadata
-    wrapper.__name__ = func.__name__
-    wrapper.__doc__ = func.__doc__
-    
-    return wrapper 
+            # Look for rate limiting related errors
+            error_str = str(e).lower()
+            if "rate limit" in error_str or "redis" in error_str:
+                # Log the error but let the request through
+                logger.error(f"Rate limiting error (allowing request): {e}")
+                # Get the request from the arguments
+                request = next((arg for arg in args if isinstance(arg, Request)), None)
+                if request:
+                    logger.error(f"Request path: {request.url.path}")
+                # Continue processing the request
+                # We remove the wrapper and call the original function directly
+                return await func(*args, **kwargs)
+            else:
+                # Not a rate limiting error, re-raise
+                raise
+
+    return cast(F, wrapper)

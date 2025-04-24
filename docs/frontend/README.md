@@ -31,4 +31,4 @@ To understand the frontend architecture, start by exploring:
 
 1. The feature directories to understand user-facing functionality
 2. The components directory to understand the UI building blocks
-3. The services directory to understand data fetching and API interactions 
+3. The services directory to understand data fetching and API interactions
