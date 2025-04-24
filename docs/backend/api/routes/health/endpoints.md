@@ -92,18 +92,18 @@ class StorageBucketsConfig(BaseModel):
 // Frontend example (JavaScript)
 const checkHealth = async () => {
   try {
-    const response = await fetch('/api/health/ping');
+    const response = await fetch("/api/health/ping");
     const data = await response.json();
-    
-    if (data.status === 'ok') {
-      console.log('API is healthy');
+
+    if (data.status === "ok") {
+      console.log("API is healthy");
       return true;
     } else {
-      console.error('API health check failed');
+      console.error("API health check failed");
       return false;
     }
   } catch (error) {
-    console.error('API is unreachable', error);
+    console.error("API is unreachable", error);
     return false;
   }
 };
@@ -115,16 +115,16 @@ const checkHealth = async () => {
 // Frontend example (JavaScript)
 const getConfig = async () => {
   try {
-    const response = await fetch('/api/health/config');
+    const response = await fetch("/api/health/config");
     const config = await response.json();
-    
+
     // Use the storage bucket names
-    console.log('Concept bucket:', config.storage.concept);
-    console.log('Palette bucket:', config.storage.palette);
-    
+    console.log("Concept bucket:", config.storage.concept);
+    console.log("Palette bucket:", config.storage.palette);
+
     return config;
   } catch (error) {
-    console.error('Failed to load configuration', error);
+    console.error("Failed to load configuration", error);
     return null;
   }
 };
@@ -134,4 +134,4 @@ const getConfig = async () => {
 
 - [Health Check Implementation](check.md): More detailed health checks
 - [Rate Limits](limits.md): Rate limit information endpoints
-- [Utility Functions](utils.md): Helper functions for health endpoints 
+- [Utility Functions](utils.md): Helper functions for health endpoints

@@ -1,56 +1,51 @@
-"""
-Image processing and manipulation services.
+"""Image processing and manipulation services.
 
 This module provides services for processing and manipulating images.
 """
 
-from functools import lru_cache
-from typing import Optional
-
-from app.services.image.interface import ImageServiceInterface, ImageProcessingServiceInterface
-from app.services.image.service import ImageService, ImageError
-from app.services.image.processing_service import ImageProcessingService, ImageProcessingError
-from app.services.persistence import get_image_persistence_service
-from app.services.persistence.image_persistence_service import ImagePersistenceService
+from app.services.image.interface import ImageProcessingServiceInterface, ImageServiceInterface
+from app.services.image.processing_service import ImageProcessingError, ImageProcessingService
+from app.services.image.service import ImageError, ImageService
 
 # Export symbols that should be available to importers of this package
 __all__ = [
-    "ImageService", 
+    "ImageService",
     "ImageError",
     "ImageProcessingService",
     "ImageProcessingError",
     "get_image_service",
     "get_image_processing_service",
     "ImageServiceInterface",
-    "ImageProcessingServiceInterface"
+    "ImageProcessingServiceInterface",
 ]
 
 
-@lru_cache()
 def get_image_processing_service() -> ImageProcessingServiceInterface:
-    """
-    Get image processing service instance.
-    
+    """Get image processing service instance.
+
     Returns:
         ImageProcessingServiceInterface: Service for processing images
     """
     return ImageProcessingService()
 
 
-@lru_cache()
 def get_image_service() -> ImageServiceInterface:
-    """
-    Get image service instance.
-    
+    """Get image service instance.
+
     Returns:
         ImageServiceInterface: Service for processing and manipulating images
     """
-    persistence_service = get_image_persistence_service()
+    from app.core.supabase.client import get_supabase_client
+
+    # Get the Supabase client directly
+    supabase_client = get_supabase_client()
+
+    # Use the client to create the persistence service properly
+    from app.services.persistence.image_persistence_service import ImagePersistenceService
+
+    persistence_service = ImagePersistenceService(client=supabase_client)
+
     processing_service = get_image_processing_service()
-    
-    # Note: Although ImageService appears to be abstract,
-    # it fully implements all methods from the interface.
-    return ImageService(  # noqa: F821
-        persistence_service=persistence_service,
-        processing_service=processing_service
-    ) 
+
+    # Create the service with properly initialized dependencies
+    return ImageService(persistence_service=persistence_service, processing_service=processing_service)

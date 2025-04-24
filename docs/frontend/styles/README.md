@@ -25,10 +25,10 @@ The styles are organized into the following files:
 
 ```typescript
 // Global styles are imported in the main App component
-import './styles/global.scss';
+import "./styles/global.scss";
 
 // For specific component styles
-import './styles/components/Button.scss';
+import "./styles/components/Button.scss";
 ```
 
 ### Theme Variables
@@ -41,14 +41,14 @@ The application uses CSS variables for theming, allowing for easy dark/light mod
   --secondary-color: #ff006e;
   --background-color: #ffffff;
   --text-color: #333333;
-  
+
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-sm: 14px;
   --font-size-md: 16px;
   --font-size-lg: 18px;
@@ -70,8 +70,12 @@ The application includes several reusable animations:
 
 ```css
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in {
@@ -79,8 +83,14 @@ The application includes several reusable animations:
 }
 
 @keyframes slideIn {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .slide-in {
@@ -94,4 +104,4 @@ The application includes several reusable animations:
 2. **Mobile-First**: Start with mobile styles and use media queries for larger screens
 3. **Component Encapsulation**: Keep component styles scoped to prevent leakage
 4. **Consistent Naming**: Follow BEM (Block Element Modifier) naming convention
-5. **Performance**: Minimize nested selectors and avoid expensive CSS properties 
+5. **Performance**: Minimize nested selectors and avoid expensive CSS properties

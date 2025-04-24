@@ -19,24 +19,24 @@ This page serves as a dashboard for users to browse, manage, and revisit their p
 ```tsx
 const RecentConceptsPage: React.FC = () => {
   // State management for sorting, filtering, pagination
-  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Data fetching with React Query
   const { data, isLoading, error } = useConceptQueries.useRecentConcepts({
     sortOrder,
     page: currentPage,
-    limit: CONCEPTS_PER_PAGE
+    limit: CONCEPTS_PER_PAGE,
   });
-  
+
   return (
     <MainLayout>
       <PageHeader title="Your Recent Concepts" />
-      <RecentConceptsHeader 
+      <RecentConceptsHeader
         onSortChange={setSortOrder}
         currentSort={sortOrder}
       />
-      
+
       {/* Error and loading states handled by this component */}
       <QueryResultHandler
         isLoading={isLoading}
@@ -48,7 +48,7 @@ const RecentConceptsPage: React.FC = () => {
         {(conceptsData) => (
           <>
             <ConceptList concepts={conceptsData.items} />
-            <Pagination 
+            <Pagination
               currentPage={currentPage}
               totalPages={conceptsData.totalPages}
               onPageChange={setCurrentPage}
@@ -89,4 +89,4 @@ This page is typically accessed via the main navigation or from the dashboard. I
 
 ```tsx
 <Route path="/concepts/recent" element={<RecentConceptsPage />} />
-``` 
+```

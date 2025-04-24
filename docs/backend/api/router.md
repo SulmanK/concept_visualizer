@@ -23,14 +23,14 @@ This function creates the main API router and includes all sub-routers with appr
 
 #### Included Sub-Routers
 
-| Sub-Router | Prefix | Tags |
-|------------|--------|------|
-| health_router | `/health` | `["health"]` |
-| auth_router | `/auth` | `["auth"]` |
-| concept_router | `/concepts` | `["concepts"]` |
-| concept_storage_router | `/storage` | `["storage"]` |
-| export_router | `/export` | `["export"]` |
-| task_router | `/tasks` | `["tasks"]` |
+| Sub-Router             | Prefix      | Tags           |
+| ---------------------- | ----------- | -------------- |
+| health_router          | `/health`   | `["health"]`   |
+| auth_router            | `/auth`     | `["auth"]`     |
+| concept_router         | `/concepts` | `["concepts"]` |
+| concept_storage_router | `/storage`  | `["storage"]`  |
+| export_router          | `/export`   | `["export"]`   |
+| task_router            | `/tasks`    | `["tasks"]`    |
 
 ### configure_api_routes
 
@@ -79,4 +79,4 @@ The API follows a structured organization:
 
 ## Error Handling
 
-The router configuration also sets up error handlers using the `configure_error_handlers` function from the `app.api.errors` module. This ensures consistent error responses across all API endpoints. 
+The router configuration also sets up error handlers using the `configure_error_handlers` function from the `app.api.errors` module. This ensures consistent error responses across all API endpoints.

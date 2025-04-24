@@ -137,26 +137,29 @@ The authentication endpoints can return the following error responses:
 // Authenticate anonymously
 async function signInAnonymously() {
   try {
-    const response = await fetch('/api/auth/signin-anonymous', {
-      method: 'POST',
+    const response = await fetch("/api/auth/signin-anonymous", {
+      method: "POST",
     });
-    
+
     if (!response.ok) {
-      throw new Error('Authentication failed');
+      throw new Error("Authentication failed");
     }
-    
+
     const auth = await response.json();
-    
+
     // Store authentication data
-    localStorage.setItem('auth', JSON.stringify({
-      userId: auth.user_id,
-      token: auth.token,
-      expiresAt: auth.expires_at
-    }));
-    
+    localStorage.setItem(
+      "auth",
+      JSON.stringify({
+        userId: auth.user_id,
+        token: auth.token,
+        expiresAt: auth.expires_at,
+      }),
+    );
+
     return auth;
   } catch (error) {
-    console.error('Sign-in failed:', error);
+    console.error("Sign-in failed:", error);
     return null;
   }
 }
@@ -164,35 +167,38 @@ async function signInAnonymously() {
 // Refresh token when needed
 async function refreshToken() {
   try {
-    const auth = JSON.parse(localStorage.getItem('auth'));
-    
+    const auth = JSON.parse(localStorage.getItem("auth"));
+
     if (!auth || !auth.token) {
-      throw new Error('No authentication data found');
+      throw new Error("No authentication data found");
     }
-    
-    const response = await fetch('/api/auth/refresh', {
-      method: 'POST',
+
+    const response = await fetch("/api/auth/refresh", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${auth.token}`
-      }
+        Authorization: `Bearer ${auth.token}`,
+      },
     });
-    
+
     if (!response.ok) {
-      throw new Error('Token refresh failed');
+      throw new Error("Token refresh failed");
     }
-    
+
     const newAuth = await response.json();
-    
+
     // Update stored authentication data
-    localStorage.setItem('auth', JSON.stringify({
-      userId: newAuth.user_id,
-      token: newAuth.token,
-      expiresAt: newAuth.expires_at
-    }));
-    
+    localStorage.setItem(
+      "auth",
+      JSON.stringify({
+        userId: newAuth.user_id,
+        token: newAuth.token,
+        expiresAt: newAuth.expires_at,
+      }),
+    );
+
     return newAuth;
   } catch (error) {
-    console.error('Token refresh failed:', error);
+    console.error("Token refresh failed:", error);
     return null;
   }
 }
@@ -200,25 +206,25 @@ async function refreshToken() {
 // Sign out
 async function signOut() {
   try {
-    const auth = JSON.parse(localStorage.getItem('auth'));
-    
+    const auth = JSON.parse(localStorage.getItem("auth"));
+
     if (!auth || !auth.token) {
       return true; // Already signed out
     }
-    
-    const response = await fetch('/api/auth/signout', {
-      method: 'POST',
+
+    const response = await fetch("/api/auth/signout", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${auth.token}`
-      }
+        Authorization: `Bearer ${auth.token}`,
+      },
     });
-    
+
     // Clear local auth data regardless of response
-    localStorage.removeItem('auth');
-    
+    localStorage.removeItem("auth");
+
     return response.ok;
   } catch (error) {
-    console.error('Sign-out failed:', error);
+    console.error("Sign-out failed:", error);
     return false;
   }
 }
@@ -228,4 +234,4 @@ async function signOut() {
 
 - [Auth Middleware](../../middleware/auth_middleware.md): Middleware for authenticating requests
 - [Supabase Client](../../../core/supabase/client.md): Client for interacting with Supabase
-- [Security](../../../utils/security/mask.md): Utility for masking sensitive information 
+- [Security](../../../utils/security/mask.md): Utility for masking sensitive information

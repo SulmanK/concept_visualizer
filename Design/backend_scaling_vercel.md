@@ -1,18 +1,21 @@
 # Backend Scaling Strategy for Concept Visualizer on Vercel
 
 ## Current Status
+
 - FastAPI backend using a single worker
 - Sequential request processing (no parallelism)
 - Limited ability to handle concurrent users
 - Targeted for Vercel deployment
 
 ## Requirements
+
 - Deploy on Vercel's free tier
 - Support up to 20 concurrent users (5 minimum)
 - Optimize for cost efficiency (free tier usage)
 - Maintain responsiveness under concurrent load
 
 ## Technical Constraints
+
 - Vercel Serverless Functions have cold starts
 - Free tier has limited execution time (10-60 seconds)
 - Memory limits of 1024MB per function
@@ -41,7 +44,9 @@ Vercel's serverless architecture automatically provisions instances based on tra
 ```
 
 #### Implementation Plan:
+
 1. Create a `vercel.json` configuration:
+
 ```json
 {
   "version": 2,
@@ -61,6 +66,7 @@ Vercel's serverless architecture automatically provisions instances based on tra
 ```
 
 2. Create an entry point specifically for Vercel:
+
 ```python
 # backend/vercel_app.py
 from app.main import app
@@ -83,6 +89,7 @@ async def generate_concept(request: PromptRequest, service: ConceptService = Dep
 ```
 
 #### Benefits:
+
 - Allows handling multiple requests concurrently within the same function instance
 - Prevents blocking during I/O operations (like JigsawStack API calls)
 - Makes efficient use of the limited resources on Vercel
@@ -94,7 +101,7 @@ For operations that take longer than a few seconds (like image generation), we'l
 ```python
 @router.post("/generate-with-background", response_model=TaskResponse)
 async def generate_with_background(
-    request: PromptRequest, 
+    request: PromptRequest,
     background_tasks: BackgroundTasks,
     service: ConceptService = Depends()
 ):
@@ -103,19 +110,20 @@ async def generate_with_background(
     The client can poll for results.
     """
     task_id = str(uuid.uuid4())
-    
+
     # Schedule the generation in the background
     background_tasks.add_task(
         service.generate_concept_and_store,
         task_id,
-        request.logo_description, 
+        request.logo_description,
         request.theme_description
     )
-    
+
     return {"task_id": task_id, "status": "processing"}
 ```
 
 #### Why This Rather Than Celery/Redis:
+
 - Simpler implementation that works within Vercel's serverless model
 - No need for additional infrastructure (Redis server, worker processes)
 - Suitable for our modest requirements (<20 concurrent users)
@@ -135,10 +143,10 @@ async def get_task_status(task_id: str, db: Database = Depends(get_db)):
         "SELECT status, result FROM tasks WHERE id = :task_id",
         {"task_id": task_id}
     )
-    
+
     if not result:
         raise HTTPException(status_code=404, detail="Task not found")
-        
+
     return {
         "task_id": task_id,
         "status": result["status"],
@@ -151,6 +159,7 @@ async def get_task_status(task_id: str, db: Database = Depends(get_db)):
 To keep the application responsive:
 
 1. **Timeout Management**:
+
 ```python
 @router.post("/generate-optimized")
 async def generate_optimized(request: PromptRequest):
@@ -168,6 +177,7 @@ async def generate_optimized(request: PromptRequest):
 ```
 
 2. **Response Streaming** (for progress updates):
+
 ```python
 @router.get("/stream-progress/{task_id}")
 async def stream_progress(task_id: str, request: Request):
@@ -178,44 +188,49 @@ async def stream_progress(task_id: str, request: Request):
                 "SELECT progress FROM tasks WHERE id = :task_id",
                 {"task_id": task_id}
             )
-            
+
             if not progress:
                 yield f"data: {json.dumps({'error': 'Task not found'})}\n\n"
                 break
-                
+
             yield f"data: {json.dumps({'progress': progress['progress']})}\n\n"
-            
+
             if progress['progress'] == 100:
                 break
-                
+
             await asyncio.sleep(1)
-    
+
     return EventSourceResponse(event_generator())
 ```
 
 ## Implementation Phases
 
 ### Phase 1: Vercel Configuration
+
 - Create vercel.json
 - Create Vercel entry point
 - Test basic deployment
 
 ### Phase 2: Async Optimization
+
 - Review and convert all endpoints to async
 - Implement proper error handling for async operations
 - Test with simulated concurrent requests
 
 ### Phase 3: Background Task Implementation
+
 - Add BackgroundTasks support
 - Create task status tracking in Supabase
 - Add endpoints for checking task status
 
 ### Phase 4: Response Optimization
+
 - Implement timeouts
 - Add streaming progress updates
 - Optimize JigsawStack API calls
 
 ### Phase 5: Testing & Monitoring
+
 - Test with simulated concurrent users
 - Implement basic monitoring
 - Set up alerts for failures
@@ -266,7 +281,7 @@ class PromptRequest(BaseModel):
 
 @app.post("/api/concept/generate", response_model=TaskResponse)
 async def generate_concept(
-    request: PromptRequest, 
+    request: PromptRequest,
     background_tasks: BackgroundTasks,
     db = Depends(get_db),
     service: ConceptService = Depends()
@@ -277,13 +292,13 @@ async def generate_concept(
     """
     # Generate a unique task ID
     task_id = str(uuid.uuid4())
-    
+
     # Get session ID from request cookies or create a new one
     session_id = request.cookies.get("concept_session")
     if not session_id:
         session_id = str(uuid.uuid4())
         # Will need to set this cookie in the response
-    
+
     # Store task in database as 'pending'
     await db.execute(
         """
@@ -299,7 +314,7 @@ async def generate_concept(
             "updated_at": datetime.utcnow()
         }
     )
-    
+
     # Add the task to background tasks
     background_tasks.add_task(
         process_generation_task,
@@ -310,10 +325,10 @@ async def generate_concept(
         service,
         db
     )
-    
+
     # Create response with a cookie for session tracking
     response = TaskResponse(task_id=task_id, status="pending")
-    
+
     # If new session, set the cookie
     if not request.cookies.get("concept_session"):
         response.set_cookie(
@@ -323,7 +338,7 @@ async def generate_concept(
             max_age=60*60*24*30,  # 30 days
             samesite="lax"
         )
-    
+
     return response
 ```
 
@@ -347,43 +362,43 @@ async def process_generation_task(
             "UPDATE tasks SET status = :status, updated_at = :updated_at WHERE id = :id",
             {"id": task_id, "status": "processing", "updated_at": datetime.utcnow()}
         )
-        
+
         # Generate the concept - this is the long-running operation
         result = await service.generate_concept(logo_description, theme_description)
-        
+
         # Update database with successful result
         await db.execute(
             """
-            UPDATE tasks 
-            SET status = :status, 
-                result = :result, 
-                updated_at = :updated_at 
+            UPDATE tasks
+            SET status = :status,
+                result = :result,
+                updated_at = :updated_at
             WHERE id = :id
             """,
             {
-                "id": task_id, 
-                "status": "completed", 
-                "result": json.dumps(result), 
+                "id": task_id,
+                "status": "completed",
+                "result": json.dumps(result),
                 "updated_at": datetime.utcnow()
             }
         )
     except Exception as e:
         # Log the error
         logger.error(f"Error processing task {task_id}: {str(e)}")
-        
+
         # Update database with error
         await db.execute(
             """
-            UPDATE tasks 
-            SET status = :status, 
-                error = :error, 
-                updated_at = :updated_at 
+            UPDATE tasks
+            SET status = :status,
+                error = :error,
+                updated_at = :updated_at
             WHERE id = :id
             """,
             {
-                "id": task_id, 
-                "status": "failed", 
-                "error": str(e), 
+                "id": task_id,
+                "status": "failed",
+                "error": str(e),
                 "updated_at": datetime.utcnow()
             }
         )
@@ -402,30 +417,30 @@ async def get_task_status(task_id: str, db = Depends(get_db)):
     task = await db.fetch_one(
         """
         SELECT id, status, result, error, created_at, updated_at
-        FROM tasks 
+        FROM tasks
         WHERE id = :id
         """,
         {"id": task_id}
     )
-    
+
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     response = {
         "task_id": task["id"],
         "status": task["status"],
         "created_at": task["created_at"],
         "updated_at": task["updated_at"]
     }
-    
+
     # Include result if task is completed
     if task["status"] == "completed" and task["result"]:
         response["result"] = json.loads(task["result"])
-    
+
     # Include error if task failed
     if task["status"] == "failed" and task["error"]:
         response["error"] = task["error"]
-    
+
     return response
 ```
 
@@ -436,41 +451,43 @@ On the frontend, we'll need to implement a polling mechanism:
 ```typescript
 // React hook for polling task status
 function useTaskStatus(taskId: string | null) {
-  const [status, setStatus] = useState<'pending' | 'processing' | 'completed' | 'failed' | null>(null);
+  const [status, setStatus] = useState<
+    "pending" | "processing" | "completed" | "failed" | null
+  >(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!taskId) return;
-    
+
     let intervalId: number;
     let isMounted = true;
-    
+
     const checkStatus = async () => {
       try {
         setLoading(true);
         const response = await fetch(`/api/tasks/${taskId}`);
-        
+
         if (!response.ok) {
-          throw new Error('Failed to fetch task status');
+          throw new Error("Failed to fetch task status");
         }
-        
+
         const data = await response.json();
-        
+
         if (isMounted) {
           setStatus(data.status);
-          
+
           if (data.result) {
             setResult(data.result);
           }
-          
+
           if (data.error) {
             setError(data.error);
           }
-          
+
           // If we've reached a terminal state, stop polling
-          if (data.status === 'completed' || data.status === 'failed') {
+          if (data.status === "completed" || data.status === "failed") {
             clearInterval(intervalId);
           }
         }
@@ -484,20 +501,20 @@ function useTaskStatus(taskId: string | null) {
         }
       }
     };
-    
+
     // Initial check
     checkStatus();
-    
+
     // Set up polling every 2 seconds
     intervalId = window.setInterval(checkStatus, 2000);
-    
+
     // Clean up
     return () => {
       isMounted = false;
       clearInterval(intervalId);
     };
   }, [taskId]);
-  
+
   return { status, result, error, loading };
 }
 ```
@@ -513,16 +530,16 @@ Since our background task might reach Vercel's 60-second limit, we need a resili
 ```python
 async def process_generation_task(...):
     start_time = time.time()
-    
+
     try:
         # Update status to processing...
-        
+
         # Check if we have enough time for the operation (allowing some buffer)
         if time.time() - start_time > 50:  # 50 seconds to be safe
             raise Exception("Function timeout imminent, need to restart")
-            
+
         # Generate the concept...
-        
+
         # Update database with successful result...
     except Exception as e:
         if "timeout imminent" in str(e):
@@ -551,13 +568,13 @@ async def process_pending_tasks(
     stalled_tasks = await db.fetch_all(
         """
         SELECT id, session_id, request
-        FROM tasks 
+        FROM tasks
         WHERE status = 'pending' AND updated_at < :cutoff_time
         LIMIT 5  /* Process a few at a time */
         """,
         {"cutoff_time": datetime.utcnow() - timedelta(minutes=2)}
     )
-    
+
     for task in stalled_tasks:
         # Start a new background task for each stalled task
         request_data = json.loads(task["request"])
@@ -570,7 +587,7 @@ async def process_pending_tasks(
             service,
             db
         )
-    
+
     return {"processed": len(stalled_tasks)}
 ```
 
@@ -583,13 +600,14 @@ Create a Vercel configuration for the cron job in `vercel.json`:
   "crons": [
     {
       "path": "/api/cron/process-pending-tasks",
-      "schedule": "* * * * *"  // Run every minute
+      "schedule": "* * * * *" // Run every minute
     }
   ]
 }
 ```
 
 This implementation gives you a robust background task system that:
+
 1. Immediately returns a task ID to the client
 2. Processes generation in the background
 3. Persists task state in Supabase
@@ -609,6 +627,7 @@ BackgroundTasks is a lightweight solution built into FastAPI that doesn't requir
 3. Adequate functionality - handles our background processing needs
 
 The trade-offs are:
+
 - Limited to the lifetime of the serverless function (max 60 seconds on Vercel free tier)
 - No persistent worker pool for high-volume background processing
 - Less sophisticated task management compared to Celery
@@ -616,20 +635,25 @@ The trade-offs are:
 ### Why not use Gunicorn with Uvicorn workers?
 
 Gunicorn with Uvicorn workers is an excellent solution for traditional deployments that offers:
+
 1. Multiple worker processes for true parallelism
 2. Process management for stability
 3. Graceful worker rotation and shutdown
 
 However, in a serverless environment like Vercel:
+
 1. You can't control the underlying server or process management
 2. Serverless functions don't maintain long-running processes
 3. Vercel automatically scales by creating new function instances
 
 For self-hosted environments, the Gunicorn command would be:
+
 ```bash
 gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
 ```
+
 Where:
+
 - `-w 4` specifies 4 worker processes
 - `-k uvicorn.workers.UvicornWorker` uses Uvicorn's ASGI workers
 - This creates 4 parallel processes that can handle requests simultaneously
@@ -637,6 +661,7 @@ Where:
 ## Monitoring Considerations
 
 To monitor the application performance:
+
 - Use Vercel's built-in function metrics
 - Implement logging to Vercel logs
 - Add custom performance tracking in critical endpoints
@@ -676,33 +701,37 @@ backend/
 ### File Modification Details
 
 1. **Create `backend/vercel.json`**
+
    - Configure deployment settings
    - Set up cron jobs for pending task processing
 
 2. **Create `backend/vercel_app.py`**
+
    - Simple entry point for Vercel serverless functions
 
 3. **Create `backend/app/models/task.py`**
+
    - Define Pydantic models for task requests and responses
+
    ```python
    from pydantic import BaseModel, Field
    from typing import Optional, Dict, Any
    from datetime import datetime
    import uuid
-   
+
    class TaskBase(BaseModel):
        """Base model for tasks"""
        id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-       
+
    class TaskCreate(TaskBase):
        """Model for creating a new task"""
        pass
-       
+
    class TaskResponse(TaskBase):
        """Model for task response"""
        status: str
        created_at: Optional[datetime] = None
-       
+
    class TaskStatusResponse(TaskResponse):
        """Model for task status response"""
        updated_at: Optional[datetime] = None
@@ -711,24 +740,27 @@ backend/
    ```
 
 4. **Update `backend/app/models/request.py` and `backend/app/models/response.py`**
+
    - Add any additional request/response models needed
 
 5. **Create `backend/app/api/routes/tasks.py`**
+
    - Implement endpoints for task status checking
+
    ```python
    """
    Task status endpoints for the API.
-   
+
    This module provides endpoints to check the status of background tasks.
    """
-   
+
    from fastapi import APIRouter, Depends, HTTPException
    from app.models.task import TaskStatusResponse
    from app.core.supabase import get_supabase_client
    import json
-   
+
    router = APIRouter()
-   
+
    @router.get("/{task_id}", response_model=TaskStatusResponse)
    async def get_task_status(task_id: str, supabase=Depends(get_supabase_client)):
        """
@@ -738,67 +770,73 @@ backend/
    ```
 
 6. **Update `backend/app/api/routes/__init__.py`**
+
    - Register the new tasks router
 
 7. **Modify `backend/app/api/routes/concept.py`**
+
    - Update to use BackgroundTasks for the generation process
 
 8. **Create `backend/app/services/task_service.py`**
+
    - Implement task management services
+
    ```python
    """
    Task management services.
-   
+
    This module provides services for managing background tasks.
    """
-   
+
    import json
    import logging
    import time
    from datetime import datetime
    from typing import Dict, Any
-   
+
    from app.core.supabase import SupabaseClient
-   
+
    logger = logging.getLogger(__name__)
-   
+
    class TaskService:
        """Service for managing background tasks."""
-       
+
        def __init__(self, supabase: SupabaseClient):
            self.supabase = supabase
-           
+
        async def create_task(self, session_id: str, request_data: Dict[str, Any]) -> str:
            """Create a new task and return its ID."""
            # Implementation details
-           
+
        async def update_task_status(self, task_id: str, status: str, result: Dict[str, Any] = None, error: str = None):
            """Update the status of a task."""
            # Implementation details
-           
+
        async def get_task_status(self, task_id: str) -> Dict[str, Any]:
            """Get the status of a task."""
            # Implementation details
    ```
 
 9. **Create an API endpoint for Cron Jobs (`backend/app/api/routes/cron.py`)**
+
    - Implement the endpoint for Vercel's cron to call
+
    ```python
    """
    Cron job endpoints for the API.
-   
+
    This module provides endpoints for cron jobs to process pending tasks.
    """
-   
+
    from fastapi import APIRouter, BackgroundTasks, Depends
    from app.core.supabase import get_supabase_client
    from app.services.task_service import TaskService
    from app.services.concept_service import ConceptService
    from datetime import datetime, timedelta
    import json
-   
+
    router = APIRouter()
-   
+
    @router.post("/process-pending-tasks")
    async def process_pending_tasks(
        background_tasks: BackgroundTasks,
@@ -842,10 +880,10 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 -- Policy to allow the server to read/write all tasks
 CREATE POLICY "Server can read all tasks" ON tasks
     FOR SELECT USING (true);
-    
+
 CREATE POLICY "Server can insert tasks" ON tasks
     FOR INSERT WITH CHECK (true);
-    
+
 CREATE POLICY "Server can update tasks" ON tasks
     FOR UPDATE USING (true);
-``` 
+```

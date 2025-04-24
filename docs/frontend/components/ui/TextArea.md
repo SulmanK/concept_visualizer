@@ -11,17 +11,17 @@ The `TextArea` component provides a customizable, accessible textarea input for 
 
 ## Props
 
-| Prop        | Type                                      | Required | Default     | Description                             |
-|-------------|-------------------------------------------|----------|-------------|-----------------------------------------|
-| `label`     | `string`                                  | No       | `undefined` | Label text for the textarea             |
-| `helperText`| `string`                                  | No       | `undefined` | Helper text displayed below the textarea|
-| `error`     | `string`                                  | No       | `undefined` | Error message to display                |
-| `fullWidth` | `boolean`                                 | No       | `false`     | Whether the textarea takes full width   |
-| `animated`  | `boolean`                                 | No       | `true`      | Whether to apply focus animations       |
-| `rows`      | `number`                                  | No       | `4`         | Number of visible rows                  |
-| `id`        | `string`                                  | No       | Auto-generated | ID for the textarea element          |
-| `className` | `string`                                  | No       | `''`        | Additional CSS classes                  |
-| `...props`  | `TextareaHTMLAttributes<HTMLTextAreaElement>` | No  | -           | All standard textarea HTML attributes   |
+| Prop         | Type                                          | Required | Default        | Description                              |
+| ------------ | --------------------------------------------- | -------- | -------------- | ---------------------------------------- |
+| `label`      | `string`                                      | No       | `undefined`    | Label text for the textarea              |
+| `helperText` | `string`                                      | No       | `undefined`    | Helper text displayed below the textarea |
+| `error`      | `string`                                      | No       | `undefined`    | Error message to display                 |
+| `fullWidth`  | `boolean`                                     | No       | `false`        | Whether the textarea takes full width    |
+| `animated`   | `boolean`                                     | No       | `true`         | Whether to apply focus animations        |
+| `rows`       | `number`                                      | No       | `4`            | Number of visible rows                   |
+| `id`         | `string`                                      | No       | Auto-generated | ID for the textarea element              |
+| `className`  | `string`                                      | No       | `''`           | Additional CSS classes                   |
+| `...props`   | `TextareaHTMLAttributes<HTMLTextAreaElement>` | No       | -              | All standard textarea HTML attributes    |
 
 ## State
 
@@ -39,24 +39,24 @@ The `TextArea` component provides a customizable, accessible textarea input for 
 ## Usage Example
 
 ```tsx
-import { TextArea } from '../components/ui/TextArea';
-import { useState } from 'react';
+import { TextArea } from "../components/ui/TextArea";
+import { useState } from "react";
 
 const FeedbackForm = () => {
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setFeedback(value);
-    
+
     if (value.length > 0 && value.length < 10) {
-      setError('Feedback must be at least 10 characters long');
+      setError("Feedback must be at least 10 characters long");
     } else {
       setError(undefined);
     }
   };
-  
+
   return (
     <form>
       <TextArea
@@ -70,7 +70,9 @@ const FeedbackForm = () => {
         placeholder="Tell us what you think..."
         required
       />
-      <button type="submit" disabled={!!error}>Submit</button>
+      <button type="submit" disabled={!!error}>
+        Submit
+      </button>
     </form>
   );
 };
@@ -86,4 +88,4 @@ const FeedbackForm = () => {
 ## Related Components
 
 - [`Input`](./Input.md) - Similar component for single-line text input
-- [`ErrorMessage`](./ErrorMessage.md) - Used for displaying errors elsewhere 
+- [`ErrorMessage`](./ErrorMessage.md) - Used for displaying errors elsewhere

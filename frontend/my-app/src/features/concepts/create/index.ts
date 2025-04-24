@@ -1,1 +1,1 @@
-export { LandingPage as CreateConceptPage } from '../../landing'; 
+export { LandingPage as CreateConceptPage } from "../../landing";

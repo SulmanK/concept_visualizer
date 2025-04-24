@@ -91,7 +91,7 @@
 <body class="p-8">
   <div class="max-w-6xl mx-auto">
     <h1 class="text-3xl font-bold text-gray-800 mb-8">Floating Image Concept Cards</h1>
-    
+
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
       <!-- Card 1 -->
       <div class="floating-card rounded-xl overflow-hidden bg-white">
@@ -100,13 +100,13 @@
             <img src="https://via.placeholder.com/100" alt="Krypto" class="max-w-full max-h-full object-contain">
           </div>
         </div>
-        
+
         <div class="pt-12 px-6 pb-6">
           <div class="text-center mb-6">
             <h3 class="text-xl font-bold text-gray-800 mb-1">Krypto</h3>
             <p class="text-gray-500 text-sm">Modern crypto trading platform</p>
           </div>
-          
+
           <div class="flex justify-center space-x-2 mb-6">
             <div class="original-badge bg-indigo-50 text-indigo-600">O</div>
             <div class="color-badge active" style="background-color: #6366F1; color: #6366F1;"></div>
@@ -115,14 +115,14 @@
             <div class="color-badge" style="background-color: #F59E0B; color: #F59E0B;"></div>
             <div class="color-badge" style="background-color: #EF4444; color: #EF4444;"></div>
           </div>
-          
+
           <div class="grid grid-cols-2 gap-3">
             <button class="py-2.5 px-4 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition">Refine</button>
             <button class="py-2.5 px-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg text-sm font-medium btn-hover">View Details</button>
           </div>
         </div>
       </div>
-      
+
       <!-- Card 2 -->
       <div class="floating-card rounded-xl overflow-hidden bg-white">
         <div class="gradient-top" style="--gradient-from: #34D399; --gradient-to: #047857;">
@@ -130,13 +130,13 @@
             <img src="https://via.placeholder.com/100" alt="Golf King" class="max-w-full max-h-full object-contain">
           </div>
         </div>
-        
+
         <div class="pt-12 px-6 pb-6">
           <div class="text-center mb-6">
             <h3 class="text-xl font-bold text-gray-800 mb-1">Golf King</h3>
             <p class="text-gray-500 text-sm">Premier golf equipment brand</p>
           </div>
-          
+
           <div class="flex justify-center space-x-2 mb-6">
             <div class="original-badge bg-green-50 text-green-700">O</div>
             <div class="color-badge active" style="background-color: #047857; color: #047857;"></div>
@@ -145,14 +145,14 @@
             <div class="color-badge" style="background-color: #1E3A8A; color: #1E3A8A;"></div>
             <div class="color-badge" style="background-color: #111827; color: #111827;"></div>
           </div>
-          
+
           <div class="grid grid-cols-2 gap-3">
             <button class="py-2.5 px-4 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition">Refine</button>
             <button class="py-2.5 px-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg text-sm font-medium btn-hover">View Details</button>
           </div>
         </div>
       </div>
-      
+
       <!-- Card 3 -->
       <div class="floating-card rounded-xl overflow-hidden bg-white">
         <div class="gradient-top" style="--gradient-from: #F472B6; --gradient-to: #BE185D;">
@@ -160,13 +160,13 @@
             <img src="https://via.placeholder.com/100" alt="Queen" class="max-w-full max-h-full object-contain">
           </div>
         </div>
-        
+
         <div class="pt-12 px-6 pb-6">
           <div class="text-center mb-6">
             <h3 class="text-xl font-bold text-gray-800 mb-1">Queen</h3>
             <p class="text-gray-500 text-sm">Luxury women's fashion</p>
           </div>
-          
+
           <div class="flex justify-center space-x-2 mb-6">
             <div class="original-badge bg-pink-50 text-pink-700">O</div>
             <div class="color-badge active" style="background-color: #BE185D; color: #BE185D;"></div>
@@ -175,7 +175,7 @@
             <div class="color-badge" style="background-color: #831843; color: #831843;"></div>
             <div class="color-badge" style="background-color: #4C1D95; color: #4C1D95;"></div>
           </div>
-          
+
           <div class="grid grid-cols-2 gap-3">
             <button class="py-2.5 px-4 bg-pink-50 text-pink-700 rounded-lg text-sm font-medium hover:bg-pink-100 transition">Refine</button>
             <button class="py-2.5 px-4 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg text-sm font-medium btn-hover">View Details</button>
@@ -184,24 +184,24 @@
       </div>
     </div>
   </div>
-  
+
   <script>
     // Optional JavaScript for interactive color badge selection
     document.addEventListener('DOMContentLoaded', function() {
       const colorBadges = document.querySelectorAll('.color-badge');
-      
+
       colorBadges.forEach(badge => {
         badge.addEventListener('click', function() {
           // Find all siblings within the parent
           const siblings = Array.from(this.parentNode.children);
-          
+
           // Remove active class from all
           siblings.forEach(sib => {
             if (sib.classList.contains('color-badge')) {
               sib.classList.remove('active');
             }
           });
-          
+
           // Add active class to clicked badge
           this.classList.add('active');
         });
@@ -209,4 +209,4 @@
     });
   </script>
 </body>
-</html> 
+</html>

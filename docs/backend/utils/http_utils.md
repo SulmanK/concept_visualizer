@@ -30,15 +30,18 @@ def create_standard_response(
 This function generates a standardized JSON response with a consistent structure.
 
 **Parameters:**
+
 - `data`: The response payload (default: None)
 - `message`: Human-readable status message (default: "Success")
 - `status_code`: HTTP status code (default: 200)
 - `headers`: Additional HTTP headers to include (default: None)
 
 **Returns:**
+
 - A FastAPI JSONResponse object with standardized structure
 
 **Example Response Structure:**
+
 ```json
 {
   "success": true,
@@ -58,9 +61,11 @@ def extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
 This function extracts the token value from an Authorization header with Bearer scheme.
 
 **Parameters:**
+
 - `authorization`: The Authorization header value (e.g., "Bearer xyz123")
 
 **Returns:**
+
 - The extracted token or None if not present/valid
 
 ### Parse Query Parameters
@@ -77,14 +82,17 @@ def parse_query_parameters(
 This function processes query parameters and ensures they match expected types and names.
 
 **Parameters:**
+
 - `params`: Dictionary of query parameters
 - `allowed_params`: List of allowed parameter names
 - `type_mapping`: Dictionary mapping parameter names to expected types
 
 **Returns:**
+
 - Dictionary of validated and converted parameters
 
 **Raises:**
+
 - `InvalidQueryParameterError`: If a parameter is not allowed or has an invalid type
 
 ### Generate URL with Query Parameters
@@ -101,11 +109,13 @@ def generate_url_with_params(
 This function builds a URL with properly encoded query parameters.
 
 **Parameters:**
+
 - `base_url`: Base URL to append parameters to
 - `params`: Dictionary of query parameters
 - `exclude_none`: Whether to exclude parameters with None values (default: True)
 
 **Returns:**
+
 - Complete URL with encoded query parameters
 
 ### Handle Request Exceptions
@@ -121,10 +131,12 @@ def handle_request_exceptions(
 This decorator handles common HTTP request exceptions and converts them to appropriate HTTP responses.
 
 **Parameters:**
+
 - `func`: The function to wrap
 - `error_mapping`: Dictionary mapping exception types to (status_code, message) tuples
 
 **Returns:**
+
 - Wrapped function that handles specified exceptions
 
 ## Common HTTP Status Utilities
@@ -187,10 +199,10 @@ def get_current_user(authorization: str = Header(None)):
     token = extract_bearer_token(authorization)
     if not token:
         raise HTTPException(status_code=401, detail="Invalid or missing token")
-    
+
     # Validate the token and get user information
     # ...
-    
+
     return user_info
 ```
 
@@ -209,14 +221,14 @@ async def create_user(user_data: UserCreate):
     # This function is protected by the exception handler
     # If any of the specified exceptions occur, they will be
     # converted to appropriate HTTP responses
-    
+
     # Validate input
     if not validate_user_data(user_data):
         raise ValidationError("Invalid user data")
-    
+
     # Create user
     user = await user_service.create_user(user_data)
-    
+
     return user
 ```
 
@@ -237,12 +249,14 @@ def create_error_response(
 This function generates a standardized error response with consistent structure.
 
 **Parameters:**
+
 - `message`: Human-readable error message
 - `status_code`: HTTP status code (4xx or 5xx)
 - `error_code`: Machine-readable error code (e.g., "INVALID_INPUT")
 - `details`: Additional error details
 
 **Returns:**
+
 - A FastAPI JSONResponse object with standardized error structure
 
 ## Content Type Helpers
@@ -252,10 +266,10 @@ The module includes helpers for working with content types:
 ```python
 def is_json_content(content_type: str) -> bool:
     """Check if the content type is JSON."""
-    
+
 def is_multipart_content(content_type: str) -> bool:
     """Check if the content type is multipart form data."""
-    
+
 def is_form_content(content_type: str) -> bool:
     """Check if the content type is form-urlencoded."""
 ```
@@ -267,4 +281,4 @@ These functions validate content type strings for common API content types.
 - [API Router](../../api/router.md): Main API router that uses these HTTP utilities
 - [Error Handling](../../api/errors.md): API error handling that leverages these utilities
 - [JWT Utils](jwt_utils.md): JWT utilities that work with HTTP authentication
-- [Auth Middleware](../../api/middleware/auth_middleware.md): Authentication middleware using HTTP functions 
+- [Auth Middleware](../../api/middleware/auth_middleware.md): Authentication middleware using HTTP functions

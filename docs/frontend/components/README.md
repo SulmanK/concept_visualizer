@@ -24,4 +24,4 @@ Components are designed to be reusable and composable. Each component is documen
 - `ErrorBoundary`: Catches errors in child components
 - `MainLayout`: Main layout component for the application
 - `Toast`: Toast notification component
-- `TaskStatusBar`: Displays the status of ongoing tasks 
+- `TaskStatusBar`: Displays the status of ongoing tasks

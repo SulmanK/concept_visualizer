@@ -21,8 +21,8 @@ assets/
 Images should be optimized for web use with appropriate compression and dimensions. For responsive images, different sizes should be provided and loaded using the `OptimizedImage` component.
 
 ```tsx
-import { OptimizedImage } from 'components/ui/OptimizedImage';
-import placeholderImage from 'assets/images/placeholder.jpg';
+import { OptimizedImage } from "components/ui/OptimizedImage";
+import placeholderImage from "assets/images/placeholder.jpg";
 
 function MyComponent() {
   return (
@@ -41,8 +41,8 @@ function MyComponent() {
 SVG icons are preferred for scalability and customization. Icons should be imported and used with the appropriate wrapper component to ensure consistent styling and accessibility.
 
 ```tsx
-import { ReactComponent as StarIcon } from 'assets/icons/star.svg';
-import { Icon } from 'components/ui/Icon';
+import { ReactComponent as StarIcon } from "assets/icons/star.svg";
+import { Icon } from "components/ui/Icon";
 
 function MyComponent() {
   return (
@@ -58,8 +58,8 @@ function MyComponent() {
 Application logos should be available in multiple formats and sizes to accommodate different use cases (header, favicon, splash screen, etc.).
 
 ```tsx
-import logoFull from 'assets/logos/logo-full.svg';
-import logoSmall from 'assets/logos/logo-small.svg';
+import logoFull from "assets/logos/logo-full.svg";
+import logoSmall from "assets/logos/logo-small.svg";
 
 function Header({ isCompact }) {
   return (
@@ -75,8 +75,8 @@ function Header({ isCompact }) {
 Animation files should be lightweight and used sparingly to enhance the user experience without impacting performance.
 
 ```tsx
-import { Player } from '@lottiefiles/react-lottie-player';
-import loadingAnimation from 'assets/animations/loading.json';
+import { Player } from "@lottiefiles/react-lottie-player";
+import loadingAnimation from "assets/animations/loading.json";
 
 function LoadingIndicator() {
   return (
@@ -84,7 +84,7 @@ function LoadingIndicator() {
       autoplay
       loop
       src={loadingAnimation}
-      style={{ height: '100px', width: '100px' }}
+      style={{ height: "100px", width: "100px" }}
     />
   );
 }
@@ -115,7 +115,7 @@ For assets loaded from external sources (APIs, CDNs), handle loading states and 
 function ExternalImage({ src, alt, ...props }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   return (
     <div className="image-container">
       {isLoading && <LoadingIndicator />}
@@ -126,11 +126,11 @@ function ExternalImage({ src, alt, ...props }) {
         onLoad={() => setIsLoading(false)}
         onError={(e) => {
           setIsLoading(false);
-          setError(new Error('Failed to load image'));
+          setError(new Error("Failed to load image"));
         }}
         {...props}
       />
     </div>
   );
 }
-``` 
+```

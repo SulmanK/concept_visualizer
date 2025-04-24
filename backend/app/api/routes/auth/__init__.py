@@ -1,5 +1,4 @@
-"""
-Authentication routes package.
+"""Authentication routes package.
 
 This package provides authentication-related API endpoints.
 """
@@ -12,4 +11,4 @@ from .auth_routes import router as auth_router
 router = APIRouter()
 
 # Include auth routes
-router.include_router(auth_router, prefix="", tags=["auth"]) 
+router.include_router(auth_router, prefix="", tags=["auth"])

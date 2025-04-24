@@ -1,30 +1,30 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { ErrorMessage } from './ErrorMessage';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { ErrorMessage } from "./ErrorMessage";
 
 interface ErrorBoundaryProps {
   /**
    * Child components to be rendered inside the error boundary
    */
   children: ReactNode;
-  
+
   /**
    * Custom fallback component to render when an error occurs
    * If not provided, will use the default ErrorMessage component
    */
   fallback?: ReactNode;
-  
+
   /**
    * Whether to retry loading the component that crashed
    * @default true
    */
   canRetry?: boolean;
-  
+
   /**
    * Custom error message to display
    * @default "Something went wrong in this component"
    */
   errorMessage?: string;
-  
+
   /**
    * Callback function to be called when an error is caught
    */
@@ -36,12 +36,12 @@ interface ErrorBoundaryState {
    * Whether an error has been caught
    */
   hasError: boolean;
-  
+
   /**
    * The error that was caught
    */
   error: Error | null;
-  
+
   /**
    * Additional information about the error
    */
@@ -51,7 +51,7 @@ interface ErrorBoundaryState {
 /**
  * Component that catches JavaScript errors anywhere in its child component tree,
  * displays a fallback UI, and logs the errors.
- * 
+ *
  * Usage:
  * ```jsx
  * <ErrorBoundary>
@@ -59,7 +59,10 @@ interface ErrorBoundaryState {
  * </ErrorBoundary>
  * ```
  */
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -85,14 +88,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
    */
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
-    
+
     // Call the onError callback if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-    
+
     // Log the error to the console
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    console.error("Error caught by ErrorBoundary:", error, errorInfo);
   }
 
   /**
@@ -108,7 +111,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render(): ReactNode {
     const { hasError, error, errorInfo } = this.state;
-    const { children, fallback, canRetry = true, errorMessage = 'Something went wrong in this component' } = this.props;
+    const {
+      children,
+      fallback,
+      canRetry = true,
+      errorMessage = "Something went wrong in this component",
+    } = this.props;
 
     // If there's no error, render the children
     if (!hasError) {
@@ -121,11 +129,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     // Get the component stack from the error info
-    const componentStack = errorInfo?.componentStack || '';
-    
+    const componentStack = errorInfo?.componentStack || "";
+
     // Format the stack for display as details
-    const errorDetails = error?.stack || error?.message || 'No error details available';
-    
+    const errorDetails =
+      error?.stack || error?.message || "No error details available";
+
     // Otherwise, render our default error message
     return (
       <div className="p-4 rounded-lg shadow-sm">
@@ -140,4 +149,4 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 }
 
-export default ErrorBoundary; 
+export default ErrorBoundary;

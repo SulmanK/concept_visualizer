@@ -1,8 +1,8 @@
 /**
  * Types specific to the Landing page feature
  */
-import { GenerationResponse } from '../../../types/concept.types';
-import { FormStatus } from '../../../types/ui.types';
+import { GenerationResponse } from "../../../types/concept.types";
+import { FormStatus } from "../../../types/ui.types";
 
 /**
  * Step model for the How It Works section
@@ -63,4 +63,4 @@ export interface RecentConceptsSectionProps {
   concepts: RecentConcept[];
   onEdit: (id: string) => void;
   onViewDetails: (id: string) => void;
-} 
+}

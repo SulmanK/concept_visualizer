@@ -18,7 +18,7 @@ This service builds upon the core image processing and conversion modules to pro
 ```python
 class ImageProcessingService:
     """Service for advanced image processing operations."""
-    
+
     def __init__(
         self,
         cache_service: Optional[CacheServiceInterface] = None,
@@ -49,14 +49,17 @@ async def generate_variations(
 This method produces different versions of an image according to provided configurations.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `variation_configs`: List of configuration dictionaries for each variation
 - `cache_key`: Optional cache key for retrieving/storing results
 
 **Returns:**
+
 - Dictionary mapping variation identifiers to binary image data
 
 **Raises:**
+
 - `ImageProcessingError`: If variation generation fails
 - `InvalidConfigurationError`: If configuration is invalid
 
@@ -74,13 +77,16 @@ async def apply_color_transformations(
 This method applies multiple color transformations in sequence to an image.
 
 **Parameters:**
+
 - `image_data`: Binary image data to transform
 - `transformations`: List of transformation configurations
 
 **Returns:**
+
 - Binary data of the transformed image
 
 **Raises:**
+
 - `ImageProcessingError`: If transformation fails
 - `UnsupportedTransformationError`: If a transformation is not supported
 
@@ -100,15 +106,18 @@ async def create_composite(
 This method creates a composite image by combining multiple image layers.
 
 **Parameters:**
+
 - `layers`: List of layer configurations with image data and positioning
 - `width`: Width of the output composite in pixels
 - `height`: Height of the output composite in pixels
 - `background_color`: Optional background color (e.g., "#FFFFFF")
 
 **Returns:**
+
 - Binary data of the composite image
 
 **Raises:**
+
 - `ImageProcessingError`: If composite creation fails
 - `InvalidLayerError`: If a layer configuration is invalid
 
@@ -126,13 +135,16 @@ async def analyze_image(
 This method conducts various analyses on an image to extract information.
 
 **Parameters:**
+
 - `image_data`: Binary image data to analyze
 - `analysis_types`: List of analysis types to perform (e.g., "colors", "composition")
 
 **Returns:**
+
 - Dictionary containing analysis results organized by type
 
 **Raises:**
+
 - `ImageProcessingError`: If analysis fails
 - `UnsupportedAnalysisError`: If an analysis type is not supported
 
@@ -155,11 +167,13 @@ async def generate_and_apply_palette(
 This method creates color palettes based on a theme and applies them to an image.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `theme_description`: Textual description of the desired color theme
 - `num_palettes`: Number of palette variations to generate
 
 **Returns:**
+
 - List of dictionaries with palette information and transformed images
 
 ### Image Export Processing
@@ -177,11 +191,13 @@ async def process_for_export(
 This method prepares an image for export with format-specific optimizations.
 
 **Parameters:**
+
 - `image_data`: Binary image data to process
 - `export_format`: Target export format (e.g., "png", "jpeg", "svg")
 - `export_options`: Format-specific options for the export
 
 **Returns:**
+
 - Binary data of the processed image ready for export
 
 ## Resource Management
@@ -282,4 +298,4 @@ print(f"Quality assessment: {analysis['quality']['overall_score']}")
 - [Image Conversion](conversion.md): Image format conversion
 - [Image Service](service.md): Main image service implementation
 - [Image Interface](interface.md): Interface for image services
-- [Export Service](../export/service.md): Service that uses image processing for exports 
+- [Export Service](../export/service.md): Service that uses image processing for exports

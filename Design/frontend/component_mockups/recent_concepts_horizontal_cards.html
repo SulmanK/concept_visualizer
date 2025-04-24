@@ -27,38 +27,38 @@
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Inter', sans-serif;
       background-color: #f7f9fc;
       color: var(--gray-800);
       padding: 2rem;
     }
-    
+
     .container {
       max-width: 1200px;
       margin: 0 auto;
     }
-    
+
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
     }
-    
+
     .title {
       font-size: 1.75rem;
       font-weight: 700;
       color: var(--gray-900);
     }
-    
+
     .create-new {
       padding: 0.5rem 1rem;
       background-color: var(--primary);
@@ -73,23 +73,23 @@
       align-items: center;
       gap: 0.5rem;
     }
-    
+
     .create-new:hover {
       background-color: var(--primary-dark);
     }
-    
+
     .icon {
       display: inline-block;
       width: 1rem;
       height: 1rem;
     }
-    
+
     .recent-concepts {
       display: flex;
       flex-direction: column;
       gap: 1.5rem;
     }
-    
+
     .concept-card {
       display: flex;
       background-color: white;
@@ -99,12 +99,12 @@
       border: 1px solid var(--gray-200);
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    
+
     .concept-card:hover {
       transform: translateY(-2px);
       box-shadow: var(--shadow-md);
     }
-    
+
     .concept-image {
       flex: 0 0 180px;
       background-color: var(--primary-lightest);
@@ -113,13 +113,13 @@
       justify-content: center;
       overflow: hidden;
     }
-    
+
     .concept-image img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    
+
     .concept-image .initials {
       width: 80px;
       height: 80px;
@@ -132,27 +132,27 @@
       font-size: 1.75rem;
       font-weight: 600;
     }
-    
+
     .concept-details {
       flex: 1;
       padding: 1.5rem;
       display: flex;
       flex-direction: column;
     }
-    
+
     .concept-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       margin-bottom: 0.75rem;
     }
-    
+
     .concept-title {
       font-size: 1.25rem;
       font-weight: 600;
       color: var(--gray-900);
     }
-    
+
     .concept-date {
       font-size: 0.75rem;
       color: var(--gray-500);
@@ -160,20 +160,20 @@
       background-color: var(--gray-100);
       border-radius: 1rem;
     }
-    
+
     .concept-description {
       font-size: 0.875rem;
       color: var(--gray-600);
       margin-bottom: 1rem;
       flex-grow: 1;
     }
-    
+
     .color-palette {
       display: flex;
       gap: 0.5rem;
       margin-bottom: 1.5rem;
     }
-    
+
     .color-swatch {
       width: 2rem;
       height: 2rem;
@@ -183,23 +183,23 @@
       cursor: pointer;
       transition: transform 0.15s;
     }
-    
+
     .color-swatch:hover {
       transform: scale(1.1);
     }
-    
+
     .color-swatch.active {
       outline: 2px solid var(--primary);
       outline-offset: 1px;
     }
-    
+
     .variation-tags {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
       margin-bottom: 1.5rem;
     }
-    
+
     .variation-tag {
       font-size: 0.75rem;
       padding: 0.25rem 0.75rem;
@@ -209,22 +209,22 @@
       cursor: pointer;
       transition: background-color 0.2s;
     }
-    
+
     .variation-tag:hover {
       background-color: var(--primary-lighter);
     }
-    
+
     .variation-tag.active {
       background-color: var(--primary);
       color: white;
     }
-    
+
     .actions {
       display: flex;
       justify-content: flex-end;
       gap: 0.75rem;
     }
-    
+
     .btn {
       padding: 0.5rem 1rem;
       border-radius: 0.375rem;
@@ -236,28 +236,28 @@
       align-items: center;
       gap: 0.5rem;
     }
-    
+
     .btn-outline {
       background-color: transparent;
       border: 1px solid var(--gray-300);
       color: var(--gray-700);
     }
-    
+
     .btn-outline:hover {
       background-color: var(--gray-50);
       border-color: var(--gray-400);
     }
-    
+
     .btn-primary {
       background-color: var(--primary);
       color: white;
       border: none;
     }
-    
+
     .btn-primary:hover {
       background-color: var(--primary-dark);
     }
-    
+
     .empty-state {
       padding: 4rem 2rem;
       text-align: center;
@@ -267,7 +267,7 @@
       border: 1px solid var(--gray-200);
       margin-top: 2rem;
     }
-    
+
     .empty-state-icon {
       width: 4rem;
       height: 4rem;
@@ -275,14 +275,14 @@
       margin-inline: auto;
       color: var(--gray-400);
     }
-    
+
     .empty-state-title {
       font-size: 1.25rem;
       font-weight: 600;
       color: var(--gray-800);
       margin-bottom: 0.75rem;
     }
-    
+
     .empty-state-message {
       font-size: 0.875rem;
       color: var(--gray-500);
@@ -294,7 +294,7 @@
       .concept-card {
         flex-direction: column;
       }
-      
+
       .concept-image {
         flex: 0 0 160px;
         width: 100%;
@@ -313,7 +313,7 @@
         Create New
       </button>
     </div>
-    
+
     <div class="recent-concepts">
       <!-- Concept Card 1 -->
       <div class="concept-card">
@@ -329,14 +329,14 @@
             A minimalist outdoor brand with a mountain-inspired theme. This concept features natural elements
             with a modern twist, perfect for adventure gear and apparel.
           </p>
-          
+
           <div class="variation-tags">
             <span class="variation-tag active">Original</span>
             <span class="variation-tag">Ocean Blue</span>
             <span class="variation-tag">Forest Green</span>
             <span class="variation-tag">Sunset Orange</span>
           </div>
-          
+
           <div class="color-palette">
             <div class="color-swatch active" style="background-color: #3B82F6;"></div>
             <div class="color-swatch" style="background-color: #10B981;"></div>
@@ -344,7 +344,7 @@
             <div class="color-swatch" style="background-color: #6366F1;"></div>
             <div class="color-swatch" style="background-color: #EC4899;"></div>
           </div>
-          
+
           <div class="actions">
             <button class="btn btn-outline">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -362,7 +362,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Concept Card 2 -->
       <div class="concept-card">
         <div class="concept-image">
@@ -377,20 +377,20 @@
             Futuristic tech company with cutting-edge digital solutions. This concept embraces a sleek and
             modern aesthetic with vibrant color accents and geometric patterns.
           </p>
-          
+
           <div class="variation-tags">
             <span class="variation-tag active">Original</span>
             <span class="variation-tag">Neon Future</span>
             <span class="variation-tag">Deep Space</span>
           </div>
-          
+
           <div class="color-palette">
             <div class="color-swatch active" style="background-color: #8B5CF6;"></div>
             <div class="color-swatch" style="background-color: #3B82F6;"></div>
             <div class="color-swatch" style="background-color: #EC4899;"></div>
             <div class="color-swatch" style="background-color: #10B981;"></div>
           </div>
-          
+
           <div class="actions">
             <button class="btn btn-outline">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -408,7 +408,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Concept Card 3 -->
       <div class="concept-card">
         <div class="concept-image">
@@ -423,21 +423,21 @@
             Sustainable products with an emphasis on environmental awareness. This eco-conscious brand
             concept focuses on organic shapes, natural colors, and gentle transitions.
           </p>
-          
+
           <div class="variation-tags">
             <span class="variation-tag active">Natural</span>
             <span class="variation-tag">Forest</span>
             <span class="variation-tag">Ocean</span>
             <span class="variation-tag">Earth</span>
           </div>
-          
+
           <div class="color-palette">
             <div class="color-swatch active" style="background-color: #10B981;"></div>
             <div class="color-swatch" style="background-color: #F59E0B;"></div>
             <div class="color-swatch" style="background-color: #3B82F6;"></div>
             <div class="color-swatch" style="background-color: #D97706;"></div>
           </div>
-          
+
           <div class="actions">
             <button class="btn btn-outline">
               <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -456,7 +456,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Empty state (hidden by default) -->
     <!--
     <div class="empty-state">
@@ -477,4 +477,4 @@
     -->
   </div>
 </body>
-</html> 
+</html>

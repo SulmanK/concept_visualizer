@@ -20,7 +20,7 @@ The module provides a `get_redis_client()` function to create and configure Redi
 def get_redis_client() -> Optional[redis.Redis]:
     """
     Get a configured Redis client for rate limiting.
-    
+
     Returns:
         Configured Redis client or None if Redis is not available
     """
@@ -28,6 +28,7 @@ def get_redis_client() -> Optional[redis.Redis]:
 ```
 
 This function:
+
 - Checks for required configuration settings
 - Creates a connection with proper timeouts and SSL configuration
 - Tests the connection with a ping
@@ -41,11 +42,11 @@ The `RedisStore` class is the core implementation:
 ```python
 class RedisStore:
     """Redis-based storage for rate limiting data."""
-    
+
     def __init__(self, redis_client: redis.Redis, prefix: str = "ratelimit:"):
         """
         Initialize with Redis client.
-        
+
         Args:
             redis_client: Configured Redis client
             prefix: Key prefix for rate limit data in Redis
@@ -61,12 +62,12 @@ class RedisStore:
 def increment(self, key: str, expiry: int, amount: int = 1) -> int:
     """
     Increment counter and set expiry.
-    
+
     Args:
         key: Counter key
         expiry: Expiry time in seconds
         amount: Amount to increment by
-        
+
     Returns:
         New counter value
     """
@@ -74,7 +75,8 @@ def increment(self, key: str, expiry: int, amount: int = 1) -> int:
 ```
 
 This method:
-- Atomically increments a counter and sets its expiration time 
+
+- Atomically increments a counter and sets its expiration time
 - Uses Redis pipeline for atomic operations
 - Returns the new counter value
 - Handles errors with safe fallbacks
@@ -85,10 +87,10 @@ This method:
 def get(self, key: str) -> int:
     """
     Get current counter value.
-    
+
     Args:
         key: Counter key
-        
+
     Returns:
         Current counter value or 0 if not found
     """
@@ -99,10 +101,10 @@ def get(self, key: str) -> int:
 def get_with_expiry(self, key: str) -> Tuple[int, int]:
     """
     Get counter value with remaining expiry time.
-    
+
     Args:
         key: Counter key
-        
+
     Returns:
         Tuple of (current value, remaining seconds)
     """
@@ -115,23 +117,23 @@ These methods retrieve counter values and TTL information.
 
 ```python
 def check_rate_limit(
-    self, 
-    user_id: str, 
-    endpoint: str, 
-    limit: int, 
+    self,
+    user_id: str,
+    endpoint: str,
+    limit: int,
     period: int,
     check_only: bool = False
 ) -> Tuple[bool, Dict[str, Any]]:
     """
     Check if a request is rate limited.
-    
+
     Args:
         user_id: The user identifier (usually user ID or IP)
         endpoint: API endpoint being accessed
         limit: Maximum requests allowed
         period: Time period in seconds
         check_only: If True, don't increment the counter (for status checks)
-        
+
     Returns:
         Tuple of (is_allowed, quota_info)
     """
@@ -139,6 +141,7 @@ def check_rate_limit(
 ```
 
 This is the primary method used to enforce rate limits. It:
+
 - Checks if a user has exceeded their quota for an endpoint
 - Optionally increments the counter for actual requests
 - Returns a boolean indicating if the request is allowed
@@ -149,21 +152,21 @@ This is the primary method used to enforce rate limits. It:
 
 ```python
 def get_quota(
-    self, 
+    self,
     user_id: str,
-    endpoint: str, 
+    endpoint: str,
     limit: int,
     period: int
 ) -> Dict[str, Any]:
     """
     Get quota information for a user and endpoint.
-    
+
     Args:
         user_id: The user identifier (usually user ID or IP)
         endpoint: API endpoint being accessed
         limit: Maximum requests allowed
         period: Time period in seconds
-        
+
     Returns:
         Dict with quota information
     """
@@ -171,6 +174,7 @@ def get_quota(
 ```
 
 This method calculates and returns quota information:
+
 - Total number of requests allowed
 - Number of requests remaining
 - Number of requests used
@@ -182,10 +186,10 @@ This method calculates and returns quota information:
 def reset(self, key: str) -> bool:
     """
     Reset a rate limit counter.
-    
+
     Args:
         key: Counter key to reset
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -196,7 +200,7 @@ def reset(self, key: str) -> bool:
 def clear_all(self) -> bool:
     """
     Clear all rate limit data (for testing).
-    
+
     Returns:
         True if successful, False otherwise
     """
@@ -281,4 +285,4 @@ The module includes security best practices:
 - [Config](config.md): Configuration for the rate limiter
 - [Keys](keys.md): Key functions used to identify rate-limited resources
 - [Decorators](decorators.md): Rate limit decorators that use the Redis store
-- [Rate Limit Apply Middleware](../../api/middleware/rate_limit_apply.md): Middleware that uses this store 
+- [Rate Limit Apply Middleware](../../api/middleware/rate_limit_apply.md): Middleware that uses this store

@@ -13,7 +13,7 @@ The `domain.py` module in `app/models/concept/` defines the core Pydantic models
 ```python
 class ColorPalette(APIBaseModel):
     """Model for a color palette."""
-    
+
     name: str = Field(..., description="Name of the palette")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
@@ -34,7 +34,7 @@ This model represents a color palette for concepts:
 ```python
 class ConceptSummary(APIBaseModel):
     """Model for a concept summary (used in list views)."""
-    
+
     id: uuid.UUID = Field(..., description="Unique identifier for the concept")
     created_at: datetime = Field(..., description="Creation timestamp")
     logo_description: str = Field(..., description="Description of the logo")
@@ -59,7 +59,7 @@ This model provides summary information about a concept (typically used in list 
 ```python
 class ConceptDetail(APIBaseModel):
     """Model for detailed concept information."""
-    
+
     id: uuid.UUID = Field(..., description="Unique identifier for the concept")
     created_at: datetime = Field(..., description="Creation timestamp")
     session_id: uuid.UUID = Field(..., description="ID of the session that created this concept")
@@ -86,7 +86,7 @@ This model provides detailed information about a concept:
 ```python
 class ConceptCreate(APIBaseModel):
     """Model for creating a new concept."""
-    
+
     session_id: uuid.UUID = Field(..., description="ID of the session creating this concept")
     logo_description: str = Field(..., description="Description of the logo")
     theme_description: str = Field(..., description="Description of the theme/color scheme")
@@ -107,12 +107,12 @@ This model is used when creating a new concept in the system:
 ```python
 class ColorVariationCreate(APIBaseModel):
     """Model for creating a new color variation."""
-    
+
     concept_id: uuid.UUID = Field(..., description="ID of the concept this variation belongs to")
     palette_name: str = Field(..., description="Name of the palette")
     colors: List[str] = Field(..., description="List of hex color codes")
     description: Optional[str] = Field(None, description="Description of the palette")
-    image_path: str = Field(..., description="Storage path for the variation image") 
+    image_path: str = Field(..., description="Storage path for the variation image")
     image_url: Optional[str] = Field(None, description="URL to the variation image")
 ```
 
@@ -144,7 +144,7 @@ async def create_concept(
     image_path: str
 ) -> ConceptDetail:
     """Create a new concept and store it."""
-    
+
     # Create the concept record
     concept_create = ConceptCreate(
         session_id=session_id,
@@ -152,10 +152,10 @@ async def create_concept(
         theme_description=theme_description,
         image_path=image_path
     )
-    
+
     # Store it in the database and get back the full record
     concept = await concept_repository.create(concept_create)
-    
+
     # Return as a domain model
     return ConceptDetail(
         id=concept.id,
@@ -173,4 +173,4 @@ async def create_concept(
 
 - [Request Models](request.md): Models for validating API requests
 - [Response Models](response.md): Models for structuring API responses
-- [Base Models](../common/base.md): Common base models and utilities 
+- [Base Models](../common/base.md): Common base models and utilities

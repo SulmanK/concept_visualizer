@@ -11,18 +11,18 @@ The `OptimizedImage` component is a performance-optimized image wrapper that sup
 
 ## Props
 
-| Prop               | Type                                         | Required | Default               | Description                                       |
-|--------------------|----------------------------------------------|----------|------------------------|--------------------------------------------------|
-| `src`              | `string \| undefined`                         | Yes      | `'/placeholder-image.png'` | Source URL of the image                           |
-| `alt`              | `string`                                      | Yes      | -                      | Alternative text for accessibility                 |
-| `lazy`             | `boolean`                                     | No       | `true`                 | Whether to lazy load the image                     |
-| `width`            | `string \| number`                            | No       | `'auto'`               | Width of the image element                         |
-| `height`           | `string \| number`                            | No       | `'auto'`               | Height of the image element                        |
-| `className`        | `string`                                      | No       | `''`                   | CSS class names for styling                        |
-| `objectFit`        | `'contain' \| 'cover' \| 'fill' \| 'none' \| 'scale-down'` | No | `'contain'`      | Object fit property                               |
-| `placeholder`      | `string`                                      | No       | `undefined`            | Placeholder image to show while loading            |
-| `backgroundColor`  | `string`                                      | No       | `'#f3f4f6'`            | Background color while loading                     |
-| `...rest`          | `any`                                         | No       | -                      | Additional props passed to container               |
+| Prop              | Type                                                       | Required | Default                    | Description                             |
+| ----------------- | ---------------------------------------------------------- | -------- | -------------------------- | --------------------------------------- |
+| `src`             | `string \| undefined`                                      | Yes      | `'/placeholder-image.png'` | Source URL of the image                 |
+| `alt`             | `string`                                                   | Yes      | -                          | Alternative text for accessibility      |
+| `lazy`            | `boolean`                                                  | No       | `true`                     | Whether to lazy load the image          |
+| `width`           | `string \| number`                                         | No       | `'auto'`                   | Width of the image element              |
+| `height`          | `string \| number`                                         | No       | `'auto'`                   | Height of the image element             |
+| `className`       | `string`                                                   | No       | `''`                       | CSS class names for styling             |
+| `objectFit`       | `'contain' \| 'cover' \| 'fill' \| 'none' \| 'scale-down'` | No       | `'contain'`                | Object fit property                     |
+| `placeholder`     | `string`                                                   | No       | `undefined`                | Placeholder image to show while loading |
+| `backgroundColor` | `string`                                                   | No       | `'#f3f4f6'`                | Background color while loading          |
+| `...rest`         | `any`                                                      | No       | -                          | Additional props passed to container    |
 
 ## State
 
@@ -42,7 +42,7 @@ The `OptimizedImage` component is a performance-optimized image wrapper that sup
 ## Usage Example
 
 ```tsx
-import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { OptimizedImage } from "../components/ui/OptimizedImage";
 
 const Gallery = () => {
   return (
@@ -55,7 +55,7 @@ const Gallery = () => {
         objectFit="cover"
         backgroundColor="#e2e8f0"
       />
-      
+
       <OptimizedImage
         src="https://example.com/another-image.jpg"
         alt="Ocean sunset"
@@ -79,6 +79,7 @@ const Gallery = () => {
 ## Error Handling
 
 When an image fails to load, the component:
+
 1. Logs an error to the console with the attempted source URL
 2. Displays a visual error indicator with an icon and message
 3. Sets the error state to prevent further loading attempts
@@ -86,4 +87,4 @@ When an image fails to load, the component:
 ## Related Components
 
 - [`ConceptImage`](../concept/ConceptImage.md) - Higher-level component that uses OptimizedImage for concept images
-- [`LoadingIndicator`](./LoadingIndicator.md) - Used elsewhere for loading states 
+- [`LoadingIndicator`](./LoadingIndicator.md) - Used elsewhere for loading states

@@ -9,26 +9,26 @@ This hook fetches rate limit data from the backend and maintains it in the React
 ## Usage
 
 ```tsx
-import { useRateLimitsQuery } from '../hooks/useRateLimitsQuery';
+import { useRateLimitsQuery } from "../hooks/useRateLimitsQuery";
 
 function RateLimitDisplay() {
-  const { 
-    data: rateLimits, 
-    isLoading, 
+  const {
+    data: rateLimits,
+    isLoading,
     error,
     decrementLimit,
-    refetch 
+    refetch,
   } = useRateLimitsQuery();
 
   if (isLoading) return <LoadingIndicator />;
   if (error) return <ErrorMessage error={error} />;
-  
-  const conceptGenLimit = rateLimits?.limits?.['concept-generation'];
+
+  const conceptGenLimit = rateLimits?.limits?.["concept-generation"];
 
   const handleGenerateConcept = () => {
     // Optimistically update rate limit before making the API call
-    decrementLimit('concept-generation');
-    
+    decrementLimit("concept-generation");
+
     // Make your API call...
   };
 
@@ -37,7 +37,10 @@ function RateLimitDisplay() {
       <h2>Rate Limits</h2>
       {conceptGenLimit && (
         <div>
-          <p>Concept Generation: {conceptGenLimit.remaining}/{conceptGenLimit.limit}</p>
+          <p>
+            Concept Generation: {conceptGenLimit.remaining}/
+            {conceptGenLimit.limit}
+          </p>
           <p>Resets: {new Date(conceptGenLimit.reset).toLocaleString()}</p>
         </div>
       )}
@@ -52,13 +55,13 @@ function RateLimitDisplay() {
 
 The hook returns an object with the following properties:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `data` | `RateLimitsResponse \| undefined` | The rate limits data from the server |
-| `isLoading` | `boolean` | True when the query is loading |
-| `error` | `Error \| null` | Error object if the query failed |
-| `refetch` | `() => Promise<...>` | Function to force a fresh data fetch from the server |
-| `decrementLimit` | `(category: RateLimitCategory, amount?: number) => void` | Function to optimistically decrement a limit |
+| Property         | Type                                                     | Description                                          |
+| ---------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| `data`           | `RateLimitsResponse \| undefined`                        | The rate limits data from the server                 |
+| `isLoading`      | `boolean`                                                | True when the query is loading                       |
+| `error`          | `Error \| null`                                          | Error object if the query failed                     |
+| `refetch`        | `() => Promise<...>`                                     | Function to force a fresh data fetch from the server |
+| `decrementLimit` | `(category: RateLimitCategory, amount?: number) => void` | Function to optimistically decrement a limit         |
 
 ## Rate Limits Response Structure
 
@@ -68,10 +71,10 @@ The `RateLimitsResponse` object has the following structure:
 interface RateLimitsResponse {
   limits: {
     [category: string]: {
-      limit: number;      // Maximum number of requests allowed
-      remaining: number;  // Number of requests remaining
-      reset: number;      // Timestamp when the limit will reset
-    }
+      limit: number; // Maximum number of requests allowed
+      remaining: number; // Number of requests remaining
+      reset: number; // Timestamp when the limit will reset
+    };
   };
   global?: {
     limit: number;
@@ -82,6 +85,7 @@ interface RateLimitsResponse {
 ```
 
 Common categories include:
+
 - `'concept-generation'`
 - `'concept-refinement'`
 - `'export'`
@@ -108,16 +112,16 @@ The hook provides a custom `refetch` function that:
 The module also exports a separate hook `useOptimisticRateLimitUpdate` that provides just the `decrementLimit` functionality without fetching the rate limits. This is useful for components that need to update limits but don't need to display them.
 
 ```tsx
-import { useOptimisticRateLimitUpdate } from '../hooks/useRateLimitsQuery';
+import { useOptimisticRateLimitUpdate } from "../hooks/useRateLimitsQuery";
 
 function ConceptGenerator() {
   const { decrementLimit } = useOptimisticRateLimitUpdate();
-  
+
   const handleGenerate = async () => {
-    decrementLimit('concept-generation');
+    decrementLimit("concept-generation");
     // Generate concept logic...
   };
-  
+
   return <button onClick={handleGenerate}>Generate</button>;
 }
 ```
@@ -126,4 +130,4 @@ function ConceptGenerator() {
 
 - `rateLimitService` - Provides the API client for rate limit data
 - `useErrorHandling` - Used for standardized error handling
-- `RateLimitContext` - For application-wide access to rate limit status 
+- `RateLimitContext` - For application-wide access to rate limit status

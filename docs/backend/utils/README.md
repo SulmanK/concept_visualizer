@@ -57,4 +57,5 @@ logger = get_logger(__name__)
 def process_data(data: dict):
     logger.info("Processing data", extra={"data_size": len(data)})
     # Processing logic
-    logger.debug("Data processed successfully") 
+    logger.debug("Data processed successfully")
+```

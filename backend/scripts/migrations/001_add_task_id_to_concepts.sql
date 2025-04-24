@@ -12,4 +12,4 @@ CREATE INDEX concepts_task_id_idx ON concepts(task_id);
 
 -- Comment the new columns
 COMMENT ON COLUMN concepts.task_id IS 'UUID of the background task that created this concept';
-COMMENT ON COLUMN concepts.status IS 'Status of the concept generation process (processing, completed, failed, etc.)'; 
+COMMENT ON COLUMN concepts.status IS 'Status of the concept generation process (processing, completed, failed, etc.)';

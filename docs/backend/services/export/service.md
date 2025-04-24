@@ -19,9 +19,9 @@ This service uses the PIL (Pillow) library for raster image processing and VTrac
 ```python
 class ExportService:
     """Service for exporting images in different formats."""
-    
+
     def __init__(
-        self, 
+        self,
         image_service: ImageServiceInterface = Depends(get_image_service),
         processing_service: ImageProcessingServiceInterface = Depends(get_image_processing_service),
     ):
@@ -46,20 +46,20 @@ async def process_export(
 ) -> Tuple[bytes, str, str]:
     """
     Process the image export request.
-    
+
     Args:
         image_data: Binary image data to export
         original_filename: Original filename for generating export filename
         target_format: Target format for export (png, jpg, svg)
         target_size: Target size for export (small, medium, large, original)
         svg_params: Optional parameters for SVG conversion
-        
+
     Returns:
         Tuple containing:
             - Processed image bytes
             - Filename for the exported file
             - Content type for the exported file
-        
+
     Raises:
         ExportError: If the export processing fails
     """
@@ -67,6 +67,7 @@ async def process_export(
 ```
 
 This method is the main entry point for processing exports, handling:
+
 - Format determination and conversion
 - Size adjustments based on predefined presets
 - SVG vectorization when requested
@@ -85,13 +86,13 @@ async def _process_raster_image(
 ) -> Tuple[bytes, str, str]:
     """
     Process a raster image (resize and convert format).
-    
+
     Args:
         image_data: Original image bytes
         original_filename: Original filename
         target_format: Target format (png, jpg)
         target_size: Target size (small, medium, large, original)
-        
+
     Returns:
         Tuple containing:
             - Processed image bytes
@@ -102,6 +103,7 @@ async def _process_raster_image(
 ```
 
 This method handles:
+
 - Size mapping for predefined dimensions ("small", "medium", "large")
 - Format conversion for raster images
 - Quality settings for different formats
@@ -118,12 +120,12 @@ async def _convert_to_svg(
 ) -> Tuple[bytes, str, str]:
     """
     Convert an image to SVG format.
-    
+
     Args:
         image_data: Original image bytes
         original_filename: Original filename
         svg_params: Optional parameters for SVG conversion
-        
+
     Returns:
         Tuple containing:
             - Processed SVG bytes
@@ -134,6 +136,7 @@ async def _convert_to_svg(
 ```
 
 This method implements:
+
 - Bitmap to vector conversion using VTracer
 - Temporary file handling for processing
 - SVG optimization and cleaning
@@ -145,7 +148,7 @@ This method implements:
 def _create_simple_svg_from_image(self, image: Image.Image, output_path: str) -> None:
     """
     Create a simple SVG representation of an image.
-    
+
     Args:
         image: PIL Image object
         output_path: Path to save the SVG file
@@ -154,6 +157,7 @@ def _create_simple_svg_from_image(self, image: Image.Image, output_path: str) ->
 ```
 
 This fallback method:
+
 - Creates a basic SVG representation when full vectorization fails
 - Uses simple rectangles to represent the image
 - Maintains proportions and visual structure
@@ -166,13 +170,14 @@ The service defines a custom exception for export-related errors:
 ```python
 class ExportError(Exception):
     """Exception raised for image export errors."""
-    
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
 ```
 
 Throughout the service, errors are:
+
 - Logged with appropriate detail
 - Wrapped in domain-specific exceptions
 - Masked to protect sensitive information (paths, IDs)
@@ -189,11 +194,11 @@ async def get_export_service(
 ) -> ExportService:
     """
     Factory function for the ExportService.
-    
+
     Args:
         image_service: Service for image operations
         processing_service: Service for image processing
-        
+
     Returns:
         ExportService instance
     """
@@ -204,6 +209,7 @@ async def get_export_service(
 ```
 
 This function:
+
 - Injects required dependencies
 - Creates properly configured service instances
 - Simplifies service instantiation in API routes
@@ -222,6 +228,7 @@ size_mapping = {
 ```
 
 These sizes ensure:
+
 - Consistent output dimensions
 - Optimized file sizes for different use cases
 - Preserved aspect ratios
@@ -267,4 +274,4 @@ processed_bytes, filename, content_type = await export_service.process_export(
 - [Export Interface](interface.md): Interface implemented by this service
 - [Image Processing Service](../image/processing_service.md): Used for image manipulation
 - [Image Service](../image/service.md): Used for image retrieval
-- [Export API Routes](../../api/routes/export/export_routes.md): API endpoints that use this service 
+- [Export API Routes](../../api/routes/export/export_routes.md): API endpoints that use this service

@@ -35,6 +35,7 @@ def __init__(
 ```
 
 Parameters:
+
 - `app`: The FastAPI application instance
 - `public_paths`: List of paths that should be accessible without authentication
 
@@ -48,6 +49,7 @@ async def dispatch(
 ```
 
 The dispatch method:
+
 1. Allows OPTIONS requests for CORS
 2. Skips authentication for public paths
 3. Extracts and validates JWT tokens from the Authorization header
@@ -105,7 +107,7 @@ async def get_profile(
 ):
     if not user_id:
         raise HTTPException(status_code=401, detail="Authentication required")
-    
+
     # Use user_id to fetch and return user profile
     return {"user_id": user_id, "profile": "..."}
 ```
@@ -128,4 +130,4 @@ async def get_profile(
 
 - Tokens are validated cryptographically by the Supabase auth client
 - User IDs are masked in logs for security
-- Authentication errors include minimal information to prevent information leakage 
+- Authentication errors include minimal information to prevent information leakage

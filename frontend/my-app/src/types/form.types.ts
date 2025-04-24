@@ -2,7 +2,7 @@
  * Form-related TypeScript interfaces for the Concept Visualizer application.
  */
 
-import { FormStatus } from './ui.types';
+import { FormStatus } from "./ui.types";
 
 /**
  * Concept generation form data structure
@@ -38,4 +38,4 @@ export interface ValidationProps {
  */
 export interface FormErrors {
   [key: string]: string;
-} 
+}

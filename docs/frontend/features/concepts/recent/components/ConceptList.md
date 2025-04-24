@@ -31,9 +31,9 @@ const ConceptList: React.FC<ConceptListProps> = ({
       </div>
     );
   }
-  
+
   return (
-    <div className={`concept-grid columns-${columns} ${className || ''}`}>
+    <div className={`concept-grid columns-${columns} ${className || ""}`}>
       {concepts.map((concept) => (
         <ConceptCard
           key={concept.id}
@@ -48,13 +48,13 @@ const ConceptList: React.FC<ConceptListProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `concepts` | `Concept[]` | Yes | - | Array of concept objects to display |
-| `onConceptSelect` | `(conceptId: string) => void` | No | - | Callback when a concept is selected |
-| `emptyStateMessage` | `string` | No | "No concepts found" | Message to display when no concepts are available |
-| `columns` | `2 \| 3 \| 4` | No | 3 | Number of columns to display in the grid |
-| `className` | `string` | No | - | Additional CSS class for styling |
+| Prop                | Type                          | Required | Default             | Description                                       |
+| ------------------- | ----------------------------- | -------- | ------------------- | ------------------------------------------------- |
+| `concepts`          | `Concept[]`                   | Yes      | -                   | Array of concept objects to display               |
+| `onConceptSelect`   | `(conceptId: string) => void` | No       | -                   | Callback when a concept is selected               |
+| `emptyStateMessage` | `string`                      | No       | "No concepts found" | Message to display when no concepts are available |
+| `columns`           | `2 \| 3 \| 4`                 | No       | 3                   | Number of columns to display in the grid          |
+| `className`         | `string`                      | No       | -                   | Additional CSS class for styling                  |
 
 ## Features
 
@@ -76,21 +76,21 @@ const ConceptList: React.FC<ConceptListProps> = ({
 ## Usage Example
 
 ```tsx
-import { ConceptList } from './ConceptList';
-import { useRouter } from 'next/router';
+import { ConceptList } from "./ConceptList";
+import { useRouter } from "next/router";
 
 const MyConceptsSection = () => {
   const router = useRouter();
   const { data } = useConceptQueries.useRecentConcepts();
-  
+
   const handleConceptSelect = (conceptId: string) => {
     router.push(`/concepts/${conceptId}`);
   };
-  
+
   return (
     <section className="my-concepts-section">
       <h2>My Concepts</h2>
-      <ConceptList 
+      <ConceptList
         concepts={data?.items || []}
         onConceptSelect={handleConceptSelect}
         columns={4}
@@ -103,4 +103,4 @@ const MyConceptsSection = () => {
 
 ## Styling
 
-The component uses CSS Grid for layout with responsive breakpoints. The number of columns can be controlled through the `columns` prop, which applies appropriate CSS classes. 
+The component uses CSS Grid for layout with responsive breakpoints. The number of columns can be controlled through the `columns` prop, which applies appropriate CSS classes.

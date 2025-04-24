@@ -1,142 +1,140 @@
-      
 # Concept Visualizer - Refactoring & Improvement Plan
 
 ## 1. Goals
 
-*   **Production Readiness:** Enhance robustness, security, and performance for production deployment.
-*   **Maintainability & Scalability:** Improve code organization, reduce coupling, and adhere to Clean Code principles (SRP, DRY).
-*   **Robust State Management:** Leverage React Query effectively for server state, streamline context usage, and ensure smooth UI updates without forced refreshes where possible.
-*   **Background Task Implementation:** Replace risky global state middleware with a reliable background task mechanism for long-running operations (concept generation/refinement).
-*   **Standardized URL Handling:** Ensure image URLs are handled consistently, preferably generated correctly by the backend.
-*   **Architecture Adherence:** Align both frontend and backend code more closely with the defined architectural guidelines.
+- **Production Readiness:** Enhance robustness, security, and performance for production deployment.
+- **Maintainability & Scalability:** Improve code organization, reduce coupling, and adhere to Clean Code principles (SRP, DRY).
+- **Robust State Management:** Leverage React Query effectively for server state, streamline context usage, and ensure smooth UI updates without forced refreshes where possible.
+- **Background Task Implementation:** Replace risky global state middleware with a reliable background task mechanism for long-running operations (concept generation/refinement).
+- **Standardized URL Handling:** Ensure image URLs are handled consistently, preferably generated correctly by the backend.
+- **Architecture Adherence:** Align both frontend and backend code more closely with the defined architectural guidelines.
 
 ## 2. Guiding Principles
 
-*   **Clean Code:** Follow SOLID principles, especially Single Responsibility (SRP) and Don't Repeat Yourself (DRY).
-*   **Architecture:** Strictly adhere to the defined layered architecture (Backend) and feature-based organization (Frontend).
-*   **State Management:** Utilize React Query as the primary tool for server state, caching, and mutations. Minimize redundant client-side state.
-*   **Performance:** Optimize API calls, database queries, image processing, and frontend rendering. Use background tasks for non-blocking operations.
-*   **Security:** Prioritize secure handling of credentials, user data, and access control (RLS). Use signed URLs for storage access.
-*   **Testability:** Structure code to be easily unit and integration tested.
+- **Clean Code:** Follow SOLID principles, especially Single Responsibility (SRP) and Don't Repeat Yourself (DRY).
+- **Architecture:** Strictly adhere to the defined layered architecture (Backend) and feature-based organization (Frontend).
+- **State Management:** Utilize React Query as the primary tool for server state, caching, and mutations. Minimize redundant client-side state.
+- **Performance:** Optimize API calls, database queries, image processing, and frontend rendering. Use background tasks for non-blocking operations.
+- **Security:** Prioritize secure handling of credentials, user data, and access control (RLS). Use signed URLs for storage access.
+- **Testability:** Structure code to be easily unit and integration tested.
 
 ## 3. Backend Refactoring Plan
 
 **3.1. Implement Background Tasks (Replace PrioritizationMiddleware)**
 
-*   **Remove:** `backend/app/core/middleware/prioritization.py` and its registration in `backend/app/core/factory.py`.
-*   **Choose Task Runner:** Utilize FastAPI's built-in `BackgroundTasks`.
-*   **Modify API Routes:**
-    *   Inject `BackgroundTasks` into relevant routes (`generation.py`, `refinement.py`).
-    *   Modify `POST /concepts/generate-with-palettes` and `POST /concepts/refine` handlers:
-        *   Validate input.
-        *   Generate a unique Task ID (optional but recommended for tracking).
-        *   Add the core generation/refinement logic (calling the service method) to the background tasks queue using `background_tasks.add_task()`.
-        *   Immediately return a response to the client (e.g., `202 Accepted` with a task ID or a simple confirmation).
-*   **Create Task Logic:**
-    *   Define functions within services (e.g., `ConceptService`, `ImageService`) or a new `tasks` module that contain the actual logic previously executed directly in the route (calling JigsawStack, storing results). These functions will be passed to `background_tasks.add_task()`.
-    *   Ensure these task functions handle their own errors and logging appropriately.
+- **Remove:** `backend/app/core/middleware/prioritization.py` and its registration in `backend/app/core/factory.py`.
+- **Choose Task Runner:** Utilize FastAPI's built-in `BackgroundTasks`.
+- **Modify API Routes:**
+  - Inject `BackgroundTasks` into relevant routes (`generation.py`, `refinement.py`).
+  - Modify `POST /concepts/generate-with-palettes` and `POST /concepts/refine` handlers:
+    - Validate input.
+    - Generate a unique Task ID (optional but recommended for tracking).
+    - Add the core generation/refinement logic (calling the service method) to the background tasks queue using `background_tasks.add_task()`.
+    - Immediately return a response to the client (e.g., `202 Accepted` with a task ID or a simple confirmation).
+- **Create Task Logic:**
+  - Define functions within services (e.g., `ConceptService`, `ImageService`) or a new `tasks` module that contain the actual logic previously executed directly in the route (calling JigsawStack, storing results). These functions will be passed to `background_tasks.add_task()`.
+  - Ensure these task functions handle their own errors and logging appropriately.
 
 **3.2. Service Layer Granularity (SRP)**
 
-*   **Modify `ImageService` (`backend/app/services/image/service.py`):**
-    *   Split responsibilities further *if complexity warrants it later*. For now, ensure it correctly orchestrates `ImageStorageService`, `processing.py`, and `conversion.py`.
-    *   Delegate JigsawStack interactions specifically related to *image* generation/refinement to a potential (future) `ImageGenerationService` or keep within `ImageService` but clearly separated.
-*   **Modify `ConceptService` (`backend/app/services/concept/service.py`):**
-    *   Ensure `ConceptGenerator`, `ConceptRefiner`, `PaletteGenerator` remain focused on their single tasks. The orchestration role here seems appropriate.
+- **Modify `ImageService` (`backend/app/services/image/service.py`):**
+  - Split responsibilities further _if complexity warrants it later_. For now, ensure it correctly orchestrates `ImageStorageService`, `processing.py`, and `conversion.py`.
+  - Delegate JigsawStack interactions specifically related to _image_ generation/refinement to a potential (future) `ImageGenerationService` or keep within `ImageService` but clearly separated.
+- **Modify `ConceptService` (`backend/app/services/concept/service.py`):**
+  - Ensure `ConceptGenerator`, `ConceptRefiner`, `PaletteGenerator` remain focused on their single tasks. The orchestration role here seems appropriate.
 
 **3.3. Rate Limiting Application**
 
-*   **Modify `backend/app/utils/api_limits/endpoints.py`:** Refine `apply_rate_limit` and `apply_multiple_rate_limits`.
-*   **Modify API Routes (e.g., `generation.py`, `export_routes.py`):**
-    *   Replace direct calls to `apply_rate_limit`/`apply_multiple_rate_limits` within route handlers.
-    *   **Option A (Middleware Enhancement):** Enhance `RateLimitHeadersMiddleware` or create a new `RateLimitApplyMiddleware` that uses route information (decorators or path matching) to apply limits *before* the route handler executes.
-    *   **Option B (FastAPI Depends):** Create FastAPI dependency functions that perform the rate limit check and raise HTTPException if exceeded. Inject these dependencies into the routes. `Depends(RateLimit("10/minute"))`.
-*   **Modify `backend/app/utils/api_limits/decorators.py`:** Extract the logic for storing rate limit info into a reusable dependency function instead of a decorator, making it injectable via `Depends`.
+- **Modify `backend/app/utils/api_limits/endpoints.py`:** Refine `apply_rate_limit` and `apply_multiple_rate_limits`.
+- **Modify API Routes (e.g., `generation.py`, `export_routes.py`):**
+  - Replace direct calls to `apply_rate_limit`/`apply_multiple_rate_limits` within route handlers.
+  - **Option A (Middleware Enhancement):** Enhance `RateLimitHeadersMiddleware` or create a new `RateLimitApplyMiddleware` that uses route information (decorators or path matching) to apply limits _before_ the route handler executes.
+  - **Option B (FastAPI Depends):** Create FastAPI dependency functions that perform the rate limit check and raise HTTPException if exceeded. Inject these dependencies into the routes. `Depends(RateLimit("10/minute"))`.
+- **Modify `backend/app/utils/api_limits/decorators.py`:** Extract the logic for storing rate limit info into a reusable dependency function instead of a decorator, making it injectable via `Depends`.
 
 **3.4. Supabase Client & Storage**
 
-*   **Modify `backend/app/core/supabase/client.py`:**
-    *   Ensure this file *only* deals with creating/configuring Supabase client instances.
-    *   **Move `purge_all_data`:** Relocate this function to a dedicated administrative service or script (e.g., `backend/app/services/admin/cleanup_service.py` or modify `backend/supabase/functions/cleanup-old-data/handler.py`).
-*   **Modify `backend/app/core/supabase/image_storage.py`:**
-    *   **Add Comments:** Add clear comments explaining why direct `requests` calls are used for signed URLs/uploads, referencing Supabase limitations if applicable.
-    *   **Review:** Periodically check Supabase client library updates to see if direct requests can be replaced by SDK methods.
+- **Modify `backend/app/core/supabase/client.py`:**
+  - Ensure this file _only_ deals with creating/configuring Supabase client instances.
+  - **Move `purge_all_data`:** Relocate this function to a dedicated administrative service or script (e.g., `backend/app/services/admin/cleanup_service.py` or modify `backend/supabase/functions/cleanup-old-data/handler.py`).
+- **Modify `backend/app/core/supabase/image_storage.py`:**
+  - **Add Comments:** Add clear comments explaining why direct `requests` calls are used for signed URLs/uploads, referencing Supabase limitations if applicable.
+  - **Review:** Periodically check Supabase client library updates to see if direct requests can be replaced by SDK methods.
 
 **3.5. DRY - Route Logic**
 
-*   **Refactor `backend/app/api/routes/concept/generation.py`:**
-    *   Extract the duplicated logic for storing rate limit info in `request.state` (used by `RateLimitHeadersMiddleware`) into a reusable dependency function (as mentioned in 3.3).
+- **Refactor `backend/app/api/routes/concept/generation.py`:**
+  - Extract the duplicated logic for storing rate limit info in `request.state` (used by `RateLimitHeadersMiddleware`) into a reusable dependency function (as mentioned in 3.3).
 
 **3.6. URL Handling Consistency**
 
-*   **Modify Services (e.g., `ImageService`, `ConceptStorageService`):** Ensure methods that return concept/image data always include ready-to-use, absolute, signed URLs (where applicable) using the standardized `ImageStorageService.get_signed_url`.
-
+- **Modify Services (e.g., `ImageService`, `ConceptStorageService`):** Ensure methods that return concept/image data always include ready-to-use, absolute, signed URLs (where applicable) using the standardized `ImageStorageService.get_signed_url`.
 
 **3.8. Legacy Code Cleanup**
 
-*   **Review/Remove:**
-    *   `backend/app/api/routes/api.py`
-    *   `backend/app/models/concept.py`
-    *   `backend/app/models/request.py`
-    *   `backend/app/models/response.py`
-    *   `backend/app/services/concept_service.py`
-    *   `backend/app/services/image_processing.py`
-    *   `backend/app/services/image_service.py`
-    *   Determine if `backend/app/services/concept_storage_service.py` should be moved fully into `backend/app/services/storage/concept_storage.py` and the root file removed.
+- **Review/Remove:**
+  - `backend/app/api/routes/api.py`
+  - `backend/app/models/concept.py`
+  - `backend/app/models/request.py`
+  - `backend/app/models/response.py`
+  - `backend/app/services/concept_service.py`
+  - `backend/app/services/image_processing.py`
+  - `backend/app/services/image_service.py`
+  - Determine if `backend/app/services/concept_storage_service.py` should be moved fully into `backend/app/services/storage/concept_storage.py` and the root file removed.
 
 ## 4. Frontend Refactoring Plan
 
 **4.1. State Management (React Query Focus)**
 
-*   **Remove Context:**
-    *   **Remove:** `frontend/my-app/src/contexts/ConceptContext.tsx`.
-    *   **Modify:** Update any components importing `useConceptContext` to use `useRecentConcepts` or `useConceptDetail` hooks directly.
-*   **Review Caching:**
-    *   **Modify:** `frontend/my-app/src/main.tsx`. Confirm `staleTime: 1000 * 10` is the desired behavior for frequent background updates.
-*   **Optimize Queries:**
-    *   **Modify:** `frontend/my-app/src/hooks/useConceptQueries.ts`. Evaluate if `useFreshConceptDetail`'s forced refetch is still needed. Test if relying on short `staleTime` and `queryClient.invalidateQueries` provides sufficient freshness after mutations.
+- **Remove Context:**
+  - **Remove:** `frontend/my-app/src/contexts/ConceptContext.tsx`.
+  - **Modify:** Update any components importing `useConceptContext` to use `useRecentConcepts` or `useConceptDetail` hooks directly.
+- **Review Caching:**
+  - **Modify:** `frontend/my-app/src/main.tsx`. Confirm `staleTime: 1000 * 10` is the desired behavior for frequent background updates.
+- **Optimize Queries:**
+  - **Modify:** `frontend/my-app/src/hooks/useConceptQueries.ts`. Evaluate if `useFreshConceptDetail`'s forced refetch is still needed. Test if relying on short `staleTime` and `queryClient.invalidateQueries` provides sufficient freshness after mutations.
 
 **4.2. Component Consolidation & Structure**
 
-*   **Consolidate `ConceptCard`:**
-    *   **Merge:** Logic from `frontend/my-app/src/features/landing/components/ConceptCard.tsx` and `frontend/my-app/src/features/concepts/recent/components/ConceptCard.tsx`.
-    *   **Create:** A single reusable card, likely in `frontend/my-app/src/components/concept/` or a new `frontend/my-app/src/components/shared/concepts/`.
-    *   **Modify:** `RecentConceptsSection.tsx` and any other users to import and use the consolidated card.
-*   **Review UI Components (`components/ui`):** Ensure strict adherence to SRP – no feature-specific logic.
-*   **Review Feature Components (`features/`):** Ensure components primarily use shared UI components and feature-specific hooks/logic. Minimize direct cross-feature imports.
+- **Consolidate `ConceptCard`:**
+  - **Merge:** Logic from `frontend/my-app/src/features/landing/components/ConceptCard.tsx` and `frontend/my-app/src/features/concepts/recent/components/ConceptCard.tsx`.
+  - **Create:** A single reusable card, likely in `frontend/my-app/src/components/concept/` or a new `frontend/my-app/src/components/shared/concepts/`.
+  - **Modify:** `RecentConceptsSection.tsx` and any other users to import and use the consolidated card.
+- **Review UI Components (`components/ui`):** Ensure strict adherence to SRP – no feature-specific logic.
+- **Review Feature Components (`features/`):** Ensure components primarily use shared UI components and feature-specific hooks/logic. Minimize direct cross-feature imports.
 
 **4.3. URL Handling Consistency**
 
-*   **Simplify Frontend Logic:**
-    *   **Modify:** `frontend/my-app/src/services/supabaseClient.ts`. Aim to simplify or remove complex URL parsing/formatting in `getImageUrl` and `getSignedImageUrl`. Rely on the backend providing complete, correct URLs. If fallbacks are needed, ensure they are robust.
-    *   **Modify:** `frontend/my-app/src/features/landing/components/ConceptCard.tsx` (or the consolidated version) and `frontend/my-app/src/components/ui/OptimizedImage.tsx` to expect and use ready-to-use URLs.
-    *   **Modify:** `frontend/my-app/src/utils/url.ts`. Simplify or remove `extractStoragePathFromUrl` if no longer needed.
+- **Simplify Frontend Logic:**
+  - **Modify:** `frontend/my-app/src/services/supabaseClient.ts`. Aim to simplify or remove complex URL parsing/formatting in `getImageUrl` and `getSignedImageUrl`. Rely on the backend providing complete, correct URLs. If fallbacks are needed, ensure they are robust.
+  - **Modify:** `frontend/my-app/src/features/landing/components/ConceptCard.tsx` (or the consolidated version) and `frontend/my-app/src/components/ui/OptimizedImage.tsx` to expect and use ready-to-use URLs.
+  - **Modify:** `frontend/my-app/src/utils/url.ts`. Simplify or remove `extractStoragePathFromUrl` if no longer needed.
 
 **4.4. Page Transitions**
 
-*   **Fix/Remove:**
-    *   **Modify:** `frontend/my-app/src/App.tsx`. Reinstate the `PageTransition` component.
-    *   **Debug/Modify:** `frontend/my-app/src/components/layout/PageTransition.tsx`. Address the underlying issue causing it to be bypassed. Ensure it handles state synchronization correctly, especially with React Query data fetching across page loads. Test different navigation scenarios thoroughly. If it proves too problematic, remove it for now.
+- **Fix/Remove:**
+  - **Modify:** `frontend/my-app/src/App.tsx`. Reinstate the `PageTransition` component.
+  - **Debug/Modify:** `frontend/my-app/src/components/layout/PageTransition.tsx`. Address the underlying issue causing it to be bypassed. Ensure it handles state synchronization correctly, especially with React Query data fetching across page loads. Test different navigation scenarios thoroughly. If it proves too problematic, remove it for now.
 
 **4.5. API Client & Fetch Interceptor**
 
-*   **Review/Modify:** `frontend/my-app/src/App.tsx`. Consider moving the fetch interceptor logic into `frontend/my-app/src/services/apiClient.ts` using Axios interceptors (if switching to Axios) or refining the global fetch wrapper to be more robust and less likely to interfere with non-API calls.
+- **Review/Modify:** `frontend/my-app/src/App.tsx`. Consider moving the fetch interceptor logic into `frontend/my-app/src/services/apiClient.ts` using Axios interceptors (if switching to Axios) or refining the global fetch wrapper to be more robust and less likely to interfere with non-API calls.
 
 **4.6. Legacy Hooks**
 
-*   **Review/Remove:**
-    *   `frontend/my-app/src/hooks/useConceptGeneration.ts`
-    *   `frontend/my-app/src/hooks/useConceptRefinement.ts`
-    *   `frontend/my-app/src/hooks/useApi.ts`
-    *   Ensure all relevant components are using the React Query-based hooks (`useConceptMutations.ts`, `useConceptQueries.ts`, `useExportImageMutation.ts`) and the core `apiClient`.
+- **Review/Remove:**
+  - `frontend/my-app/src/hooks/useConceptGeneration.ts`
+  - `frontend/my-app/src/hooks/useConceptRefinement.ts`
+  - `frontend/my-app/src/hooks/useApi.ts`
+  - Ensure all relevant components are using the React Query-based hooks (`useConceptMutations.ts`, `useConceptQueries.ts`, `useExportImageMutation.ts`) and the core `apiClient`.
 
 **4.7. Code Quality**
 
-*   **Remove/Guard:** All `console.log` statements intended for debugging.
-*   **Refactor:** Look for opportunities to apply DRY principle to UI rendering logic (e.g., loading/error states in lists).
+- **Remove/Guard:** All `console.log` statements intended for debugging.
+- **Refactor:** Look for opportunities to apply DRY principle to UI rendering logic (e.g., loading/error states in lists).
 
-4.7. Code Quality Improvements
-A. console.log Cleanup (Remove/Guard for Production)
+  4.7. Code Quality Improvements
+  A. console.log Cleanup (Remove/Guard for Production)
 
 These files contain console.log, console.warn, or console.error statements primarily used for debugging during development. They should be reviewed and either removed or conditionally executed (e.g., if (process.env.NODE_ENV === 'development')) before deploying to production, unless they represent essential error logging.
 
@@ -405,14 +403,11 @@ These backend files show patterns that could potentially be refactored to reduce
 
             Within services, consider if common error handling patterns (e.g., catching a JigsawStackError and re-raising as a ConceptError) can be abstracted using decorators or helper functions if the pattern is identical in many places.
 
-
 ## 5. Target Directory Structure (Post-Refactoring)
 
 **(Showing key changes/areas of focus)**
 
 **Backend:**
-
-    
 
 IGNORE_WHEN_COPYING_START
 Use code with caution.Markdown
@@ -453,10 +448,7 @@ backend/
 │ └── cleanup-old-data/ # (DB cleanup edge function)
 └── tests/ # (Updated test structure mirroring app/)
 
-      
 **Frontend:**
-
-    
 
 IGNORE_WHEN_COPYING_START
 Use code with caution.
@@ -500,69 +492,65 @@ frontend/
 │ └── utils/ # (Utility functions)
 └── tests/ # (e2e, unit tests mirroring src/)
 
-      
 ## 6. Key File Changes Summary
 
-| Action   | File Path (Backend)                                       | Notes                                                              |
-| :------- | :-------------------------------------------------------- | :----------------------------------------------------------------- |
-| **Remove** | `app/core/middleware/prioritization.py`                   | Replaced by BackgroundTasks.                                       |
-| **Remove** | `app/api/routes/api.py`                                   | Redundant router definition.                                       |
-| **Remove** | `app/models/concept.py`, `request.py`, `response.py`      | Models consolidated in `app/models/concept/`.                    |
-| **Remove** | `app/services/concept_service.py`                         | Service consolidated in `app/services/concept/`.                 |
-| **Remove** | `app/services/image_processing.py`                        | Logic moved to `app/services/image/processing.py`.               |
-| **Remove** | `app/services/image_service.py`                           | Service consolidated in `app/services/image/`.                   |
-| **Modify** | `app/core/factory.py`                                     | Remove PrioritizationMiddleware registration, register tasks?    |
-| **Modify** | `app/api/routes/concept/generation.py`                    | Use BackgroundTasks, extract rate limit state logic.             |
-| **Modify** | `app/api/routes/concept/refinement.py`                    | Use BackgroundTasks, extract rate limit state logic.             |
-| **Modify** | `app/services/**/service.py`                              | Define functions suitable for background execution.                |
-| **Modify** | `app/core/supabase/client.py`                             | Refocus on client creation, move `purge_all_data`.               |
-| **Modify** | `app/core/supabase/image_storage.py`                      | Add comments explaining direct `requests` usage.                 |
-| **Modify** | `app/utils/api_limits/endpoints.py`                       | Refactor rate limit application logic.                           |
-| **Modify** | `app/utils/api_limits/decorators.py`                      | Convert decorator to injectable dependency.                      |
-| **Create** | `app/services/tasks/` (Optional)                          | Module for background task functions if not kept in services.    |
-| **Modify** | `scripts/*.sql`                                           | Review/Update/Replace with migration tool.                       |
+| Action     | File Path (Backend)                                  | Notes                                                         |
+| :--------- | :--------------------------------------------------- | :------------------------------------------------------------ |
+| **Remove** | `app/core/middleware/prioritization.py`              | Replaced by BackgroundTasks.                                  |
+| **Remove** | `app/api/routes/api.py`                              | Redundant router definition.                                  |
+| **Remove** | `app/models/concept.py`, `request.py`, `response.py` | Models consolidated in `app/models/concept/`.                 |
+| **Remove** | `app/services/concept_service.py`                    | Service consolidated in `app/services/concept/`.              |
+| **Remove** | `app/services/image_processing.py`                   | Logic moved to `app/services/image/processing.py`.            |
+| **Remove** | `app/services/image_service.py`                      | Service consolidated in `app/services/image/`.                |
+| **Modify** | `app/core/factory.py`                                | Remove PrioritizationMiddleware registration, register tasks? |
+| **Modify** | `app/api/routes/concept/generation.py`               | Use BackgroundTasks, extract rate limit state logic.          |
+| **Modify** | `app/api/routes/concept/refinement.py`               | Use BackgroundTasks, extract rate limit state logic.          |
+| **Modify** | `app/services/**/service.py`                         | Define functions suitable for background execution.           |
+| **Modify** | `app/core/supabase/client.py`                        | Refocus on client creation, move `purge_all_data`.            |
+| **Modify** | `app/core/supabase/image_storage.py`                 | Add comments explaining direct `requests` usage.              |
+| **Modify** | `app/utils/api_limits/endpoints.py`                  | Refactor rate limit application logic.                        |
+| **Modify** | `app/utils/api_limits/decorators.py`                 | Convert decorator to injectable dependency.                   |
+| **Create** | `app/services/tasks/` (Optional)                     | Module for background task functions if not kept in services. |
+| **Modify** | `scripts/*.sql`                                      | Review/Update/Replace with migration tool.                    |
 
-| Action   | File Path (Frontend)                                               | Notes                                                                    |
-| :------- | :----------------------------------------------------------------- | :----------------------------------------------------------------------- |
-| **Remove** | `src/contexts/ConceptContext.tsx`                                  | State managed by React Query hooks.                                      |
-| **Remove** | `src/hooks/useConceptGeneration.ts`                                | Replace usage with `useConceptMutations`.                                |
-| **Remove** | `src/hooks/useConceptRefinement.ts`                                | Replace usage with `useConceptMutations`.                                |
-| **Remove** | `src/hooks/useApi.ts`                                              | Replace usage with `apiClient` or React Query hooks.                     |
-| **Remove** | `src/services/eventService.ts` (Potentially)                       | If replaced entirely by React Query invalidation.                        |
-| **Modify** | `src/main.tsx`                                                     | Confirm React Query `staleTime`.                                         |
-| **Modify** | `src/services/supabaseClient.ts`                                   | Simplify `getImageUrl`/`getSignedImageUrl` based on backend changes.     |
-| **Modify** | `src/components/concept/ConceptCard.tsx` (Consolidated)            | Create single reusable card, update consumers.                           |
-| **Modify** | `src/components/layout/PageTransition.tsx`                         | Fix or remove component based on investigation.                          |
-| **Modify** | `src/App.tsx`                                                      | Address `PageTransition` bypass, review fetch interceptor.               |
-| **Modify** | `src/hooks/useConceptQueries.ts`                                   | Review `useFreshConceptDetail` necessity.                              |
-| **Modify** | `src/services/apiClient.ts`                                        | Consider moving fetch interceptor logic here (e.g., Axios interceptors). |
-| **Modify** | All components using removed context/hooks                         | Update to use React Query hooks or `apiClient`.                          |
-| **Cleanup**| All files                                                          | Remove/guard `console.log` statements.                                   |
+| Action      | File Path (Frontend)                                    | Notes                                                                    |
+| :---------- | :------------------------------------------------------ | :----------------------------------------------------------------------- |
+| **Remove**  | `src/contexts/ConceptContext.tsx`                       | State managed by React Query hooks.                                      |
+| **Remove**  | `src/hooks/useConceptGeneration.ts`                     | Replace usage with `useConceptMutations`.                                |
+| **Remove**  | `src/hooks/useConceptRefinement.ts`                     | Replace usage with `useConceptMutations`.                                |
+| **Remove**  | `src/hooks/useApi.ts`                                   | Replace usage with `apiClient` or React Query hooks.                     |
+| **Remove**  | `src/services/eventService.ts` (Potentially)            | If replaced entirely by React Query invalidation.                        |
+| **Modify**  | `src/main.tsx`                                          | Confirm React Query `staleTime`.                                         |
+| **Modify**  | `src/services/supabaseClient.ts`                        | Simplify `getImageUrl`/`getSignedImageUrl` based on backend changes.     |
+| **Modify**  | `src/components/concept/ConceptCard.tsx` (Consolidated) | Create single reusable card, update consumers.                           |
+| **Modify**  | `src/components/layout/PageTransition.tsx`              | Fix or remove component based on investigation.                          |
+| **Modify**  | `src/App.tsx`                                           | Address `PageTransition` bypass, review fetch interceptor.               |
+| **Modify**  | `src/hooks/useConceptQueries.ts`                        | Review `useFreshConceptDetail` necessity.                                |
+| **Modify**  | `src/services/apiClient.ts`                             | Consider moving fetch interceptor logic here (e.g., Axios interceptors). |
+| **Modify**  | All components using removed context/hooks              | Update to use React Query hooks or `apiClient`.                          |
+| **Cleanup** | All files                                               | Remove/guard `console.log` statements.                                   |
 
 ## 7. Testing Strategy
 
-*   **Backend:**
-    *   Add unit tests for new background task functions.
-    *   Add integration tests for API routes triggering background tasks (verify task queuing and initial response).
-    *   Enhance tests for refactored services (SRP focus).
-    *   Test error handling paths for background tasks.
-*   **Frontend:**
-    *   Update component tests relying on `ConceptContext` or legacy hooks.
-    *   Add tests for the consolidated `ConceptCard`.
-    *   Test components relying on React Query state, mocking query responses.
-    *   Thoroughly test `PageTransition` if kept.
-    *   Verify error handling UI components (`ErrorMessage`, `RateLimitErrorMessage`) display correctly based on query/mutation errors.
-*   **E2E:**
-    *   Update existing E2E tests to reflect any UI/UX changes from refactoring.
-    *   Add E2E tests covering the background task flow (e.g., submitting generation, checking results later if UI changes).
-    *   Ensure visual/accessibility tests still pass after refactoring.
+- **Backend:**
+  - Add unit tests for new background task functions.
+  - Add integration tests for API routes triggering background tasks (verify task queuing and initial response).
+  - Enhance tests for refactored services (SRP focus).
+  - Test error handling paths for background tasks.
+- **Frontend:**
+  - Update component tests relying on `ConceptContext` or legacy hooks.
+  - Add tests for the consolidated `ConceptCard`.
+  - Test components relying on React Query state, mocking query responses.
+  - Thoroughly test `PageTransition` if kept.
+  - Verify error handling UI components (`ErrorMessage`, `RateLimitErrorMessage`) display correctly based on query/mutation errors.
+- **E2E:**
+  - Update existing E2E tests to reflect any UI/UX changes from refactoring.
+  - Add E2E tests covering the background task flow (e.g., submitting generation, checking results later if UI changes).
+  - Ensure visual/accessibility tests still pass after refactoring.
 
 ## 8. Next Steps
 
 1.  Review and approve this design plan.
 2.  Break down the plan into smaller, manageable tasks/tickets.
 3.  Prioritize tasks (e.g., Backend Background Tasks first, then Frontend state cleanup).
-5.  Conduct code reviews for refactored sections.
-
-
-    
+4.  Conduct code reviews for refactored sections.

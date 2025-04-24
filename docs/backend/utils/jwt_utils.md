@@ -25,16 +25,16 @@ def create_jwt_token(
 ) -> str:
     """
     Create a JWT token.
-    
+
     Args:
         subject: The subject of the token (usually user ID)
         expires_delta: Optional expiration time delta (default: 15 minutes)
         claims: Optional additional claims to include in the token
         secret_key: Optional secret key to sign the token (default: from settings)
-        
+
     Returns:
         Encoded JWT token as a string
-        
+
     Raises:
         ValueError: If subject is not provided or secret key is missing
     """
@@ -52,16 +52,16 @@ def create_supabase_jwt(
 ) -> str:
     """
     Create a Supabase-compatible JWT token.
-    
+
     Args:
         user_id: The user ID to encode in the token
         role: The role to assign (default: "authenticated")
         expires_delta: Optional expiration time delta (default: 24 hours)
         extra_claims: Optional additional claims to include
-        
+
     Returns:
         Encoded Supabase JWT token as a string
-        
+
     Raises:
         ValueError: If JWT secret is not configured
     """
@@ -78,15 +78,15 @@ def create_supabase_jwt_for_storage(
 ) -> str:
     """
     Create a JWT token specifically for Supabase Storage operations.
-    
+
     Args:
         path: The storage path being accessed
         expiry: Token expiration time in seconds (default: 1 hour)
         role: The role to assign (default: "authenticated")
-        
+
     Returns:
         Encoded JWT token for storage operations
-        
+
     Raises:
         ValueError: If JWT secret is not configured
     """
@@ -103,15 +103,15 @@ def verify_jwt_token(
 ) -> Dict[str, Any]:
     """
     Verify a JWT token and return its claims.
-    
+
     Args:
         token: The JWT token to verify
         secret_key: Optional secret key to verify the token (default: from settings)
         algorithms: Optional list of allowed algorithms (default: ["HS256"])
-        
+
     Returns:
         Dictionary of token claims
-        
+
     Raises:
         JWTError: If token is invalid or expired
     """
@@ -124,10 +124,10 @@ def verify_jwt_token(
 def get_user_id_from_token(token: str) -> Optional[str]:
     """
     Extract user ID from a JWT token.
-    
+
     Args:
         token: The JWT token
-        
+
     Returns:
         User ID from the token or None if extraction fails
     """
@@ -142,12 +142,12 @@ The standard JWT token has the following structure:
 
 ```json
 {
-  "sub": "user-123",          // Subject (user ID)
-  "exp": 1628097060,          // Expiration timestamp
-  "iat": 1628010660,          // Issued at timestamp
-  "nbf": 1628010660,          // Not valid before timestamp
-  "jti": "unique-token-id",   // JWT ID (unique identifier)
-  "custom_claim": "value"     // Any custom claims
+  "sub": "user-123", // Subject (user ID)
+  "exp": 1628097060, // Expiration timestamp
+  "iat": 1628010660, // Issued at timestamp
+  "nbf": 1628010660, // Not valid before timestamp
+  "jti": "unique-token-id", // JWT ID (unique identifier)
+  "custom_claim": "value" // Any custom claims
 }
 ```
 
@@ -157,12 +157,12 @@ Supabase tokens include additional claims required by Supabase:
 
 ```json
 {
-  "aud": "authenticated",     // Audience
-  "sub": "user-123",          // Subject (user ID)
+  "aud": "authenticated", // Audience
+  "sub": "user-123", // Subject (user ID)
   "email": "user@example.com", // User email (if available)
-  "exp": 1628097060,          // Expiration timestamp
-  "iat": 1628010660,          // Issued at timestamp
-  "role": "authenticated",    // User role
+  "exp": 1628097060, // Expiration timestamp
+  "iat": 1628010660, // Issued at timestamp
+  "role": "authenticated", // User role
   "session_id": "session-456" // Session ID
 }
 ```
@@ -173,12 +173,12 @@ Storage-specific tokens include claims required for Supabase Storage operations:
 
 ```json
 {
-  "aud": "authenticated",     // Audience
-  "sub": "user-123",          // Subject (user ID)
-  "ref": "storage-path",      // Storage path reference
-  "exp": 1628097060,          // Expiration timestamp
-  "iat": 1628010660,          // Issued at timestamp
-  "role": "authenticated"     // User role
+  "aud": "authenticated", // Audience
+  "sub": "user-123", // Subject (user ID)
+  "ref": "storage-path", // Storage path reference
+  "exp": 1628097060, // Expiration timestamp
+  "iat": 1628010660, // Issued at timestamp
+  "role": "authenticated" // User role
 }
 ```
 
@@ -223,16 +223,16 @@ from app.utils.jwt_utils import verify_jwt_token
 try:
     # Verify a token and get its claims
     claims = verify_jwt_token(token)
-    
+
     # Extract user information
     user_id = claims.get("sub")
     user_role = claims.get("user_role")
     permissions = claims.get("permissions", [])
-    
+
     if "write" in permissions and user_role == "admin":
         # Allow the operation
         pass
-        
+
 except Exception as e:
     # Handle invalid token
     print(f"Token verification failed: {str(e)}")
@@ -308,4 +308,4 @@ if claims:
 - [Supabase Client](../../core/supabase/client.md): Uses JWT tokens for authentication
 - [Image Storage](../../core/supabase/image_storage.md): Uses storage-specific JWT tokens
 - [Auth Middleware](../../api/middleware/auth_middleware.md): Validates JWT tokens for API access
-- [Security Utilities](../security/mask.md): Related security utilities 
+- [Security Utilities](../security/mask.md): Related security utilities

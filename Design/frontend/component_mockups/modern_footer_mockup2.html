@@ -35,7 +35,7 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    
+
     .footer {
       background-color: #FFFFFF;
       border-top: 1px solid #E5E7EB;
@@ -47,7 +47,7 @@
       position: relative;
       overflow: hidden;
     }
-    
+
     /* Gradient accents */
     .footer::before {
       content: '';
@@ -58,7 +58,7 @@
       height: 3px;
       background: linear-gradient(to right, var(--primary), var(--secondary));
     }
-    
+
     .container {
       width: 100%;
       max-width: 1280px;
@@ -67,7 +67,7 @@
       position: relative;
       z-index: 10;
     }
-    
+
     /* Subtle background decoration */
     .footer-decoration {
       position: absolute;
@@ -79,13 +79,13 @@
       z-index: 1;
       pointer-events: none;
     }
-    
+
     .footer-brand {
       margin-bottom: 2rem;
       display: flex;
       align-items: center;
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
@@ -98,7 +98,7 @@
       border-radius: 0.5rem;
       box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
     }
-    
+
     .brand-name {
       margin-left: 0.75rem;
       font-size: 1.25rem;
@@ -108,13 +108,13 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    
+
     .footer-content {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 2rem;
     }
-    
+
     .footer-section-title {
       font-size: 0.75rem;
       font-weight: 600;
@@ -123,17 +123,17 @@
       letter-spacing: 0.05em;
       margin-bottom: 1rem;
     }
-    
+
     .footer-links {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    
+
     .footer-link {
       margin-bottom: 0.5rem;
     }
-    
+
     .footer-link a {
       font-size: 0.875rem;
       color: #4B5563;
@@ -142,29 +142,29 @@
       display: inline-block;
       padding: 0.25rem 0;
     }
-    
+
     .footer-link a:hover {
       color: var(--primary);
     }
-    
+
     .footer-powered-by {
       display: flex;
       align-items: center;
       margin-top: 1rem;
       gap: 1rem;
     }
-    
+
     .footer-powered-by span {
       font-size: 0.75rem;
       color: #6B7280;
     }
-    
+
     .copyright-divider {
       height: 1px;
       background: #E5E7EB;
       margin: 2rem 0 1.5rem;
     }
-    
+
     .footer-bottom {
       display: flex;
       justify-content: space-between;
@@ -172,33 +172,33 @@
       flex-wrap: wrap;
       gap: 1rem;
     }
-    
+
     .copyright {
       font-size: 0.75rem;
       color: #6B7280;
     }
-    
+
     .footer-legal {
       display: flex;
       gap: 1.5rem;
     }
-    
+
     .footer-legal a {
       font-size: 0.75rem;
       color: #6B7280;
       text-decoration: none;
       transition: color 0.15s ease;
     }
-    
+
     .footer-legal a:hover {
       color: var(--primary);
     }
-    
+
     .footer-social {
       display: flex;
       gap: 0.75rem;
     }
-    
+
     .social-icon {
       display: flex;
       align-items: center;
@@ -209,19 +209,19 @@
       border-radius: 9999px;
       transition: all 0.2s ease;
     }
-    
+
     .social-icon:hover {
       color: var(--primary);
       transform: translateY(-2px);
     }
-    
+
     @media (max-width: 768px) {
       .footer-bottom {
         flex-direction: column;
         align-items: center;
         text-align: center;
       }
-      
+
       .footer-legal {
         margin-top: 1rem;
       }
@@ -233,7 +233,7 @@
   <div style="height: 400px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #333;">
     Page Content
   </div>
-  
+
   <!-- Footer -->
   <footer class="footer">
     <div class="footer-decoration"></div>
@@ -243,7 +243,7 @@
         <div class="logo">CV</div>
         <h2 class="brand-name">Concept Visualizer</h2>
       </div>
-      
+
       <!-- Footer content grid -->
       <div class="footer-content">
         <!-- Company section -->
@@ -259,7 +259,7 @@
             </a>
           </div>
         </div>
-        
+
         <!-- Features section -->
         <div>
           <h3 class="footer-section-title">Features</h3>
@@ -278,7 +278,7 @@
             </li>
           </ul>
         </div>
-        
+
         <!-- Resources section -->
         <div>
           <h3 class="footer-section-title">Resources</h3>
@@ -297,7 +297,7 @@
             </li>
           </ul>
         </div>
-        
+
         <!-- Contact section -->
         <div>
           <h3 class="footer-section-title">Contact</h3>
@@ -314,17 +314,17 @@
           </ul>
         </div>
       </div>
-      
+
       <!-- Divider -->
       <div class="copyright-divider"></div>
-      
+
       <!-- Footer bottom -->
       <div class="footer-bottom">
         <!-- Copyright -->
         <div class="copyright">
           &copy; 2023 Concept Visualizer. All rights reserved.
         </div>
-        
+
         <!-- Social links -->
         <div class="footer-social">
           <a href="#" class="social-icon">
@@ -348,7 +348,7 @@
             </svg>
           </a>
         </div>
-        
+
         <!-- Legal links -->
         <div class="footer-legal">
           <a href="/privacy">Privacy Policy</a>
@@ -359,4 +359,4 @@
     </div>
   </footer>
 </body>
-</html> 
+</html>

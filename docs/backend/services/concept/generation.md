@@ -6,7 +6,7 @@ The concept generation module provides implementation details for generating vis
 
 This module is responsible for:
 
-1. Converting user text prompts into polished visual concepts 
+1. Converting user text prompts into polished visual concepts
 2. Processing prompt inputs to optimize image generation
 3. Calling the external image generation service (JigsawStack API)
 4. Handling response parsing and error management
@@ -37,15 +37,18 @@ This function is responsible for:
 4. Handling any errors that occur during generation
 
 **Parameters:**
+
 - `prompt`: Text description of the image to generate
 - `model`: AI model to use for generation (default: "dall-e-3")
 - `width`: Desired image width in pixels (default: 1024)
 - `height`: Desired image height in pixels (default: 1024)
 
 **Returns:**
+
 - `GeneratedImage`: Object containing the generated image data and metadata
 
 **Raises:**
+
 - `ServiceUnavailableError`: If the external API is unavailable
 - `GenerationError`: If image generation fails for any reason
 
@@ -59,10 +62,12 @@ def enhance_prompt(original_prompt: str, context: str = "logo") -> str:
 This function improves raw user prompts by adding context and specificity to get better results from the AI model.
 
 **Parameters:**
+
 - `original_prompt`: The user's original text description
 - `context`: The generation context (e.g., "logo", "icon")
 
 **Returns:**
+
 - Enhanced prompt string with additional details and specifications
 
 ## Error Handling
@@ -113,4 +118,4 @@ image_url = result.image_url
 - [Concept Service](service.md): Main concept service implementation
 - [Palette Service](palette.md): Service for generating color palettes
 - [JigsawStack Client](../jigsawstack/client.md): Client for the external AI API
-- [Generation API Routes](../../api/routes/concept/generation.md): API routes that use this service 
+- [Generation API Routes](../../api/routes/concept/generation.md): API routes that use this service

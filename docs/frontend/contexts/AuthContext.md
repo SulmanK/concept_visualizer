@@ -20,22 +20,22 @@ The `AuthContext` provides the following properties and methods:
 interface AuthContextType {
   // Current session object from Supabase
   session: Session | null;
-  
+
   // Current user object from Supabase
   user: User | null;
-  
+
   // Whether the current user is anonymous
   isAnonymous: boolean;
-  
+
   // Whether authentication is being initialized
   isLoading: boolean;
-  
+
   // Any authentication error that occurred
   error: Error | null;
-  
+
   // Function to sign out the current user
   signOut: () => Promise<boolean>;
-  
+
   // Function to link an email to an anonymous user
   linkEmail: (email: string) => Promise<boolean>;
 }
@@ -46,28 +46,28 @@ interface AuthContextType {
 The context is accessed through various custom hooks that expose specific parts of the auth state:
 
 ```tsx
-import { 
-  useAuth, 
+import {
+  useAuth,
   useAuthUser,
   useUserId,
   useIsAnonymous,
-  useAuthIsLoading
-} from '../contexts/AuthContext';
+  useAuthIsLoading,
+} from "../contexts/AuthContext";
 
 function ProfileSection() {
   // Get all auth state
   const { user, isAnonymous, linkEmail, signOut } = useAuth();
-  
+
   const handleEmailLink = async () => {
-    const email = prompt('Enter your email to save your work:');
+    const email = prompt("Enter your email to save your work:");
     if (email) {
       const success = await linkEmail(email);
       if (success) {
-        alert('Your account has been upgraded!');
+        alert("Your account has been upgraded!");
       }
     }
   };
-  
+
   return (
     <div>
       <h2>Your Profile</h2>
@@ -90,7 +90,7 @@ function ProfileSection() {
 function UserIdDisplay() {
   // Only get and subscribe to the user ID
   const userId = useUserId();
-  return <span>User ID: {userId || 'Not signed in'}</span>;
+  return <span>User ID: {userId || "Not signed in"}</span>;
 }
 
 function AnonymousBadge() {
@@ -105,11 +105,11 @@ function AnonymousBadge() {
 function AuthGuard({ children }) {
   // Only get and subscribe to loading state
   const isLoading = useAuthIsLoading();
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
+
   return children;
 }
 ```
@@ -151,13 +151,13 @@ The context uses several techniques to optimize performance:
 
 ## Exposed Hooks
 
-| Hook | Returns | Description |
-|------|---------|-------------|
-| `useAuth()` | `AuthContextType` | Full auth context with all properties and methods |
-| `useAuthUser()` | `User \| null` | Current user object only |
-| `useUserId()` | `string \| null` | Current user ID only |
-| `useIsAnonymous()` | `boolean` | Whether current user is anonymous |
-| `useAuthIsLoading()` | `boolean` | Whether auth is currently initializing |
+| Hook                 | Returns           | Description                                       |
+| -------------------- | ----------------- | ------------------------------------------------- |
+| `useAuth()`          | `AuthContextType` | Full auth context with all properties and methods |
+| `useAuthUser()`      | `User \| null`    | Current user object only                          |
+| `useUserId()`        | `string \| null`  | Current user ID only                              |
+| `useIsAnonymous()`   | `boolean`         | Whether current user is anonymous                 |
+| `useAuthIsLoading()` | `boolean`         | Whether auth is currently initializing            |
 
 ## Error Handling
 
@@ -170,4 +170,4 @@ The context includes centralized error handling:
 
 - [supabaseClient](../services/supabaseClient.md) - Authentication service used by the context
 - [RateLimitContext](./RateLimitContext.md) - Often used alongside auth for user-specific rate limits
-- [useSessionQuery](../hooks/useSessionQuery.md) - Hook for syncing sessions with the backend 
+- [useSessionQuery](../hooks/useSessionQuery.md) - Hook for syncing sessions with the backend

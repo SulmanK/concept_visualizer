@@ -26,4 +26,4 @@ Each feature is organized following a similar pattern:
 - **Concept Generation**: Create new visual concepts based on prompts
 - **Concept Browsing**: View and browse previously created concepts
 - **Concept Refinement**: Refine concepts through iterative prompting
-- **Concept Export**: Export concepts in various formats 
+- **Concept Export**: Export concepts in various formats

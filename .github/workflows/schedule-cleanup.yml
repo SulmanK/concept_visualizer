@@ -4,25 +4,25 @@ on:
   schedule:
     # Run at midnight every day (UTC)
     - cron: '0 0 * * *'
-  
+
   # Allow manual triggering for testing
   workflow_dispatch:
 
 jobs:
   call-cleanup-function:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Call Cleanup Edge Function
         run: |
           curl -L -X POST 'https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data' \
             -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
             -H 'Content-Type: application/json'
-      
+
       - name: Log completion
         if: ${{ success() }}
         run: echo "Data cleanup function executed successfully"
-      
+
       - name: Log failure
         if: ${{ failure() }}
-        run: echo "Failed to execute data cleanup function" 
+        run: echo "Failed to execute data cleanup function"

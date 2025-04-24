@@ -19,7 +19,7 @@ This approach improves testability and allows for different configurations in di
 def create_app() -> FastAPI:
     """
     Create and configure the FastAPI application.
-    
+
     Returns:
         FastAPI: Configured FastAPI application
     """
@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
         log_level=settings.LOG_LEVEL,
         log_dir="logs"
     )
-    
+
     # Create FastAPI app with OpenAPI configuration
     app = FastAPI(
         title="Concept Visualizer API",
@@ -38,10 +38,10 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
         openapi_url="/openapi.json",
     )
-    
+
     # Configure middleware, routes, etc.
     # ...
-    
+
     return app
 ```
 
@@ -62,7 +62,7 @@ if not cors_origins:
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
     ]
-    
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -90,6 +90,7 @@ app.add_middleware(RateLimitHeadersMiddleware)
 ```
 
 Note: FastAPI/Starlette executes middleware in **reverse** order of registration:
+
 1. First RateLimitHeadersMiddleware (adds headers to responses)
 2. Then RateLimitApplyMiddleware (checks and applies limits)
 3. Then AuthMiddleware (authenticates the user)
@@ -138,7 +139,7 @@ def test_app():
         mock_settings.CORS_ORIGINS = ["http://testserver"]
         mock_settings.LOG_LEVEL = "ERROR"
         # ...
-        
+
         # Create test app
         app = create_app()
         # Use app for testing
@@ -150,4 +151,4 @@ def test_app():
 - [API Router](../api/router.md): API route configuration function
 - [Auth Middleware](../api/middleware/auth_middleware.md): Authentication middleware
 - [Rate Limiting](api/middleware/rate_limit_apply.md): Rate limiting middleware
-- [Logging Setup](../utils/logging/setup.md): Logging configuration 
+- [Logging Setup](../utils/logging/setup.md): Logging configuration

@@ -3,18 +3,25 @@
  */
 
 // API Types
-export * from './api.types';
+export * from "./api.types";
 
 // Concept Types
-export * from './concept.types';
+export * from "./concept.types";
 
 // UI Types
-export * from './ui.types';
+export * from "./ui.types";
 
 // Form Types
-export * from './form.types';
+export * from "./form.types";
 
 /**
  * Form status type
  */
-export type FormStatus = 'idle' | 'submitting' | 'initiating' | 'pending' | 'processing' | 'success' | 'error'; 
+export type FormStatus =
+  | "idle"
+  | "submitting"
+  | "initiating"
+  | "pending"
+  | "processing"
+  | "success"
+  | "error";

@@ -16,37 +16,33 @@ const ConceptHeader: React.FC = () => {
         <h1 className="main-heading">
           Visualize Your <span className="highlight">Brand Concepts</span>
         </h1>
-        
+
         <p className="tagline">
-          Transform your brand ideas into visual concepts with AI-powered design generation
+          Transform your brand ideas into visual concepts with AI-powered design
+          generation
         </p>
-        
+
         <div className="cta-container">
-          <Button 
+          <Button
             variant="primary"
             size="large"
             onClick={() => {
-              document.getElementById('concept-form')?.scrollIntoView({ 
-                behavior: 'smooth' 
+              document.getElementById("concept-form")?.scrollIntoView({
+                behavior: "smooth",
               });
             }}
           >
             Start Creating
           </Button>
-          
-          <Button
-            variant="secondary"
-            size="large"
-            as="a"
-            href="/examples"
-          >
+
+          <Button variant="secondary" size="large" as="a" href="/examples">
             View Examples
           </Button>
         </div>
       </div>
-      
+
       <div className="header-visual">
-        <OptimizedImage 
+        <OptimizedImage
           src="/assets/hero-image.webp"
           alt="Visual representation of brand concept generation"
           width={600}
@@ -117,4 +113,4 @@ const LandingPage: React.FC = () => {
 
 - Uses `priority={true}` on the hero image to ensure it loads early
 - Optimized asset loading with WebP format
-- Minimal JavaScript for interactive elements 
+- Minimal JavaScript for interactive elements

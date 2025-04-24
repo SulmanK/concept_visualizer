@@ -26,76 +26,75 @@ import { LoadingIndicator } from 'components/ui/LoadingIndicator';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `size` | `number \| 'small' \| 'medium' \| 'large'` | `'medium'` | Size of the loading indicator |
-| `color` | `'primary' \| 'secondary' \| 'inherit'` | `'primary'` | Color of the loading indicator |
-| `label` | `string` | `''` | Text to display below the indicator |
-| `center` | `boolean` | `false` | Whether to center the indicator in its container |
-| `thickness` | `number` | `3.6` | Thickness of the circular progress |
-| `variant` | `'indeterminate' \| 'determinate'` | `'indeterminate'` | Type of progress indicator |
-| `value` | `number` | `0` | Progress value (0-100) when variant is determinate |
-| `className` | `string` | `''` | Additional CSS class to apply |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for additional styling |
+| Prop        | Type                                       | Default           | Description                                        |
+| ----------- | ------------------------------------------ | ----------------- | -------------------------------------------------- |
+| `size`      | `number \| 'small' \| 'medium' \| 'large'` | `'medium'`        | Size of the loading indicator                      |
+| `color`     | `'primary' \| 'secondary' \| 'inherit'`    | `'primary'`       | Color of the loading indicator                     |
+| `label`     | `string`                                   | `''`              | Text to display below the indicator                |
+| `center`    | `boolean`                                  | `false`           | Whether to center the indicator in its container   |
+| `thickness` | `number`                                   | `3.6`             | Thickness of the circular progress                 |
+| `variant`   | `'indeterminate' \| 'determinate'`         | `'indeterminate'` | Type of progress indicator                         |
+| `value`     | `number`                                   | `0`               | Progress value (0-100) when variant is determinate |
+| `className` | `string`                                   | `''`              | Additional CSS class to apply                      |
+| `sx`        | `SxProps<Theme>`                           | `{}`              | MUI system props for additional styling            |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { 
-  Box, 
-  CircularProgress, 
-  Typography 
-} from '@mui/material';
-import { SxProps, Theme } from '@mui/material/styles';
+import React from "react";
+import { Box, CircularProgress, Typography } from "@mui/material";
+import { SxProps, Theme } from "@mui/material/styles";
 
 interface LoadingIndicatorProps {
-  size?: number | 'small' | 'medium' | 'large';
-  color?: 'primary' | 'secondary' | 'inherit';
+  size?: number | "small" | "medium" | "large";
+  color?: "primary" | "secondary" | "inherit";
   label?: string;
   center?: boolean;
   thickness?: number;
-  variant?: 'indeterminate' | 'determinate';
+  variant?: "indeterminate" | "determinate";
   value?: number;
   className?: string;
   sx?: SxProps<Theme>;
 }
 
 export function LoadingIndicator({
-  size = 'medium',
-  color = 'primary',
-  label = '',
+  size = "medium",
+  color = "primary",
+  label = "",
   center = false,
   thickness = 3.6,
-  variant = 'indeterminate',
+  variant = "indeterminate",
   value = 0,
-  className = '',
+  className = "",
   sx = {},
 }: LoadingIndicatorProps) {
   // Convert named sizes to pixel values
   const sizeInPixels = (): number => {
-    if (typeof size === 'number') return size;
+    if (typeof size === "number") return size;
     switch (size) {
-      case 'small': return 24;
-      case 'large': return 48;
-      case 'medium':
-      default: return 36;
+      case "small":
+        return 24;
+      case "large":
+        return 48;
+      case "medium":
+      default:
+        return 36;
     }
   };
-  
+
   return (
     <Box
       className={className}
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: center ? 'center' : 'flex-start',
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: center ? "center" : "flex-start",
         ...(center && {
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
         }),
         ...sx,
       }}
@@ -108,11 +107,7 @@ export function LoadingIndicator({
         value={value}
       />
       {label && (
-        <Typography 
-          variant="body2" 
-          color="textSecondary" 
-          sx={{ mt: 1 }}
-        >
+        <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
           {label}
         </Typography>
       )}
@@ -138,12 +133,12 @@ export function LoadingIndicator({
 
 ```tsx
 function PageContent() {
-  const { data, isLoading } = useQuery(['data'], fetchData);
-  
+  const { data, isLoading } = useQuery(["data"], fetchData);
+
   if (isLoading) {
     return <LoadingIndicator center label="Loading content..." />;
   }
-  
+
   return <div>{/* Render data */}</div>;
 }
 ```
@@ -151,10 +146,8 @@ function PageContent() {
 ### Inline Loading
 
 ```tsx
-<Box sx={{ display: 'flex', alignItems: 'center' }}>
-  <Typography variant="body1">
-    Loading search results
-  </Typography>
+<Box sx={{ display: "flex", alignItems: "center" }}>
+  <Typography variant="body1">Loading search results</Typography>
   <LoadingIndicator size="small" sx={{ ml: 1 }} />
 </Box>
 ```
@@ -164,14 +157,14 @@ function PageContent() {
 ```tsx
 function FileUpload() {
   const [progress, setProgress] = useState(0);
-  
+
   // Upload logic that updates progress
-  
+
   return (
-    <Box sx={{ textAlign: 'center' }}>
-      <LoadingIndicator 
-        variant="determinate" 
-        value={progress} 
+    <Box sx={{ textAlign: "center" }}>
+      <LoadingIndicator
+        variant="determinate"
+        value={progress}
         label={`Uploading... ${progress}%`}
       />
     </Box>
@@ -182,8 +175,8 @@ function FileUpload() {
 ### Loading Button Alternative
 
 ```tsx
-<Box sx={{ position: 'relative' }}>
-  <Button 
+<Box sx={{ position: "relative" }}>
+  <Button
     variant="primary"
     disabled={isSubmitting}
     sx={{ opacity: isSubmitting ? 0.7 : 1 }}
@@ -191,14 +184,14 @@ function FileUpload() {
     Submit
   </Button>
   {isSubmitting && (
-    <LoadingIndicator 
-      size="small" 
+    <LoadingIndicator
+      size="small"
       color="inherit"
       sx={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
       }}
     />
   )}
@@ -212,7 +205,14 @@ function FileUpload() {
   <CardHeader title="Recent Activities" />
   <CardContent>
     {isLoading ? (
-      <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box
+        sx={{
+          height: 200,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <LoadingIndicator label="Loading activities..." />
       </Box>
     ) : (
@@ -230,4 +230,4 @@ function FileUpload() {
 4. For determinate operations, use the determinate variant to show progress
 5. Position the indicator in the same location where content will appear
 6. Consider using skeleton loaders for content that has a known structure
-7. Ensure loading states are properly communicated to screen readers 
+7. Ensure loading states are properly communicated to screen readers

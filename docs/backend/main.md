@@ -43,4 +43,4 @@ uv run dev
 ## Related Documentation
 
 - [Factory Module](core/factory.md): Details about the application factory and configuration
-- [API Router](api/router.md): The main API router that connects all endpoints 
+- [API Router](api/router.md): The main API router that connects all endpoints

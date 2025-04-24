@@ -1,26 +1,21 @@
 # Frontend State Management Refactor Design Document
 
-
-
-
-
-
 ## Current Context
 
-*   **Existing System:** The frontend uses a mix of state management strategies: React Context API (`AuthContext`, `ConceptContext`, `RateLimitContext` with `use-context-selector`), local component state (`useState`), custom hooks managing API state (`useApi`, `useConceptGeneration`, `useConceptRefinement`, `useRateLimits`), TanStack React Query (`useConceptQueries`), and a simple event service (`eventService`).
-*   **Key Components:**
-    *   Context Providers (`AuthProvider`, `ConceptProvider`, `RateLimitProvider`)
-    *   API hooks (`useApi`, `useConceptGeneration`, etc.)
-    *   React Query hooks (`useRecentConcepts`, `useConceptDetail`)
-    *   UI components consuming state from contexts or hooks.
-    *   `apiClient` for making requests.
-    *   `eventService` for cross-component communication/refresh triggers.
-*   **Pain Points/Gaps:**
-    *   **Inconsistent Server State Management:** Some server data is managed via React Query, while other data (generation results, rate limits) is managed manually within custom hooks using `useState` and `useEffect`. This leads to duplicated logic for loading/error states and difficulty managing caching/refetching consistently.
-    *   **Context Complexity:** `ConceptContext` potentially duplicates state managed by React Query, increasing complexity and potential for unnecessary re-renders, even with `use-context-selector`.
-    *   **Optimistic Update Implementation:** While `useRateLimits` has an optimistic update mechanism (`decrementLimit`), it's manually managed and not tied into a central caching layer like React Query.
-    *   **Event-Driven Data Flow:** Using `eventService` to trigger data refreshes (e.g., after concept creation) obscures the direct relationship between actions and data updates.
-    *   **Manual API State in Hooks:** Custom hooks like `useApi`, `useConceptGeneration`, etc., manually manage `loading`, `error`, and `result` states, which is boilerplate code already handled well by libraries like React Query.
+- **Existing System:** The frontend uses a mix of state management strategies: React Context API (`AuthContext`, `ConceptContext`, `RateLimitContext` with `use-context-selector`), local component state (`useState`), custom hooks managing API state (`useApi`, `useConceptGeneration`, `useConceptRefinement`, `useRateLimits`), TanStack React Query (`useConceptQueries`), and a simple event service (`eventService`).
+- **Key Components:**
+  - Context Providers (`AuthProvider`, `ConceptProvider`, `RateLimitProvider`)
+  - API hooks (`useApi`, `useConceptGeneration`, etc.)
+  - React Query hooks (`useRecentConcepts`, `useConceptDetail`)
+  - UI components consuming state from contexts or hooks.
+  - `apiClient` for making requests.
+  - `eventService` for cross-component communication/refresh triggers.
+- **Pain Points/Gaps:**
+  - **Inconsistent Server State Management:** Some server data is managed via React Query, while other data (generation results, rate limits) is managed manually within custom hooks using `useState` and `useEffect`. This leads to duplicated logic for loading/error states and difficulty managing caching/refetching consistently.
+  - **Context Complexity:** `ConceptContext` potentially duplicates state managed by React Query, increasing complexity and potential for unnecessary re-renders, even with `use-context-selector`.
+  - **Optimistic Update Implementation:** While `useRateLimits` has an optimistic update mechanism (`decrementLimit`), it's manually managed and not tied into a central caching layer like React Query.
+  - **Event-Driven Data Flow:** Using `eventService` to trigger data refreshes (e.g., after concept creation) obscures the direct relationship between actions and data updates.
+  - **Manual API State in Hooks:** Custom hooks like `useApi`, `useConceptGeneration`, etc., manually manage `loading`, `error`, and `result` states, which is boilerplate code already handled well by libraries like React Query.
 
 ## Requirements
 
@@ -46,48 +41,48 @@
 
 ### 1. Primary Server State Management Tool
 
-*   **Decision:** Adopt **TanStack React Query (`@tanstack/react-query`)** as the primary tool for managing *all* server state, including concepts, generation/refinement results, and rate limits.
-*   **Rationale:**
-    *   Provides built-in caching, background updates, stale-while-revalidate logic.
-    *   Simplifies handling of loading, error, and success states for data fetching and mutations.
-    *   Offers robust features like query invalidation, optimistic updates, and pagination/infinite scrolling support.
-    *   Reduces boilerplate code compared to manual state management with `useState`/`useEffect`.
-    *   Already partially used (`useConceptQueries`), allowing for consolidation onto a single pattern.
-*   **Trade-offs:** Requires refactoring existing custom hooks (`useConceptGeneration`, `useConceptRefinement`, `useRateLimits`, `useApi`). Team needs familiarity with React Query concepts.
+- **Decision:** Adopt **TanStack React Query (`@tanstack/react-query`)** as the primary tool for managing _all_ server state, including concepts, generation/refinement results, and rate limits.
+- **Rationale:**
+  - Provides built-in caching, background updates, stale-while-revalidate logic.
+  - Simplifies handling of loading, error, and success states for data fetching and mutations.
+  - Offers robust features like query invalidation, optimistic updates, and pagination/infinite scrolling support.
+  - Reduces boilerplate code compared to manual state management with `useState`/`useEffect`.
+  - Already partially used (`useConceptQueries`), allowing for consolidation onto a single pattern.
+- **Trade-offs:** Requires refactoring existing custom hooks (`useConceptGeneration`, `useConceptRefinement`, `useRateLimits`, `useApi`). Team needs familiarity with React Query concepts.
 
 ### 2. Role of React Context API
 
-*   **Decision:** **Reduce the scope of Context API.** Use Context primarily for:
-    1.  **Global, non-server state:** Authentication status (`AuthContext`), potentially UI theme or settings.
-    2.  **Dependency Injection:** Providing stable instances of services or functions (like the `queryClient` or toast functions).
-    3.  **Stable Derived State:** Providing heavily memoized, derived state if absolutely necessary, leveraging `use-context-selector`.
-*   **Rationale:**
-    *   Avoids duplicating server state already managed by React Query.
-    *   Improves performance by minimizing context-related re-renders.
-    *   Separates concerns: React Query for server state, Context for global UI/auth state.
-*   **Alternatives Considered:**
-    *   *Zustand/Jotai:* Powerful but adds another state management library. React Query + minimal Context is likely sufficient.
-    *   *Redux:* Generally overkill for this application's likely complexity.
+- **Decision:** **Reduce the scope of Context API.** Use Context primarily for:
+  1.  **Global, non-server state:** Authentication status (`AuthContext`), potentially UI theme or settings.
+  2.  **Dependency Injection:** Providing stable instances of services or functions (like the `queryClient` or toast functions).
+  3.  **Stable Derived State:** Providing heavily memoized, derived state if absolutely necessary, leveraging `use-context-selector`.
+- **Rationale:**
+  - Avoids duplicating server state already managed by React Query.
+  - Improves performance by minimizing context-related re-renders.
+  - Separates concerns: React Query for server state, Context for global UI/auth state.
+- **Alternatives Considered:**
+  - _Zustand/Jotai:_ Powerful but adds another state management library. React Query + minimal Context is likely sufficient.
+  - _Redux:_ Generally overkill for this application's likely complexity.
 
 ### 3. Data Synchronization Strategy
 
-*   **Decision:** Primarily use **React Query's cache invalidation (`queryClient.invalidateQueries`)** for data synchronization after mutations.
-*   **Rationale:**
-    *   Creates a clear link between an action (mutation) and its effect on related data (query invalidation).
-    *   Leverages React Query's core mechanism for keeping data fresh.
-    *   Reduces the need for the custom `eventService` for simple data refresh scenarios.
-*   **Keep Event Service For:** Global UI notifications (like toasts triggered from non-React `apiClient`), or scenarios where direct coupling via invalidation is not feasible.
+- **Decision:** Primarily use **React Query's cache invalidation (`queryClient.invalidateQueries`)** for data synchronization after mutations.
+- **Rationale:**
+  - Creates a clear link between an action (mutation) and its effect on related data (query invalidation).
+  - Leverages React Query's core mechanism for keeping data fresh.
+  - Reduces the need for the custom `eventService` for simple data refresh scenarios.
+- **Keep Event Service For:** Global UI notifications (like toasts triggered from non-React `apiClient`), or scenarios where direct coupling via invalidation is not feasible.
 
 ### 4. Refactoring Custom API Hooks
 
-*   **Decision:** Refactor existing custom API hooks:
-    *   `useConceptGeneration` and `useConceptRefinement` will be rewritten using `useMutation`.
-    *   `useRateLimits` will be rewritten using `useQuery`.
-    *   `useApi` will be simplified to a basic fetch utility focusing on auth headers and base URL, or potentially removed if components/hooks use React Query's `queryFn`/`mutationFn` directly with `apiClient`.
-*   **Rationale:**
-    *   Leverages the dedicated state management capabilities of `useQuery` and `useMutation`.
-    *   Removes manual `loading`, `error`, `status`, `result` state management from these hooks.
-    *   Integrates seamlessly with React Query's caching and invalidation system.
+- **Decision:** Refactor existing custom API hooks:
+  - `useConceptGeneration` and `useConceptRefinement` will be rewritten using `useMutation`.
+  - `useRateLimits` will be rewritten using `useQuery`.
+  - `useApi` will be simplified to a basic fetch utility focusing on auth headers and base URL, or potentially removed if components/hooks use React Query's `queryFn`/`mutationFn` directly with `apiClient`.
+- **Rationale:**
+  - Leverages the dedicated state management capabilities of `useQuery` and `useMutation`.
+  - Removes manual `loading`, `error`, `status`, `result` state management from these hooks.
+  - Integrates seamlessly with React Query's caching and invalidation system.
 
 ## Technical Design
 
@@ -254,7 +249,4 @@ Ensure React Query cache does not inadvertently store sensitive user-specific da
 Verify that query keys incorporating user IDs or other identifiers do not expose sensitive information if logged or used improperly.
 
 Authentication token handling within apiClient remains critical and should be reviewed for security alongside this refactor.
-
-
-
-
+```

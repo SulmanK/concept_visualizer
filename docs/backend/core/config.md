@@ -5,6 +5,7 @@ The `config.py` module manages application settings for the Concept Visualizer A
 ## Overview
 
 This module is responsible for:
+
 - Loading configuration from environment variables
 - Providing default values when appropriate
 - Validating required configuration settings
@@ -21,14 +22,14 @@ The `Settings` class is a Pydantic model that defines all application settings w
 class Settings(BaseSettings):
     # API settings
     API_PREFIX: str = "/api"
-    
+
     # CORS settings
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
-    
+
     # JigsawStack API settings
     JIGSAWSTACK_API_KEY: str = "dummy_key"
     JIGSAWSTACK_API_URL: str = "https://api.jigsawstack.com"
-    
+
     # Supabase settings, Redis settings, etc.
     # ...
 ```
@@ -41,7 +42,7 @@ The `Settings` class includes a `validate_required_settings` method that checks 
 def validate_required_settings(self):
     """
     Validate that all required settings are properly configured.
-    
+
     Raises:
         EnvironmentVariableError: If a required setting is missing or has its default value
     """
@@ -126,4 +127,4 @@ Two custom exception types are used for configuration errors:
 
 - [Exceptions](exceptions.md): Custom exception classes used for configuration errors
 - [Constants](constants.md): Application constants derived from configuration
-- [Factory](factory.md): Application factory that uses these settings 
+- [Factory](factory.md): Application factory that uses these settings

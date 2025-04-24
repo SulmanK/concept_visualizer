@@ -22,10 +22,10 @@ def get_user_id(request: Request) -> str:
     """
     Get the user's ID from request state for rate limiting.
     Falls back to extracting from JWT token, then to IP address if no user ID is available.
-    
+
     Args:
         request: FastAPI request object
-        
+
     Returns:
         str: User ID or IP address to use as rate limit key
     """
@@ -33,6 +33,7 @@ def get_user_id(request: Request) -> str:
 ```
 
 This function tries several methods to identify the user:
+
 1. First tries to get the user ID from request state (set by auth middleware)
 2. If not available, tries to extract from the JWT token in the Authorization header
 3. Falls back to the client's IP address if no user identity is available
@@ -43,10 +44,10 @@ This function tries several methods to identify the user:
 def get_endpoint_key(request: Request) -> str:
     """
     Get a unique key for the current endpoint.
-    
+
     Args:
         request: FastAPI request object
-        
+
     Returns:
         str: Unique key for the endpoint
     """
@@ -61,11 +62,11 @@ This function generates a key that uniquely identifies the API endpoint being ca
 def combine_keys(user_id: str, endpoint_key: str) -> str:
     """
     Combine user and endpoint keys for granular rate limiting.
-    
+
     Args:
         user_id: The user identifier (usually user ID or IP)
         endpoint_key: The endpoint identifier
-        
+
     Returns:
         str: Combined key for rate limiting
     """
@@ -80,10 +81,10 @@ This function combines user and endpoint keys to create more granular rate limit
 def calculate_ttl(period: str) -> int:
     """
     Calculate the time-to-live (TTL) in seconds based on the rate limit period.
-    
+
     Args:
         period: The time period (minute, hour, day, month)
-        
+
     Returns:
         int: TTL in seconds
     """
@@ -98,12 +99,12 @@ This function converts time period strings to seconds for Redis TTL values.
 def generate_rate_limit_keys(user_id: str, endpoint: str, period: str) -> list[str]:
     """
     Generate all possible key formats for rate limiting.
-    
+
     Args:
         user_id: The user identifier (usually session ID or IP)
         endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
         period: The time period (minute, hour, day, month)
-        
+
     Returns:
         list[str]: List of possible rate limit keys
     """
@@ -167,7 +168,7 @@ async def check_limit(request: Request):
     user_key = get_user_id(request)
     endpoint_key = get_endpoint_key(request)
     combined_key = combine_keys(user_key, endpoint_key)
-    
+
     # Use keys to check limits
     # ...
 ```
@@ -176,4 +177,4 @@ async def check_limit(request: Request):
 
 - [Redis Store](redis_store.md): Storage backend that uses these keys
 - [Decorators](decorators.md): Rate limit decorators that use these key functions
-- [Config](config.md): Configuration for the rate limiter system 
+- [Config](config.md): Configuration for the rate limiter system

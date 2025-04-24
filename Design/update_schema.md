@@ -40,6 +40,7 @@ CREATE TABLE color_variations (
 ```
 
 Key changes:
+
 - Renamed `base_image_path` to `image_path` in the concepts table
 - Added `image_url` field to both tables to store signed URLs
 
@@ -83,20 +84,20 @@ class ColorVariationInDB(ColorVariationBase):
 def store_image(self, image_data, session_id, concept_id=None, file_name=None, metadata=None, is_palette=False) -> Tuple[str, str]:
     """
     Store an image in the storage bucket and return both path and signed URL.
-    
+
     Returns:
         Tuple[str, str]: (image_path, image_url)
     """
     # [Existing code for storing the image]
-    
+
     # Get the storage path
     path = f"{session_id}/{file_name}" if not concept_id else f"{session_id}/{concept_id}/{file_name}"
-    
+
     # [Existing upload code]
-    
+
     # Generate signed URL with 3-day expiration
     image_url = self.get_signed_url(path, is_palette=is_palette)
-    
+
     return path, image_url
 ```
 
@@ -146,12 +147,12 @@ async def generate_concept(
 ):
     """Generate a new concept based on the provided prompt."""
     # [Existing code]
-    
+
     # Store generated image
     image_path, image_url = await concept_service.store_generated_image(
         image_data, session_id, concept_id
     )
-    
+
     # Create concept in database with both path and URL
     concept = await concept_service.create_concept(
         session_id=session_id,
@@ -160,7 +161,7 @@ async def generate_concept(
         image_path=image_path,
         image_url=image_url
     )
-    
+
     # [Remaining code]
 ```
 
@@ -178,8 +179,8 @@ export interface ConceptData {
   session_id: string;
   logo_description: string;
   theme_description: string;
-  image_path: string;  // Storage path
-  image_url: string;   // Signed URL
+  image_path: string; // Storage path
+  image_url: string; // Signed URL
   // Other fields...
 }
 
@@ -189,8 +190,8 @@ export interface ColorVariation {
   palette_name: string;
   colors: string[];
   description?: string;
-  image_path: string;  // Storage path
-  image_url: string;   // Signed URL
+  image_path: string; // Storage path
+  image_url: string; // Signed URL
 }
 ```
 
@@ -199,29 +200,30 @@ export interface ColorVariation {
 1. Update `ConceptResult.tsx` to use `image_url` when available:
 
 ```typescript
-const getFormattedUrl = (url: string | undefined, bucketType = 'concept') => {
-  if (!url) return '';
-  
+const getFormattedUrl = (url: string | undefined, bucketType = "concept") => {
+  if (!url) return "";
+
   // If we have an image_url from the API, use it directly
-  if (url.startsWith('http')) {
+  if (url.startsWith("http")) {
     // Handle double-signed URLs by using our URL processing logic
     // [Existing URL detection and processing logic]
     return url;
   }
-  
+
   // If we only have a path, generate a signed URL
-  return getSignedImageUrl(url, bucketType as 'concept' | 'palette');
+  return getSignedImageUrl(url, bucketType as "concept" | "palette");
 };
 
 // When using in component:
-const imageUrl = concept.image_url || getFormattedUrl(concept.image_path, 'concept');
+const imageUrl =
+  concept.image_url || getFormattedUrl(concept.image_path, "concept");
 ```
 
 2. Update image fetching logic in `ConceptCard` to use `image_url`:
 
 ```typescript
 // In ConceptCard component
-const [imageUrl, setImageUrl] = useState<string>('');
+const [imageUrl, setImageUrl] = useState<string>("");
 
 useEffect(() => {
   // If we have an image_url, use it directly
@@ -229,17 +231,17 @@ useEffect(() => {
     setImageUrl(concept.image_url);
     return;
   }
-  
+
   // Otherwise generate from path
   const fetchImageUrl = async () => {
     try {
-      const signedUrl = await getImageUrl(concept.image_path, 'concept');
+      const signedUrl = await getImageUrl(concept.image_path, "concept");
       setImageUrl(signedUrl);
     } catch (error) {
-      console.error('Error getting image URL:', error);
+      console.error("Error getting image URL:", error);
     }
   };
-  
+
   fetchImageUrl();
 }, [concept]);
 ```
@@ -247,20 +249,22 @@ useEffect(() => {
 ## Implementation Plan
 
 ### Phase 1: Database and Models
+
 1. Update database schema (already done)
 2. Update Pydantic models in backend
 3. Update TypeScript interfaces in frontend
 
 ### Phase 2: Backend Services
+
 1. Modify ImageStorageService to generate and return both path and URL
 2. Update ConceptStorageService to store and retrieve both fields
 3. Update API endpoints to pass both fields through the system
 
 ### Phase 3: Frontend Components
+
 1. Update image URL handling in utility functions
 2. Modify components to prefer image_url over generating URLs from paths
 3. Update image display components with proper fallbacks
-
 
 ## URL Handling Strategy
 
@@ -277,4 +281,4 @@ The new strategy for URL handling will follow these principles:
 
 This schema update provides a more robust approach to handling image URLs in our application. By storing both the path and URL, we gain flexibility in how we access images while preventing issues like double-signing. The implementation plan ensures a smooth transition to the new schema across both backend and frontend components.
 
-The approach aligns with our broader security goals by continuing to use signed URLs for all image access while improving reliability and performance by reducing the need for URL generation on every access. 
+The approach aligns with our broader security goals by continuing to use signed URLs for all image access while improving reliability and performance by reducing the need for URL generation on every access.

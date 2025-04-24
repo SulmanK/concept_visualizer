@@ -1,3 +1,1 @@
-"""
-Concept Visualizer API package.
-""" 
+"""Concept Visualizer API package."""

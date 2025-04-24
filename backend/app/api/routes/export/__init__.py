@@ -1,5 +1,4 @@
-"""
-Export routes for the API.
+"""Export routes for the API.
 
 This module provides routes for exporting images in different formats.
 """
@@ -14,4 +13,4 @@ router = APIRouter()
 # Include the export routes
 router.include_router(export_router)
 
-__all__ = ["router"] 
+__all__ = ["router"]

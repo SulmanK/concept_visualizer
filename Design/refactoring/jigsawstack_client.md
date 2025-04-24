@@ -44,6 +44,7 @@ app/services/jigsawstack/
 #### 2.1 Base Client (`base.py`)
 
 The `BaseJigsawClient` will provide:
+
 - Authentication handling
 - Common HTTP request methods
 - Rate limiting and retry logic
@@ -53,22 +54,22 @@ The `BaseJigsawClient` will provide:
 ```python
 class BaseJigsawClient:
     """Base client for JigsawStack API with common functionality."""
-    
+
     def __init__(self, api_key: str, api_url: str):
         """Initialize the client with API credentials."""
         self.api_key = api_key
         self.api_url = api_url
         self.headers = self._get_default_headers()
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-    
+
     def _get_default_headers(self) -> Dict[str, str]:
         """Get default headers for API requests."""
         # Implementation...
-    
+
     async def _make_request(
-        self, 
-        method: str, 
-        endpoint: str, 
+        self,
+        method: str,
+        endpoint: str,
         json_data: Optional[Dict[str, Any]] = None,
         timeout: float = 30.0
     ) -> httpx.Response:
@@ -79,6 +80,7 @@ class BaseJigsawClient:
 #### 2.2 Image Client (`image.py`)
 
 The `JigsawImageClient` will provide:
+
 - Image generation
 - Image refinement
 - Image variation
@@ -88,33 +90,34 @@ The `JigsawImageClient` will provide:
 ```python
 class JigsawImageClient(BaseJigsawClient):
     """Client for JigsawStack image generation and manipulation."""
-    
+
     async def generate_image(
-        self, 
-        prompt: str, 
-        width: int = 512, 
-        height: int = 512, 
+        self,
+        prompt: str,
+        width: int = 512,
+        height: int = 512,
         model: str = "stable-diffusion-xl"
     ) -> Dict[str, str]:
         """Generate an image based on a text prompt."""
         # Implementation...
-    
+
     async def refine_image(
-        self, 
-        prompt: str, 
-        image_url: str, 
+        self,
+        prompt: str,
+        image_url: str,
         strength: float = 0.7,
         model: str = "stable-diffusion-xl"
     ) -> bytes:
         """Refine an existing image using a text prompt."""
         # Implementation...
-    
+
     # Other image-related methods...
 ```
 
 #### 2.3 Palette Client (`palette.py`)
 
 The `JigsawPaletteClient` will provide:
+
 - Color palette generation
 - Palette validation and processing
 - Default/fallback palette handling
@@ -122,16 +125,16 @@ The `JigsawPaletteClient` will provide:
 ```python
 class JigsawPaletteClient(BaseJigsawClient):
     """Client for JigsawStack color palette generation."""
-    
+
     async def generate_multiple_palettes(
-        self, 
-        logo_description: str, 
-        theme_description: str, 
+        self,
+        logo_description: str,
+        theme_description: str,
         num_palettes: int = 7
     ) -> List[Dict[str, Any]]:
         """Generate multiple color palettes based on descriptions."""
         # Implementation...
-    
+
     # Other palette-related methods...
 ```
 
@@ -142,27 +145,27 @@ Define clear interfaces using Protocol classes to support dependency injection a
 ```python
 class JigsawImageClientProtocol(Protocol):
     """Interface for JigsawStack image client."""
-    
+
     async def generate_image(
-        self, 
-        prompt: str, 
-        width: int = 512, 
-        height: int = 512, 
+        self,
+        prompt: str,
+        width: int = 512,
+        height: int = 512,
         model: str = "stable-diffusion-xl"
     ) -> Dict[str, str]: ...
-    
+
     # Other method signatures...
 
 class JigsawPaletteClientProtocol(Protocol):
     """Interface for JigsawStack palette client."""
-    
+
     async def generate_multiple_palettes(
-        self, 
-        logo_description: str, 
-        theme_description: str, 
+        self,
+        logo_description: str,
+        theme_description: str,
         num_palettes: int = 7
     ) -> List[Dict[str, Any]]: ...
-    
+
     # Other method signatures...
 ```
 
@@ -208,7 +211,7 @@ To ensure backward compatibility, we will:
 ```python
 class JigsawStackClient:
     """Legacy client for JigsawStack API (uses composition with specialized clients)."""
-    
+
     def __init__(self, api_key: str, api_url: str):
         """Initialize the client with API credentials."""
         self.api_key = api_key
@@ -216,16 +219,16 @@ class JigsawStackClient:
         self._image_client = JigsawImageClient(api_key, api_url)
         self._palette_client = JigsawPaletteClient(api_key, api_url)
         # ... other initialization
-    
+
     # Delegate to specialized clients
     async def generate_image(self, *args, **kwargs):
         """Generate an image. Delegates to image client."""
         return await self._image_client.generate_image(*args, **kwargs)
-    
+
     async def generate_multiple_palettes(self, *args, **kwargs):
         """Generate palettes. Delegates to palette client."""
         return await self._palette_client.generate_multiple_palettes(*args, **kwargs)
-    
+
     # ... other delegated methods
 ```
 
@@ -292,4 +295,4 @@ After this refactoring, we can:
 - Phase 4 (Service Updates): 1 day
 - Testing: 1 day
 
-Total: 6 days 
+Total: 6 days

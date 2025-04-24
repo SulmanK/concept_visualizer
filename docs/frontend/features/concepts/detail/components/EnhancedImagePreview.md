@@ -11,12 +11,12 @@ The `EnhancedImagePreview` component provides an advanced image viewer with zoom
 
 ## Props
 
-| Prop        | Type       | Required | Description                                      |
-|-------------|------------|----------|--------------------------------------------------|
-| `isOpen`    | `boolean`  | Yes      | Controls whether the modal is open or closed     |
-| `onClose`   | `() => void` | Yes    | Function to call when the modal is closed        |
-| `imageUrl`  | `string`   | Yes      | URL of the image to display                      |
-| `format`    | `string`   | Yes      | Format of the image (e.g., 'png', 'jpg')         |
+| Prop       | Type         | Required | Description                                  |
+| ---------- | ------------ | -------- | -------------------------------------------- |
+| `isOpen`   | `boolean`    | Yes      | Controls whether the modal is open or closed |
+| `onClose`  | `() => void` | Yes      | Function to call when the modal is closed    |
+| `imageUrl` | `string`     | Yes      | URL of the image to display                  |
+| `format`   | `string`     | Yes      | Format of the image (e.g., 'png', 'jpg')     |
 
 ## Features
 
@@ -53,21 +53,21 @@ The component uses several state variables to manage user interactions:
 ## Usage Example
 
 ```tsx
-import { useState } from 'react';
-import EnhancedImagePreview from './components/EnhancedImagePreview';
+import { useState } from "react";
+import EnhancedImagePreview from "./components/EnhancedImagePreview";
 
 const ImageDisplay = ({ imageUrl }) => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
+
   return (
     <div>
-      <img 
-        src={imageUrl} 
-        alt="Concept preview" 
+      <img
+        src={imageUrl}
+        alt="Concept preview"
         onClick={() => setIsPreviewOpen(true)}
         className="cursor-pointer"
       />
-      
+
       <EnhancedImagePreview
         isOpen={isPreviewOpen}
         onClose={() => setIsPreviewOpen(false)}
@@ -98,4 +98,4 @@ The component uses Material UI components for the interface:
 ## Related Components
 
 - [`ConceptDetailPage`](../ConceptDetailPage.md) - Uses this component for image previews
-- [`ExportOptions`](./ExportOptions.md) - Can trigger this component to preview exports 
+- [`ExportOptions`](./ExportOptions.md) - Can trigger this component to preview exports

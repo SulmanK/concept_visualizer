@@ -20,46 +20,46 @@ The context exposes the following properties and methods:
 interface TaskContextType {
   // Current active task ID being tracked
   activeTaskId: string | null;
-  
+
   // Latest task data from the server
   activeTaskData: TaskResponse | null;
-  
+
   // Set a new task to track
   setActiveTask: (taskId: string | null) => void;
-  
+
   // Clear the current task
   clearActiveTask: () => void;
-  
+
   // Whether there is an active task in progress
   hasActiveTask: boolean;
-  
+
   // Whether the task is in pending state
   isTaskPending: boolean;
-  
+
   // Whether the task is in processing state
   isTaskProcessing: boolean;
-  
+
   // Whether the task has completed
   isTaskCompleted: boolean;
-  
+
   // Whether the task has failed
   isTaskFailed: boolean;
-  
+
   // Whether a task is being initiated (before task ID arrives)
   isTaskInitiating: boolean;
-  
+
   // Set the initiating state
   setIsTaskInitiating: (isInitiating: boolean) => void;
-  
+
   // Force a refresh of the task status
   refreshTaskStatus: () => void;
 
   // The result ID from the most recently completed task
   latestResultId: string | null;
-  
+
   // Set the result ID manually
   setLatestResultId: (resultId: string | null) => void;
-  
+
   // Subscribe to task cleared events
   onTaskCleared: (listener: () => void) => () => void;
 }
@@ -80,34 +80,38 @@ import {
   useLatestResultId,
   useTaskInitiating,
   useActiveTaskId,
-  useOnTaskCleared
-} from '../contexts/TaskContext';
+  useOnTaskCleared,
+} from "../contexts/TaskContext";
 
 // Component that starts a task
 function ConceptGenerator() {
-  const setActiveTask = useContextSelector(TaskContext, state => state?.setActiveTask);
-  const setIsTaskInitiating = useContextSelector(TaskContext, state => state?.setIsTaskInitiating);
-  
+  const setActiveTask = useContextSelector(
+    TaskContext,
+    (state) => state?.setActiveTask,
+  );
+  const setIsTaskInitiating = useContextSelector(
+    TaskContext,
+    (state) => state?.setIsTaskInitiating,
+  );
+
   const handleGenerate = async () => {
     // Mark that we're initiating a task before we have the ID
     setIsTaskInitiating(true);
-    
+
     try {
       // Make API call to start a task
-      const response = await apiClient.post('/concepts/generate', formData);
-      
+      const response = await apiClient.post("/concepts/generate", formData);
+
       // Once task is created, track it
       setActiveTask(response.data.task_id);
     } catch (error) {
       // If task creation fails, reset initiating state
       setIsTaskInitiating(false);
-      console.error('Failed to start task', error);
+      console.error("Failed to start task", error);
     }
   };
-  
-  return (
-    <button onClick={handleGenerate}>Generate Concept</button>
-  );
+
+  return <button onClick={handleGenerate}>Generate Concept</button>;
 }
 
 // Status indicator that shows task progress
@@ -118,14 +122,14 @@ function TaskStatusIndicator() {
   const isCompleted = useIsTaskCompleted();
   const isFailed = useIsTaskFailed();
   const taskId = useActiveTaskId();
-  
+
   if (!taskId) return null;
-  
+
   if (isPending) return <span>Task queued...</span>;
   if (isProcessing) return <ProgressBar />;
   if (isCompleted) return <span>Task completed!</span>;
   if (isFailed) return <span>Task failed</span>;
-  
+
   return null;
 }
 
@@ -133,17 +137,17 @@ function TaskStatusIndicator() {
 function ResultDisplay() {
   const resultId = useLatestResultId();
   const onTaskCleared = useOnTaskCleared();
-  
+
   // Subscribe to task cleared events
   useEffect(() => {
     // Return cleanup function from event subscription
     return onTaskCleared(() => {
-      console.log('Task was cleared, time to update UI');
+      console.log("Task was cleared, time to update UI");
     });
   }, [onTaskCleared]);
-  
+
   if (!resultId) return <p>No results yet</p>;
-  
+
   return <ConceptDisplayCard conceptId={resultId} />;
 }
 ```
@@ -192,18 +196,18 @@ unsubscribe();
 
 ## Exposed Hooks
 
-| Hook | Returns | Description |
-|------|---------|-------------|
-| `useTaskContext()` | `TaskContextType` | Complete task context |
-| `useHasActiveTask()` | `boolean` | Whether there's an active task |
-| `useIsTaskProcessing()` | `boolean` | Whether a task is processing |
-| `useIsTaskPending()` | `boolean` | Whether a task is pending |
-| `useIsTaskCompleted()` | `boolean` | Whether a task has completed |
-| `useIsTaskFailed()` | `boolean` | Whether a task has failed |
-| `useLatestResultId()` | `string \| null` | Latest result ID |
-| `useTaskInitiating()` | `boolean` | Whether a task is initiating |
-| `useActiveTaskId()` | `string \| null` | Current active task ID |
-| `useOnTaskCleared()` | `(listener: () => void) => () => void` | Task cleared event subscription |
+| Hook                    | Returns                                | Description                     |
+| ----------------------- | -------------------------------------- | ------------------------------- |
+| `useTaskContext()`      | `TaskContextType`                      | Complete task context           |
+| `useHasActiveTask()`    | `boolean`                              | Whether there's an active task  |
+| `useIsTaskProcessing()` | `boolean`                              | Whether a task is processing    |
+| `useIsTaskPending()`    | `boolean`                              | Whether a task is pending       |
+| `useIsTaskCompleted()`  | `boolean`                              | Whether a task has completed    |
+| `useIsTaskFailed()`     | `boolean`                              | Whether a task has failed       |
+| `useLatestResultId()`   | `string \| null`                       | Latest result ID                |
+| `useTaskInitiating()`   | `boolean`                              | Whether a task is initiating    |
+| `useActiveTaskId()`     | `string \| null`                       | Current active task ID          |
+| `useOnTaskCleared()`    | `(listener: () => void) => () => void` | Task cleared event subscription |
 
 ## Task Response Structure
 
@@ -211,15 +215,15 @@ The `TaskResponse` object contains:
 
 ```typescript
 interface TaskResponse {
-  id: string;          // Task ID
-  status: string;      // Task status (pending, processing, completed, failed)
-  progress?: number;   // Optional progress percentage (0-100)
-  message?: string;    // Optional status message
-  result_id?: string;  // Optional result ID for completed tasks
-  result?: any;        // Optional result data
-  error?: string;      // Optional error message
-  created_at: string;  // Creation timestamp
-  updated_at: string;  // Last update timestamp
+  id: string; // Task ID
+  status: string; // Task status (pending, processing, completed, failed)
+  progress?: number; // Optional progress percentage (0-100)
+  message?: string; // Optional status message
+  result_id?: string; // Optional result ID for completed tasks
+  result?: any; // Optional result data
+  error?: string; // Optional error message
+  created_at: string; // Creation timestamp
+  updated_at: string; // Last update timestamp
 }
 ```
 
@@ -227,4 +231,4 @@ interface TaskResponse {
 
 - [useTaskSubscription](../hooks/useTaskSubscription.md) - Hook used for real-time task updates
 - [useTaskQueries](../hooks/useTaskQueries.md) - Hooks for task API interactions
-- [TaskStatusBar](../components/TaskStatusBar.md) - UI component for displaying task status 
+- [TaskStatusBar](../components/TaskStatusBar.md) - UI component for displaying task status

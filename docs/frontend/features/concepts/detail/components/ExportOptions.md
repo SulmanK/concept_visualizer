@@ -11,14 +11,14 @@ The `ExportOptions` component provides a user interface for exporting concept im
 
 ## Props
 
-| Prop                | Type                  | Required | Default     | Description                                      |
-|---------------------|----------------------|----------|-------------|--------------------------------------------------|
-| `imageUrl`          | `string \| undefined` | Yes      | -           | URL of the image to process and download         |
-| `storagePath`       | `string`              | No       | -           | Storage path of the image (extracted from URL if not provided) |
-| `conceptTitle`      | `string`              | Yes      | -           | Title/name of the concept                        |
-| `variationName`     | `string`              | No       | `''`        | Variation name (for color variations)            |
-| `isPaletteVariation`| `boolean`            | No       | `false`     | Indicates if this is a palette variation         |
-| `onDownload`        | `(format: ExportFormat, size: ExportSize) => void` | No | - | Callback when download button is clicked |
+| Prop                 | Type                                               | Required | Default | Description                                                    |
+| -------------------- | -------------------------------------------------- | -------- | ------- | -------------------------------------------------------------- |
+| `imageUrl`           | `string \| undefined`                              | Yes      | -       | URL of the image to process and download                       |
+| `storagePath`        | `string`                                           | No       | -       | Storage path of the image (extracted from URL if not provided) |
+| `conceptTitle`       | `string`                                           | Yes      | -       | Title/name of the concept                                      |
+| `variationName`      | `string`                                           | No       | `''`    | Variation name (for color variations)                          |
+| `isPaletteVariation` | `boolean`                                          | No       | `false` | Indicates if this is a palette variation                       |
+| `onDownload`         | `(format: ExportFormat, size: ExportSize) => void` | No       | -       | Callback when download button is clicked                       |
 
 ## Features
 
@@ -35,6 +35,7 @@ The `ExportOptions` component provides a user interface for exporting concept im
 ### Export Formats
 
 The component supports the following export formats:
+
 - **PNG**: Lossless format with transparency support
 - **JPG**: Compressed format for smaller file sizes
 - **SVG**: Vector format for scalable graphics (when available)
@@ -42,6 +43,7 @@ The component supports the following export formats:
 ### Size Options
 
 Users can select from several size options:
+
 - **Small**: 256px (suitable for thumbnails and icons)
 - **Medium**: 512px (default, good for web usage)
 - **Large**: 1024px (higher quality for presentations)
@@ -50,6 +52,7 @@ Users can select from several size options:
 ### API Integration
 
 The component uses the `useExportImageMutation` hook to:
+
 1. Send export requests to the backend API
 2. Process the response and generate blob URLs
 3. Handle downloading or previewing the exported image
@@ -57,6 +60,7 @@ The component uses the `useExportImageMutation` hook to:
 ### State Management
 
 Several state variables track the component's operation:
+
 - `selectedFormat`: Currently selected export format
 - `selectedSize`: Currently selected export size
 - `previewUrl`: URL for the current preview image
@@ -67,17 +71,17 @@ Several state variables track the component's operation:
 ## Usage Example
 
 ```tsx
-import { ExportOptions } from './components/ExportOptions';
+import { ExportOptions } from "./components/ExportOptions";
 
 const ConceptExport = ({ concept }) => {
   return (
     <div className="export-section">
       <h2>Export Options</h2>
-      
+
       <ExportOptions
         imageUrl={concept.imageUrl}
-        conceptTitle={concept.title || 'Concept'}
-        variationName={concept.variation || ''}
+        conceptTitle={concept.title || "Concept"}
+        variationName={concept.variation || ""}
         isPaletteVariation={Boolean(concept.variation)}
         onDownload={(format, size) => {
           console.log(`Downloading in ${format} format at ${size} size`);
@@ -91,6 +95,7 @@ const ConceptExport = ({ concept }) => {
 ## Error Handling
 
 The component provides comprehensive error handling for:
+
 - Network failures
 - Rate limit errors
 - Processing errors
@@ -99,6 +104,7 @@ The component provides comprehensive error handling for:
 ## Resource Management
 
 The component carefully manages resources by:
+
 - Tracking and revoking blob URLs to prevent memory leaks
 - Cleaning up resources when unmounting
 - Using references to avoid unnecessary re-renders
@@ -106,4 +112,4 @@ The component carefully manages resources by:
 ## Related Components
 
 - [`EnhancedImagePreview`](./EnhancedImagePreview.md) - Used for the full-screen preview modal
-- [`ConceptDetailPage`](../ConceptDetailPage.md) - Parent component that integrates the export options 
+- [`ConceptDetailPage`](../ConceptDetailPage.md) - Parent component that integrates the export options

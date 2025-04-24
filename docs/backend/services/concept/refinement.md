@@ -20,9 +20,9 @@ This service is crucial for implementing an iterative design workflow, allowing 
 ```python
 class ConceptRefiner:
     """Service for refining existing visual concepts."""
-    
+
     def __init__(
-        self, 
+        self,
         client: JigsawStackClient,
         persistence_service: ConceptPersistenceServiceInterface
     ):
@@ -48,13 +48,16 @@ async def refine_concept(
 This method applies refinement instructions to an existing concept to create an improved version.
 
 **Parameters:**
+
 - `concept_id`: ID of the concept to refine
 - `refinement_prompt`: Textual instructions for refining the concept
 
 **Returns:**
+
 - `RefinementResponse`: Contains the refined image URL, original image URL, and metadata
 
 **Raises:**
+
 - `ResourceNotFoundError`: If the concept with the given ID doesn't exist
 - `RefinementError`: If the refinement process fails
 - `ServiceUnavailableError`: If external services are unavailable
@@ -71,13 +74,16 @@ async def generate_variations(
 This method creates multiple alternative versions of an existing concept.
 
 **Parameters:**
+
 - `concept_id`: ID of the base concept to create variations from
 - `variation_count`: Number of variations to generate (default: 3)
 
 **Returns:**
+
 - List of `ConceptVariation` objects, each containing a variation image and metadata
 
 **Raises:**
+
 - `ResourceNotFoundError`: If the base concept doesn't exist
 - `VariationGenerationError`: If the variation generation fails
 
@@ -93,10 +99,12 @@ def process_refinement_prompt(
 This method enhances raw refinement instructions to improve the refinement results.
 
 **Parameters:**
+
 - `original_concept`: The base concept being refined
 - `refinement_prompt`: Original refinement instructions from the user
 
 **Returns:**
+
 - Enhanced refinement prompt optimized for the AI service
 
 ## Refinement Flow
@@ -182,4 +190,4 @@ The refinement service implements comprehensive error handling:
 - [Concept Generation](generation.md): Details on initial concept generation
 - [Persistence Service](../persistence/concept_persistence_service.md): Storage service for concepts
 - [JigsawStack Client](../jigsawstack/client.md): Client for the external AI service
-- [Refinement API Routes](../../api/routes/concept/refinement.md): API routes that use this service 
+- [Refinement API Routes](../../api/routes/concept/refinement.md): API routes that use this service

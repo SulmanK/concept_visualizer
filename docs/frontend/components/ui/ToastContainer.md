@@ -11,11 +11,11 @@ The `ToastContainer` component manages and displays multiple toast notifications
 
 ## Props
 
-| Prop        | Type                          | Required | Default        | Description                                      |
-|-------------|-------------------------------|----------|----------------|--------------------------------------------------|
-| `toasts`    | `ToastData[]`                 | Yes      | -              | Array of toast notifications to display           |
-| `position`  | `string`                      | No       | `'bottom-right'`| Position of the toast container on screen        |
-| `onDismiss` | `(id: string) => void`        | Yes      | -              | Function to call when a toast is dismissed       |
+| Prop        | Type                   | Required | Default          | Description                                |
+| ----------- | ---------------------- | -------- | ---------------- | ------------------------------------------ |
+| `toasts`    | `ToastData[]`          | Yes      | -                | Array of toast notifications to display    |
+| `position`  | `string`               | No       | `'bottom-right'` | Position of the toast container on screen  |
+| `onDismiss` | `(id: string) => void` | Yes      | -                | Function to call when a toast is dismissed |
 
 ## Supported Positions
 
@@ -34,17 +34,17 @@ export interface ToastData {
    * Unique ID for the toast
    */
   id: string;
-  
+
   /**
    * Toast type/severity
    */
   type: ToastType; // 'success' | 'error' | 'info' | 'warning'
-  
+
   /**
    * Message to display
    */
   message: string;
-  
+
   /**
    * Auto dismiss timeout in milliseconds
    * Set to 0 to prevent auto-dismissal
@@ -54,7 +54,13 @@ export interface ToastData {
 
 export interface ToastContainerProps {
   toasts: ToastData[];
-  position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
+  position?:
+    | "top-right"
+    | "top-left"
+    | "bottom-right"
+    | "bottom-left"
+    | "top-center"
+    | "bottom-center";
   onDismiss: (id: string) => void;
 }
 ```
@@ -70,48 +76,48 @@ export interface ToastContainerProps {
 ## Usage Example
 
 ```tsx
-import { ToastContainer } from '../components/ui/ToastContainer';
-import { useState } from 'react';
+import { ToastContainer } from "../components/ui/ToastContainer";
+import { useState } from "react";
 
 const NotificationSystem = () => {
   const [toasts, setToasts] = useState([
     {
-      id: 'toast-1',
-      type: 'success',
-      message: 'Operation completed successfully',
-      duration: 5000
+      id: "toast-1",
+      type: "success",
+      message: "Operation completed successfully",
+      duration: 5000,
     },
     {
-      id: 'toast-2',
-      type: 'info',
-      message: 'New updates are available',
-      duration: 8000
-    }
+      id: "toast-2",
+      type: "info",
+      message: "New updates are available",
+      duration: 8000,
+    },
   ]);
-  
+
   const handleDismiss = (id: string) => {
-    setToasts(toasts.filter(toast => toast.id !== id));
+    setToasts(toasts.filter((toast) => toast.id !== id));
   };
-  
+
   const addToast = (type, message) => {
     const newToast = {
       id: `toast-${Date.now()}`,
       type,
       message,
-      duration: 5000
+      duration: 5000,
     };
     setToasts([...toasts, newToast]);
   };
-  
+
   return (
     <div>
-      <button onClick={() => addToast('success', 'Item created!')}>
+      <button onClick={() => addToast("success", "Item created!")}>
         Show Success Toast
       </button>
-      <button onClick={() => addToast('error', 'Operation failed')}>
+      <button onClick={() => addToast("error", "Operation failed")}>
         Show Error Toast
       </button>
-      
+
       <ToastContainer
         toasts={toasts}
         position="top-right"
@@ -133,4 +139,4 @@ const NotificationSystem = () => {
 
 - [`Toast`](./Toast.md) - Individual toast notification component
 - [`useToast`](../../hooks/useToast.md) - Hook for creating and managing toasts
-- [`ApiToastListener`](./ApiToastListener.md) - Component that listens for API events and shows toasts 
+- [`ApiToastListener`](./ApiToastListener.md) - Component that listens for API events and shows toasts

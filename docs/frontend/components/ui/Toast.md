@@ -11,14 +11,14 @@ The `Toast` component displays short-lived notification messages to users. It su
 
 ## Props
 
-| Prop              | Type                    | Required | Default     | Description                                      |
-|-------------------|-------------------------|----------|-------------|--------------------------------------------------|
-| `id`              | `string`                | Yes      | -           | Unique identifier for the toast                  |
-| `type`            | `ToastType`             | Yes      | -           | Type of toast: 'success' \| 'error' \| 'info' \| 'warning' |
-| `message`         | `string`                | Yes      | -           | Content of the toast notification               |
-| `onDismiss`       | `(id: string) => void`  | No       | `undefined` | Function called when toast is dismissed          |
-| `duration`        | `number`                | No       | `5000`      | Time in milliseconds before auto-dismissal (0 for no auto-dismiss) |
-| `showCloseButton` | `boolean`               | No       | `true`      | Whether to show the close button                 |
+| Prop              | Type                   | Required | Default     | Description                                                        |
+| ----------------- | ---------------------- | -------- | ----------- | ------------------------------------------------------------------ |
+| `id`              | `string`               | Yes      | -           | Unique identifier for the toast                                    |
+| `type`            | `ToastType`            | Yes      | -           | Type of toast: 'success' \| 'error' \| 'info' \| 'warning'         |
+| `message`         | `string`               | Yes      | -           | Content of the toast notification                                  |
+| `onDismiss`       | `(id: string) => void` | No       | `undefined` | Function called when toast is dismissed                            |
+| `duration`        | `number`               | No       | `5000`      | Time in milliseconds before auto-dismissal (0 for no auto-dismiss) |
+| `showCloseButton` | `boolean`              | No       | `true`      | Whether to show the close button                                   |
 
 ## Features
 
@@ -32,17 +32,17 @@ The `Toast` component displays short-lived notification messages to users. It su
 ## Usage Example
 
 ```tsx
-import { Toast } from '../components/ui/Toast';
-import { useState } from 'react';
+import { Toast } from "../components/ui/Toast";
+import { useState } from "react";
 
 const NotificationExample = () => {
   const [isVisible, setIsVisible] = useState(true);
-  
+
   const handleDismiss = (id: string) => {
     console.log(`Toast ${id} dismissed`);
     setIsVisible(false);
   };
-  
+
   return (
     <div>
       {isVisible && (
@@ -54,10 +54,8 @@ const NotificationExample = () => {
           duration={3000}
         />
       )}
-      
-      <button onClick={() => setIsVisible(true)}>
-        Show Toast Again
-      </button>
+
+      <button onClick={() => setIsVisible(true)}>Show Toast Again</button>
     </div>
   );
 };
@@ -66,7 +64,7 @@ const NotificationExample = () => {
 ## Type Definitions
 
 ```typescript
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
+export type ToastType = "success" | "error" | "info" | "warning";
 
 export interface ToastProps {
   id: string;
@@ -90,4 +88,4 @@ Each toast type has a distinct visual appearance:
 ## Related Components
 
 - [`ToastContainer`](./ToastContainer.md) - Container for managing multiple toasts
-- [`useToast`](../../hooks/useToast.md) - Hook for creating and managing toasts 
+- [`useToast`](../../hooks/useToast.md) - Hook for creating and managing toasts

@@ -5,6 +5,7 @@ The Task API module provides functions for interacting with task-related endpoin
 ## Overview
 
 The Task API allows clients to:
+
 - Retrieve task information
 - Subscribe to task updates
 - Check task status
@@ -15,11 +16,11 @@ The Task API allows clients to:
 ```tsx
 // Task status enumeration
 export enum TaskStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled'
+  PENDING = "pending",
+  PROCESSING = "processing",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
 }
 
 // Task object interface
@@ -57,7 +58,7 @@ export const getTask = async (taskId: string): Promise<Task> => {
   try {
     return await apiClient.get<Task>(`/api/tasks/${taskId}`);
   } catch (error) {
-    throw handleApiError(error, 'Failed to retrieve task');
+    throw handleApiError(error, "Failed to retrieve task");
   }
 };
 ```
@@ -76,7 +77,7 @@ export const getTaskStatus = async (taskId: string): Promise<TaskStatus> => {
     const task = await apiClient.get<Task>(`/api/tasks/${taskId}/status`);
     return task.status;
   } catch (error) {
-    throw handleApiError(error, 'Failed to retrieve task status');
+    throw handleApiError(error, "Failed to retrieve task status");
   }
 };
 ```
@@ -94,7 +95,7 @@ export const cancelTask = async (taskId: string): Promise<Task> => {
   try {
     return await apiClient.post<Task>(`/api/tasks/${taskId}/cancel`);
   } catch (error) {
-    throw handleApiError(error, 'Failed to cancel task');
+    throw handleApiError(error, "Failed to cancel task");
   }
 };
 ```
@@ -108,15 +109,17 @@ export const cancelTask = async (taskId: string): Promise<Task> => {
  * @returns The task result data
  * @throws ApiError if the task is not completed or the request fails
  */
-export const getTaskResult = async (taskId: string): Promise<Record<string, any>> => {
+export const getTaskResult = async (
+  taskId: string,
+): Promise<Record<string, any>> => {
   try {
     const task = await apiClient.get<Task>(`/api/tasks/${taskId}/result`);
     if (task.status !== TaskStatus.COMPLETED) {
-      throw new Error('Task is not completed');
+      throw new Error("Task is not completed");
     }
     return task.result || {};
   } catch (error) {
-    throw handleApiError(error, 'Failed to retrieve task result');
+    throw handleApiError(error, "Failed to retrieve task result");
   }
 };
 ```
@@ -126,34 +129,41 @@ export const getTaskResult = async (taskId: string): Promise<Record<string, any>
 ### Retrieving and Monitoring a Task
 
 ```tsx
-import { getTask, getTaskStatus, TaskStatus } from 'api/task';
+import { getTask, getTaskStatus, TaskStatus } from "api/task";
 
 // Fetch a task
 const fetchAndMonitorTask = async (taskId: string) => {
   try {
     // Get initial task data
     const task = await getTask(taskId);
-    console.log('Task retrieved:', task);
-    
+    console.log("Task retrieved:", task);
+
     // Set up polling if task is not complete
-    if (task.status === TaskStatus.PENDING || task.status === TaskStatus.PROCESSING) {
+    if (
+      task.status === TaskStatus.PENDING ||
+      task.status === TaskStatus.PROCESSING
+    ) {
       const interval = setInterval(async () => {
         const status = await getTaskStatus(taskId);
-        console.log('Task status:', status);
-        
-        if (status === TaskStatus.COMPLETED || status === TaskStatus.FAILED || status === TaskStatus.CANCELLED) {
+        console.log("Task status:", status);
+
+        if (
+          status === TaskStatus.COMPLETED ||
+          status === TaskStatus.FAILED ||
+          status === TaskStatus.CANCELLED
+        ) {
           clearInterval(interval);
-          
+
           // Get final task data if completed
           if (status === TaskStatus.COMPLETED) {
             const updatedTask = await getTask(taskId);
-            console.log('Completed task:', updatedTask);
+            console.log("Completed task:", updatedTask);
           }
         }
       }, 2000); // Poll every 2 seconds
     }
   } catch (error) {
-    console.error('Error monitoring task:', error);
+    console.error("Error monitoring task:", error);
   }
 };
 ```
@@ -161,15 +171,15 @@ const fetchAndMonitorTask = async (taskId: string) => {
 ### Cancelling a Task
 
 ```tsx
-import { cancelTask } from 'api/task';
+import { cancelTask } from "api/task";
 
 const handleCancelTask = async (taskId: string) => {
   try {
     const cancelledTask = await cancelTask(taskId);
-    console.log('Task cancelled:', cancelledTask);
+    console.log("Task cancelled:", cancelledTask);
     return cancelledTask;
   } catch (error) {
-    console.error('Failed to cancel task:', error);
+    console.error("Failed to cancel task:", error);
     throw error;
   }
 };
@@ -188,16 +198,16 @@ const handleApiError = (error: any, defaultMessage: string): never => {
   if (error instanceof ApiError) {
     throw error;
   }
-  
+
   if (error.response) {
     const errorData = error.response.data as ErrorResponse;
     throw new ApiError(
       errorData.message || defaultMessage,
       error.response.status,
-      errorData.code
+      errorData.code,
     );
   }
-  
+
   throw new ApiError(defaultMessage, 500);
 };
-``` 
+```

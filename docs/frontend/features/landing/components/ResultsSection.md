@@ -14,22 +14,25 @@ const ResultsSection: React.FC = () => {
   // but are hardcoded for demonstration purposes
   const exampleResults = [
     {
-      id: 'example1',
-      title: 'Modern Tech Startup',
-      description: 'A clean, minimalist design for a technology startup focused on innovation.',
-      imageUrl: '/assets/examples/tech-startup-concept.webp',
+      id: "example1",
+      title: "Modern Tech Startup",
+      description:
+        "A clean, minimalist design for a technology startup focused on innovation.",
+      imageUrl: "/assets/examples/tech-startup-concept.webp",
     },
     {
-      id: 'example2',
-      title: 'Organic Food Brand',
-      description: 'Earthy, natural aesthetic for an organic food company with sustainability focus.',
-      imageUrl: '/assets/examples/organic-food-concept.webp',
+      id: "example2",
+      title: "Organic Food Brand",
+      description:
+        "Earthy, natural aesthetic for an organic food company with sustainability focus.",
+      imageUrl: "/assets/examples/organic-food-concept.webp",
     },
     {
-      id: 'example3',
-      title: 'Creative Agency',
-      description: 'Bold, vibrant design for a creative agency that pushes boundaries.',
-      imageUrl: '/assets/examples/creative-agency-concept.webp',
+      id: "example3",
+      title: "Creative Agency",
+      description:
+        "Bold, vibrant design for a creative agency that pushes boundaries.",
+      imageUrl: "/assets/examples/creative-agency-concept.webp",
     },
   ];
 
@@ -37,10 +40,10 @@ const ResultsSection: React.FC = () => {
     <section className="results-section">
       <h2 className="section-title">Example Results</h2>
       <p className="section-description">
-        See what's possible with our concept visualization tools. These examples showcase 
-        the quality and variety of concepts you can generate.
+        See what's possible with our concept visualization tools. These examples
+        showcase the quality and variety of concepts you can generate.
       </p>
-      
+
       <div className="example-grid">
         {exampleResults.map((example) => (
           <div key={example.id} className="example-card">
@@ -59,14 +62,14 @@ const ResultsSection: React.FC = () => {
           </div>
         ))}
       </div>
-      
+
       <div className="cta-container">
         <Button
           variant="primary"
           size="large"
           onClick={() => {
-            document.getElementById('concept-form')?.scrollIntoView({ 
-              behavior: 'smooth' 
+            document.getElementById("concept-form")?.scrollIntoView({
+              behavior: "smooth",
             });
           }}
         >
@@ -149,4 +152,4 @@ const LandingPage: React.FC = () => {
 
 - Uses optimized images with appropriate dimensions
 - Could implement lazy loading for the images to improve initial page load
-- Static content that doesn't require data fetching (in the current implementation) 
+- Static content that doesn't require data fetching (in the current implementation)

@@ -11,6 +11,7 @@ This interface establishes a contract for services that:
 3. Generate color palettes based on text descriptions
 
 By defining this interface, the application can:
+
 - Maintain separation between API implementation details and business logic
 - Swap implementations for testing or future API changes
 - Establish clear boundaries for what the service provides
@@ -20,18 +21,18 @@ By defining this interface, the application can:
 ```python
 class JigsawStackServiceInterface(abc.ABC):
     """Interface for JigsawStack API operations."""
-    
+
     @abc.abstractmethod
     async def generate_image(
-        self, 
-        prompt: str, 
-        width: int = 512, 
+        self,
+        prompt: str,
+        width: int = 512,
         height: int = 512,
         model: str = "stable-diffusion-xl"
     ) -> Dict[str, Any]:
         """Generate an image based on a prompt."""
         pass
-    
+
     # Other abstract methods...
 ```
 
@@ -42,24 +43,24 @@ class JigsawStackServiceInterface(abc.ABC):
 ```python
 @abc.abstractmethod
 async def generate_image(
-    self, 
-    prompt: str, 
-    width: int = 512, 
+    self,
+    prompt: str,
+    width: int = 512,
     height: int = 512,
     model: str = "stable-diffusion-xl"
 ) -> Dict[str, Any]:
     """
     Generate an image based on a prompt.
-    
+
     Args:
         prompt: The image generation prompt
         width: Width of the generated image
         height: Height of the generated image
         model: Model to use for generation
-        
+
     Returns:
         Dictionary containing image URL and/or binary data
-        
+
     Raises:
         JigsawStackGenerationError: If generation fails
     """
@@ -73,24 +74,24 @@ This method defines the contract for generating a new image from a text prompt.
 ```python
 @abc.abstractmethod
 async def refine_image(
-    self, 
-    prompt: str, 
+    self,
+    prompt: str,
     image_url: str,
     strength: float = 0.7,
     model: str = "stable-diffusion-xl"
 ) -> Dict[str, Any]:
     """
     Refine an existing image based on a prompt.
-    
+
     Args:
         prompt: The refinement prompt
         image_url: URL of the original image
         strength: How much to change the original (0.0-1.0)
         model: Model to use for refinement
-        
+
     Returns:
         Dictionary containing refined image URL and/or binary data
-        
+
     Raises:
         JigsawStackGenerationError: If refinement fails
     """
@@ -104,20 +105,20 @@ This method defines how to refine an existing image with a new prompt, maintaini
 ```python
 @abc.abstractmethod
 async def generate_color_palettes(
-    self, 
+    self,
     prompt: str,
     num_palettes: int = 5
 ) -> List[Dict[str, Any]]:
     """
     Generate color palettes based on a prompt.
-    
+
     Args:
         prompt: The color palette generation prompt
         num_palettes: Number of palettes to generate
-        
+
     Returns:
         List of palette dictionaries
-        
+
     Raises:
         JigsawStackGenerationError: If palette generation fails
     """
@@ -193,7 +194,7 @@ async def generate_concept(
         width=512,
         height=512
     )
-    
+
     # Process the result
     return {"image_url": image_result["url"], ...}
 ```
@@ -202,4 +203,4 @@ async def generate_concept(
 
 - [JigsawStack Service](service.md): Implementation of this interface
 - [JigsawStack Client](client.md): Lower-level client used by the service
-- [Concept Service](../concept/service.md): Higher-level service that uses this service 
+- [Concept Service](../concept/service.md): Higher-level service that uses this service

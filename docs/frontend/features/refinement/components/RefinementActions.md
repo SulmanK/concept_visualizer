@@ -38,7 +38,7 @@ const RefinementActions: React.FC<RefinementActionsProps> = ({
         >
           Discard Changes
         </Button>
-        
+
         <div className="primary-actions">
           <Button
             variant="secondary"
@@ -50,7 +50,7 @@ const RefinementActions: React.FC<RefinementActionsProps> = ({
           >
             Export
           </Button>
-          
+
           <Button
             variant="primary"
             onClick={onSave}
@@ -63,12 +63,12 @@ const RefinementActions: React.FC<RefinementActionsProps> = ({
           </Button>
         </div>
       </div>
-      
+
       <div className="action-info">
         <p className="info-text">
           <Icon name="info" size="small" />
-          Saving will store this refined concept in your account. 
-          Exporting will download the concept in your preferred format.
+          Saving will store this refined concept in your account. Exporting will
+          download the concept in your preferred format.
         </p>
       </div>
     </div>
@@ -78,15 +78,15 @@ const RefinementActions: React.FC<RefinementActionsProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `onSave` | `() => void` | Yes | - | Callback when save button is clicked |
-| `onExport` | `() => void` | Yes | - | Callback when export button is clicked |
-| `onDiscard` | `() => void` | Yes | - | Callback when discard button is clicked |
-| `isSaving` | `boolean` | No | false | Whether save operation is in progress |
-| `isExporting` | `boolean` | No | false | Whether export operation is in progress |
-| `disableSave` | `boolean` | No | false | Whether save button should be disabled |
-| `disableExport` | `boolean` | No | false | Whether export button should be disabled |
+| Prop            | Type         | Required | Default | Description                              |
+| --------------- | ------------ | -------- | ------- | ---------------------------------------- |
+| `onSave`        | `() => void` | Yes      | -       | Callback when save button is clicked     |
+| `onExport`      | `() => void` | Yes      | -       | Callback when export button is clicked   |
+| `onDiscard`     | `() => void` | Yes      | -       | Callback when discard button is clicked  |
+| `isSaving`      | `boolean`    | No       | false   | Whether save operation is in progress    |
+| `isExporting`   | `boolean`    | No       | false   | Whether export operation is in progress  |
+| `disableSave`   | `boolean`    | No       | false   | Whether save button should be disabled   |
+| `disableExport` | `boolean`    | No       | false   | Whether export button should be disabled |
 
 ## Features
 
@@ -128,36 +128,44 @@ const RefinementActions: React.FC<RefinementActionsProps> = ({
 ```tsx
 const RefinementPage: React.FC = () => {
   const router = useRouter();
-  const { mutate: saveConcept, isPending: isSaving } = useConceptMutations.useSaveConcept();
-  const { mutate: exportConcept, isPending: isExporting } = useConceptMutations.useExportConcept();
-  
+  const { mutate: saveConcept, isPending: isSaving } =
+    useConceptMutations.useSaveConcept();
+  const { mutate: exportConcept, isPending: isExporting } =
+    useConceptMutations.useExportConcept();
+
   const handleSave = useCallback(() => {
-    saveConcept({ conceptId: 'concept-123' }, {
-      onSuccess: () => {
-        // Handle success
+    saveConcept(
+      { conceptId: "concept-123" },
+      {
+        onSuccess: () => {
+          // Handle success
+        },
       },
-    });
+    );
   }, [saveConcept]);
-  
+
   const handleExport = useCallback(() => {
-    exportConcept({ conceptId: 'concept-123', format: 'png' }, {
-      onSuccess: (data) => {
-        // Handle download
+    exportConcept(
+      { conceptId: "concept-123", format: "png" },
+      {
+        onSuccess: (data) => {
+          // Handle download
+        },
       },
-    });
+    );
   }, [exportConcept]);
-  
+
   const handleDiscard = useCallback(() => {
     // Show confirmation dialog
-    if (window.confirm('Are you sure you want to discard your changes?')) {
-      router.push('/concepts');
+    if (window.confirm("Are you sure you want to discard your changes?")) {
+      router.push("/concepts");
     }
   }, [router]);
-  
+
   return (
     <div className="refinement-page">
       {/* Refinement content */}
-      
+
       <RefinementActions
         onSave={handleSave}
         onExport={handleExport}
@@ -176,4 +184,4 @@ const RefinementPage: React.FC = () => {
 - **Export Button**: Initiates an export process for the current concept
 - **Discard Button**: Discards changes, typically with a confirmation dialog
 - **Loading State**: Buttons show loading indicators during operations
-- **Disabled State**: Buttons are disabled when operations are not possible 
+- **Disabled State**: Buttons are disabled when operations are not possible

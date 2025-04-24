@@ -1,6 +1,6 @@
 # Concept Visualizer
 
-A web application for generating and refining visual concepts with AI assistance. 
+A web application for generating and refining visual concepts with AI assistance.
 
 ## Features
 
@@ -12,13 +12,15 @@ A web application for generating and refining visual concepts with AI assistance
 ## Tech Stack
 
 ### Backend
+
 - Python 3.11
-- FastAPI 
+- FastAPI
 - Pydantic
 - JigsawStack API integration
 - Supabase for storage and database
 
 ### Frontend
+
 - React 19
 - TypeScript
 - Tailwind CSS
@@ -34,7 +36,7 @@ concept_visualizer/
 ├── .github/             # GitHub workflows and CI/CD configuration
 ├── backend/             # Python FastAPI backend
 │   ├── .venv/           # Backend virtual environment (not tracked in git)
-│   ├── app/             # Application code 
+│   ├── app/             # Application code
 │   ├── docs/            # Backend documentation
 │   ├── tests/           # Test suite
 │   ├── .env             # Environment variables (not tracked in git)
@@ -93,6 +95,32 @@ cp .env.example .env
 npm run dev
 ```
 
+### Pre-commit Hooks
+
+The project uses pre-commit hooks to ensure code quality and maintain architectural standards. To set up pre-commit hooks:
+
+```bash
+# Install pre-commit
+pip install pre-commit
+
+# Install the git hooks
+pre-commit install
+```
+
+These hooks will automatically run when you attempt to commit changes and will prevent commits that don't meet the project's standards. The hooks include:
+
+- Code formatting with Black and Prettier
+- Import sorting with isort
+- Linting with flake8 and ESLint
+- Type checking with mypy and TypeScript
+- Custom architectural checks to enforce project structure
+
+To manually run all pre-commit hooks on all files:
+
+```bash
+pre-commit run --all-files
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -108,6 +136,7 @@ npm run dev
 1. Create a new Supabase project
 
 2. Set up the database tables:
+
    - `sessions`: Stores user sessions
    - `concepts`: Stores generated concepts
    - `color_variations`: Stores color variations for concepts
@@ -135,7 +164,7 @@ npm run test:watch # Run tests in watch mode
 For testing API integrations without making actual network calls, the project includes a mock API service:
 
 ```typescript
-import { mockApiService, setupMockApi, resetMockApi } from '../services/mocks';
+import { mockApiService, setupMockApi, resetMockApi } from "../services/mocks";
 
 // Configure mock API behavior
 setupMockApi({
@@ -143,10 +172,10 @@ setupMockApi({
   responseDelay: 10,
   customResponses: {
     generateConcept: {
-      imageUrl: 'https://example.com/test-image.png',
+      imageUrl: "https://example.com/test-image.png",
       // other properties...
-    }
-  }
+    },
+  },
 });
 
 // Reset mock API to default state
@@ -170,10 +199,11 @@ Never commit actual credentials to the repository. The repository contains examp
 ### Setting Up Credentials
 
 1. Copy the example environment files to create your own:
+
    ```bash
    # Backend
    cp backend/.env.example backend/.env
-   
+
    # Frontend
    cp frontend/my-app/.env.example frontend/my-app/.env
    ```
@@ -199,4 +229,4 @@ The application implements secure logging practices:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.

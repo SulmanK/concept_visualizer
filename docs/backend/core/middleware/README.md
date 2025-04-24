@@ -65,4 +65,4 @@ app = setup_request_id_middleware(app)
 
 - [API Middleware](../../api/middleware/README.md): Higher-level FastAPI middleware
 - [Application Factory](../factory.md): Application creation and middleware setup
-- [Logging Setup](../../utils/logging/setup.md): Logging configuration 
+- [Logging Setup](../../utils/logging/setup.md): Logging configuration

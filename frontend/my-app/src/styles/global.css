@@ -1,4 +1,4 @@
-@import './variables.css';
+@import "./variables.css";
 
 /* Tailwind directives */
 @tailwind base;
@@ -12,7 +12,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -20,16 +21,29 @@ html, body {
 }
 
 body {
-  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  font-family:
+    "Montserrat",
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 @layer base {
   body {
     @apply bg-gradient-to-br from-indigo-50 to-blue-100 min-h-screen;
-    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-family:
+      "Montserrat",
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold text-indigo-900;
   }
 
@@ -55,11 +69,11 @@ body {
   .btn-primary {
     @apply bg-gradient-to-r from-primary to-primary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
   }
-  
+
   .btn-secondary {
     @apply bg-gradient-to-r from-secondary to-secondary-dark text-white px-6 py-3 rounded-lg shadow-modern hover:shadow-modern-hover transition-all duration-200 font-semibold;
   }
-  
+
   .btn-outline {
     @apply border-2 border-primary/50 bg-white/80 hover:bg-white text-primary px-6 py-3 rounded-lg shadow-sm hover:shadow-modern transition-all duration-200 font-semibold;
   }
@@ -117,7 +131,7 @@ body {
   .bg-gradient-secondary {
     @apply bg-gradient-to-r from-secondary to-secondary-dark;
   }
-  
+
   .bg-gradient-page {
     @apply bg-gradient-to-br from-indigo-50 to-blue-100;
   }
@@ -126,16 +140,16 @@ body {
   .gradient-text {
     @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
   }
-  
+
   /* Interactive elements animations */
   .hover-lift {
     @apply transition-transform duration-300 hover:-translate-y-1;
   }
-  
+
   .hover-scale {
     @apply transition-transform duration-300 hover:scale-105;
   }
-  
+
   .hover-bright {
     @apply transition-all duration-300 hover:brightness-110;
   }
@@ -143,8 +157,12 @@ body {
 
 /* Animations */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -152,8 +170,12 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fade-in {
@@ -161,10 +183,16 @@ body {
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .scale-in {
   animation: scaleIn 0.3s ease-out;
-} 
+}

@@ -1,12 +1,11 @@
-"""
-Health API utilities.
+"""Health API utilities.
 
 This module provides utility functions for health check and rate limit endpoints.
 """
 
 import calendar
-from datetime import datetime
 import logging
+from datetime import datetime
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -14,15 +13,15 @@ logger = logging.getLogger(__name__)
 
 def get_reset_time(period: str) -> int:
     """Calculate approximate reset time in seconds.
-    
+
     Args:
         period: The period string (minute, hour, day, month)
-        
+
     Returns:
         int: Approximate seconds until reset
     """
     now = datetime.now()
-    
+
     if period == "minute":
         # Reset at the next minute
         return 60 - now.second
@@ -40,48 +39,51 @@ def get_reset_time(period: str) -> int:
         days_left = days_in_month - now.day
         return days_left * 24 * 60 * 60 + (24 - now.hour) * 60 * 60
 
+    # Default case
+    return 0
+
 
 def mask_ip(ip_address: str) -> str:
     """Mask an IP address for privacy in logs.
-    
+
     Args:
         ip_address: The IP address to mask
-        
+
     Returns:
         str: Masked IP address
     """
     if not ip_address:
         return "unknown"
-    
+
     # For IPv4 addresses
-    if '.' in ip_address:
-        parts = ip_address.split('.')
+    if "." in ip_address:
+        parts = ip_address.split(".")
         if len(parts) == 4:
             return f"{parts[0]}.{parts[1]}.**.**"
-    
+
     # For IPv6 addresses
-    if ':' in ip_address:
-        return ip_address.split(':')[0] + ':****:****'
-    
+    if ":" in ip_address:
+        return ip_address.split(":")[0] + ":****:****"
+
     # If not a recognized format, mask most of it
     if len(ip_address) > 4:
-        return ip_address[:4] + '*' * (len(ip_address) - 4)
-    
+        return ip_address[:4] + "*" * (len(ip_address) - 4)
+
     return "****"
 
 
 def mask_id(id_value: str) -> str:
     """Mask an identifier (user ID or IP) for privacy in logs.
-    
+
     Args:
         id_value: The identifier to mask
-        
+
     Returns:
         str: Masked identifier
     """
     if not id_value:
         return "unknown"
-        
+
     # Check if this is a user ID or IP format
     if id_value.startswith("user:"):
         # Extract and mask the user ID part
@@ -94,46 +96,46 @@ def mask_id(id_value: str) -> str:
         ip = id_value[3:]
         masked_ip = mask_ip(ip)
         return f"ip:{masked_ip}"
-    
+
     # Default masking for other formats
     if len(id_value) > 4:
-        return id_value[:4] + '*' * (len(id_value) - 4)
-    
+        return id_value[:4] + "*" * (len(id_value) - 4)
+
     return "****"
 
 
 def mask_key(key: str) -> str:
     """Mask a Redis key that might contain sensitive information.
-    
+
     Args:
         key: The Redis key to mask
-        
+
     Returns:
         str: Masked Redis key
     """
     if not key:
         return "unknown"
-    
+
     # Check if key is in format "user:{user_id}:..."
     if "user:" in key:
         parts = key.split(":")
         for i, part in enumerate(parts):
-            if i > 0 and parts[i-1] == "user" and len(part) > 4:
+            if i > 0 and parts[i - 1] == "user" and len(part) > 4:
                 # This part is likely a user ID
-                parts[i] = part[:4] + '*' * (len(part) - 4)
-    
+                parts[i] = part[:4] + "*" * (len(part) - 4)
+
     # If key contains an IP address, mask it
     else:
-        parts = key.split(':')
+        parts = key.split(":")
         masked_parts = []
-        
+
         for part in parts:
-            if '.' in part and len(part.split('.')) == 4:
+            if "." in part and len(part.split(".")) == 4:
                 # Likely an IPv4 address
                 masked_parts.append(mask_ip(part))
             else:
                 masked_parts.append(part)
-        
-        return ':'.join(masked_parts)
-    
-    return ':'.join(parts) 
+
+        return ":".join(masked_parts)
+
+    return ":".join(parts)

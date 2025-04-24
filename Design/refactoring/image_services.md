@@ -71,23 +71,23 @@ This module will focus solely on generating images via different providers:
 ```python
 class JigsawStackImageGenerator(ImageGeneratorInterface):
     """JigsawStack implementation of image generation."""
-    
+
     def __init__(self, jigsawstack_client: JigsawImageClientProtocol):
         """Initialize with a JigsawStack client."""
         self.client = jigsawstack_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def generate_image(
-        self, 
+        self,
         prompt: str,
         width: int = 512,
         height: int = 512
     ) -> bytes:
         """Generate an image based on a prompt."""
         # Implementation...
-    
+
     async def refine_image(
-        self, 
+        self,
         prompt: str,
         original_image_url: str,
         strength: float = 0.7
@@ -103,14 +103,14 @@ Split the storage functionality into smaller components:
 ```python
 class SupabaseImageStorage(ImageStorageInterface):
     """Supabase implementation of image storage."""
-    
+
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize with a Supabase client."""
         self.client = supabase_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def store_image(
-        self, 
+        self,
         image_data: bytes,
         path: Optional[str] = None,
         content_type: str = "image/png",
@@ -118,7 +118,7 @@ class SupabaseImageStorage(ImageStorageInterface):
     ) -> str:
         """Store an image and return its path."""
         # Implementation...
-    
+
     async def get_image(self, path: str, bucket: str = "concept-images") -> bytes:
         """Retrieve an image by path."""
         # Implementation...
@@ -127,23 +127,23 @@ class SupabaseImageStorage(ImageStorageInterface):
 ```python
 class ImageMetadataService:
     """Service for managing image metadata."""
-    
+
     def __init__(self, supabase_client: SupabaseClient):
         """Initialize with a Supabase client."""
         self.client = supabase_client
         self.logger = logging.getLogger(__name__)
-    
+
     async def store_metadata(
-        self, 
+        self,
         image_path: str,
         metadata: Dict[str, Any],
         bucket: str = "concept-images"
     ) -> bool:
         """Store metadata for an image."""
         # Implementation...
-    
+
     async def get_metadata(
-        self, 
+        self,
         image_path: str,
         bucket: str = "concept-images"
     ) -> Optional[Dict[str, Any]]:
@@ -158,17 +158,17 @@ Split image processing into specialized components:
 ```python
 class ColorProcessor:
     """Service for color-related image processing."""
-    
+
     async def extract_dominant_colors(
-        self, 
+        self,
         image_data: bytes,
         num_colors: int = 5
     ) -> List[Dict[str, Any]]:
         """Extract dominant colors from an image."""
         # Implementation...
-    
+
     async def apply_palette(
-        self, 
+        self,
         image_data: bytes,
         palette: List[str],
         blend_strength: float = 0.75
@@ -180,9 +180,9 @@ class ColorProcessor:
 ```python
 class ImageTransformer:
     """Service for image transformation operations."""
-    
+
     async def resize(
-        self, 
+        self,
         image_data: bytes,
         width: int,
         height: int,
@@ -190,9 +190,9 @@ class ImageTransformer:
     ) -> bytes:
         """Resize an image to specified dimensions."""
         # Implementation...
-    
+
     async def crop(
-        self, 
+        self,
         image_data: bytes,
         x: int,
         y: int,
@@ -210,16 +210,16 @@ Split conversion functionality into specialized components:
 ```python
 class FormatConverter:
     """Service for image format conversion."""
-    
+
     async def convert_to_format(
-        self, 
+        self,
         image_data: bytes,
         target_format: str,
         quality: int = 90
     ) -> bytes:
         """Convert image to specified format."""
         # Implementation...
-    
+
     async def get_image_info(self, image_data: bytes) -> Dict[str, Any]:
         """Get information about an image."""
         # Implementation...
@@ -228,9 +228,9 @@ class FormatConverter:
 ```python
 class SVGProcessor:
     """Service for SVG-specific operations."""
-    
+
     async def rasterize_svg(
-        self, 
+        self,
         svg_data: bytes,
         width: int,
         height: int,
@@ -238,7 +238,7 @@ class SVGProcessor:
     ) -> bytes:
         """Convert SVG to raster image."""
         # Implementation...
-    
+
     async def optimize_svg(self, svg_data: bytes) -> bytes:
         """Optimize SVG file size and structure."""
         # Implementation...
@@ -251,7 +251,7 @@ The main ImageService will use composition with specialized services:
 ```python
 class ImageService:
     """Main service for image operations using composition."""
-    
+
     def __init__(
         self,
         generator: ImageGeneratorInterface,
@@ -265,28 +265,28 @@ class ImageService:
         self.processor = processor
         self.converter = converter
         self.logger = logging.getLogger(__name__)
-    
+
     # Delegate to specialized services
     async def generate_and_store_image(self, prompt: str, session_id: str) -> Tuple[Optional[str], Optional[str]]:
         """Generate an image and store it in storage."""
         try:
             # Generate image
             image_data = await self.generator.generate_image(prompt)
-            
+
             # Generate path
             path = f"{session_id}/{uuid.uuid4()}.png"
-            
+
             # Store image
             stored_path = await self.storage.store_image(image_data, path)
-            
+
             # Get public URL
             public_url = await self.storage.get_public_url(stored_path)
-            
+
             return stored_path, public_url
         except Exception as e:
             self.logger.error(f"Error in generate_and_store_image: {e}")
             return None, None
-    
+
     # Other methods delegating to specialized services...
 ```
 
@@ -297,16 +297,16 @@ Define clear interfaces for each service type:
 ```python
 class ImageGeneratorInterface(Protocol):
     """Interface for image generation services."""
-    
+
     async def generate_image(
-        self, 
+        self,
         prompt: str,
         width: int = 512,
         height: int = 512
     ) -> bytes: ...
-    
+
     async def refine_image(
-        self, 
+        self,
         prompt: str,
         original_image_url: str,
         strength: float = 0.7
@@ -314,17 +314,17 @@ class ImageGeneratorInterface(Protocol):
 
 class ImageStorageInterface(Protocol):
     """Interface for image storage services."""
-    
+
     async def store_image(
-        self, 
+        self,
         image_data: bytes,
         path: Optional[str] = None,
         content_type: str = "image/png",
         bucket: str = "concept-images"
     ) -> str: ...
-    
+
     async def get_image(
-        self, 
+        self,
         path: str,
         bucket: str = "concept-images"
     ) -> bytes: ...
@@ -341,7 +341,7 @@ def get_image_generator(
     """Get an image generator implementation."""
     if jigsawstack_client is None:
         jigsawstack_client = get_jigsawstack_image_client()
-    
+
     return JigsawStackImageGenerator(jigsawstack_client)
 
 def get_image_storage(
@@ -350,7 +350,7 @@ def get_image_storage(
     """Get an image storage implementation."""
     if supabase_client is None:
         supabase_client = get_supabase_client()
-    
+
     return SupabaseImageStorage(supabase_client)
 
 # Main image service factory
@@ -365,7 +365,7 @@ def get_image_service(
     storage = storage or get_image_storage()
     processor = processor or get_image_processor()
     converter = converter or get_image_converter()
-    
+
     return ImageService(generator, storage, processor, converter)
 ```
 
@@ -437,4 +437,4 @@ def get_image_service(
 - Phase 6 (Service Updates): 2 days
 - Testing: 2 days
 
-Total: 12 days 
+Total: 12 days

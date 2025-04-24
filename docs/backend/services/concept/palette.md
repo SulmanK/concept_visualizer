@@ -20,7 +20,7 @@ This service works closely with the concept generation service to enhance visual
 ```python
 class PaletteGenerator:
     """Service for generating color palettes based on textual descriptions."""
-    
+
     def __init__(self, client: JigsawStackClient):
         """Initialize the palette generator with an API client."""
         self.client = client
@@ -43,13 +43,16 @@ async def generate_palettes(
 This method creates multiple color palettes based on a textual theme description.
 
 **Parameters:**
+
 - `theme_description`: Textual description of the desired color theme
 - `count`: Number of different palette variations to generate (default: 3)
 
 **Returns:**
+
 - List of `Palette` objects containing color information and metadata
 
 **Raises:**
+
 - `ServiceUnavailableError`: If the external palette service is unavailable
 - `PaletteGenerationError`: If there's an error generating palettes
 
@@ -63,9 +66,11 @@ def process_theme_description(self, theme_description: str) -> str:
 This method enhances raw theme descriptions to improve palette generation results.
 
 **Parameters:**
+
 - `theme_description`: Original theme description from the user
 
 **Returns:**
+
 - Enhanced description optimized for palette generation
 
 ### Apply Palette to Image
@@ -80,13 +85,16 @@ async def apply_palette_to_image(
 This method transforms an image by applying a specific color palette to it.
 
 **Parameters:**
+
 - `image_data`: Binary image data to transform
 - `palette`: Palette object containing colors to apply
 
 **Returns:**
+
 - Binary data of the transformed image
 
 **Raises:**
+
 - `ImageProcessingError`: If there's an error processing the image
 - `PaletteApplicationError`: If there's an error applying the palette
 
@@ -171,4 +179,4 @@ The palette service implements comprehensive error handling:
 - [Concept Generation](generation.md): Details on concept image generation
 - [Image Processing](../image/processing.md): Details on image transformation techniques
 - [JigsawStack Client](../jigsawstack/client.md): Client for the external AI service
-- [Palette Models](../../models/concept/domain.md): Data models for palette data structures 
+- [Palette Models](../../models/concept/domain.md): Data models for palette data structures

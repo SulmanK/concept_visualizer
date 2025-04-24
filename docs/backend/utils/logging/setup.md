@@ -25,11 +25,13 @@ def setup_logging(
 Configures logging for the application with both console and file handlers.
 
 **Parameters:**
+
 - `log_level`: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 - `log_format`: Optional custom log format
 - `log_dir`: Directory to store log files (default: 'logs')
 
 **Behavior:**
+
 1. Converts the string log level to a logging constant
 2. Creates a formatter with the specified format
 3. Configures the root logger with the specified level
@@ -46,9 +48,11 @@ def get_logger(name: str) -> logging.Logger
 Gets a logger with the given name.
 
 **Parameters:**
+
 - `name`: Logger name
 
 **Returns:**
+
 - A Logger instance with the specified name
 
 ### `is_health_check`
@@ -60,9 +64,11 @@ def is_health_check(path: str) -> bool
 Checks if a request path is a health check endpoint.
 
 **Parameters:**
+
 - `path`: Request path to check
 
 **Returns:**
+
 - `True` if this is a health check path, `False` otherwise
 
 ## Usage Examples
@@ -78,7 +84,7 @@ def init_app():
         log_level="DEBUG",  # More verbose during development
         log_dir="app_logs"   # Custom log directory
     )
-    
+
     # Continue with application initialization
 ```
 
@@ -112,7 +118,7 @@ async def log_request_middleware(request: Request, call_next):
     # Skip detailed logging for health checks
     if is_health_check(request.url.path):
         return await call_next(request)
-    
+
     # Full request logging for non-health check endpoints
     # ...
 ```
@@ -125,6 +131,7 @@ When configured with the default settings, the module creates the following file
 - `logs/error.log`: Error-only log with messages at ERROR level or above
 
 Both files are configured as rotating file handlers with the following settings:
+
 - Maximum file size: 10 MB
 - Maximum backup files: 5
 
@@ -135,10 +142,11 @@ This ensures that logs don't consume too much disk space while still retaining i
 1. Call `setup_logging()` early in the application startup process
 2. Use module-level loggers with `get_logger(__name__)` for easier message filtering
 3. Use appropriate log levels:
+
    - DEBUG: Detailed information for debugging
    - INFO: Confirmation that things are working as expected
    - WARNING: Indication that something unexpected happened, but the application still works
    - ERROR: Due to a more serious problem, the application couldn't perform a function
    - CRITICAL: A serious error indicating the application may be unable to continue running
 
-4. Include contextual information in log messages to make them more useful for debugging 
+4. Include contextual information in log messages to make them more useful for debugging

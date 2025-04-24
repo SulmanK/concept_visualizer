@@ -9,14 +9,10 @@ This hook leverages React Query to fetch configuration data from the `/health/co
 ## Usage
 
 ```tsx
-import { useConfigQuery } from '../hooks/useConfigQuery';
+import { useConfigQuery } from "../hooks/useConfigQuery";
 
 function MyComponent() {
-  const { 
-    data: config, 
-    isLoading, 
-    error 
-  } = useConfigQuery();
+  const { data: config, isLoading, error } = useConfigQuery();
 
   if (isLoading) return <LoadingIndicator />;
   if (error) return <ErrorMessage error={error} />;
@@ -25,7 +21,7 @@ function MyComponent() {
     <div>
       <h1>Application Configuration</h1>
       <p>Version: {config?.version}</p>
-      <p>Storage enabled: {config?.storage?.enabled ? 'Yes' : 'No'}</p>
+      <p>Storage enabled: {config?.storage?.enabled ? "Yes" : "No"}</p>
       {/* Display other configuration options as needed */}
     </div>
   );
@@ -36,9 +32,9 @@ function MyComponent() {
 
 The hook accepts an optional `options` object with the following properties:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `enabled` | boolean | `true` | Controls whether the query should automatically execute |
+| Parameter              | Type    | Default | Description                                                             |
+| ---------------------- | ------- | ------- | ----------------------------------------------------------------------- |
+| `enabled`              | boolean | `true`  | Controls whether the query should automatically execute                 |
 | `refetchOnWindowFocus` | boolean | `false` | Controls whether the query should refetch when the window regains focus |
 
 ## Return Value
@@ -99,4 +95,4 @@ The long cache times reflect that configuration data typically changes infrequen
 
 - `apiClient` - Used for making API requests
 - `useErrorHandling` - Used for standardized error handling
-- `configService` - Provides default configuration values and types 
+- `configService` - Provides default configuration values and types

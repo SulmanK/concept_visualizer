@@ -9,7 +9,7 @@ MainLayout provides a consistent layout structure across the application. It wra
 ## Usage
 
 ```tsx
-import { MainLayout } from 'components/layout/MainLayout';
+import { MainLayout } from "components/layout/MainLayout";
 
 function App() {
   return (
@@ -23,8 +23,8 @@ function App() {
 
 ```tsx
 // Using with React Router
-import { Routes, Route } from 'react-router-dom';
-import { MainLayout } from 'components/layout/MainLayout';
+import { Routes, Route } from "react-router-dom";
+import { MainLayout } from "components/layout/MainLayout";
 
 function App() {
   return (
@@ -41,48 +41,48 @@ function App() {
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `React.ReactNode` | - | The main content to render within the layout |
-| `headerTransparent` | `boolean` | `false` | Whether the header should be transparent (used for pages with hero sections) |
-| `maxWidth` | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| false` | `'lg'` | Maximum width of the content container |
-| `disableFooter` | `boolean` | `false` | Whether to hide the footer |
+| Prop                | Type                                            | Default | Description                                                                  |
+| ------------------- | ----------------------------------------------- | ------- | ---------------------------------------------------------------------------- |
+| `children`          | `React.ReactNode`                               | -       | The main content to render within the layout                                 |
+| `headerTransparent` | `boolean`                                       | `false` | Whether the header should be transparent (used for pages with hero sections) |
+| `maxWidth`          | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| false` | `'lg'`  | Maximum width of the content container                                       |
+| `disableFooter`     | `boolean`                                       | `false` | Whether to hide the footer                                                   |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { Container, Box, useTheme } from '@mui/material';
-import { Header } from './Header';
-import { Footer } from './Footer';
+import React from "react";
+import { Container, Box, useTheme } from "@mui/material";
+import { Header } from "./Header";
+import { Footer } from "./Footer";
 
 interface MainLayoutProps {
   children: React.ReactNode;
   headerTransparent?: boolean;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false;
+  maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   disableFooter?: boolean;
 }
 
 export function MainLayout({
   children,
   headerTransparent = false,
-  maxWidth = 'lg',
+  maxWidth = "lg",
   disableFooter = false,
 }: MainLayoutProps) {
   const theme = useTheme();
-  
+
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
         backgroundColor: theme.palette.background.default,
       }}
     >
       {/* Header */}
       <Header transparent={headerTransparent} />
-      
+
       {/* Main Content */}
       <Box
         component="main"
@@ -91,7 +91,7 @@ export function MainLayout({
           // Add padding to account for fixed header height
           pt: headerTransparent ? 0 : theme.spacing(8),
           // Add responsive padding on smaller screens
-          [theme.breakpoints.down('sm')]: {
+          [theme.breakpoints.down("sm")]: {
             pt: headerTransparent ? 0 : theme.spacing(7),
           },
         }}
@@ -100,7 +100,7 @@ export function MainLayout({
           {children}
         </Container>
       </Box>
-      
+
       {/* Footer */}
       {!disableFooter && <Footer />}
     </Box>
@@ -189,4 +189,4 @@ function FormPage() {
     </MainLayout>
   );
 }
-``` 
+```

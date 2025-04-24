@@ -22,39 +22,39 @@ interface Logger {
 
 ## Available Functions
 
-| Function | Development | Production | Description |
-|----------|-------------|------------|-------------|
-| `logger.debug()` | ✅ Enabled | ❌ Suppressed | Log debug information |
-| `logger.info()` | ✅ Enabled | ❌ Suppressed | Log informational messages |
-| `logger.warn()` | ✅ Enabled | ✅ Enabled | Log warnings |
-| `logger.error()` | ✅ Enabled | ✅ Enabled | Log errors |
-| `logDev()` | ✅ Enabled | ❌ Suppressed | Helper function for development-only logging |
+| Function         | Development | Production    | Description                                  |
+| ---------------- | ----------- | ------------- | -------------------------------------------- |
+| `logger.debug()` | ✅ Enabled  | ❌ Suppressed | Log debug information                        |
+| `logger.info()`  | ✅ Enabled  | ❌ Suppressed | Log informational messages                   |
+| `logger.warn()`  | ✅ Enabled  | ✅ Enabled    | Log warnings                                 |
+| `logger.error()` | ✅ Enabled  | ✅ Enabled    | Log errors                                   |
+| `logDev()`       | ✅ Enabled  | ❌ Suppressed | Helper function for development-only logging |
 
 ## Usage Examples
 
 ### Basic Logging
 
 ```typescript
-import { logger } from '../utils/logger';
+import { logger } from "../utils/logger";
 
 function processData(data) {
   // Only shown in development
-  logger.debug('Processing data:', data);
-  
+  logger.debug("Processing data:", data);
+
   try {
     // Processing logic...
-    
+
     // Only shown in development
-    logger.info('Data processed successfully');
-    
+    logger.info("Data processed successfully");
+
     return processedData;
   } catch (error) {
     // Shown in both development and production
-    logger.error('Failed to process data:', error);
-    
+    logger.error("Failed to process data:", error);
+
     // Shown in both development and production
-    logger.warn('Falling back to default data');
-    
+    logger.warn("Falling back to default data");
+
     return defaultData;
   }
 }
@@ -63,17 +63,17 @@ function processData(data) {
 ### Development-Only Logging
 
 ```typescript
-import { logDev } from '../utils/logger';
+import { logDev } from "../utils/logger";
 
 function complexCalculation(input) {
   // This will only appear in development builds
-  logDev('Starting calculation with input:', input);
-  
+  logDev("Starting calculation with input:", input);
+
   // Calculation steps...
-  
+
   // Logs intermediate values in development only
-  logDev('Intermediate result:', intermediateResult);
-  
+  logDev("Intermediate result:", intermediateResult);
+
   return finalResult;
 }
 ```
@@ -115,6 +115,7 @@ export const logger: Logger = isDev ? developmentLogger : productionLogger;
 ## Best Practices
 
 1. **Use Appropriate Log Levels**:
+
    - `debug`: For detailed debugging information
    - `info`: For general information about application flow
    - `warn`: For non-critical issues that don't stop execution
@@ -124,4 +125,4 @@ export const logger: Logger = isDev ? developmentLogger : productionLogger;
 
 3. **Be Concise**: Keep log messages clear and to the point
 
-4. **Performance**: Avoid expensive operations in log arguments in production 
+4. **Performance**: Avoid expensive operations in log arguments in production

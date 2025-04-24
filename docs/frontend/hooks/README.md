@@ -22,4 +22,4 @@ Custom hooks encapsulate complex logic and state management, making components c
 - `useRateLimitsQuery`: Hook for fetching API rate limit information
 - `useTaskQueries`: Hooks for fetching task information
 - `useToast`: Hook for displaying toast notifications
-- `useAnimatedMount`: Hook for animating component mounting and unmounting 
+- `useAnimatedMount`: Hook for animating component mounting and unmounting

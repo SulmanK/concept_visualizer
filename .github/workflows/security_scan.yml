@@ -45,35 +45,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        
+
     - name: Backend dependency scan
       run: |
         cd backend
         # Install safety directly
         pip install safety==2.3.5
-        
+
         # Install project dependencies
         pip install -e .
-        
+
         # Run safety check with a more compatible approach
         safety check --full-report || echo "Vulnerabilities found, but continuing the workflow"
-        
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        
+
     - name: Frontend dependency scan
       run: |
         cd frontend/my-app
         npm install
-        npm audit --production || echo "Vulnerabilities found, but continuing the workflow" 
+        npm audit --production || echo "Vulnerabilities found, but continuing the workflow"

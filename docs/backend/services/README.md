@@ -39,15 +39,15 @@ from app.services.jigsawstack.service import JigsawStackService
 # Service implementation
 class ConceptService(ConceptServiceInterface):
     def __init__(
-        self, 
+        self,
         image_service: JigsawStackService = Depends()
     ):
         self.image_service = image_service
-    
+
     async def generate_concept(self, prompt: str):
         # Business logic for concept generation
         image_url = await self.image_service.generate_image(prompt)
-        
+
         # More business logic...
         return {
             "prompt": prompt,
@@ -61,4 +61,4 @@ async def generate_concept(
     service: ConceptServiceInterface = Depends(ConceptService)
 ):
     return await service.generate_concept(request.prompt)
-``` 
+```

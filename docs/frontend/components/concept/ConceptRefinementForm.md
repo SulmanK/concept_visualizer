@@ -11,15 +11,15 @@ The `ConceptRefinementForm` component provides a user interface for refining exi
 
 ## Props
 
-| Prop             | Type                                | Required | Default                             | Description                                      |
-|------------------|-------------------------------------|---------|--------------------------------------|--------------------------------------------------|
-| `onSubmit`       | `(refinementPrompt: string) => void` | Yes     | -                                    | Handler for form submission                      |
-| `status`         | `FormStatus`                        | Yes     | -                                    | Form submission status                           |
-| `error`          | `string \| null`                    | No      | `undefined`                          | Error message from submission                    |
-| `onReset`        | `() => void`                        | No      | `undefined`                          | Reset form and results                           |
-| `isProcessing`   | `boolean`                           | No      | `false`                              | Whether the refinement is being processed        |
-| `processingMessage` | `string`                         | No      | `'Processing your refinement request...'` | Message to display during processing         |
-| `initialPrompt`  | `string`                            | No      | `''`                                 | Initial refinement prompt to populate the form   |
+| Prop                | Type                                 | Required | Default                                   | Description                                    |
+| ------------------- | ------------------------------------ | -------- | ----------------------------------------- | ---------------------------------------------- |
+| `onSubmit`          | `(refinementPrompt: string) => void` | Yes      | -                                         | Handler for form submission                    |
+| `status`            | `FormStatus`                         | Yes      | -                                         | Form submission status                         |
+| `error`             | `string \| null`                     | No       | `undefined`                               | Error message from submission                  |
+| `onReset`           | `() => void`                         | No       | `undefined`                               | Reset form and results                         |
+| `isProcessing`      | `boolean`                            | No       | `false`                                   | Whether the refinement is being processed      |
+| `processingMessage` | `string`                             | No       | `'Processing your refinement request...'` | Message to display during processing           |
+| `initialPrompt`     | `string`                             | No       | `''`                                      | Initial refinement prompt to populate the form |
 
 ## State
 
@@ -38,29 +38,29 @@ The `ConceptRefinementForm` component provides a user interface for refining exi
 ## Usage Example
 
 ```tsx
-import { ConceptRefinementForm } from '../components/concept/ConceptRefinementForm';
-import { FormStatus } from '../types';
+import { ConceptRefinementForm } from "../components/concept/ConceptRefinementForm";
+import { FormStatus } from "../types";
 
 const RefinementPage = ({ conceptId }) => {
-  const [status, setStatus] = useState<FormStatus>('idle');
+  const [status, setStatus] = useState<FormStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  
+
   const handleSubmit = async (refinementPrompt: string) => {
-    setStatus('submitting');
+    setStatus("submitting");
     try {
       await refineConcept(conceptId, refinementPrompt);
-      setStatus('success');
+      setStatus("success");
     } catch (err) {
       setError(err.message);
-      setStatus('error');
+      setStatus("error");
     }
   };
-  
+
   const handleReset = () => {
-    setStatus('idle');
+    setStatus("idle");
     setError(null);
   };
-  
+
   return (
     <ConceptRefinementForm
       onSubmit={handleSubmit}
@@ -78,4 +78,4 @@ const RefinementPage = ({ conceptId }) => {
 - [`TextArea`](../ui/TextArea.md) - Used for refinement instructions input
 - [`Button`](../ui/Button.md) - Used for form submission
 - [`LoadingIndicator`](../ui/LoadingIndicator.md) - Displays loading state
-- [`ErrorMessage`](../ui/ErrorMessage.md) - Displays error messages 
+- [`ErrorMessage`](../ui/ErrorMessage.md) - Displays error messages

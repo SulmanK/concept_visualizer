@@ -132,6 +132,7 @@ async def refine_concept_background_task(
 ```
 
 This function:
+
 1. Updates the task status to "processing"
 2. Downloads the original image
 3. Sends the image and refinement prompt to the concept service
@@ -167,40 +168,45 @@ The concept refinement endpoint is subject to the following rate limits:
 
 ```javascript
 // Start concept refinement
-async function refineConceptWithPrompt(originalImageUrl, refinementPrompt, logoDesc, themeDesc) {
+async function refineConceptWithPrompt(
+  originalImageUrl,
+  refinementPrompt,
+  logoDesc,
+  themeDesc,
+) {
   try {
     // Submit the refinement request
-    const response = await fetch('/api/concepts/refine', {
-      method: 'POST',
+    const response = await fetch("/api/concepts/refine", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify({
         original_image_url: originalImageUrl,
         refinement_prompt: refinementPrompt,
         logo_description: logoDesc,
-        theme_description: themeDesc
-      })
+        theme_description: themeDesc,
+      }),
     });
-    
+
     // Check for conflict (existing task)
     if (response.status === 409) {
       const existingTask = await response.json();
-      console.log('A refinement task is already in progress:', existingTask);
+      console.log("A refinement task is already in progress:", existingTask);
       return existingTask;
     }
-    
+
     if (!response.ok) {
-      throw new Error('Concept refinement failed');
+      throw new Error("Concept refinement failed");
     }
-    
+
     const taskData = await response.json();
-    
+
     // Start polling for task status
     return pollTaskStatus(taskData.task_id);
   } catch (error) {
-    console.error('Failed to start concept refinement:', error);
+    console.error("Failed to start concept refinement:", error);
     return null;
   }
 }
@@ -211,33 +217,33 @@ async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
     try {
       const response = await fetch(`/api/concepts/task/${taskId}`, {
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`
-        }
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
       });
-      
+
       if (!response.ok) {
-        throw new Error('Failed to check task status');
+        throw new Error("Failed to check task status");
       }
-      
+
       const taskData = await response.json();
-      
+
       // If task is complete or failed, return the result
-      if (taskData.status === 'completed' || taskData.status === 'failed') {
+      if (taskData.status === "completed" || taskData.status === "failed") {
         return taskData;
       }
-      
+
       // Update UI with current status
       updateRefinementStatus(taskData.status, taskData.message);
-      
+
       // Wait before polling again
-      await new Promise(resolve => setTimeout(resolve, interval));
+      await new Promise((resolve) => setTimeout(resolve, interval));
     } catch (error) {
-      console.error('Error polling task status:', error);
+      console.error("Error polling task status:", error);
       // Continue polling despite errors
     }
   }
-  
-  throw new Error('Task polling timed out');
+
+  throw new Error("Task polling timed out");
 }
 ```
 
@@ -245,4 +251,4 @@ async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
 
 - [Generation](generation.md): Endpoints for generating concepts
 - [Example Error Handling](example_error_handling.md): Examples of proper error handling
-- [Task Routes](../task/routes.md): Endpoints for managing background tasks 
+- [Task Routes](../task/routes.md): Endpoints for managing background tasks

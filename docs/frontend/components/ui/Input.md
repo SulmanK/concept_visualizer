@@ -12,18 +12,18 @@ This component wraps Material-UI's TextField component, providing consistent sty
 import { Input } from 'components/ui/Input';
 
 // Basic usage
-<Input 
-  label="Email" 
-  name="email" 
-  value={email} 
-  onChange={handleChange} 
+<Input
+  label="Email"
+  name="email"
+  value={email}
+  onChange={handleChange}
 />
 
 // With validation error
-<Input 
-  label="Username" 
-  name="username" 
-  value={username} 
+<Input
+  label="Username"
+  name="username"
+  value={username}
   onChange={handleChange}
   error={!!errors.username}
   helperText={errors.username}
@@ -31,11 +31,11 @@ import { Input } from 'components/ui/Input';
 />
 
 // Password input with icon
-<Input 
-  label="Password" 
-  name="password" 
+<Input
+  label="Password"
+  name="password"
   type="password"
-  value={password} 
+  value={password}
   onChange={handleChange}
   endAdornment={<VisibilityIcon />}
 />
@@ -43,53 +43,49 @@ import { Input } from 'components/ui/Input';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `name` | `string` | - | Input field name (required) |
-| `label` | `string` | - | Label text for the input |
-| `value` | `string` | `''` | Current input value |
-| `onChange` | `(e: React.ChangeEvent<HTMLInputElement>) => void` | - | Handler for value changes |
-| `type` | `'text' \| 'password' \| 'email' \| 'number' \| 'tel'` | `'text'` | HTML input type |
-| `placeholder` | `string` | `''` | Placeholder text when empty |
-| `required` | `boolean` | `false` | Whether the field is required |
-| `disabled` | `boolean` | `false` | Whether the input is disabled |
-| `error` | `boolean` | `false` | Whether the input has an error |
-| `helperText` | `string` | `''` | Helper or error text below the input |
-| `fullWidth` | `boolean` | `true` | Whether input should take up full width |
-| `size` | `'small' \| 'medium'` | `'medium'` | Size of the input field |
-| `startAdornment` | `React.ReactNode` | - | Icon or element to place at start of input |
-| `endAdornment` | `React.ReactNode` | - | Icon or element to place at end of input |
-| `multiline` | `boolean` | `false` | Whether to render as textarea |
-| `rows` | `number` | `1` | Number of rows when multiline |
-| `maxRows` | `number` | - | Maximum number of rows when multiline |
-| `autoFocus` | `boolean` | `false` | Whether to focus on mount |
-| `className` | `string` | `''` | Additional CSS class to apply |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for additional styling |
+| Prop             | Type                                                   | Default    | Description                                |
+| ---------------- | ------------------------------------------------------ | ---------- | ------------------------------------------ |
+| `name`           | `string`                                               | -          | Input field name (required)                |
+| `label`          | `string`                                               | -          | Label text for the input                   |
+| `value`          | `string`                                               | `''`       | Current input value                        |
+| `onChange`       | `(e: React.ChangeEvent<HTMLInputElement>) => void`     | -          | Handler for value changes                  |
+| `type`           | `'text' \| 'password' \| 'email' \| 'number' \| 'tel'` | `'text'`   | HTML input type                            |
+| `placeholder`    | `string`                                               | `''`       | Placeholder text when empty                |
+| `required`       | `boolean`                                              | `false`    | Whether the field is required              |
+| `disabled`       | `boolean`                                              | `false`    | Whether the input is disabled              |
+| `error`          | `boolean`                                              | `false`    | Whether the input has an error             |
+| `helperText`     | `string`                                               | `''`       | Helper or error text below the input       |
+| `fullWidth`      | `boolean`                                              | `true`     | Whether input should take up full width    |
+| `size`           | `'small' \| 'medium'`                                  | `'medium'` | Size of the input field                    |
+| `startAdornment` | `React.ReactNode`                                      | -          | Icon or element to place at start of input |
+| `endAdornment`   | `React.ReactNode`                                      | -          | Icon or element to place at end of input   |
+| `multiline`      | `boolean`                                              | `false`    | Whether to render as textarea              |
+| `rows`           | `number`                                               | `1`        | Number of rows when multiline              |
+| `maxRows`        | `number`                                               | -          | Maximum number of rows when multiline      |
+| `autoFocus`      | `boolean`                                              | `false`    | Whether to focus on mount                  |
+| `className`      | `string`                                               | `''`       | Additional CSS class to apply              |
+| `sx`             | `SxProps<Theme>`                                       | `{}`       | MUI system props for additional styling    |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { 
-  TextField, 
-  TextFieldProps,
-  InputAdornment
-} from '@mui/material';
-import { SxProps, Theme } from '@mui/material/styles';
+import React from "react";
+import { TextField, TextFieldProps, InputAdornment } from "@mui/material";
+import { SxProps, Theme } from "@mui/material/styles";
 
-interface InputProps extends Omit<TextFieldProps, 'variant'> {
+interface InputProps extends Omit<TextFieldProps, "variant"> {
   name: string;
   label?: string;
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type?: 'text' | 'password' | 'email' | 'number' | 'tel';
+  type?: "text" | "password" | "email" | "number" | "tel";
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;
   error?: boolean;
   helperText?: string;
   fullWidth?: boolean;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   startAdornment?: React.ReactNode;
   endAdornment?: React.ReactNode;
   multiline?: boolean;
@@ -103,23 +99,23 @@ interface InputProps extends Omit<TextFieldProps, 'variant'> {
 export function Input({
   name,
   label,
-  value = '',
+  value = "",
   onChange,
-  type = 'text',
-  placeholder = '',
+  type = "text",
+  placeholder = "",
   required = false,
   disabled = false,
   error = false,
-  helperText = '',
+  helperText = "",
   fullWidth = true,
-  size = 'medium',
+  size = "medium",
   startAdornment,
   endAdornment,
   multiline = false,
   rows = 1,
   maxRows,
   autoFocus = false,
-  className = '',
+  className = "",
   sx = {},
   ...rest
 }: InputProps) {
@@ -152,9 +148,9 @@ export function Input({
         ),
       }}
       sx={{
-        '& .MuiOutlinedInput-root': {
-          '&.Mui-focused fieldset': {
-            borderColor: theme => theme.palette.primary.main,
+        "& .MuiOutlinedInput-root": {
+          "&.Mui-focused fieldset": {
+            borderColor: (theme) => theme.palette.primary.main,
           },
         },
         ...sx,
@@ -181,11 +177,11 @@ export function Input({
 ### Basic Form Field
 
 ```tsx
-<Input 
-  label="Full Name" 
-  name="fullName" 
-  value={formData.fullName} 
-  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+<Input
+  label="Full Name"
+  name="fullName"
+  value={formData.fullName}
+  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
   required
 />
 ```
@@ -193,11 +189,11 @@ export function Input({
 ### Form Field with Validation
 
 ```tsx
-<Input 
-  label="Email Address" 
-  name="email" 
+<Input
+  label="Email Address"
+  name="email"
   type="email"
-  value={formData.email} 
+  value={formData.email}
   onChange={handleChange}
   error={!!errors.email}
   helperText={errors.email || "We'll never share your email with anyone else."}
@@ -210,24 +206,24 @@ export function Input({
 ```tsx
 function PasswordField() {
   const [showPassword, setShowPassword] = useState(false);
-  const [password, setPassword] = useState('');
-  
+  const [password, setPassword] = useState("");
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-  
+
   return (
-    <Input 
-      label="Password" 
-      name="password" 
-      type={showPassword ? 'text' : 'password'}
-      value={password} 
+    <Input
+      label="Password"
+      name="password"
+      type={showPassword ? "text" : "password"}
+      value={password}
       onChange={(e) => setPassword(e.target.value)}
       endAdornment={
-        <IconButton 
+        <IconButton
           onClick={togglePasswordVisibility}
           edge="end"
-          aria-label={showPassword ? 'hide password' : 'show password'}
+          aria-label={showPassword ? "hide password" : "show password"}
         >
           {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
         </IconButton>
@@ -241,20 +237,18 @@ function PasswordField() {
 ### Search Field
 
 ```tsx
-<Input 
-  placeholder="Search concepts..." 
-  name="search" 
-  value={searchQuery} 
+<Input
+  placeholder="Search concepts..."
+  name="search"
+  value={searchQuery}
   onChange={(e) => setSearchQuery(e.target.value)}
   startAdornment={<SearchIcon />}
   endAdornment={
-    searchQuery ? 
-      <IconButton 
-        size="small" 
-        onClick={() => setSearchQuery('')}
-      >
+    searchQuery ? (
+      <IconButton size="small" onClick={() => setSearchQuery("")}>
         <ClearIcon />
-      </IconButton> : undefined
+      </IconButton>
+    ) : undefined
   }
   size="small"
 />
@@ -263,10 +257,10 @@ function PasswordField() {
 ### Multiline Comment Field
 
 ```tsx
-<Input 
-  label="Description" 
-  name="description" 
-  value={description} 
+<Input
+  label="Description"
+  name="description"
+  value={description}
   onChange={(e) => setDescription(e.target.value)}
   multiline
   rows={4}
@@ -282,4 +276,4 @@ function PasswordField() {
 3. Add validation and show error messages for invalid input
 4. Use appropriate input types (`email`, `password`, etc.) for built-in validation
 5. Keep labels concise and clear about what information is needed
-6. Use consistent styling and behavior across all forms in the application 
+6. Use consistent styling and behavior across all forms in the application

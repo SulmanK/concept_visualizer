@@ -19,9 +19,9 @@ capitalizeFirstLetter(str: string): string
 
 Capitalizes the first letter of a string.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `str` | string | The string to capitalize |
+| Parameter | Type   | Description              |
+| --------- | ------ | ------------------------ |
+| `str`     | string | The string to capitalize |
 
 **Returns:** The string with the first letter capitalized
 
@@ -33,9 +33,9 @@ truncateString(str: string, maxLength: number): string
 
 Truncates a string to a specified length and adds an ellipsis if truncated.
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `str` | string | The string to truncate |
+| Parameter   | Type   | Description                      |
+| ----------- | ------ | -------------------------------- |
+| `str`       | string | The string to truncate           |
 | `maxLength` | number | The maximum length of the string |
 
 **Returns:** The truncated string with ellipsis if needed
@@ -48,9 +48,9 @@ toKebabCase(str: string): string
 
 Formats a string to kebab-case (lowercase with hyphens between words).
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `str` | string | The string to format |
+| Parameter | Type   | Description          |
+| --------- | ------ | -------------------- |
+| `str`     | string | The string to format |
 
 **Returns:** The kebab-case formatted string
 
@@ -59,10 +59,10 @@ Formats a string to kebab-case (lowercase with hyphens between words).
 ### Capitalizing Text
 
 ```typescript
-import { capitalizeFirstLetter } from '../utils/stringUtils';
+import { capitalizeFirstLetter } from "../utils/stringUtils";
 
 // Basic usage
-const name = 'john';
+const name = "john";
 const capitalizedName = capitalizeFirstLetter(name); // "John"
 
 // In a component
@@ -74,9 +74,10 @@ const LabelDisplay = ({ label }) => {
 ### Truncating Long Text
 
 ```typescript
-import { truncateString } from '../utils/stringUtils';
+import { truncateString } from "../utils/stringUtils";
 
-const longDescription = "This is a very long description that needs to be truncated for display purposes.";
+const longDescription =
+  "This is a very long description that needs to be truncated for display purposes.";
 const truncated = truncateString(longDescription, 20); // "This is a very long..."
 
 // In a component
@@ -88,7 +89,7 @@ const DescriptionPreview = ({ description, maxLength = 50 }) => {
 ### Converting to Kebab Case
 
 ```typescript
-import { toKebabCase } from '../utils/stringUtils';
+import { toKebabCase } from "../utils/stringUtils";
 
 const title = "My Cool Component";
 const idAttribute = toKebabCase(title); // "my-cool-component"
@@ -113,4 +114,4 @@ Each function in this module:
 
 - Use these utilities instead of implementing the same logic repeatedly
 - For localization concerns, consider using a proper i18n library instead
-- When working with very large strings, be mindful of performance implications 
+- When working with very large strings, be mindful of performance implications

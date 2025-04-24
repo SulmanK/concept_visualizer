@@ -19,11 +19,11 @@ This client handles the complexities of the raw API, including enhancing prompts
 ```python
 class JigsawStackClient:
     """Client for interacting with JigsawStack API for concept generation and refinement."""
-    
+
     def __init__(self, api_key: str, api_url: str):
         """
         Initialize the JigsawStack API client.
-        
+
         Args:
             api_key: The API key for authentication
             api_url: The base URL for the JigsawStack API
@@ -45,24 +45,24 @@ class JigsawStackClient:
 
 ```python
 async def generate_image(
-    self, 
-    prompt: str, 
-    width: int = 512, 
-    height: int = 512, 
+    self,
+    prompt: str,
+    width: int = 512,
+    height: int = 512,
     model: str = "stable-diffusion-xl"
 ) -> Dict[str, str]:
     """
     Generate an image using the JigsawStack API.
-    
+
     Args:
         prompt: The text prompt for image generation
         width: The width of the generated image
         height: The height of the generated image
         model: The model to use for generation
-        
+
     Returns:
         Dictionary containing image URL and ID
-        
+
     Raises:
         JigsawStackConnectionError: If connection to the API fails
         JigsawStackAuthenticationError: If authentication fails
@@ -72,6 +72,7 @@ async def generate_image(
 ```
 
 This method:
+
 - Enhances logo prompts with specific design requirements
 - Determines appropriate aspect ratio based on dimensions
 - Uses negative prompts to avoid common issues in logo design
@@ -82,24 +83,24 @@ This method:
 
 ```python
 async def refine_image(
-    self, 
-    prompt: str, 
-    image_url: str, 
+    self,
+    prompt: str,
+    image_url: str,
     strength: float = 0.7,
     model: str = "stable-diffusion-xl"
 ) -> Dict[str, str]:
     """
     Refine an existing image using the JigsawStack API.
-    
+
     Args:
         prompt: The refinement prompt
         image_url: URL of the image to refine
         strength: How much to change the original (0.0-1.0)
         model: Model to use for refinement
-        
+
     Returns:
         Dictionary containing refined image URL and ID
-        
+
     Raises:
         JigsawStackConnectionError: If connection to the API fails
         JigsawStackAuthenticationError: If authentication fails
@@ -112,20 +113,20 @@ async def refine_image(
 
 ```python
 async def generate_color_palettes(
-    self, 
+    self,
     prompt: str,
     num_palettes: int = 5
 ) -> List[Dict[str, Any]]:
     """
     Generate color palettes using the JigsawStack API.
-    
+
     Args:
         prompt: The prompt describing the desired color theme
         num_palettes: Number of palettes to generate
-        
+
     Returns:
         List of palette dictionaries
-        
+
     Raises:
         JigsawStackGenerationError: If palette generation fails
     """
@@ -133,6 +134,7 @@ async def generate_color_palettes(
 ```
 
 This specialized method:
+
 - Formats the prompt for palette generation
 - Validates the returned palettes for consistency
 - Includes fallback to default palettes if generation fails
@@ -148,11 +150,11 @@ async def get_variation(self, image_url: str, model: str = "stable-diffusion-xl"
     # Implementation details...
 
 async def generate_image_with_palette(
-    self, 
-    logo_prompt: str, 
+    self,
+    logo_prompt: str,
     palette: List[str],
-    palette_name: str = "", 
-    width: int = 512, 
+    palette_name: str = "",
+    width: int = 512,
     height: int = 512
 ) -> bytes:
     """Generate an image using a specific color palette."""
@@ -160,6 +162,7 @@ async def generate_image_with_palette(
 ```
 
 These advanced methods enable specialized workflows like:
+
 - Creating variations of successful concepts
 - Generating concepts with pre-selected color palettes
 - Themed concept generation
@@ -191,7 +194,7 @@ A factory function simplifies client creation:
 def get_jigsawstack_client() -> JigsawStackClient:
     """
     Get a singleton instance of the JigsawStackClient.
-    
+
     Returns:
         JigsawStackClient: Client for JigsawStack API operations
     """
@@ -286,4 +289,4 @@ The client implements several security measures:
 - [JigsawStack Service](service.md): Higher-level service that uses this client
 - [JigsawStack Interface](interface.md): Interface for the service layer
 - [Core Exceptions](../../core/exceptions.md): Domain-specific exceptions used by this client
-- [Configuration](../../core/config.md): Application settings for JigsawStack integration 
+- [Configuration](../../core/config.md): Application settings for JigsawStack integration

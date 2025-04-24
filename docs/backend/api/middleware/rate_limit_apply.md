@@ -82,6 +82,7 @@ def __init__(self, app: ASGIApp):
 ```
 
 Parameters:
+
 - `app`: The ASGI application instance
 
 #### Dispatch Method
@@ -124,6 +125,7 @@ is_rate_limited = limit_info.get("exceeded", False)
 ```
 
 This returns information including:
+
 - Whether the limit is exceeded
 - The limit value
 - Remaining requests
@@ -154,4 +156,4 @@ The middleware stores rate limit information in `request.state.limiter_info`, wh
 1. **Rate Limit Configuration**: Keep rate limits reasonable and appropriate for your API's purpose
 2. **Public Paths**: Ensure that essential endpoints are included in the PUBLIC_PATHS list
 3. **Error Handling**: Provide meaningful error messages that help users understand the limits
-4. **Retry-After Headers**: Include these to allow clients to implement proper retry logic 
+4. **Retry-After Headers**: Include these to allow clients to implement proper retry logic

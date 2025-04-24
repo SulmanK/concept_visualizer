@@ -35,7 +35,7 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    
+
     .footer {
       background-color: var(--indigo-900);
       color: var(--indigo-100);
@@ -46,47 +46,47 @@
       position: relative;
       overflow: hidden;
     }
-    
+
     .container {
       width: 100%;
       max-width: 1280px;
       margin: 0 auto;
       padding: 0 2rem;
     }
-    
+
     .footer-grid {
       display: grid;
       grid-template-columns: 1fr 2fr;
       gap: 3rem;
     }
-    
+
     @media (max-width: 768px) {
       .footer-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .links-grid {
         grid-template-columns: repeat(2, 1fr) !important;
       }
     }
-    
+
     @media (max-width: 480px) {
       .links-grid {
         grid-template-columns: 1fr !important;
       }
     }
-    
+
     .footer-brand {
       display: flex;
       flex-direction: column;
     }
-    
+
     .logo-container {
       display: flex;
       align-items: center;
       margin-bottom: 1rem;
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
@@ -99,21 +99,21 @@
       border-radius: 0.5rem;
       box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
-    
+
     .brand-name {
       margin-left: 0.75rem;
       font-size: 1.25rem;
       font-weight: 700;
       color: white;
     }
-    
+
     .brand-description {
       margin-top: 0.5rem;
       font-size: 0.875rem;
       color: var(--indigo-200);
       line-height: 1.5;
     }
-    
+
     .cta-button {
       display: inline-flex;
       align-items: center;
@@ -129,22 +129,22 @@
       text-decoration: none;
       margin-top: 1.5rem;
     }
-    
+
     .cta-button:hover {
       transform: translateY(-1px);
       box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
-    
+
     .cta-button svg {
       margin-right: 0.5rem;
     }
-    
+
     .links-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 2rem;
     }
-    
+
     .footer-section-title {
       font-size: 0.875rem;
       font-weight: 600;
@@ -155,17 +155,17 @@
       margin-bottom: 1rem;
       border-bottom: 1px solid var(--indigo-700);
     }
-    
+
     .footer-links {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    
+
     .footer-link {
       margin-bottom: 0.75rem;
     }
-    
+
     .footer-link a {
       font-size: 0.875rem;
       color: var(--indigo-200);
@@ -175,13 +175,13 @@
       align-items: center;
       position: relative;
     }
-    
+
     .footer-link a svg {
       margin-right: 0.5rem;
       width: 16px;
       height: 16px;
     }
-    
+
     /* Underline animation for links */
     .footer-link a::after {
       content: '';
@@ -193,19 +193,19 @@
       background-color: white;
       transition: width 0.2s ease;
     }
-    
+
     .footer-link a:hover {
       color: white;
     }
-    
+
     .footer-link a:hover::after {
       width: 100%;
     }
-    
+
     .powered-by {
       margin-top: 1.5rem;
     }
-    
+
     .copyright {
       margin-top: 3rem;
       padding-top: 1.5rem;
@@ -214,12 +214,12 @@
       justify-content: space-between;
       align-items: center;
     }
-    
+
     .copyright-text {
       font-size: 0.75rem;
       color: var(--indigo-300);
     }
-    
+
     .github-link {
       display: flex;
       align-items: center;
@@ -231,7 +231,7 @@
       color: var(--indigo-200);
       transition: all 0.2s ease;
     }
-    
+
     .github-link:hover {
       background-color: rgba(255, 255, 255, 0.2);
       color: white;
@@ -245,7 +245,7 @@
   <div style="height: 400px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #333;">
     Page Content
   </div>
-  
+
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
@@ -271,7 +271,7 @@
             </a>
           </div>
         </div>
-        
+
         <!-- Links Grid -->
         <div class="links-grid">
           <!-- Features Column -->
@@ -304,7 +304,7 @@
               </li>
             </ul>
           </div>
-          
+
           <!-- Resources Column -->
           <div>
             <h3 class="footer-section-title">Resources</h3>
@@ -329,7 +329,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Copyright -->
       <div class="copyright">
         <div class="copyright-text">
@@ -344,4 +344,4 @@
     </div>
   </footer>
 </body>
-</html> 
+</html>

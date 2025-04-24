@@ -12,23 +12,23 @@ This component wraps Material-UI's Select component with consistent styling, val
 import { Select } from 'components/ui/Select';
 
 // Basic usage
-<Select 
-  label="Country" 
-  name="country" 
-  value={country} 
+<Select
+  label="Country"
+  name="country"
+  value={country}
   onChange={handleChange}
   options={[
     { value: 'us', label: 'United States' },
     { value: 'ca', label: 'Canada' },
     { value: 'mx', label: 'Mexico' }
-  ]} 
+  ]}
 />
 
 // With validation error
-<Select 
-  label="Category" 
-  name="category" 
-  value={category} 
+<Select
+  label="Category"
+  name="category"
+  value={category}
   onChange={handleChange}
   options={categoryOptions}
   error={!!errors.category}
@@ -37,10 +37,10 @@ import { Select } from 'components/ui/Select';
 />
 
 // Multiple selection
-<Select 
-  label="Skills" 
-  name="skills" 
-  value={skills} 
+<Select
+  label="Skills"
+  name="skills"
+  value={skills}
   onChange={handleChange}
   options={skillOptions}
   multiple
@@ -49,28 +49,28 @@ import { Select } from 'components/ui/Select';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `name` | `string` | - | Field name (required) |
-| `label` | `string` | - | Label text for the select |
-| `value` | `string \| string[] \| number \| number[]` | `''` | Current selected value(s) |
-| `onChange` | `(e: React.ChangeEvent<HTMLInputElement>) => void` | - | Handler for value changes |
-| `options` | `{ value: string \| number; label: string; disabled?: boolean }[]` | `[]` | Array of options for the select |
-| `placeholder` | `string` | `'Select an option'` | Text to display when no option is selected |
-| `required` | `boolean` | `false` | Whether the field is required |
-| `disabled` | `boolean` | `false` | Whether the select is disabled |
-| `error` | `boolean` | `false` | Whether the select has an error |
-| `helperText` | `string` | `''` | Helper or error text below the select |
-| `fullWidth` | `boolean` | `true` | Whether select should take up full width |
-| `size` | `'small' \| 'medium'` | `'medium'` | Size of the select field |
-| `multiple` | `boolean` | `false` | Whether multiple options can be selected |
-| `className` | `string` | `''` | Additional CSS class to apply |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for additional styling |
+| Prop          | Type                                                               | Default              | Description                                |
+| ------------- | ------------------------------------------------------------------ | -------------------- | ------------------------------------------ |
+| `name`        | `string`                                                           | -                    | Field name (required)                      |
+| `label`       | `string`                                                           | -                    | Label text for the select                  |
+| `value`       | `string \| string[] \| number \| number[]`                         | `''`                 | Current selected value(s)                  |
+| `onChange`    | `(e: React.ChangeEvent<HTMLInputElement>) => void`                 | -                    | Handler for value changes                  |
+| `options`     | `{ value: string \| number; label: string; disabled?: boolean }[]` | `[]`                 | Array of options for the select            |
+| `placeholder` | `string`                                                           | `'Select an option'` | Text to display when no option is selected |
+| `required`    | `boolean`                                                          | `false`              | Whether the field is required              |
+| `disabled`    | `boolean`                                                          | `false`              | Whether the select is disabled             |
+| `error`       | `boolean`                                                          | `false`              | Whether the select has an error            |
+| `helperText`  | `string`                                                           | `''`                 | Helper or error text below the select      |
+| `fullWidth`   | `boolean`                                                          | `true`               | Whether select should take up full width   |
+| `size`        | `'small' \| 'medium'`                                              | `'medium'`           | Size of the select field                   |
+| `multiple`    | `boolean`                                                          | `false`              | Whether multiple options can be selected   |
+| `className`   | `string`                                                           | `''`                 | Additional CSS class to apply              |
+| `sx`          | `SxProps<Theme>`                                                   | `{}`                 | MUI system props for additional styling    |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
+import React from "react";
 import {
   FormControl,
   InputLabel,
@@ -78,9 +78,9 @@ import {
   MenuItem,
   FormHelperText,
   SelectChangeEvent,
-  SelectProps as MuiSelectProps
-} from '@mui/material';
-import { SxProps, Theme } from '@mui/material/styles';
+  SelectProps as MuiSelectProps,
+} from "@mui/material";
+import { SxProps, Theme } from "@mui/material/styles";
 
 export interface SelectOption {
   value: string | number;
@@ -88,7 +88,7 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-interface SelectProps extends Omit<MuiSelectProps, 'variant'> {
+interface SelectProps extends Omit<MuiSelectProps, "variant"> {
   name: string;
   label?: string;
   value?: string | string[] | number | number[];
@@ -100,7 +100,7 @@ interface SelectProps extends Omit<MuiSelectProps, 'variant'> {
   error?: boolean;
   helperText?: string;
   fullWidth?: boolean;
-  size?: 'small' | 'medium';
+  size?: "small" | "medium";
   multiple?: boolean;
   className?: string;
   sx?: SxProps<Theme>;
@@ -109,24 +109,24 @@ interface SelectProps extends Omit<MuiSelectProps, 'variant'> {
 export function Select({
   name,
   label,
-  value = '',
+  value = "",
   onChange,
   options = [],
-  placeholder = 'Select an option',
+  placeholder = "Select an option",
   required = false,
   disabled = false,
   error = false,
-  helperText = '',
+  helperText = "",
   fullWidth = true,
-  size = 'medium',
+  size = "medium",
   multiple = false,
-  className = '',
+  className = "",
   sx = {},
   ...rest
 }: SelectProps) {
   const labelId = `${name}-label`;
   const displayEmpty = !value || (Array.isArray(value) && value.length === 0);
-  
+
   return (
     <FormControl
       required={required}
@@ -137,9 +137,7 @@ export function Select({
       className={className}
       sx={sx}
     >
-      {label && (
-        <InputLabel id={labelId}>{label}</InputLabel>
-      )}
+      {label && <InputLabel id={labelId}>{label}</InputLabel>}
       <MuiSelect
         labelId={labelId}
         id={name}
@@ -154,14 +152,17 @@ export function Select({
           if (displayEmpty) {
             return <em>{placeholder}</em>;
           }
-          
+
           if (multiple && Array.isArray(selected)) {
             return selected
-              .map(value => options.find(opt => opt.value === value)?.label || value)
-              .join(', ');
+              .map(
+                (value) =>
+                  options.find((opt) => opt.value === value)?.label || value,
+              )
+              .join(", ");
           }
-          
-          const option = options.find(opt => opt.value === selected);
+
+          const option = options.find((opt) => opt.value === selected);
           return option ? option.label : selected;
         }}
         {...rest}
@@ -172,8 +173,8 @@ export function Select({
           </MenuItem>
         )}
         {options.map((option) => (
-          <MenuItem 
-            key={option.value} 
+          <MenuItem
+            key={option.value}
             value={option.value}
             disabled={option.disabled}
           >
@@ -181,9 +182,7 @@ export function Select({
           </MenuItem>
         ))}
       </MuiSelect>
-      {helperText && (
-        <FormHelperText>{helperText}</FormHelperText>
-      )}
+      {helperText && <FormHelperText>{helperText}</FormHelperText>}
     </FormControl>
   );
 }
@@ -205,16 +204,16 @@ export function Select({
 ### Basic Dropdown
 
 ```tsx
-<Select 
-  label="Department" 
-  name="department" 
-  value={formData.department} 
-  onChange={(e) => setFormData({...formData, department: e.target.value})}
+<Select
+  label="Department"
+  name="department"
+  value={formData.department}
+  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
   options={[
-    { value: 'engineering', label: 'Engineering' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'sales', label: 'Sales' },
-    { value: 'support', label: 'Customer Support' },
+    { value: "engineering", label: "Engineering" },
+    { value: "marketing", label: "Marketing" },
+    { value: "sales", label: "Sales" },
+    { value: "support", label: "Customer Support" },
   ]}
   required
 />
@@ -223,17 +222,17 @@ export function Select({
 ### Multiple Selection
 
 ```tsx
-<Select 
-  label="Interests" 
-  name="interests" 
-  value={formData.interests} 
-  onChange={(e) => setFormData({...formData, interests: e.target.value})}
+<Select
+  label="Interests"
+  name="interests"
+  value={formData.interests}
+  onChange={(e) => setFormData({ ...formData, interests: e.target.value })}
   options={[
-    { value: 'tech', label: 'Technology' },
-    { value: 'finance', label: 'Finance' },
-    { value: 'health', label: 'Healthcare' },
-    { value: 'education', label: 'Education' },
-    { value: 'environment', label: 'Environment' },
+    { value: "tech", label: "Technology" },
+    { value: "finance", label: "Finance" },
+    { value: "health", label: "Healthcare" },
+    { value: "education", label: "Education" },
+    { value: "environment", label: "Environment" },
   ]}
   multiple
   helperText="Select all that apply"
@@ -243,16 +242,16 @@ export function Select({
 ### With Error State
 
 ```tsx
-<Select 
-  label="Priority" 
-  name="priority" 
-  value={priority} 
+<Select
+  label="Priority"
+  name="priority"
+  value={priority}
   onChange={handlePriorityChange}
   options={[
-    { value: 'low', label: 'Low' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'high', label: 'High' },
-    { value: 'critical', label: 'Critical' },
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "high", label: "High" },
+    { value: "critical", label: "Critical" },
   ]}
   error={!!errors.priority}
   helperText={errors.priority}
@@ -263,16 +262,16 @@ export function Select({
 ### Disabled Options
 
 ```tsx
-<Select 
-  label="Subscription Plan" 
-  name="plan" 
-  value={plan} 
+<Select
+  label="Subscription Plan"
+  name="plan"
+  value={plan}
   onChange={handlePlanChange}
   options={[
-    { value: 'free', label: 'Free Tier' },
-    { value: 'basic', label: 'Basic Plan' },
-    { value: 'premium', label: 'Premium Plan' },
-    { value: 'enterprise', label: 'Enterprise Plan', disabled: !isEnterprise },
+    { value: "free", label: "Free Tier" },
+    { value: "basic", label: "Basic Plan" },
+    { value: "premium", label: "Premium Plan" },
+    { value: "enterprise", label: "Enterprise Plan", disabled: !isEnterprise },
   ]}
 />
 ```
@@ -280,15 +279,15 @@ export function Select({
 ### Compact Dropdown
 
 ```tsx
-<Select 
-  label="Sort By" 
-  name="sortBy" 
-  value={sortBy} 
+<Select
+  label="Sort By"
+  name="sortBy"
+  value={sortBy}
   onChange={handleSortChange}
   options={[
-    { value: 'name', label: 'Name' },
-    { value: 'date', label: 'Date Created' },
-    { value: 'modified', label: 'Last Modified' },
+    { value: "name", label: "Name" },
+    { value: "date", label: "Date Created" },
+    { value: "modified", label: "Last Modified" },
   ]}
   size="small"
 />
@@ -303,4 +302,4 @@ export function Select({
 5. Use validation and error messages for required selections
 6. For long lists, consider adding search functionality or grouping options
 7. Test keyboard navigation for accessibility compliance
-8. Keep option labels concise and descriptive 
+8. Keep option labels concise and descriptive

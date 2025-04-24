@@ -33,6 +33,7 @@ GET /api/health/rate-limits?force_refresh=true
 ```
 
 Parameters:
+
 - `force_refresh`: If true, bypasses the cache and gets fresh data (optional, default: false)
 
 #### Response
@@ -137,24 +138,24 @@ The module checks several types of limits:
 // Frontend example (JavaScript)
 async function checkRateLimits() {
   try {
-    const response = await fetch('/api/health/rate-limits-status');
+    const response = await fetch("/api/health/rate-limits-status");
     const limits = await response.json();
-    
+
     // Example: Show remaining concept generations
     const remaining = limits.limits.generate_concept.remaining;
-    const total = limits.limits.generate_concept.limit.split('/')[0];
-    
+    const total = limits.limits.generate_concept.limit.split("/")[0];
+
     // Update UI
     updateProgressBar(remaining, total);
-    
+
     // Show warning if low on remaining requests
     if (remaining < 3) {
       showWarning(`You have ${remaining} concept generations left this month.`);
     }
-    
+
     return limits;
   } catch (error) {
-    console.error('Failed to check rate limits', error);
+    console.error("Failed to check rate limits", error);
     return null;
   }
 }
@@ -168,18 +169,18 @@ The information from these endpoints can be used together with the rate limit he
 // Check if we're close to a rate limit
 async function shouldThrottle(endpoint) {
   const limits = await checkRateLimits();
-  
+
   if (!limits) return false; // If check fails, don't throttle
-  
+
   // Get endpoint-specific limit info
   const limitKey = endpointToLimitKey(endpoint); // e.g., /api/concepts/generate → generate_concept
   const limitInfo = limits.limits[limitKey];
-  
+
   if (!limitInfo) return false;
-  
+
   // Throttle if less than 10% of limit remaining
-  const limit = parseInt(limitInfo.limit.split('/')[0], 10);
-  return limitInfo.remaining < (limit * 0.1);
+  const limit = parseInt(limitInfo.limit.split("/")[0], 10);
+  return limitInfo.remaining < limit * 0.1;
 }
 ```
 
@@ -196,4 +197,4 @@ The endpoint includes several security and privacy features:
 
 - [Health Endpoints](endpoints.md): Basic health and configuration endpoints
 - [Utility Functions](utils.md): Helper functions for rate limit calculations
-- [Rate Limit Apply Middleware](../../middleware/rate_limit_apply.md): Middleware that enforces rate limits 
+- [Rate Limit Apply Middleware](../../middleware/rate_limit_apply.md): Middleware that enforces rate limits

@@ -14,53 +14,62 @@ interface RefinementPageProps {
 }
 
 const RefinementPage: React.FC<RefinementPageProps> = ({ conceptId }) => {
-  const { data: concept, isLoading: isLoadingConcept } = useConceptQueries.useConceptById(conceptId);
-  const { mutate: refine, isPending: isRefining } = useConceptMutations.useRefineConcept();
-  
-  const [refinementFormData, setRefinementFormData] = useState<RefinementFormData>({
-    additionalFeedback: '',
-    preserveElements: [],
-    changeRequests: [],
-  });
-  
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!concept) return;
-    
-    refine({
-      conceptId: concept.id,
-      ...refinementFormData,
-    }, {
-      onSuccess: (refinedConcept) => {
-        // Handle success - maybe show comparison view
-      },
+  const { data: concept, isLoading: isLoadingConcept } =
+    useConceptQueries.useConceptById(conceptId);
+  const { mutate: refine, isPending: isRefining } =
+    useConceptMutations.useRefineConcept();
+
+  const [refinementFormData, setRefinementFormData] =
+    useState<RefinementFormData>({
+      additionalFeedback: "",
+      preserveElements: [],
+      changeRequests: [],
     });
-  }, [concept, refinementFormData, refine]);
-  
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (!concept) return;
+
+      refine(
+        {
+          conceptId: concept.id,
+          ...refinementFormData,
+        },
+        {
+          onSuccess: (refinedConcept) => {
+            // Handle success - maybe show comparison view
+          },
+        },
+      );
+    },
+    [concept, refinementFormData, refine],
+  );
+
   if (isLoadingConcept) {
     return <LoadingIndicator />;
   }
-  
+
   if (!concept) {
     return <ErrorMessage message="Concept not found" />;
   }
-  
+
   return (
     <MainLayout>
-      <RefinementHeader 
+      <RefinementHeader
         conceptTitle={concept.title}
         versionNumber={concept.version}
       />
-      
+
       <div className="refinement-container">
         <div className="left-panel">
-          <ConceptImage 
+          <ConceptImage
             imageUrl={concept.imageUrl}
             altText={`${concept.title} - Version ${concept.version}`}
           />
         </div>
-        
+
         <div className="right-panel">
           <RefinementForm
             formData={refinementFormData}
@@ -71,18 +80,24 @@ const RefinementPage: React.FC<RefinementPageProps> = ({ conceptId }) => {
           />
         </div>
       </div>
-      
+
       {concept.previousVersions && concept.previousVersions.length > 0 && (
         <ComparisonView
           currentVersion={concept}
           previousVersions={concept.previousVersions}
         />
       )}
-      
+
       <RefinementActions
-        onSave={() => {/* Save functionality */}}
-        onExport={() => {/* Export functionality */}}
-        onDiscard={() => {/* Discard functionality */}}
+        onSave={() => {
+          /* Save functionality */
+        }}
+        onExport={() => {
+          /* Export functionality */
+        }}
+        onDiscard={() => {
+          /* Discard functionality */
+        }}
       />
     </MainLayout>
   );
@@ -100,9 +115,9 @@ const RefinementPage: React.FC<RefinementPageProps> = ({ conceptId }) => {
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `conceptId` | `string` | Yes | - | ID of the concept to refine |
+| Prop        | Type     | Required | Default | Description                 |
+| ----------- | -------- | -------- | ------- | --------------------------- |
+| `conceptId` | `string` | Yes      | -       | ID of the concept to refine |
 
 ## Types
 
@@ -160,11 +175,11 @@ The component would extract the `conceptId` from route parameters:
 ```tsx
 const RefinementPageWrapper: React.FC = () => {
   const { conceptId } = useParams<{ conceptId: string }>();
-  
+
   if (!conceptId) {
     return <Navigate to="/concepts" />;
   }
-  
+
   return <RefinementPage conceptId={conceptId} />;
 };
 ```
@@ -174,4 +189,4 @@ const RefinementPageWrapper: React.FC = () => {
 - Form inputs have proper labels and error states
 - Loading and error states are properly communicated
 - Keyboard navigation for all interactive elements
-- Sufficient color contrast for text readability 
+- Sufficient color contrast for text readability

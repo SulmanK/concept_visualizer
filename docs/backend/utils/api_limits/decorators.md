@@ -30,15 +30,18 @@ def rate_limit(
 This decorator applies rate limiting to an API endpoint based on defined parameters.
 
 **Parameters:**
+
 - `limit`: Maximum number of requests allowed within the period
 - `period`: Time period in seconds (default: 60 seconds)
 - `limit_type`: Type of limit to apply ("user", "ip", "global")
 - `key_function`: Optional custom function for generating limit keys
 
 **Returns:**
+
 - Function decorator that applies rate limiting
 
 **Rate Limit Types:**
+
 - `user`: Limit requests per authenticated user
 - `ip`: Limit requests per client IP address
 - `global`: Limit requests across all clients
@@ -58,11 +61,13 @@ def track_usage(
 This decorator tracks API resource usage for quota management.
 
 **Parameters:**
+
 - `resource`: Name of the resource being tracked (e.g., "image_generation")
 - `amount`: Amount of resource usage to record (default: 1)
 - `key_function`: Optional custom function for determining the user/entity
 
 **Returns:**
+
 - Function decorator that tracks resource usage
 
 ### Check Quota
@@ -79,14 +84,17 @@ def check_quota(
 This decorator validates that a request is within quota limits before processing.
 
 **Parameters:**
+
 - `resource`: Name of the resource being requested
 - `quota_function`: Function that returns the quota limit for the user/entity
 - `key_function`: Optional custom function for determining the user/entity
 
 **Returns:**
+
 - Function decorator that checks quota before executing the endpoint
 
 **Raises:**
+
 - `QuotaExceededError`: If the request would exceed the quota
 
 ### Add Limit Headers
@@ -99,9 +107,11 @@ def add_limit_headers() -> Callable:
 This decorator adds informative headers about rate limits and quotas to API responses.
 
 **Returns:**
+
 - Function decorator that adds limit headers to responses
 
 **Added Headers:**
+
 - `X-RateLimit-Limit`: Maximum requests allowed in the current period
 - `X-RateLimit-Remaining`: Remaining requests in the current period
 - `X-RateLimit-Reset`: Seconds until the limit resets
@@ -117,7 +127,7 @@ The module supports custom key functions for flexible limit and quota management
 def create_combined_key(prefix: str, user_id: str) -> str:
     """Create a combined key for rate limiting or quota tracking."""
     return f"{prefix}:{user_id}"
-    
+
 def get_organization_key(request: Request) -> str:
     """Get an organization-based key for limiting requests per organization."""
     # Extract organization ID from request
@@ -217,7 +227,7 @@ def rate_limit(...):
             is_allowed = await limiter.check_rate_limit(key, limit, period)
             if not is_allowed:
                 raise RateLimitExceededError(...)
-            
+
             # Execute the original function
             return await func(*args, **kwargs)
         return wrapper
@@ -239,4 +249,4 @@ These exceptions are caught by the API's error handling middleware and converted
 - [Rate Limit Headers](../../api/middleware/rate_limit_headers.md): Middleware for rate limit headers
 - [Rate Limit Apply](../../api/middleware/rate_limit_apply.md): Middleware for applying rate limits
 - [Limiter Config](../../core/limiter/config.md): Configuration for the rate limiter
-- [Redis Store](../../core/limiter/redis_store.md): Redis backend for limit tracking 
+- [Redis Store](../../core/limiter/redis_store.md): Redis backend for limit tracking

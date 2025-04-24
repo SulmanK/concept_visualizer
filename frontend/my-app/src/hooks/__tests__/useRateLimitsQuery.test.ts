@@ -48,12 +48,12 @@ const mockRateLimitsResponse = {
 
 describe('useRateLimitsQuery', () => {
   let queryClient: QueryClient;
-  
-  // Create a wrapper function instead of a component
+
+  // Create a wrapper function without JSX
   const createWrapper = () => {
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client = {queryClient}>{children}</QueryClientProvider>
-    );
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    };
   };
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe('useRateLimitsQuery', () => {
 
     // Reset the mocks
     vi.resetAllMocks();
-    
+
     // Set up default mock implementation
     vi.mocked(rateLimitService.fetchRateLimits).mockResolvedValue(mockRateLimitsResponse);
   });
@@ -84,11 +84,11 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Should start with loading state
       // Note: With React Query v5, isLoading might resolve quickly. Check success instead.
       expect(result.current.isLoading).toBe(true);
-      
+
       // Wait for success or error
       await waitFor(() => expect(result.current.isSuccess || result.current.isError).toBe(true));
       expect(result.current.isLoading).toBe(false); // Should be false after resolution
@@ -98,14 +98,14 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Should have called fetchRateLimits
       expect(rateLimitService.fetchRateLimits).toHaveBeenCalledTimes(1);
       expect(rateLimitService.fetchRateLimits).toHaveBeenCalledWith(false);
-      
+
       // Wait for the query to resolve
       await waitFor(() => !result.current.isLoading);
-      
+
       // Should have rate limits data
       expect(result.current.data).toEqual(mockRateLimitsResponse);
     });
@@ -114,14 +114,14 @@ describe('useRateLimitsQuery', () => {
       // Mock an error response
       const testError = new Error('Failed to fetch rate limits');
       vi.mocked(rateLimitService.fetchRateLimits).mockRejectedValueOnce(testError);
-      
+
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for the query to fail
       await waitFor(() => !result.current.isLoading);
-      
+
       // Should have error
       expect(result.current.error).toBeDefined();
       expect(result.current.data).toBeUndefined();
@@ -133,18 +133,18 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for initial fetch to complete
       await waitFor(() => !result.current.isLoading);
-      
+
       // Reset the mock to track next call
       vi.mocked(rateLimitService.fetchRateLimits).mockClear();
-      
+
       // Call refetch
       await act(async () => {
         await result.current.refetch();
       });
-      
+
       // Should have called fetchRateLimits with force=true
       expect(rateLimitService.fetchRateLimits).toHaveBeenCalledTimes(1);
       expect(rateLimitService.fetchRateLimits).toHaveBeenCalledWith(true);
@@ -154,20 +154,20 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for initial fetch to complete
       await waitFor(() => !result.current.isLoading);
-      
+
       // Mock an error for refetch
       const testError = new Error('Failed to refetch rate limits');
       vi.mocked(rateLimitService.fetchRateLimits).mockRejectedValueOnce(testError);
-      
+
       // Call refetch
       let refetchResult;
       await act(async () => {
         refetchResult = await result.current.refetch();
       });
-      
+
       // Should have returned error info
       expect(refetchResult.isError).toBe(true);
       expect(refetchResult.error).toBe(testError);
@@ -179,18 +179,18 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for initial fetch to complete
       await waitFor(() => !result.current.isLoading);
-      
+
       // Verify initial state
       expect(result.current.data?.limits.generate_concept.remaining).toBe(8);
-      
+
       // Decrement the limit
       act(() => {
         result.current.decrementLimit('generate_concept', 1);
       });
-      
+
       // Verify the limit was decremented
       expect(result.current.data?.limits.generate_concept.remaining).toBe(7);
     });
@@ -198,19 +198,19 @@ describe('useRateLimitsQuery', () => {
     it('should handle decrement with no initial data', async () => {
       // Mock no data returned
       vi.mocked(rateLimitService.fetchRateLimits).mockResolvedValueOnce(undefined as any);
-      
+
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for initial fetch to complete
       await waitFor(() => !result.current.isLoading);
-      
+
       // Decrement the limit (should not throw)
       act(() => {
         result.current.decrementLimit('generate_concept', 1);
       });
-      
+
       // No assertions needed, just verifying it doesn't throw
     });
 
@@ -218,15 +218,15 @@ describe('useRateLimitsQuery', () => {
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()
       });
-      
+
       // Wait for initial fetch to complete
       await waitFor(() => !result.current.isLoading);
-      
+
       // Decrement the limit by more than the remaining value
       act(() => {
         result.current.decrementLimit('generate_concept', 10);
       });
-      
+
       // Verify the limit doesn't go below zero
       expect(result.current.data?.limits.generate_concept.remaining).toBe(0);
     });
@@ -285,7 +285,7 @@ describe('useRateLimitsQuery', () => {
 
       // Custom options
       const options = {
-        enabled: false, 
+        enabled: false,
         staleTime: 60000,
         refetchOnWindowFocus: false,
       };
@@ -329,12 +329,12 @@ describe('useRateLimitsQuery', () => {
 
 describe('useOptimisticRateLimitUpdate', () => {
   let queryClient: QueryClient;
-  
-  // Create a wrapper function instead of a component
+
+  // Create a wrapper function without JSX
   const createWrapper = () => {
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    };
   };
 
   beforeEach(() => {
@@ -360,16 +360,16 @@ describe('useOptimisticRateLimitUpdate', () => {
     const { result } = renderHook(() => useOptimisticRateLimitUpdate(), {
       wrapper: createWrapper()
     });
-    
+
     // Verify initial data in the query cache
     const initialData = queryClient.getQueryData(['rateLimits']);
     expect(initialData).toEqual(mockRateLimitsResponse);
-    
+
     // Decrement the limit
     act(() => {
       result.current('generate_concept', 2);
     });
-    
+
     // Verify the optimistic update in the query cache
     const updatedData = queryClient.getQueryData(['rateLimits']) as typeof mockRateLimitsResponse;
     expect(updatedData.limits.generate_concept.remaining).toBe(6);
@@ -378,16 +378,16 @@ describe('useOptimisticRateLimitUpdate', () => {
   it('should handle case with no data in cache', async () => {
     // Clear the query cache
     queryClient.removeQueries({ queryKey: ['rateLimits'] });
-    
+
     const { result } = renderHook(() => useOptimisticRateLimitUpdate(), {
       wrapper: createWrapper()
     });
-    
+
     // Decrement the limit (should not throw)
     act(() => {
       result.current('generate_concept', 1);
     });
-    
+
     // No assertion needed, just verifying it doesn't throw
   });
-}); 
+});

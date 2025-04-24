@@ -11,16 +11,16 @@ The `SkeletonLoader` component provides placeholder loading states for various U
 
 ## Props
 
-| Prop          | Type                                      | Required | Default      | Description                             |
-|---------------|-------------------------------------------|----------|-------------|-----------------------------------------|
-| `type`        | `SkeletonType`                            | No       | `'text'`     | Type of skeleton (text, circle, etc.)    |
-| `width`       | `string`                                  | No       | Type-based   | Width of the skeleton                    |
-| `height`      | `string`                                  | No       | Type-based   | Height of the skeleton                   |
-| `lines`       | `number`                                  | No       | `1`          | Number of lines for text skeleton        |
-| `lineHeight`  | `'sm' \| 'md' \| 'lg'`                   | No       | `'md'`       | Line height for text skeleton            |
-| `borderRadius`| `string`                                  | No       | Type-based   | Border radius for the skeleton           |
-| `className`   | `string`                                  | No       | `''`         | Additional CSS classes                   |
-| `style`       | `React.CSSProperties`                     | No       | `undefined`  | Additional inline styles                 |
+| Prop           | Type                   | Required | Default     | Description                           |
+| -------------- | ---------------------- | -------- | ----------- | ------------------------------------- |
+| `type`         | `SkeletonType`         | No       | `'text'`    | Type of skeleton (text, circle, etc.) |
+| `width`        | `string`               | No       | Type-based  | Width of the skeleton                 |
+| `height`       | `string`               | No       | Type-based  | Height of the skeleton                |
+| `lines`        | `number`               | No       | `1`         | Number of lines for text skeleton     |
+| `lineHeight`   | `'sm' \| 'md' \| 'lg'` | No       | `'md'`      | Line height for text skeleton         |
+| `borderRadius` | `string`               | No       | Type-based  | Border radius for the skeleton        |
+| `className`    | `string`               | No       | `''`        | Additional CSS classes                |
+| `style`        | `React.CSSProperties`  | No       | `undefined` | Additional inline styles              |
 
 ## Skeleton Types
 
@@ -62,7 +62,7 @@ import { SkeletonLoader } from '../components/ui/SkeletonLoader';
 ### Complex Example
 
 ```tsx
-import { SkeletonLoader } from '../components/ui/SkeletonLoader';
+import { SkeletonLoader } from "../components/ui/SkeletonLoader";
 
 const LoadingProfileCard = () => {
   return (
@@ -70,18 +70,23 @@ const LoadingProfileCard = () => {
       <div className="flex items-center mb-4">
         {/* Avatar skeleton */}
         <SkeletonLoader type="circle" width="60px" height="60px" />
-        
+
         <div className="ml-4 flex-1">
           {/* Name skeleton */}
           <SkeletonLoader type="text" lineHeight="lg" width="70%" />
           {/* Title skeleton */}
-          <SkeletonLoader type="text" lineHeight="sm" width="50%" className="mt-2" />
+          <SkeletonLoader
+            type="text"
+            lineHeight="sm"
+            width="50%"
+            className="mt-2"
+          />
         </div>
       </div>
-      
+
       {/* Bio skeleton */}
       <SkeletonLoader type="text" lines={3} className="mb-4" />
-      
+
       {/* Stats skeleton */}
       <div className="flex justify-between">
         <SkeletonLoader type="rectangle" width="30%" height="40px" />
@@ -105,4 +110,4 @@ const LoadingProfileCard = () => {
 
 - Includes `role="status"` for proper ARIA role
 - Provides descriptive `aria-label` attributes based on type
-- Includes visually hidden text for screen readers via `sr-only` class 
+- Includes visually hidden text for screen readers via `sr-only` class

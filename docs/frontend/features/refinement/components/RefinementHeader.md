@@ -25,7 +25,7 @@ const RefinementHeader: React.FC<RefinementHeaderProps> = ({
       <div className="header-content">
         <div className="title-container">
           {onBackClick && (
-            <button 
+            <button
               className="back-button"
               onClick={onBackClick}
               aria-label="Go back"
@@ -33,27 +33,30 @@ const RefinementHeader: React.FC<RefinementHeaderProps> = ({
               <Icon name="arrow-left" />
             </button>
           )}
-          
+
           <div className="title-info">
             <h1 className="concept-title">{conceptTitle}</h1>
-            <div className="version-badge">
-              Version {versionNumber}
-            </div>
+            <div className="version-badge">Version {versionNumber}</div>
           </div>
         </div>
-        
+
         <div className="header-actions">
-          <Link href={`/concepts/${conceptTitle.toLowerCase().replace(/\s+/g, '-')}`} className="view-details-link">
+          <Link
+            href={`/concepts/${conceptTitle
+              .toLowerCase()
+              .replace(/\s+/g, "-")}`}
+            className="view-details-link"
+          >
             View Details
           </Link>
         </div>
       </div>
-      
+
       <div className="refinement-description">
         <p>
-          Refine your concept by providing additional feedback and specific change requests. 
-          Your refinements will be used to generate an improved version while preserving 
-          elements you specify.
+          Refine your concept by providing additional feedback and specific
+          change requests. Your refinements will be used to generate an improved
+          version while preserving elements you specify.
         </p>
       </div>
     </header>
@@ -63,11 +66,11 @@ const RefinementHeader: React.FC<RefinementHeaderProps> = ({
 
 ## Props
 
-| Prop | Type | Required | Default | Description |
-|------|------|----------|---------|-------------|
-| `conceptTitle` | `string` | Yes | - | Title of the concept being refined |
-| `versionNumber` | `number` | Yes | - | Current version number of the concept |
-| `onBackClick` | `() => void` | No | - | Callback when back button is clicked |
+| Prop            | Type         | Required | Default | Description                           |
+| --------------- | ------------ | -------- | ------- | ------------------------------------- |
+| `conceptTitle`  | `string`     | Yes      | -       | Title of the concept being refined    |
+| `versionNumber` | `number`     | Yes      | -       | Current version number of the concept |
+| `onBackClick`   | `() => void` | No       | -       | Callback when back button is clicked  |
 
 ## Features
 
@@ -106,16 +109,16 @@ const RefinementHeader: React.FC<RefinementHeaderProps> = ({
 ```tsx
 const RefinementPage: React.FC = () => {
   const router = useRouter();
-  const { data: concept } = useConceptQueries.useConceptById('concept-123');
-  
+  const { data: concept } = useConceptQueries.useConceptById("concept-123");
+
   const handleBackClick = useCallback(() => {
     router.back();
   }, [router]);
-  
+
   if (!concept) {
     return <LoadingIndicator />;
   }
-  
+
   return (
     <div className="refinement-page">
       <RefinementHeader
@@ -123,7 +126,7 @@ const RefinementPage: React.FC = () => {
         versionNumber={concept.version}
         onBackClick={handleBackClick}
       />
-      
+
       {/* Rest of refinement page content */}
     </div>
   );
@@ -134,4 +137,4 @@ const RefinementPage: React.FC = () => {
 
 - Back button navigates to the previous page in the browser history
 - Version badge updates automatically when the concept version changes
-- Detail link navigates to the concept detail page 
+- Detail link navigates to the concept detail page

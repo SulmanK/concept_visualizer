@@ -230,7 +230,7 @@ exports[`Footer Component > Snapshots > default footer snapshot 1`] = `
       <div
         class="text-xs text-indigo-300 text-center sm:text-left"
       >
-        © 
+        ©
         2025
          Concept Visualizer. All rights reserved.
       </div>
@@ -489,7 +489,7 @@ exports[`Footer Component > Snapshots > footer with custom year snapshot 1`] = `
       <div
         class="text-xs text-indigo-300 text-center sm:text-left"
       >
-        © 
+        ©
         2025
          Concept Visualizer. All rights reserved.
       </div>

@@ -18,8 +18,8 @@ import { Card } from 'components/ui/Card';
 </Card>
 
 // With hover and click functionality
-<Card 
-  hoverEffect 
+<Card
+  hoverEffect
   onClick={() => console.log('Card clicked')}
 >
   <h3>Interactive Card</h3>
@@ -29,46 +29,46 @@ import { Card } from 'components/ui/Card';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `React.ReactNode` | - | Content to render inside the card |
-| `className` | `string` | `''` | Additional CSS class to apply to the card |
-| `elevation` | `number` | `1` | Shadow depth, higher values mean more raised appearance |
-| `hoverEffect` | `boolean` | `false` | Whether to apply elevation increase on hover |
-| `onClick` | `() => void` | - | Function to call when the card is clicked |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for additional styling |
-| `variant` | `'outlined' \| 'elevation'` | `'elevation'` | Card variant style |
+| Prop          | Type                        | Default       | Description                                             |
+| ------------- | --------------------------- | ------------- | ------------------------------------------------------- |
+| `children`    | `React.ReactNode`           | -             | Content to render inside the card                       |
+| `className`   | `string`                    | `''`          | Additional CSS class to apply to the card               |
+| `elevation`   | `number`                    | `1`           | Shadow depth, higher values mean more raised appearance |
+| `hoverEffect` | `boolean`                   | `false`       | Whether to apply elevation increase on hover            |
+| `onClick`     | `() => void`                | -             | Function to call when the card is clicked               |
+| `sx`          | `SxProps<Theme>`            | `{}`          | MUI system props for additional styling                 |
+| `variant`     | `'outlined' \| 'elevation'` | `'elevation'` | Card variant style                                      |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { 
-  Card as MuiCard, 
-  CardProps as MuiCardProps, 
-  styled 
-} from '@mui/material';
-import { SxProps, Theme } from '@mui/material/styles';
+import React from "react";
+import {
+  Card as MuiCard,
+  CardProps as MuiCardProps,
+  styled,
+} from "@mui/material";
+import { SxProps, Theme } from "@mui/material/styles";
 
-interface CardProps extends Omit<MuiCardProps, 'onClick'> {
+interface CardProps extends Omit<MuiCardProps, "onClick"> {
   children: React.ReactNode;
   className?: string;
   elevation?: number;
   hoverEffect?: boolean;
   onClick?: () => void;
   sx?: SxProps<Theme>;
-  variant?: 'outlined' | 'elevation';
+  variant?: "outlined" | "elevation";
 }
 
 const StyledCard = styled(MuiCard, {
-  shouldForwardProp: (prop) => prop !== 'hoverEffect',
+  shouldForwardProp: (prop) => prop !== "hoverEffect",
 })<{ hoverEffect?: boolean }>(({ theme, hoverEffect }) => ({
-  transition: theme.transitions.create(['box-shadow', 'transform'], {
+  transition: theme.transitions.create(["box-shadow", "transform"], {
     duration: theme.transitions.duration.shorter,
   }),
   ...(hoverEffect && {
-    '&:hover': {
-      transform: 'translateY(-4px)',
+    "&:hover": {
+      transform: "translateY(-4px)",
       boxShadow: theme.shadows[4],
     },
   }),
@@ -76,12 +76,12 @@ const StyledCard = styled(MuiCard, {
 
 export function Card({
   children,
-  className = '',
+  className = "",
   elevation = 1,
   hoverEffect = false,
   onClick,
   sx = {},
-  variant = 'elevation',
+  variant = "elevation",
   ...rest
 }: CardProps) {
   return (
@@ -91,7 +91,7 @@ export function Card({
       hoverEffect={hoverEffect}
       onClick={onClick}
       sx={{
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: onClick ? "pointer" : "default",
         ...sx,
       }}
       variant={variant}
@@ -132,8 +132,8 @@ export function Card({
 ### Interactive Card with Image
 
 ```tsx
-<Card 
-  hoverEffect 
+<Card
+  hoverEffect
   onClick={() => navigate(`/concepts/${concept.id}`)}
   sx={{ maxWidth: 345 }}
 >
@@ -155,7 +155,7 @@ export function Card({
 ### Outlined Card
 
 ```tsx
-<Card variant="outlined" sx={{ borderColor: 'primary.light' }}>
+<Card variant="outlined" sx={{ borderColor: "primary.light" }}>
   <CardContent>
     <Typography variant="h6">Information Panel</Typography>
     <Typography variant="body2">
@@ -171,9 +171,7 @@ export function Card({
 <Card>
   <CardContent>
     <Typography variant="h6">Feature Card</Typography>
-    <Typography variant="body2">
-      Feature description and details.
-    </Typography>
+    <Typography variant="body2">Feature description and details.</Typography>
   </CardContent>
   <CardActions>
     <Button size="small">Learn More</Button>
@@ -190,4 +188,4 @@ export function Card({
 2. Apply the `hoverEffect` only when the card is interactive (has an `onClick` handler)
 3. Maintain consistent padding and spacing within cards
 4. Use appropriate elevation levels based on the card's importance (higher elevation for more important content)
-5. Include clear call-to-action elements in interactive cards 
+5. Include clear call-to-action elements in interactive cards

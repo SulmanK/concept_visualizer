@@ -31,4 +31,4 @@ When working with configuration files:
 2. **Use descriptive constants** that explain the purpose of the configuration value
 3. **Group related configuration values** together in appropriate files
 4. **Add comments** explaining complex configuration values or how they should be used
-5. **Add tests** for configuration values to ensure they maintain expected formats 
+5. **Add tests** for configuration values to ensure they maintain expected formats

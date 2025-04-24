@@ -39,4 +39,4 @@ api_key = settings.jigsawstack_api_key
 # Using custom exceptions
 from app.core.exceptions import RateLimitExceeded
 raise RateLimitExceeded("Daily image generation limit exceeded")
-``` 
+```

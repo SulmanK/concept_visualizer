@@ -12,21 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run Playwright tests
         run: npx playwright test
-        
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v3
@@ -34,27 +34,27 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
-          
+
   visual-regression:
     name: 'Visual Regression Tests'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
-        
+
       - name: Run visual regression tests
         run: npx playwright test -c visual-regression.config.ts
-        
+
       - name: Upload visual test results
         if: always()
         uses: actions/upload-artifact@v3
@@ -70,25 +70,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: actions/setup-node@v3
         with:
           node-version: 18
           cache: 'npm'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-        
+
       - name: Run accessibility tests
         run: npx playwright test -c accessibility.config.ts
-        
+
       - name: Upload accessibility test results
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: accessibility-report
           path: test-results/accessibility/
-          retention-days: 30 
+          retention-days: 30

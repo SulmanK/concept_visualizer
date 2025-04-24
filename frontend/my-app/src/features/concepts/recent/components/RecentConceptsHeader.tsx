@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 /**
  * Header component for the Recent Concepts page
@@ -12,9 +12,10 @@ export const RecentConceptsHeader: React.FC = () => {
           Your Recent Concepts
         </h1>
         <p className="text-indigo-700 text-lg sm:text-xl leading-relaxed mb-8 max-w-3xl mx-auto">
-          Browse your previously generated concepts and continue refining them to create the perfect visual identity.
+          Browse your previously generated concepts and continue refining them
+          to create the perfect visual identity.
         </p>
       </div>
     </div>
   );
-}; 
+};

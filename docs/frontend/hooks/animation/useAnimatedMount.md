@@ -9,15 +9,15 @@ This hook helps create smooth transitions for components entering and exiting th
 ## Usage
 
 ```tsx
-import { useAnimatedMount } from 'hooks/animation/useAnimatedMount';
+import { useAnimatedMount } from "hooks/animation/useAnimatedMount";
 
 function MyAnimatedComponent({ isVisible }) {
   const { shouldRender, animationClass } = useAnimatedMount(isVisible);
-  
+
   if (!shouldRender) {
     return null;
   }
-  
+
   return (
     <div className={`my-component ${animationClass}`}>
       Content that will animate in and out
@@ -30,22 +30,22 @@ function MyAnimatedComponent({ isVisible }) {
 
 ### Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `isVisible` | `boolean` | Yes | - | Whether the component should be visible |
-| `options` | `AnimatedMountOptions` | No | See below | Configuration options for the animation |
+| Parameter   | Type                   | Required | Default   | Description                             |
+| ----------- | ---------------------- | -------- | --------- | --------------------------------------- |
+| `isVisible` | `boolean`              | Yes      | -         | Whether the component should be visible |
+| `options`   | `AnimatedMountOptions` | No       | See below | Configuration options for the animation |
 
 ### Options
 
 ```tsx
 interface AnimatedMountOptions {
-  enterDuration?: number;    // Duration of enter animation in ms
-  exitDuration?: number;     // Duration of exit animation in ms
-  enterClass?: string;       // CSS class for enter animation
-  exitClass?: string;        // CSS class for exit animation
-  baseClass?: string;        // Base CSS class always applied
-  enteringClass?: string;    // CSS class during enter animation
-  exitingClass?: string;     // CSS class during exit animation
+  enterDuration?: number; // Duration of enter animation in ms
+  exitDuration?: number; // Duration of exit animation in ms
+  enterClass?: string; // CSS class for enter animation
+  exitClass?: string; // CSS class for exit animation
+  baseClass?: string; // Base CSS class always applied
+  enteringClass?: string; // CSS class during enter animation
+  exitingClass?: string; // CSS class during exit animation
 }
 ```
 
@@ -65,11 +65,11 @@ Default options:
 
 ### Return Values
 
-| Value | Type | Description |
-|-------|------|-------------|
-| `shouldRender` | `boolean` | Whether the component should be rendered at all (handles DOM presence) |
-| `animationClass` | `string` | The current animation CSS class to apply to the component |
-| `stage` | `'entering' \| 'entered' \| 'exiting' \| 'exited'` | The current animation stage |
+| Value            | Type                                               | Description                                                            |
+| ---------------- | -------------------------------------------------- | ---------------------------------------------------------------------- |
+| `shouldRender`   | `boolean`                                          | Whether the component should be rendered at all (handles DOM presence) |
+| `animationClass` | `string`                                           | The current animation CSS class to apply to the component              |
+| `stage`          | `'entering' \| 'entered' \| 'exiting' \| 'exited'` | The current animation stage                                            |
 
 ## Example with CSS
 
@@ -83,11 +83,11 @@ function FadeInCard({ isVisible, children }) {
     enterClass: 'fade-in',
     exitClass: 'fade-out',
   });
-  
+
   if (!shouldRender) {
     return null;
   }
-  
+
   return (
     <div className={animationClass}>
       {children}
@@ -115,6 +115,7 @@ function FadeInCard({ isVisible, children }) {
 The hook uses React's `useEffect` to track when the component should start or stop rendering based on the `isVisible` prop. The general flow is:
 
 1. When `isVisible` changes to `true`:
+
    - Sets `shouldRender` to `true`
    - Applies entering animation classes
    - After enter duration, updates to entered state
@@ -129,4 +130,4 @@ This approach ensures that animations have time to complete before components ar
 ## Related Hooks
 
 - [useAnimatedValue](./useAnimatedValue.md)
-- [usePrefersReducedMotion](./usePrefersReducedMotion.md) 
+- [usePrefersReducedMotion](./usePrefersReducedMotion.md)

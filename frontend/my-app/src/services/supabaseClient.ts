@@ -2,14 +2,17 @@
  * Supabase client configuration for Concept Visualizer
  */
 
-import { createClient, Session, User } from '@supabase/supabase-js';
-import { getBucketName } from './configService';
-import { fetchRateLimits } from './rateLimitService';
-import { fetchRecentConceptsFromApi, fetchConceptDetailFromApi } from './conceptService';
+import { createClient, Session, User } from "@supabase/supabase-js";
+import { getBucketName } from "./configService";
+import { fetchRateLimits } from "./rateLimitService";
+import {
+  fetchRecentConceptsFromApi,
+  fetchConceptDetailFromApi,
+} from "./conceptService";
 
 // Environment variables for Supabase
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 // Create default client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -21,9 +24,9 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   },
   global: {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
-  }
+  },
 });
 
 /**
@@ -33,29 +36,33 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 export const validateAndRefreshToken = async (): Promise<Session | null> => {
   try {
     // Get current session
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // If no session, create one
     if (!session) {
-      console.log('No active session found, creating new anonymous session');
+      console.log("No active session found, creating new anonymous session");
       return initializeAnonymousAuth();
     }
-    
+
     // Check if token is about to expire (within 5 minutes)
     const now = Math.floor(Date.now() / 1000);
     const expiresAt = session.expires_at || 0;
-    
+
     if (expiresAt - now < 300) {
-      console.log(`Token expires in ${expiresAt - now} seconds, refreshing now`);
+      console.log(
+        `Token expires in ${expiresAt - now} seconds, refreshing now`,
+      );
       // Refresh the session
       const { data } = await supabase.auth.refreshSession();
       return data.session;
     }
-    
+
     // Token is still valid
     return session;
   } catch (error) {
-    console.error('Error validating/refreshing token:', error);
+    console.error("Error validating/refreshing token:", error);
     return null;
   }
 };
@@ -67,44 +74,51 @@ export const validateAndRefreshToken = async (): Promise<Session | null> => {
 export const initializeAnonymousAuth = async (): Promise<Session | null> => {
   try {
     // Check if we have an existing session
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     // If no session exists, sign in anonymously
     if (!session) {
-      console.log('No session found, signing in anonymously');
+      console.log("No session found, signing in anonymously");
       const { data, error } = await supabase.auth.signInAnonymously();
-      
+
       if (error) {
-        console.error('Error signing in anonymously:', error);
+        console.error("Error signing in anonymously:", error);
         throw error;
       }
-      
-      console.log('Anonymous sign-in successful');
-      
+
+      console.log("Anonymous sign-in successful");
+
       // Force refresh rate limits after creating a new session
-      console.log('Refreshing rate limits after anonymous sign-in');
-      fetchRateLimits(true).catch(err => 
-        console.error('Failed to refresh rate limits after anonymous sign-in:', err)
+      console.log("Refreshing rate limits after anonymous sign-in");
+      fetchRateLimits(true).catch((err) =>
+        console.error(
+          "Failed to refresh rate limits after anonymous sign-in:",
+          err,
+        ),
       );
-      
+
       return data.session;
     } else {
       // If session exists but is near expiry, refresh it
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = session.expires_at || 0;
-      
+
       if (expiresAt - now < 300) {
-        console.log(`Existing session expires soon (${expiresAt - now}s), refreshing`);
+        console.log(
+          `Existing session expires soon (${expiresAt - now}s), refreshing`,
+        );
         const { data } = await supabase.auth.refreshSession();
-        console.log('Session refreshed successfully');
+        console.log("Session refreshed successfully");
         return data.session;
       }
-      
-      console.log('Using existing valid session');
+
+      console.log("Using existing valid session");
       return session;
     }
   } catch (error) {
-    console.error('Error initializing anonymous auth:', error);
+    console.error("Error initializing anonymous auth:", error);
     return null;
   }
 };
@@ -115,10 +129,12 @@ export const initializeAnonymousAuth = async (): Promise<Session | null> => {
  */
 export const getUserId = async (): Promise<string | null> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     return session?.user?.id || null;
   } catch (error) {
-    console.error('Error getting user ID:', error);
+    console.error("Error getting user ID:", error);
     return null;
   }
 };
@@ -129,14 +145,16 @@ export const getUserId = async (): Promise<string | null> => {
  */
 export const isAnonymousUser = async (): Promise<boolean> => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) return false;
-    
+
     // Check is_anonymous claim in JWT
     const claims = session.user.app_metadata;
     return claims.is_anonymous === true;
   } catch (error) {
-    console.error('Error checking if user is anonymous:', error);
+    console.error("Error checking if user is anonymous:", error);
     return false;
   }
 };
@@ -146,18 +164,20 @@ export const isAnonymousUser = async (): Promise<boolean> => {
  * @param email User's email address
  * @returns Promise with result
  */
-export const linkEmailToAnonymousUser = async (email: string): Promise<boolean> => {
+export const linkEmailToAnonymousUser = async (
+  email: string,
+): Promise<boolean> => {
   try {
     const { data, error } = await supabase.auth.updateUser({ email });
-    
+
     if (error) {
-      console.error('Error linking email to anonymous user:', error);
+      console.error("Error linking email to anonymous user:", error);
       return false;
     }
-    
+
     return !!data.user;
   } catch (error) {
-    console.error('Error linking email to anonymous user:', error);
+    console.error("Error linking email to anonymous user:", error);
     return false;
   }
 };
@@ -169,24 +189,24 @@ export const linkEmailToAnonymousUser = async (email: string): Promise<boolean> 
 export const signOut = async (): Promise<boolean> => {
   try {
     const { error } = await supabase.auth.signOut();
-    
+
     if (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       return false;
     }
-    
+
     // After sign out, initialize a new anonymous session
     await initializeAnonymousAuth();
-    
+
     // Force refresh rate limits after signing out and getting a new session
-    console.log('Refreshing rate limits after sign out');
-    fetchRateLimits(true).catch(err => 
-      console.error('Failed to refresh rate limits after sign out:', err)
+    console.log("Refreshing rate limits after sign out");
+    fetchRateLimits(true).catch((err) =>
+      console.error("Failed to refresh rate limits after sign out:", err),
     );
-    
+
     return true;
   } catch (error) {
-    console.error('Error signing out:', error);
+    console.error("Error signing out:", error);
     return false;
   }
 };
@@ -198,17 +218,19 @@ export const signOut = async (): Promise<boolean> => {
 export async function getAuthenticatedClient() {
   try {
     // Get the current session
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (session) {
       // We already have a valid session, return the default client
       return supabase;
     }
-    
+
     // If no session, try to sign in anonymously
     await initializeAnonymousAuth();
     return supabase;
   } catch (error) {
-    console.error('Error getting authenticated client:', error);
+    console.error("Error getting authenticated client:", error);
     return supabase; // Fallback to default client
   }
 }
@@ -216,47 +238,50 @@ export async function getAuthenticatedClient() {
 /**
  * Get authenticated URL for an image - simplified since backend provides full URLs
  * Only used as a fallback if the backend URL is not available
- * 
+ *
  * @param bucket Supabase storage bucket name
  * @param path File path in storage
  * @returns Authenticated URL with JWT token
  */
-export async function getAuthenticatedImageUrl(bucket: string, path: string): Promise<string> {
+export async function getAuthenticatedImageUrl(
+  bucket: string,
+  path: string,
+): Promise<string> {
   try {
-    if (!path) return '';
-    
+    if (!path) return "";
+
     // Use createSignedUrl with 3-day expiration
     const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, 259200); // 3 days in seconds
-      
+
     if (data?.signedUrl) {
       return data.signedUrl;
     }
-    
+
     if (error) {
-      console.error('Error generating signed URL:', error);
+      console.error("Error generating signed URL:", error);
     }
-    
+
     // If signed URL creation fails, use the public URL as fallback
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
-      
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(path);
+
     return publicUrl;
   } catch (error) {
-    console.error('Error generating authenticated URL:', error);
-    
+    console.error("Error generating authenticated URL:", error);
+
     // Create a fallback public URL as last resort
     try {
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(path);
-        
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(bucket).getPublicUrl(path);
+
       return publicUrl;
     } catch (fallbackError) {
-      console.error('Error creating fallback URL:', fallbackError);
-      return ''; // Return empty string to indicate failure
+      console.error("Error creating fallback URL:", fallbackError);
+      return ""; // Return empty string to indicate failure
     }
   }
 }
@@ -295,20 +320,25 @@ export interface ColorVariationData {
 /**
  * Fetch recent concepts
  * This function now uses the backend API instead of direct Supabase access
- * 
+ *
  * @param userId User ID for which to fetch concepts
  * @param limit Maximum number of concepts to return
  * @returns Promise with array of concept data
  */
 export const fetchRecentConcepts = async (
   userId: string,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<ConceptData[]> => {
   try {
-    console.log(`[supabaseClient] Fetching recent concepts for user ${userId.substring(0, 6)}... using API`);
+    console.log(
+      `[supabaseClient] Fetching recent concepts for user ${userId.substring(
+        0,
+        6,
+      )}... using API`,
+    );
     return await fetchRecentConceptsFromApi(userId, limit);
   } catch (error) {
-    console.error('[supabaseClient] Error fetching recent concepts:', error);
+    console.error("[supabaseClient] Error fetching recent concepts:", error);
     throw error;
   }
 };
@@ -316,20 +346,22 @@ export const fetchRecentConcepts = async (
 /**
  * Fetch concept detail
  * This function now uses the backend API instead of direct Supabase access
- * 
+ *
  * @param conceptId ID of the concept to fetch
  * @param userId User ID for security validation
  * @returns Promise with concept data or null if not found
  */
 export const fetchConceptDetail = async (
   conceptId: string,
-  userId: string
+  userId: string,
 ): Promise<ConceptData | null> => {
   try {
-    console.log(`[supabaseClient] Fetching concept detail for ID ${conceptId} using API`);
+    console.log(
+      `[supabaseClient] Fetching concept detail for ID ${conceptId} using API`,
+    );
     return await fetchConceptDetailFromApi(conceptId);
   } catch (error) {
-    console.error('[supabaseClient] Error fetching concept detail:', error);
+    console.error("[supabaseClient] Error fetching concept detail:", error);
     throw error;
   }
 };
@@ -337,17 +369,21 @@ export const fetchConceptDetail = async (
 /**
  * Fetch a concept by ID (regardless of user)
  * This function now uses the backend API instead of direct Supabase access
- * 
+ *
  * @param conceptId ID of the concept to fetch
  * @returns Promise with concept data or null if not found
  */
-export const fetchConceptById = async (conceptId: string): Promise<ConceptData | null> => {
+export const fetchConceptById = async (
+  conceptId: string,
+): Promise<ConceptData | null> => {
   try {
-    console.log(`[supabaseClient] Fetching concept with ID: ${conceptId} using API`);
+    console.log(
+      `[supabaseClient] Fetching concept with ID: ${conceptId} using API`,
+    );
     // Just use the same API endpoint but don't check user ownership
     return await fetchConceptDetailFromApi(conceptId);
   } catch (error) {
-    console.error('[supabaseClient] Exception fetching concept by ID:', error);
+    console.error("[supabaseClient] Exception fetching concept by ID:", error);
     return null;
   }
 };
@@ -355,11 +391,13 @@ export const fetchConceptById = async (conceptId: string): Promise<ConceptData |
 /**
  * Get concept image details for detail page
  * This function now uses the backend API instead of direct Supabase access
- * 
+ *
  * @param conceptId ID of the concept to get details for
  * @returns Promise with concept details
  */
-export const getConceptDetails = async (conceptId: string): Promise<{
+export const getConceptDetails = async (
+  conceptId: string,
+): Promise<{
   base_image_url: string;
   variations: Array<{
     id: string;
@@ -369,37 +407,39 @@ export const getConceptDetails = async (conceptId: string): Promise<{
   }>;
 }> => {
   try {
-    console.log(`[supabaseClient] Getting concept details for ID: ${conceptId} using API`);
-    
+    console.log(
+      `[supabaseClient] Getting concept details for ID: ${conceptId} using API`,
+    );
+
     // Fetch the concept with variations using the API
     const concept = await fetchConceptDetailFromApi(conceptId);
-    
+
     if (!concept) {
       console.error(`[supabaseClient] Concept ${conceptId} not found`);
-      return { base_image_url: '', variations: [] };
+      return { base_image_url: "", variations: [] };
     }
-    
+
     // Use the pre-signed URLs from the API response
-    const base_image_url = concept.image_url || '';
-    
+    const base_image_url = concept.image_url || "";
+
     // Process variations using pre-signed URLs from the API
     const variations = (concept.color_variations || []).map((variation) => {
       return {
         id: variation.id,
-        name: variation.palette_name || 'Color Variation',
+        name: variation.palette_name || "Color Variation",
         colors: Array.isArray(variation.colors) ? variation.colors : [],
-        image_url: variation.image_url || ''
+        image_url: variation.image_url || "",
       };
     });
-    
+
     return {
       base_image_url,
-      variations
+      variations,
     };
   } catch (error) {
-    console.error('[supabaseClient] Error getting concept details:', error);
-    return { base_image_url: '', variations: [] };
+    console.error("[supabaseClient] Error getting concept details:", error);
+    return { base_image_url: "", variations: [] };
   }
 };
 
-export default supabase; 
+export default supabase;

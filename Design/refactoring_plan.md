@@ -80,25 +80,26 @@ echo "export { RefinementPage } from './RefinementPage';" > frontend/my-app/src/
 For each moved file, update the import paths to reflect the new structure. This is manual work that requires careful examination of each file's dependencies.
 
 Example:
+
 ```typescript
 // Before
-import { ConceptForm } from '../../../components/concept/ConceptForm';
+import { ConceptForm } from "../../../components/concept/ConceptForm";
 
 // After (if the import path needs to change)
-import { ConceptForm } from '../../../components/concept/ConceptForm';
+import { ConceptForm } from "../../../components/concept/ConceptForm";
 ```
 
 ## Step 8: Update App.tsx Routes
 
 ```typescript
 // Update App.tsx to use the new components and routes
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { MainLayout } from './components/layout/MainLayout';
-import { LandingPage } from './features/landing';
-import { ConceptDetailPage } from './features/concepts/detail';
-import { RecentConceptsPage } from './features/concepts/recent';
-import { CreateConceptPage } from './features/concepts/create';
-import { RefinementPage } from './features/refinement';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { MainLayout } from "./components/layout/MainLayout";
+import { LandingPage } from "./features/landing";
+import { ConceptDetailPage } from "./features/concepts/detail";
+import { RecentConceptsPage } from "./features/concepts/recent";
+import { CreateConceptPage } from "./features/concepts/create";
+import { RefinementPage } from "./features/refinement";
 
 // Inside the render method:
 <Router>
@@ -106,21 +107,21 @@ import { RefinementPage } from './features/refinement';
     <Route path="/" element={<MainLayout />}>
       {/* Main landing page */}
       <Route index element={<LandingPage />} />
-      
+
       {/* Create page */}
       <Route path="create" element={<CreateConceptPage />} />
-      
+
       {/* Concept detail page */}
       <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-      
+
       {/* Recent concepts page */}
       <Route path="recent" element={<RecentConceptsPage />} />
-      
+
       {/* Refinement page */}
       <Route path="refine/:conceptId" element={<RefinementPage />} />
     </Route>
   </Routes>
-</Router>
+</Router>;
 ```
 
 ## Step 9: Update Navigation Links
@@ -168,4 +169,4 @@ If anything goes wrong during the refactoring:
 
 1. Revert to the previous commit
 2. Document what went wrong
-3. Develop a more targeted approach to fix the specific issue 
+3. Develop a more targeted approach to fix the specific issue

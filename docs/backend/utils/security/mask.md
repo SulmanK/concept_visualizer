@@ -19,11 +19,11 @@ This module helps protect personally identifiable information (PII) and sensitiv
 def mask_id(id_value: Optional[str], keep_prefix: bool = True) -> str:
     """
     Mask a user ID or other identifier.
-    
+
     Args:
         id_value: The ID to mask
         keep_prefix: Whether to keep the prefix (e.g., "user-") visible
-        
+
     Returns:
         Masked ID (e.g., "user-***567" from "user-123567")
     """
@@ -31,6 +31,7 @@ def mask_id(id_value: Optional[str], keep_prefix: bool = True) -> str:
 ```
 
 This function masks most of an ID while preserving enough information for debugging:
+
 - Original: `user-123456789`
 - Masked: `user-******789`
 
@@ -40,10 +41,10 @@ This function masks most of an ID while preserving enough information for debugg
 def mask_path(path: Optional[str]) -> str:
     """
     Mask sensitive parts of a path.
-    
+
     Args:
         path: The path to mask
-        
+
     Returns:
         Path with sensitive parts masked
     """
@@ -51,6 +52,7 @@ def mask_path(path: Optional[str]) -> str:
 ```
 
 This function masks user IDs and other sensitive information in paths:
+
 - Original: `/users/123456789/images/profile.png`
 - Masked: `/users/******789/images/profile.png`
 
@@ -60,10 +62,10 @@ This function masks user IDs and other sensitive information in paths:
 def mask_url(url: Optional[str]) -> str:
     """
     Mask sensitive parts of a URL.
-    
+
     Args:
         url: The URL to mask
-        
+
     Returns:
         URL with sensitive parts masked
     """
@@ -71,6 +73,7 @@ def mask_url(url: Optional[str]) -> str:
 ```
 
 This function masks sensitive parts in URLs, including tokens and IDs:
+
 - Original: `https://api.example.com/users/123456789?token=abcdef1234`
 - Masked: `https://api.example.com/users/******789?token=******1234`
 
@@ -80,10 +83,10 @@ This function masks sensitive parts in URLs, including tokens and IDs:
 def mask_api_key(api_key: Optional[str]) -> str:
     """
     Mask an API key or token.
-    
+
     Args:
         api_key: The key to mask
-        
+
     Returns:
         Masked API key (e.g., "******ef34" from "abcdef34")
     """
@@ -91,6 +94,7 @@ def mask_api_key(api_key: Optional[str]) -> str:
 ```
 
 This function masks most of an API key while preserving the last few characters:
+
 - Original: `sk_live_abcdefghijklmnopqrstuvwxyz`
 - Masked: `sk_live_************************wxyz`
 
@@ -100,10 +104,10 @@ This function masks most of an API key while preserving the last few characters:
 def mask_email(email: Optional[str]) -> str:
     """
     Mask an email address.
-    
+
     Args:
         email: The email to mask
-        
+
     Returns:
         Email with local part masked (e.g., "j**@example.com" from "john@example.com")
     """
@@ -111,6 +115,7 @@ def mask_email(email: Optional[str]) -> str:
 ```
 
 This function masks most of the local part of an email address:
+
 - Original: `john.doe@example.com`
 - Masked: `j******.d**@example.com`
 
@@ -127,11 +132,11 @@ logger = logging.getLogger(__name__)
 def process_user_data(user_id: str, data: dict):
     # Mask the user ID in logs
     masked_user_id = mask_id(user_id)
-    
+
     logger.info(f"Processing data for user {masked_user_id}")
-    
+
     # Process the data...
-    
+
     logger.info(f"Completed processing for user {masked_user_id}")
 ```
 
@@ -143,14 +148,14 @@ from app.utils.security.mask import mask_path
 def upload_user_file(user_id: str, file_path: str, content: bytes):
     # Create the storage path
     storage_path = f"users/{user_id}/{file_path}"
-    
+
     # Mask the path for logging
     masked_path = mask_path(storage_path)
-    
+
     logger.info(f"Uploading file to {masked_path}")
-    
+
     # Upload the file...
-    
+
     logger.info(f"Successfully uploaded file to {masked_path}")
 ```
 
@@ -163,17 +168,17 @@ def create_user_account(email: str, api_key: str):
     # Mask sensitive data for logging
     masked_email = mask_email(email)
     masked_api_key = mask_api_key(api_key)
-    
+
     logger.info(f"Creating account for {masked_email} with API key {masked_api_key}")
-    
+
     # Create the account...
     user_id = "user-123456789"
-    
+
     # Mask the new user ID
     masked_user_id = mask_id(user_id)
-    
+
     logger.info(f"Created account for {masked_email}, assigned ID {masked_user_id}")
-    
+
     return user_id
 ```
 
@@ -205,10 +210,10 @@ The module uses regular expressions for precise masking:
 def mask_path(path: Optional[str]) -> str:
     if not path:
         return str(path)
-        
+
     # Pattern to identify user IDs in paths
     pattern = r'(/|^)(user-|users/|user/)([a-zA-Z0-9-]+)'
-    
+
     # Replace with masked version
     return re.sub(pattern, lambda m: f"{m.group(1)}{m.group(2)}{mask_id(m.group(3), False)}", path)
 ```
@@ -248,4 +253,4 @@ masked_id = mask_id(user_id, keep_prefix=False) # "******789"
 - [Logging Setup](../logging/setup.md): Configuration of logging with masked data
 - [JWT Utilities](../jwt_utils.md): Authentication utilities that mask sensitive data
 - [Image Persistence Service](../../services/persistence/image_persistence_service.md): Uses masking for storage paths
-- [Error Handling](../../core/exceptions.md): Error handling with masked sensitive data 
+- [Error Handling](../../core/exceptions.md): Error handling with masked sensitive data

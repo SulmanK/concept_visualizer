@@ -17,7 +17,7 @@ vi.mock('../../services/supabaseClient', () => {
     on: vi.fn().mockReturnThis(),
     subscribe: vi.fn()
   };
-  
+
   return {
     supabase: {
       channel: vi.fn().mockReturnValue(mockChannel),
@@ -74,19 +74,19 @@ import { useTaskSubscription } from '../useTaskSubscription';
 
 describe('useTaskSubscription', () => {
   let queryClient: QueryClient;
-  
+
   // Create a wrapper function
   const createWrapper = () => {
-    return ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return function Wrapper({ children }: { children: React.ReactNode }) {
+      return React.createElement(QueryClientProvider, { client: queryClient }, children);
+    };
   };
-  
+
   beforeEach(() => {
     mockInitialTaskData = null;
     mockIsError = false;
     mockError = null;
-    
+
     // Create a fresh QueryClient for each test
     queryClient = new QueryClient({
       defaultOptions: {
@@ -96,10 +96,10 @@ describe('useTaskSubscription', () => {
         },
       },
     });
-    
+
     // Setup the subscribe callback mock
     const { supabase } = require('../../services/supabaseClient');
-    supabase.channel().subscribe.mockImplementation((callback) => {
+    supabase.channel().subscribe.mockImplementation((callback: (status: string) => void) => {
       mockSubscribeCallback = callback;
       return 'SUBSCRIBED';
     });
@@ -113,4 +113,4 @@ describe('useTaskSubscription', () => {
   it('placeholder test to keep vitest happy', () => {
     expect(true).toBe(true);
   });
-}); 
+});

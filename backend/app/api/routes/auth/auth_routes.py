@@ -1,181 +1,139 @@
-"""
-Authentication endpoints for Supabase integration.
+"""Authentication routes for the Concept Visualizer API.
 
-This module provides endpoints for anonymous authentication with Supabase.
+This module provides API endpoints for user authentication.
 """
 
 import logging
-import uuid
-from typing import Dict, Any, Optional
+import traceback
+from typing import Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 
-# Supabase client import
-from app.core.supabase.client import get_supabase_client
 from app.api.dependencies import CommonDependencies
-from app.api.errors import ServiceUnavailableError, ResourceNotFoundError
-from app.utils.security.mask import mask_id
-
-
-# Configure logging
-logger = logging.getLogger("auth_api")
 
 router = APIRouter()
 
-
-class AuthResponse(BaseModel):
-    """Response model for authentication endpoints."""
-    user_id: str
-    token: str
-    expires_at: int
+logger = logging.getLogger(__name__)
 
 
-@router.post("/signin-anonymous", response_model=AuthResponse)
-async def signin_anonymous(
-    req: Request,
-    commons: CommonDependencies = Depends()
-):
-    """
-    Sign in anonymously using Supabase.
-    
-    This endpoint creates an anonymous user in Supabase and returns a JWT token.
-    
+@router.get("/session")
+async def get_session(request: Request) -> Dict[str, object]:
+    """Check if the user is authenticated.
+
     Args:
-        req: The FastAPI request object
-        commons: Common dependencies including services
-        
+        request: The FastAPI request object
+
     Returns:
-        Authentication response with user ID and token
+        JSON response with user session information if authenticated,
+        or an error message if not
+    """
+    # Check if session exists and has user data
+    if not hasattr(request, "session") or "user" not in request.session:
+        return {"authenticated": False, "message": "No active session"}
+
+    # Return session info
+    return {
+        "authenticated": True,
+        "user": request.session["user"],
+    }
+
+
+@router.post("/login")
+async def login(request: Request, commons: CommonDependencies = Depends()) -> JSONResponse:
+    """Log in a user with email and password.
+
+    Args:
+        request: The FastAPI request object
+        commons: Common dependencies including services
+
+    Returns:
+        JSON response with authentication status and user information if successful
     """
     try:
-        # Create a new Supabase client
-        supabase = get_supabase_client()
-        
-        # Sign up anonymously using Supabase client
-        # Note: In the actual implementation, you would call supabase.auth.sign_up_anonymously()
-        # For this simplified example, we're simulating the response
-        
-        # TODO: Implement actual Supabase anonymous auth call
-        # This is a placeholder until we have the actual client functionality
-        response = supabase.client.auth.sign_up({
-            "email": f"anonymous-{uuid.uuid4()}@example.com", 
-            "password": str(uuid.uuid4())
-        })
-        
-        user = response.user
-        session = response.session
-        
-        # Log user creation with masked ID
-        user_id = user.id
-        logger.info(f"Created anonymous user: {mask_id(user_id)}")
-        
-        # Return the auth response
-        return AuthResponse(
-            user_id=user_id,
-            token=session.access_token,
-            expires_at=session.expires_at
-        )
-    
-    except Exception as e:
-        logger.error(f"Error creating anonymous user: {str(e)}")
-        raise ServiceUnavailableError(detail=f"Authentication error: {str(e)}")
+        # Get request body
+        data = await request.json()
 
-
-@router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(
-    req: Request,
-    commons: CommonDependencies = Depends()
-):
-    """
-    Refresh an existing authentication token.
-    
-    Args:
-        req: The FastAPI request object
-        commons: Common dependencies including services
-        
-    Returns:
-        Updated authentication response with new token
-    """
-    try:
-        # Get auth header
-        auth_header = req.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing or invalid authorization header"
+        # Validate required fields
+        if "email" not in data or "password" not in data:
+            return JSONResponse(
+                status_code=400,
+                content={"message": "Email and password are required"},
             )
-            
-        refresh_token = auth_header.replace("Bearer ", "")
-        
-        # Create a new Supabase client
-        supabase = get_supabase_client()
-        
-        # Refresh the token
-        # TODO: Implement actual Supabase refresh token call
-        # This is a placeholder until we have the actual client functionality
-        response = supabase.client.auth.refresh_session(refresh_token)
-        
-        session = response.session
-        user = response.user
-        
-        # Log token refresh with masked user ID
-        user_id = user.id
-        logger.info(f"Refreshed token for user: {mask_id(user_id)}")
-        
-        # Return the refreshed auth response
-        return AuthResponse(
-            user_id=user_id,
-            token=session.access_token,
-            expires_at=session.expires_at
+
+        # Extract credentials
+        email = data["email"]
+        password = data["password"]
+
+        # Authenticate with Supabase
+        # Use the client's auth object instead of a non-existent method
+        auth_response = commons.supabase_client.client.auth.sign_in_with_password(
+            {
+                "email": email,
+                "password": password,
+            }
         )
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
+
+        # Store user in session
+        if not hasattr(request, "session"):
+            # Return error if session middleware isn't configured
+            return JSONResponse(
+                status_code=500,
+                content={"message": "Session middleware not configured"},
+            )
+
+        # Get user from response
+        user = auth_response.user
+
+        # Store in session
+        request.session["user"] = user
+
+        # Return success with user data
+        return JSONResponse(
+            status_code=200,
+            content={
+                "authenticated": True,
+                "user": user,
+            },
+        )
+
     except Exception as e:
-        logger.error(f"Error refreshing token: {str(e)}")
-        raise ServiceUnavailableError(detail=f"Token refresh error: {str(e)}")
+        logger.error(f"Error during login: {str(e)}")
+        logger.debug(traceback.format_exc())
+        return JSONResponse(
+            status_code=401,
+            content={"message": f"Authentication failed: {str(e)}"},
+        )
 
 
-@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT)
-async def signout(
-    req: Request,
-    commons: CommonDependencies = Depends()
-):
-    """
-    Sign out a user, invalidating their session.
-    
+@router.post("/logout")
+async def logout(request: Request) -> JSONResponse:
+    """Log out the current user by clearing their session.
+
     Args:
-        req: The FastAPI request object
-        commons: Common dependencies including services
-        
+        request: The FastAPI request object
+
     Returns:
-        204 No Content on success
+        JSON response confirming successful logout
     """
     try:
-        # Get auth header
-        auth_header = req.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing or invalid authorization header"
+        # Clear user from session
+        if hasattr(request, "session") and "user" in request.session:
+            del request.session["user"]
+            return JSONResponse(
+                status_code=200,
+                content={"message": "Logged out successfully"},
             )
-            
-        # Create a new Supabase client
-        supabase = get_supabase_client()
-        
-        # Sign out the user
-        # TODO: Implement actual Supabase sign out call
-        # This is a placeholder until we have the actual client functionality
-        supabase.client.auth.sign_out()
-        
-        # Return no content
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-        
-    except HTTPException:
-        # Re-raise HTTP exceptions
-        raise
+        else:
+            return JSONResponse(
+                status_code=200,
+                content={"message": "No active session to log out"},
+            )
+
     except Exception as e:
-        logger.error(f"Error signing out: {str(e)}")
-        raise ServiceUnavailableError(detail=f"Sign out error: {str(e)}") 
+        logger.error(f"Error during logout: {str(e)}")
+        logger.debug(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"message": f"Logout failed: {str(e)}"},
+        )

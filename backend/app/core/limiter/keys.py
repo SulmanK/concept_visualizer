@@ -1,95 +1,165 @@
-"""
-Key generation for rate limiting in the Concept Visualizer API.
+"""Rate limiter key generation utilities.
 
-This module provides functions for extracting session IDs and generating keys
-for rate limiting purposes.
+This module provides functions for generating keys used by the rate limiter
+to uniquely identify users and endpoints.
 """
 
 import logging
-from fastapi import Request
-from slowapi.util import get_remote_address
 
-# Import JWT utilities to extract user ID from tokens if needed
-from app.utils.jwt_utils import extract_user_id_from_token
+from fastapi import Request
+
+from app.core.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 def get_user_id(request: Request) -> str:
-    """
-    Get the user's ID from request state for rate limiting.
-    Falls back to extracting from JWT token, then to IP address if no user ID is available.
-    
+    """Get user identifier for rate limiting.
+
+    Extracts the user ID from request authentication, or falls back to IP address.
+    The key is used to track rate limits per user.
+
     Args:
-        request: FastAPI request object
-        
+        request: The FastAPI request
+
     Returns:
-        str: User ID or IP address to use as rate limit key
+        User ID or IP address for rate limiting
     """
-    # First try to get the user_id from request state (set by auth middleware)
-    if hasattr(request, "state") and hasattr(request.state, "user") and request.state.user:
-        user_id = request.state.user.get("id")
-        if user_id:
-            logger.debug(f"Using user_id from request state for rate limiting: {user_id[:4]}****")
+    # First try to get authenticated user ID from request state
+    if hasattr(request.state, "user") and request.state.user:
+        # Handle user info as either a dict or an object
+        user_info = request.state.user
+
+        # Try to get ID from user info (if it's a dict)
+        if isinstance(user_info, dict) and "id" in user_info:
+            user_id = user_info["id"]
+            logger.debug(f"Using authenticated user_id from dict for rate limiting: {user_id[:4]}****")
             return f"user:{user_id}"
-    
-    # If no user in state, try to extract from Authorization header
-    auth_header = request.headers.get("Authorization")
-    if auth_header and auth_header.startswith("Bearer "):
-        token = auth_header.replace("Bearer ", "")
-        user_id = extract_user_id_from_token(token, validate=False)
+
+        # Try as an object attribute
+        user_id = getattr(user_info, "id", None)
         if user_id:
-            logger.debug(f"Using user_id extracted from JWT token for rate limiting: {user_id[:4]}****")
+            logger.debug(f"Using authenticated user_id from object for rate limiting: {user_id[:4]}****")
             return f"user:{user_id}"
-    
-    # Fall back to IP address if no user ID
-    ip = get_remote_address(request)
-    logger.debug(f"No user ID found, using IP for rate limiting: {ip}")
-    return f"ip:{ip}"
+
+        # Try direct user_info if it might be the ID itself
+        if isinstance(user_info, str):
+            logger.debug(f"Using authenticated user_id from string for rate limiting: {user_info[:4]}****")
+            return f"user:{user_info}"
+
+    # Next try to get user ID from auth token
+    if hasattr(request.state, "token") and request.state.token:
+        token_info = request.state.token
+
+        # Try to get ID from token (if it's a dict)
+        if isinstance(token_info, dict) and "sub" in token_info:
+            token_id = token_info["sub"]
+            logger.debug(f"Using user_id extracted from JWT token 'sub' for rate limiting: {token_id[:4]}****")
+            return f"token:{token_id}"
+
+        # Try as an object attribute
+        token_id = getattr(token_info, "id", None) or getattr(token_info, "sub", None)
+        if token_id:
+            logger.debug(f"Using user_id extracted from JWT token for rate limiting: {token_id[:4]}****")
+            return f"token:{token_id}"
+
+    # If no user ID, use the IP address
+    client_ip = get_client_ip(request)
+    logger.debug(f"No user ID found, using IP for rate limiting: {client_ip}")
+    return f"ip:{client_ip}"
+
+
+def get_client_ip(request: Request) -> str:
+    """Extract client IP address from request.
+
+    Handles proxies and various header formats.
+
+    Args:
+        request: The FastAPI request
+
+    Returns:
+        Client IP address
+    """
+    # Check for X-Forwarded-For header (standard for proxies)
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        # Use the first IP in the list (client IP)
+        return forwarded_for.split(",")[0].strip()
+
+    # Check for X-Real-IP header (common with Nginx)
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+
+    # Fallback to client host from connection
+    return request.client.host if request.client else "unknown"
 
 
 def get_endpoint_key(request: Request) -> str:
-    """
-    Get a unique key for the current endpoint.
-    
+    """Get endpoint key for rate limiting.
+
+    Normalizes the path by removing query parameters and standardizing format.
+
     Args:
-        request: FastAPI request object
-        
+        request: The FastAPI request
+
     Returns:
-        str: Unique key for the endpoint
+        Normalized endpoint path
     """
-    route = request.scope.get("route")
-    if route and hasattr(route, "path"):
-        path = route.path
-        return f"endpoint:{path}"
-    
-    # Fallback to the raw path if route not available
-    path = request.scope.get("path", "unknown")
-    return f"endpoint:{path}"
+    # Start with full path
+    path = request.url.path
+
+    # Remove API prefix for more consistent rate limiting
+    api_prefix = settings.API_PREFIX
+    if path.startswith(api_prefix):
+        path = path[len(api_prefix) :]
+
+    # Ensure path starts with slash
+    if not path.startswith("/"):
+        path = f"/{path}"
+
+    return path
 
 
-def combine_keys(user_id: str, endpoint_key: str) -> str:
-    """
-    Combine user and endpoint keys for granular rate limiting.
-    
+def combine_keys(user_key: str, endpoint_key: str) -> str:
+    """Combine user and endpoint keys for rate limiting.
+
+    Creates a composite key for per-user, per-endpoint rate limiting.
+
     Args:
-        user_id: The user identifier (usually user ID or IP)
-        endpoint_key: The endpoint identifier
-        
+        user_key: The user identification key
+        endpoint_key: The endpoint path key
+
     Returns:
-        str: Combined key for rate limiting
+        Combined rate limit key
     """
-    return f"{user_id}:{endpoint_key}"
+    return f"{user_key}:{endpoint_key}"
+
+
+def mask_key(key: str, visible_chars: int = 4) -> str:
+    """Mask a key for logging to protect user information.
+
+    Args:
+        key: The key to mask
+        visible_chars: Number of characters to show at start and end
+
+    Returns:
+        Masked key with middle portion replaced by asterisks
+    """
+    if len(key) <= visible_chars * 2:
+        return key  # Key is too short to mask meaningfully
+
+    # Show first and last few characters
+    return f"{key[:visible_chars]}***{key[-visible_chars:]}"
 
 
 def calculate_ttl(period: str) -> int:
-    """
-    Calculate the time-to-live (TTL) in seconds based on the rate limit period.
-    
+    """Calculate the time-to-live (TTL) in seconds based on the rate limit period.
+
     Args:
         period: The time period (minute, hour, day, month)
-        
+
     Returns:
         int: TTL in seconds
     """
@@ -104,14 +174,13 @@ def calculate_ttl(period: str) -> int:
 
 
 def generate_rate_limit_keys(user_id: str, endpoint: str, period: str) -> list[str]:
-    """
-    Generate all possible key formats for rate limiting.
-    
+    """Generate all possible key formats for rate limiting.
+
     Args:
         user_id: The user identifier (usually session ID or IP)
         endpoint: The endpoint being rate limited (e.g., "/api/concept/generate")
         period: The time period (minute, hour, day, month)
-        
+
     Returns:
         list[str]: List of possible rate limit keys
     """
@@ -120,20 +189,17 @@ def generate_rate_limit_keys(user_id: str, endpoint: str, period: str) -> list[s
         return [
             # SVG-specific keys to avoid affecting other rate limits
             f"svg:{user_id}:{period}",
-            
             # Make the standard format keys specific to SVG
-            f"svg:POST:{endpoint}:{user_id}:{period}", 
-            f"svg:{endpoint}:{user_id}:{period}"
+            f"svg:POST:{endpoint}:{user_id}:{period}",
+            f"svg:{endpoint}:{user_id}:{period}",
         ]
-    
+
     # Standard keys for all other endpoints
     return [
         # Format used by our rate limit checker
         f"{user_id}:{period}",
-        
         # Formats that match SlowAPI's internal storage patterns
-        f"POST:{endpoint}:{user_id}:{period}", 
-        
+        f"POST:{endpoint}:{user_id}:{period}",
         # Format with path and IP
-        f"{endpoint}:{user_id}:{period}"
-    ] 
+        f"{endpoint}:{user_id}:{period}",
+    ]

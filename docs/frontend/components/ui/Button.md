@@ -17,8 +17,8 @@ import { Button } from 'components/ui/Button';
 </Button>
 
 // Primary variant with icon
-<Button 
-  variant="primary" 
+<Button
+  variant="primary"
   startIcon={<SaveIcon />}
   onClick={handleSave}
 >
@@ -26,10 +26,10 @@ import { Button } from 'components/ui/Button';
 </Button>
 
 // Outlined secondary button with loading state
-<Button 
-  variant="secondary" 
-  color="error" 
-  loading={isSubmitting} 
+<Button
+  variant="secondary"
+  color="error"
+  loading={isSubmitting}
   onClick={handleDelete}
 >
   Delete Item
@@ -38,67 +38,71 @@ import { Button } from 'components/ui/Button';
 
 ## Props
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `React.ReactNode` | - | Button content |
-| `variant` | `'primary' \| 'secondary' \| 'text'` | `'primary'` | Button style variant |
-| `color` | `'primary' \| 'secondary' \| 'success' \| 'error' \| 'info' \| 'warning'` | `'primary'` | Button color |
-| `size` | `'small' \| 'medium' \| 'large'` | `'medium'` | Button size |
-| `fullWidth` | `boolean` | `false` | Whether button should take full width |
-| `disabled` | `boolean` | `false` | Whether button is disabled |
-| `loading` | `boolean` | `false` | Shows loading spinner when true |
-| `startIcon` | `React.ReactNode` | - | Icon to display before text |
-| `endIcon` | `React.ReactNode` | - | Icon to display after text |
-| `onClick` | `(e: React.MouseEvent<HTMLButtonElement>) => void` | - | Click handler |
-| `type` | `'button' \| 'submit' \| 'reset'` | `'button'` | HTML button type |
-| `className` | `string` | `''` | Additional CSS class to apply |
-| `sx` | `SxProps<Theme>` | `{}` | MUI system props for styling |
+| Prop        | Type                                                                      | Default     | Description                           |
+| ----------- | ------------------------------------------------------------------------- | ----------- | ------------------------------------- |
+| `children`  | `React.ReactNode`                                                         | -           | Button content                        |
+| `variant`   | `'primary' \| 'secondary' \| 'text'`                                      | `'primary'` | Button style variant                  |
+| `color`     | `'primary' \| 'secondary' \| 'success' \| 'error' \| 'info' \| 'warning'` | `'primary'` | Button color                          |
+| `size`      | `'small' \| 'medium' \| 'large'`                                          | `'medium'`  | Button size                           |
+| `fullWidth` | `boolean`                                                                 | `false`     | Whether button should take full width |
+| `disabled`  | `boolean`                                                                 | `false`     | Whether button is disabled            |
+| `loading`   | `boolean`                                                                 | `false`     | Shows loading spinner when true       |
+| `startIcon` | `React.ReactNode`                                                         | -           | Icon to display before text           |
+| `endIcon`   | `React.ReactNode`                                                         | -           | Icon to display after text            |
+| `onClick`   | `(e: React.MouseEvent<HTMLButtonElement>) => void`                        | -           | Click handler                         |
+| `type`      | `'button' \| 'submit' \| 'reset'`                                         | `'button'`  | HTML button type                      |
+| `className` | `string`                                                                  | `''`        | Additional CSS class to apply         |
+| `sx`        | `SxProps<Theme>`                                                          | `{}`        | MUI system props for styling          |
 
 ## Implementation Details
 
 ```tsx
-import React from 'react';
-import { 
-  Button as MuiButton, 
-  ButtonProps as MuiButtonProps, 
-  CircularProgress 
-} from '@mui/material';
-import { SxProps, Theme } from '@mui/material/styles';
+import React from "react";
+import {
+  Button as MuiButton,
+  ButtonProps as MuiButtonProps,
+  CircularProgress,
+} from "@mui/material";
+import { SxProps, Theme } from "@mui/material/styles";
 
-export interface ButtonProps extends Omit<MuiButtonProps, 'variant' | 'color'> {
-  variant?: 'primary' | 'secondary' | 'text';
-  color?: 'primary' | 'secondary' | 'success' | 'error' | 'info' | 'warning';
+export interface ButtonProps extends Omit<MuiButtonProps, "variant" | "color"> {
+  variant?: "primary" | "secondary" | "text";
+  color?: "primary" | "secondary" | "success" | "error" | "info" | "warning";
   loading?: boolean;
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
   fullWidth?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
   className?: string;
   sx?: SxProps<Theme>;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  type?: 'button' | 'submit' | 'reset';
+  type?: "button" | "submit" | "reset";
 }
 
 export function Button({
   children,
-  variant = 'primary',
-  color = 'primary',
+  variant = "primary",
+  color = "primary",
   loading = false,
   disabled = false,
   startIcon,
   endIcon,
   fullWidth = false,
-  size = 'medium',
-  className = '',
+  size = "medium",
+  className = "",
   sx = {},
   onClick,
-  type = 'button',
+  type = "button",
   ...rest
 }: ButtonProps) {
   // Map our custom variants to MUI variants
-  const muiVariant = variant === 'primary' ? 'contained' : 
-                     variant === 'secondary' ? 'outlined' : 'text';
-  
+  const muiVariant =
+    variant === "primary"
+      ? "contained"
+      : variant === "secondary"
+      ? "outlined"
+      : "text";
+
   return (
     <MuiButton
       variant={muiVariant}
@@ -116,10 +120,10 @@ export function Button({
     >
       {loading ? (
         <>
-          <CircularProgress 
-            size={size === 'small' ? 16 : size === 'large' ? 24 : 20} 
-            color="inherit" 
-            sx={{ mr: children ? 1 : 0 }} 
+          <CircularProgress
+            size={size === "small" ? 16 : size === "large" ? 24 : 20}
+            color="inherit"
+            sx={{ mr: children ? 1 : 0 }}
           />
           {children}
         </>
@@ -147,12 +151,7 @@ export function Button({
 ### Primary Action Button
 
 ```tsx
-<Button 
-  variant="primary" 
-  color="primary" 
-  onClick={handleSubmit}
-  type="submit"
->
+<Button variant="primary" color="primary" onClick={handleSubmit} type="submit">
   Submit Form
 </Button>
 ```
@@ -160,11 +159,7 @@ export function Button({
 ### Secondary Action Button
 
 ```tsx
-<Button 
-  variant="secondary" 
-  color="primary" 
-  onClick={handleCancel}
->
+<Button variant="secondary" color="primary" onClick={handleCancel}>
   Cancel
 </Button>
 ```
@@ -172,9 +167,9 @@ export function Button({
 ### Dangerous Action Button
 
 ```tsx
-<Button 
-  variant="primary" 
-  color="error" 
+<Button
+  variant="primary"
+  color="error"
   onClick={handleDelete}
   startIcon={<DeleteIcon />}
 >
@@ -185,24 +180,20 @@ export function Button({
 ### Loading Button
 
 ```tsx
-<Button 
-  variant="primary" 
-  loading={isSubmitting} 
+<Button
+  variant="primary"
+  loading={isSubmitting}
   onClick={handleSubmit}
   disabled={!isValid}
 >
-  {isSubmitting ? 'Saving...' : 'Save Changes'}
+  {isSubmitting ? "Saving..." : "Save Changes"}
 </Button>
 ```
 
 ### Icon Button
 
 ```tsx
-<Button 
-  variant="text" 
-  startIcon={<AddIcon />} 
-  onClick={handleAddItem}
->
+<Button variant="text" startIcon={<AddIcon />} onClick={handleAddItem}>
   Add Item
 </Button>
 ```
@@ -210,12 +201,7 @@ export function Button({
 ### Full Width Button
 
 ```tsx
-<Button 
-  variant="primary" 
-  fullWidth 
-  onClick={handleContinue}
-  size="large"
->
+<Button variant="primary" fullWidth onClick={handleContinue} size="large">
   Continue to Checkout
 </Button>
 ```
@@ -231,4 +217,4 @@ export function Button({
 7. Include icons when they add clarity to the action
 8. Group related buttons together with consistent styling
 9. Ensure sufficient contrast between button color and text for accessibility
-10. Use appropriate button sizes based on importance and context 
+10. Use appropriate button sizes based on importance and context

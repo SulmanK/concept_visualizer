@@ -18,13 +18,13 @@ Rate limiting decorators are used to:
 def safe_ratelimit(func: Callable[[Request], Awaitable[Any]]) -> Callable[[Request], Awaitable[Any]]:
     """
     Decorator to handle Redis connection errors during rate limiting.
-    
+
     This decorator wraps rate-limited endpoint handlers to gracefully handle Redis
     connection errors, falling back to allowing the request rather than failing.
-    
+
     Args:
         func: The endpoint handler function to decorate
-        
+
     Returns:
         Callable: Wrapped function that handles Redis connection errors
     """
@@ -59,14 +59,14 @@ In practice, these decorators are usually not used directly. Instead, they're in
 # In app.core.limiter.config
 def setup_limiter_for_app(app: FastAPI) -> None:
     # ...
-    
+
     # Patch the limiter's limit method with our safe version
     original_limit = limiter.limit
-    
+
     def safe_limit(*args, **kwargs):
         """Wrap the limit method to handle Redis connection errors."""
         limit_decorator = original_limit(*args, **kwargs)
-        
+
         def wrapper(func):
             # Apply our safe_ratelimit decorator first, then the original limit
             safe_func = safe_ratelimit(func)
@@ -90,6 +90,7 @@ except redis.exceptions.ConnectionError as e:
 ```
 
 When a Redis connection error occurs:
+
 1. The error is logged
 2. Rate limiting is bypassed
 3. The request is allowed to proceed
@@ -120,4 +121,4 @@ This ensures that API functionality continues even when rate limiting is unavail
 
 - [Config](config.md): Rate limiter configuration that uses these decorators
 - [Keys](keys.md): Key functions used for rate limiting
-- [Redis Store](redis_store.md): The Redis client used for rate limiting storage 
+- [Redis Store](redis_store.md): The Redis client used for rate limiting storage

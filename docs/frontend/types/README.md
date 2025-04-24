@@ -58,7 +58,7 @@ export interface GenerateConceptResponse {
 }
 
 // Task status type for async operations
-export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type TaskStatus = "pending" | "processing" | "completed" | "failed";
 
 // Task response from the backend
 export interface TaskResponse {
@@ -75,8 +75,8 @@ export interface TaskResponse {
 // Button component props
 export interface ButtonProps {
   label: string;
-  variant?: 'primary' | 'secondary' | 'text';
-  size?: 'small' | 'medium' | 'large';
+  variant?: "primary" | "secondary" | "text";
+  size?: "small" | "medium" | "large";
   disabled?: boolean;
   loading?: boolean;
   onClick?: () => void;
@@ -128,4 +128,4 @@ export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 4. **Use Readonly** for immutable data structures
 5. **Document Types** with JSDoc comments for better IntelliSense
 6. **Consistent Naming** using PascalCase for interfaces and types
-7. **Single Responsibility** - keep types focused on one domain or concept 
+7. **Single Responsibility** - keep types focused on one domain or concept

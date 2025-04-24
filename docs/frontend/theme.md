@@ -9,105 +9,105 @@ The theme file creates and exports a custom theme that extends Material-UI's def
 ## Implementation
 
 ```tsx
-import { createTheme, responsiveFontSizes } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes } from "@mui/material/styles";
 
 // Define custom color palette
 const palette = {
   primary: {
-    main: '#2563EB',
-    light: '#60A5FA',
-    dark: '#1E40AF',
-    contrastText: '#FFFFFF',
+    main: "#2563EB",
+    light: "#60A5FA",
+    dark: "#1E40AF",
+    contrastText: "#FFFFFF",
   },
   secondary: {
-    main: '#10B981',
-    light: '#34D399',
-    dark: '#059669',
-    contrastText: '#FFFFFF',
+    main: "#10B981",
+    light: "#34D399",
+    dark: "#059669",
+    contrastText: "#FFFFFF",
   },
   error: {
-    main: '#EF4444',
-    light: '#F87171',
-    dark: '#B91C1C',
+    main: "#EF4444",
+    light: "#F87171",
+    dark: "#B91C1C",
   },
   warning: {
-    main: '#F59E0B',
-    light: '#FBBF24',
-    dark: '#D97706',
+    main: "#F59E0B",
+    light: "#FBBF24",
+    dark: "#D97706",
   },
   info: {
-    main: '#3B82F6',
-    light: '#60A5FA',
-    dark: '#2563EB',
+    main: "#3B82F6",
+    light: "#60A5FA",
+    dark: "#2563EB",
   },
   success: {
-    main: '#10B981',
-    light: '#34D399',
-    dark: '#059669',
+    main: "#10B981",
+    light: "#34D399",
+    dark: "#059669",
   },
   background: {
-    default: '#F9FAFB',
-    paper: '#FFFFFF',
+    default: "#F9FAFB",
+    paper: "#FFFFFF",
   },
   text: {
-    primary: '#1F2937',
-    secondary: '#6B7280',
-    disabled: '#9CA3AF',
+    primary: "#1F2937",
+    secondary: "#6B7280",
+    disabled: "#9CA3AF",
   },
 };
 
 // Define custom typography
 const typography = {
   fontFamily: [
-    'Inter',
-    '-apple-system',
-    'BlinkMacSystemFont',
+    "Inter",
+    "-apple-system",
+    "BlinkMacSystemFont",
     '"Segoe UI"',
-    'Roboto',
+    "Roboto",
     '"Helvetica Neue"',
-    'Arial',
-    'sans-serif',
-  ].join(','),
+    "Arial",
+    "sans-serif",
+  ].join(","),
   h1: {
     fontWeight: 700,
-    fontSize: '2.5rem',
+    fontSize: "2.5rem",
   },
   h2: {
     fontWeight: 600,
-    fontSize: '2rem',
+    fontSize: "2rem",
   },
   h3: {
     fontWeight: 600,
-    fontSize: '1.75rem',
+    fontSize: "1.75rem",
   },
   h4: {
     fontWeight: 600,
-    fontSize: '1.5rem',
+    fontSize: "1.5rem",
   },
   h5: {
     fontWeight: 600,
-    fontSize: '1.25rem',
+    fontSize: "1.25rem",
   },
   h6: {
     fontWeight: 600,
-    fontSize: '1rem',
+    fontSize: "1rem",
   },
   subtitle1: {
-    fontSize: '1rem',
+    fontSize: "1rem",
     fontWeight: 500,
   },
   subtitle2: {
-    fontSize: '0.875rem',
+    fontSize: "0.875rem",
     fontWeight: 500,
   },
   body1: {
-    fontSize: '1rem',
+    fontSize: "1rem",
   },
   body2: {
-    fontSize: '0.875rem',
+    fontSize: "0.875rem",
   },
   button: {
-    textTransform: 'none',
+    textTransform: "none",
     fontWeight: 600,
   },
 };
@@ -129,14 +129,14 @@ theme = createTheme(theme, {
       styleOverrides: {
         root: {
           padding: `${theme.spacing(1)} ${theme.spacing(2)}`,
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: 'none',
+          boxShadow: "none",
+          "&:hover": {
+            boxShadow: "none",
           },
         },
         contained: {
-          '&:hover': {
-            boxShadow: 'none',
+          "&:hover": {
+            boxShadow: "none",
           },
         },
       },
@@ -151,11 +151,11 @@ theme = createTheme(theme, {
     MuiTextField: {
       styleOverrides: {
         root: {
-          '& .MuiOutlinedInput-root': {
-            '& fieldset': {
-              borderColor: '#E5E7EB',
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: "#E5E7EB",
             },
-            '&:hover fieldset': {
+            "&:hover fieldset": {
               borderColor: theme.palette.primary.main,
             },
           },
@@ -209,19 +209,21 @@ The theme uses `responsiveFontSizes` to automatically adjust font sizes based on
 To use the theme in components:
 
 ```tsx
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from "@mui/material/styles";
 
 function MyComponent() {
   const theme = useTheme();
-  
+
   return (
-    <div style={{ 
-      color: theme.palette.primary.main,
-      padding: theme.spacing(2),
-      fontFamily: theme.typography.fontFamily
-    }}>
+    <div
+      style={{
+        color: theme.palette.primary.main,
+        padding: theme.spacing(2),
+        fontFamily: theme.typography.fontFamily,
+      }}
+    >
       Themed component
     </div>
   );
 }
-``` 
+```

@@ -34,63 +34,59 @@ export interface RateLimitsResponse {
   default_limits: string[];
 }
 
-export type RateLimitCategory = 
-  | 'generate_concept' 
-  | 'refine_concept' 
-  | 'store_concept' 
-  | 'get_concepts' 
-  | 'sessions' 
-  | 'export_action';
+export type RateLimitCategory =
+  | "generate_concept"
+  | "refine_concept"
+  | "store_concept"
+  | "get_concepts"
+  | "sessions"
+  | "export_action";
 ```
 
 ## Key Functions
 
-| Function | Description |
-|----------|-------------|
-| `mapEndpointToCategory(endpoint)` | Maps an API endpoint path to its corresponding rate limit category |
-| `extractRateLimitHeaders(response, endpoint)` | Extracts rate limit information from response headers and updates the cache |
-| `getRateLimitInfoForCategory(category)` | Gets the current rate limit info for a specific category |
-| `decrementRateLimit(category, amount)` | Optimistically decrements the remaining count for a category (for UI updates before API confirmation) |
-| `fetchRateLimits(forceRefresh)` | Fetches rate limits from the backend API |
-| `formatTimeRemaining(seconds)` | Formats seconds into a human-readable time string |
+| Function                                      | Description                                                                                           |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `mapEndpointToCategory(endpoint)`             | Maps an API endpoint path to its corresponding rate limit category                                    |
+| `extractRateLimitHeaders(response, endpoint)` | Extracts rate limit information from response headers and updates the cache                           |
+| `getRateLimitInfoForCategory(category)`       | Gets the current rate limit info for a specific category                                              |
+| `decrementRateLimit(category, amount)`        | Optimistically decrements the remaining count for a category (for UI updates before API confirmation) |
+| `fetchRateLimits(forceRefresh)`               | Fetches rate limits from the backend API                                                              |
+| `formatTimeRemaining(seconds)`                | Formats seconds into a human-readable time string                                                     |
 
 ## Usage Examples
 
 ### Checking if an Action is Allowed
 
 ```typescript
-import { getRateLimitInfoForCategory } from '../services/rateLimitService';
+import { getRateLimitInfoForCategory } from "../services/rateLimitService";
 
 const canGenerateConcept = () => {
-  const limits = getRateLimitInfoForCategory('generate_concept');
+  const limits = getRateLimitInfoForCategory("generate_concept");
   return limits && limits.remaining > 0;
 };
 
 // In a component
 const GenerateButton = () => {
   const disabled = !canGenerateConcept();
-  
-  return (
-    <button disabled={disabled}>
-      Generate Concept
-    </button>
-  );
+
+  return <button disabled={disabled}>Generate Concept</button>;
 };
 ```
 
 ### Displaying Rate Limit Information
 
 ```tsx
-import { useRateLimitsQuery } from '../hooks/useRateLimitsQuery';
-import { formatTimeRemaining } from '../services/rateLimitService';
+import { useRateLimitsQuery } from "../hooks/useRateLimitsQuery";
+import { formatTimeRemaining } from "../services/rateLimitService";
 
 const RateLimitDisplay = () => {
   const { data: rateLimits, isLoading } = useRateLimitsQuery();
-  
+
   if (isLoading || !rateLimits) return <div>Loading limits...</div>;
-  
+
   const generateLimit = rateLimits.limits.generate_concept;
-  
+
   return (
     <div>
       <p>Concepts remaining: {generateLimit.remaining}</p>
@@ -106,4 +102,4 @@ const RateLimitDisplay = () => {
 - The service maintains a mapping between API endpoints and rate limit categories
 - When response headers contain rate limit information, the cache is automatically updated
 - For optimistic UI updates, the `decrementRateLimit` function can be called before API responses arrive
-- Time formatting supports multiple granularities (seconds, minutes, hours) 
+- Time formatting supports multiple granularities (seconds, minutes, hours)

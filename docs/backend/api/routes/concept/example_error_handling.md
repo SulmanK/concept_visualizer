@@ -29,6 +29,7 @@ GET /api/concepts/examples/concept/{concept_id}
 ```
 
 Path parameters:
+
 - `concept_id`: ID of the concept to retrieve
 
 #### Response
@@ -133,4 +134,4 @@ except Exception as e:
 - [API Errors](../../errors.md): Global API error definitions
 - [Core Exceptions](../../../core/exceptions.md): Application-specific exception types
 - [Generation](generation.md): Concept generation endpoints
-- [Refinement](refinement.md): Concept refinement endpoints 
+- [Refinement](refinement.md): Concept refinement endpoints

@@ -191,7 +191,7 @@ backend/
 │   ├── core/             # Core documentation
 │   └── utils/            # Utils documentation
 ├── static/               # Static files served by backend
-├── tests/                # Test directory 
+├── tests/                # Test directory
 │   ├── __init__.py
 │   ├── conftest.py       # Test fixtures
 │   ├── test_api/         # API tests
@@ -209,6 +209,7 @@ backend/
 ### Backend Layer Responsibilities
 
 1. **API Layer** (`api/`): Handles HTTP requests/responses, input validation, and routing
+
    - Responsible for input validation using Pydantic models
    - Routes requests to appropriate service functions
    - Handles cookies and session management
@@ -216,6 +217,7 @@ backend/
    - Uses centralized dependencies and error handling
 
 2. **Service Layer** (`services/`): Contains business logic and coordinates with external services
+
    - Implements domain logic in feature-specific modules
    - Exposes clean interfaces through the interfaces directory
    - Follows single responsibility principle with focused modules
@@ -223,12 +225,14 @@ backend/
    - Delegates specialized operations to appropriate sub-services
 
 3. **Models** (`models/`): Defines data structures using Pydantic
+
    - Organized by domain with focused model modules
    - Request models validate incoming API requests
    - Response models define API response structures
    - Domain models represent core business entities
 
 4. **Core** (`core/`): Application configuration and setup
+
    - Manages environment variables and settings
    - Configures middleware and application infrastructure
    - Provides client implementations for external services
@@ -355,16 +359,16 @@ frontend/
   <Route path="/" element={<MainLayout />}>
     {/* Main landing page with concept generator */}
     <Route index element={<LandingPage />} />
-    
+
     {/* Create page - could redirect to landing */}
     <Route path="create" element={<LandingPage />} />
-    
+
     {/* Concept detail page */}
     <Route path="concepts/:conceptId" element={<ConceptDetailPage />} />
-    
+
     {/* Recent concepts page */}
     <Route path="recent" element={<RecentConceptsPage />} />
-    
+
     {/* Refinement page */}
     <Route path="refine/:conceptId" element={<RefinementPage />} />
   </Route>
@@ -390,16 +394,19 @@ frontend/
 ### Backend Enhancements
 
 1. **API Layer Refinement**:
+
    - Create dedicated route files for different concept operations
    - Add error handling middleware
    - Implement dependencies.py for cleaner dependency injection
 
 2. **Security Improvements**:
+
    - Secure environment variable management
    - Implement proper rate limiting
    - Add CSRF protection
 
 3. **Performance Optimization**:
+
    - Add caching layer for frequent operations
    - Optimize image processing operations
 
@@ -410,6 +417,7 @@ frontend/
 ### Frontend Enhancements
 
 1. **Performance Optimization**:
+
    - Implement code splitting
    - Add caching for API responses
    - Optimize bundle size
@@ -455,6 +463,7 @@ VITE_API_BASE_URL=http://localhost:8000/api
 The project is prepared for deployment with the following considerations:
 
 1. **Backend Deployment**:
+
    - Runs as a FastAPI application
    - Requires environment variables for configuration
    - Uses Supabase for data storage
@@ -464,4 +473,4 @@ The project is prepared for deployment with the following considerations:
    - Requires API URL configuration
    - Static assets can be served from CDN
 
-This structure follows clean architecture principles while being pragmatic for a modern web application with Python backend and React frontend. 
+This structure follows clean architecture principles while being pragmatic for a modern web application with Python backend and React frontend.

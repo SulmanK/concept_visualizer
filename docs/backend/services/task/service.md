@@ -20,11 +20,11 @@ The primary implementation class:
 ```python
 class TaskService(TaskServiceInterface):
     """Service for managing background tasks."""
-    
+
     def __init__(self, client: SupabaseClient):
         """
         Initialize task service with Supabase client.
-        
+
         Args:
             client: Supabase client for interacting with the database
         """
@@ -38,22 +38,22 @@ class TaskService(TaskServiceInterface):
 
 ```python
 async def create_task(
-    self, 
-    user_id: str, 
-    task_type: str, 
+    self,
+    user_id: str,
+    task_type: str,
     metadata: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """
     Create a new task record.
-    
+
     Args:
         user_id: ID of the user who owns the task
         task_type: Type of task (e.g. 'concept_generation', 'concept_refinement')
         metadata: Optional metadata associated with the task
-            
+
     Returns:
         Task data including the generated task ID
-        
+
     Raises:
         TaskError: If creation fails
     """
@@ -61,6 +61,7 @@ async def create_task(
 ```
 
 This method:
+
 - Generates a unique UUID for the task
 - Records creation timestamp
 - Initializes the task with "pending" status
@@ -80,16 +81,16 @@ async def update_task_status(
 ) -> Dict[str, Any]:
     """
     Update the status of a task.
-    
+
     Args:
         task_id: ID of the task to update
         status: New status ('processing', 'completed', 'failed')
         result_id: Optional ID of the result entity (e.g. concept_id)
         error_message: Optional error message if status is 'failed'
-        
+
     Returns:
         Updated task data
-        
+
     Raises:
         TaskNotFoundError: If task not found
         TaskError: If update fails
@@ -98,6 +99,7 @@ async def update_task_status(
 ```
 
 Key features:
+
 - Updates timestamps for tracking progress
 - Links to result entities (like generated concepts)
 - Records error information for failed tasks
@@ -109,14 +111,14 @@ Key features:
 async def get_task(self, task_id: str, user_id: str) -> Dict[str, Any]:
     """
     Get a task by ID.
-    
+
     Args:
         task_id: ID of the task to retrieve
         user_id: ID of the user who owns the task
-        
+
     Returns:
         Task data
-        
+
     Raises:
         TaskNotFoundError: If task not found
         TaskError: If retrieval fails
@@ -126,22 +128,22 @@ async def get_task(self, task_id: str, user_id: str) -> Dict[str, Any]:
 
 ```python
 async def get_tasks_by_user(
-    self, 
-    user_id: str, 
+    self,
+    user_id: str,
     status: Optional[str] = None,
     limit: int = 10
 ) -> List[Dict[str, Any]]:
     """
     Get tasks for a user.
-    
+
     Args:
         user_id: ID of the user who owns the tasks
         status: Optional status to filter by
         limit: Maximum number of tasks to return
-        
+
     Returns:
         List of task data
-        
+
     Raises:
         TaskError: If retrieval fails
     """
@@ -149,6 +151,7 @@ async def get_tasks_by_user(
 ```
 
 These methods provide:
+
 - User-specific task filtering for security
 - Optional status filtering for UI displays
 - Pagination control with limits
@@ -160,14 +163,14 @@ These methods provide:
 async def get_task_by_result_id(self, result_id: str, user_id: str) -> Optional[Dict[str, Any]]:
     """
     Get a task by result ID.
-    
+
     Args:
         result_id: ID of the result entity (e.g. concept_id)
         user_id: ID of the user who owns the task
-        
+
     Returns:
         Task data if found, None otherwise
-        
+
     Raises:
         TaskError: If retrieval fails
     """
@@ -175,6 +178,7 @@ async def get_task_by_result_id(self, result_id: str, user_id: str) -> Optional[
 ```
 
 This specialized lookup:
+
 - Finds the task that generated a particular result
 - Enables tracking the origin of generated content
 - Maintains user security boundaries
@@ -185,14 +189,14 @@ This specialized lookup:
 async def delete_task(self, task_id: str, user_id: str) -> bool:
     """
     Delete a task.
-    
+
     Args:
         task_id: ID of the task to delete
         user_id: ID of the user who owns the task
-        
+
     Returns:
         True if successfully deleted
-        
+
     Raises:
         TaskNotFoundError: If task not found
         TaskError: If deletion fails
@@ -201,6 +205,7 @@ async def delete_task(self, task_id: str, user_id: str) -> bool:
 ```
 
 Supports:
+
 - User-specific cleanup operations
 - Security validation before deletion
 - Comprehensive error handling and logging
@@ -212,7 +217,7 @@ The service defines task-specific exceptions:
 ```python
 class TaskError(Exception):
     """Base exception for task-related errors."""
-    
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
@@ -220,7 +225,7 @@ class TaskError(Exception):
 
 class TaskNotFoundError(TaskError):
     """Exception raised when a task is not found."""
-    
+
     def __init__(self, task_id: str):
         self.task_id = task_id
         message = f"Task with ID {mask_id(task_id)} not found"
@@ -228,6 +233,7 @@ class TaskNotFoundError(TaskError):
 ```
 
 These exceptions:
+
 - Provide specific error types for different scenarios
 - Include automatic ID masking for security
 - Enable consistent error handling across the application
@@ -289,4 +295,4 @@ await task_service.update_task_status(
 - [Task Service Interface](interface.md): Interface implemented by this service
 - [API Task Routes](../../api/routes/task/routes.md): API routes that use this service
 - [Task Response Models](../../models/task/response.md): Data models for task responses
-- [Supabase Client](../../core/supabase/client.md): Database client used by this service 
+- [Supabase Client](../../core/supabase/client.md): Database client used by this service

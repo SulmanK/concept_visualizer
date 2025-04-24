@@ -35,7 +35,7 @@
       flex-direction: column;
       min-height: 100vh;
     }
-    
+
     .footer {
       width: 100%;
       padding: 3rem 0 2rem;
@@ -43,7 +43,7 @@
       background-color: var(--indigo-50);
       position: relative;
     }
-    
+
     /* Subtle gradient overlay */
     .footer::after {
       content: '';
@@ -55,7 +55,7 @@
       background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
-    
+
     .container {
       width: 100%;
       max-width: 1280px;
@@ -64,42 +64,42 @@
       position: relative;
       z-index: 10;
     }
-    
+
     /* Simple two-column layout */
     .footer-grid {
       display: grid;
       grid-template-columns: 1fr 2fr;
       gap: 3rem;
     }
-    
+
     /* Handle responsive layout */
     @media (max-width: 768px) {
       .footer-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .links-grid {
         grid-template-columns: repeat(2, 1fr) !important;
       }
     }
-    
+
     @media (max-width: 480px) {
       .links-grid {
         grid-template-columns: 1fr !important;
       }
     }
-    
+
     .footer-brand-container {
       display: flex;
       flex-direction: column;
     }
-    
+
     .footer-brand {
       display: flex;
       align-items: center;
       margin-bottom: 1rem;
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
@@ -112,32 +112,32 @@
       border-radius: 0.5rem;
       box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
     }
-    
+
     .brand-name {
       margin-left: 0.75rem;
       font-size: 1.25rem;
       font-weight: 700;
       color: var(--indigo-900);
     }
-    
+
     .brand-description {
       font-size: 0.875rem;
       color: #4B5563;
       line-height: 1.6;
       margin-bottom: 1.5rem;
     }
-    
+
     .powered-by {
       margin-top: auto;
     }
-    
+
     /* Links grid layout */
     .links-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 2rem;
     }
-    
+
     .footer-links-title {
       font-size: 0.875rem;
       font-weight: 600;
@@ -146,17 +146,17 @@
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--indigo-200);
     }
-    
+
     .footer-links {
       list-style: none;
       padding: 0;
       margin: 0;
     }
-    
+
     .footer-link {
       margin-bottom: 0.5rem;
     }
-    
+
     .footer-link a {
       font-size: 0.875rem;
       color: #4B5563;
@@ -166,7 +166,7 @@
       padding: 0.25rem 0;
       position: relative;
     }
-    
+
     /* Underline animation for links */
     .footer-link a::after {
       content: '';
@@ -178,15 +178,15 @@
       background-color: var(--primary);
       transition: width 0.2s ease;
     }
-    
+
     .footer-link a:hover {
       color: var(--primary);
     }
-    
+
     .footer-link a:hover::after {
       width: 100%;
     }
-    
+
     /* Footer bottom with copyright and social */
     .footer-bottom {
       margin-top: 3rem;
@@ -198,17 +198,17 @@
       align-items: center;
       gap: 1rem;
     }
-    
+
     .copyright {
       font-size: 0.75rem;
       color: #6B7280;
     }
-    
+
     .footer-social {
       display: flex;
       gap: 0.75rem;
     }
-    
+
     .social-icon {
       display: flex;
       align-items: center;
@@ -221,13 +221,13 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       transition: all 0.2s ease;
     }
-    
+
     .social-icon:hover {
       transform: translateY(-2px);
       color: var(--primary);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
-    
+
     /* Call to action button */
     .cta-button {
       display: inline-flex;
@@ -244,12 +244,12 @@
       text-decoration: none;
       margin-top: 1rem;
     }
-    
+
     .cta-button:hover {
       transform: translateY(-1px);
       box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
     }
-    
+
     .cta-button svg {
       margin-right: 0.5rem;
     }
@@ -260,7 +260,7 @@
   <div style="height: 400px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; color: #333;">
     Page Content
   </div>
-  
+
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
@@ -271,11 +271,11 @@
             <div class="logo">CV</div>
             <h2 class="brand-name">Concept Visualizer</h2>
           </div>
-          
+
           <p class="brand-description">
             Create and refine visual concepts with AI. Generate unique logos, color schemes, and design assets for your brand and projects.
           </p>
-          
+
           <a href="/get-started" class="cta-button">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
               <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
@@ -283,14 +283,14 @@
             </svg>
             Get Started
           </a>
-          
+
           <div class="powered-by">
             <a href="https://jigsawstack.com/?ref=powered-by" rel="follow">
               <img src="https://jigsawstack.com/badge.svg" alt="Powered by JigsawStack" style="height: 40px; margin-top: 1.5rem;">
             </a>
           </div>
         </div>
-        
+
         <!-- Right column: Links grid -->
         <div class="links-grid">
           <!-- Features column -->
@@ -311,7 +311,7 @@
               </li>
             </ul>
           </div>
-          
+
           <!-- Resources column -->
           <div>
             <h3 class="footer-links-title">Resources</h3>
@@ -330,7 +330,7 @@
               </li>
             </ul>
           </div>
-          
+
           <!-- Company column -->
           <div>
             <h3 class="footer-links-title">Company</h3>
@@ -351,13 +351,13 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Footer bottom: copyright and social -->
       <div class="footer-bottom">
         <div class="copyright">
           &copy; 2023 Concept Visualizer. All rights reserved.
         </div>
-        
+
         <div class="footer-social">
           <a href="#" class="social-icon" aria-label="Facebook">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -384,4 +384,4 @@
     </div>
   </footer>
 </body>
-</html> 
+</html>

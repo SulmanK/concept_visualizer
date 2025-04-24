@@ -19,11 +19,11 @@ The primary class for managing image data:
 ```python
 class ImageStorage:
     """Handles image storage operations in Supabase Storage."""
-    
+
     def __init__(self, client: Client):
         """
         Initialize the image storage with a Supabase client.
-        
+
         Args:
             client: Supabase client instance
         """
@@ -46,7 +46,7 @@ def upload_image(
 ) -> str:
     """
     Upload an image to Supabase Storage.
-    
+
     Args:
         image_data: Image data as bytes, BytesIO, or UploadFile
         path: Storage path (should include user_id as first segment)
@@ -54,10 +54,10 @@ def upload_image(
         user_id: User ID for access control
         is_palette: Whether this is a palette image (uses different bucket)
         metadata: Optional metadata to store with the image
-        
+
     Returns:
         Storage path of the uploaded image
-        
+
     Raises:
         ImageStorageError: If upload fails
     """
@@ -72,14 +72,14 @@ The method supports various input formats and ensures proper authentication with
 def download_image(self, path: str, bucket_name: str) -> bytes:
     """
     Download an image from Supabase Storage.
-    
+
     Args:
         path: Path to the image in storage
         bucket_name: Name of the bucket
-        
+
     Returns:
         Image data as bytes
-        
+
     Raises:
         ImageNotFoundError: If image is not found
         ImageStorageError: If download fails
@@ -98,15 +98,15 @@ def create_signed_url(
 ) -> str:
     """
     Create a signed URL for accessing an image.
-    
+
     Args:
         path: Path to the image in storage
         bucket_name: Name of the bucket
         expires_in: Expiration time in seconds
-        
+
     Returns:
         Signed URL with temporary access
-        
+
     Raises:
         ImageStorageError: If URL creation fails
     """
@@ -121,14 +121,14 @@ This method generates time-limited access URLs with proper JWT authentication.
 def remove_image(self, path: str, bucket_name: str) -> bool:
     """
     Remove an image from storage.
-    
+
     Args:
         path: Path to the image in storage
         bucket_name: Name of the bucket
-        
+
     Returns:
         True if successful, False otherwise
-        
+
     Raises:
         ImageStorageError: If removal fails
     """
@@ -145,13 +145,13 @@ def delete_all_storage_objects(
 ) -> bool:
     """
     Delete all storage objects for a user or all objects in a bucket.
-    
+
     WARNING: This is destructive and will delete all files permanently.
-    
+
     Args:
         bucket_name: Name of the bucket
         user_id: Optional user ID to limit deletion to user's files
-        
+
     Returns:
         True if successful, False otherwise
     """
@@ -172,16 +172,16 @@ def apply_color_palette(
 ) -> Tuple[str, str]:
     """
     Apply a color palette to an image.
-    
+
     Args:
         image_path: Path to the source image
         palette_colors: List of hex color codes
         output_path: Optional custom output path
         bucket_name: Name of the source bucket
-        
+
     Returns:
         Tuple of (storage_path, signed_url)
-        
+
     Raises:
         ImageStorageError: If palette application fails
     """
@@ -203,17 +203,17 @@ def upload_image_from_url(
 ) -> str:
     """
     Upload an image from a URL to storage.
-    
+
     Args:
         url: URL of the image to download
         path: Destination path in storage
         bucket_name: Name of the bucket
         user_id: Optional user ID for access control
         metadata: Optional metadata to store with the image
-        
+
     Returns:
         Storage path of the uploaded image
-        
+
     Raises:
         ImageStorageError: If upload fails
     """
@@ -232,6 +232,7 @@ The module implements several security features:
 4. **Metadata Validation**: Ensures metadata includes required user identification
 
 Example of path structure for security:
+
 ```
 user-123/concept-456/image.png
 ```
@@ -277,15 +278,15 @@ try:
         content_type="image/png",
         user_id=user_id
     )
-    
+
     # Get a signed URL
     signed_url = storage.create_signed_url(
         path=uploaded_path,
         bucket_name="concept-images"
     )
-    
+
     print(f"Image available at: {signed_url}")
-    
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -303,9 +304,9 @@ try:
         palette_colors=palette_colors,
         bucket_name="concept-images"
     )
-    
+
     print(f"Palette variation available at: {new_url}")
-    
+
 except Exception as e:
     print(f"Error: {str(e)}")
 ```
@@ -346,4 +347,4 @@ token = create_supabase_jwt_for_storage(
 - [Client](client.md): Base Supabase client used by image storage
 - [Concept Storage](concept_storage.md): Storage for concept data that references images
 - [Image Persistence Service](../../services/persistence/image_persistence_service.md): Higher-level service that uses this storage
-- [JWT Utils](../../utils/jwt_utils.md): JWT token utilities used for authentication 
+- [JWT Utils](../../utils/jwt_utils.md): JWT token utilities used for authentication

@@ -1,8 +1,8 @@
-import '@testing-library/jest-dom';
-import { vi, expect, afterEach } from 'vitest';
-import { QueryClient } from '@tanstack/react-query';
-import { cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
+import "@testing-library/jest-dom";
+import { vi, expect, afterEach } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { cleanup } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 
 // Add vi (Vitest) to global to allow usage like jest in tests
 // This allows existing jest-style tests to work with Vitest
@@ -11,17 +11,17 @@ global.jest = {
   mock: vi.mock,
   spyOn: vi.spyOn,
   resetAllMocks: vi.resetAllMocks,
-  clearAllMocks: vi.clearAllMocks
+  clearAllMocks: vi.clearAllMocks,
 } as any;
 
 // Create a mock DOM element for the root
-const mockRootElement = document.createElement('div');
-mockRootElement.id = 'root';
+const mockRootElement = document.createElement("div");
+mockRootElement.id = "root";
 document.body.appendChild(mockRootElement);
 
 // Mock document.getElementById to return our mock element
 document.getElementById = vi.fn((id) => {
-  if (id === 'root') {
+  if (id === "root") {
     return mockRootElement;
   }
   return null;
@@ -50,12 +50,12 @@ global.queryClient = new QueryClient({
 });
 
 // Mock the main.tsx file to prevent it from initializing React during tests
-vi.mock('./main', () => ({
+vi.mock("./main", () => ({
   queryClient: global.queryClient,
 }));
 
 // Mock problematic modules
-vi.mock('./services/rateLimitService', () => ({
+vi.mock("./services/rateLimitService", () => ({
   mapEndpointToCategory: vi.fn(),
   extractRateLimitHeaders: vi.fn(),
   formatTimeRemaining: vi.fn(),
@@ -63,11 +63,11 @@ vi.mock('./services/rateLimitService', () => ({
 }));
 
 // Mock any animation hooks
-vi.mock('./hooks/animation/usePrefersReducedMotion', () => ({
+vi.mock("./hooks/animation/usePrefersReducedMotion", () => ({
   default: () => false,
 }));
 
-// Optional: Set up any global mocks or configurations here 
+// Optional: Set up any global mocks or configurations here
 
 // Clean up after each test
 afterEach(() => {
@@ -81,18 +81,18 @@ class MockIntersectionObserver {
   readonly root: Element | null;
   readonly rootMargin: string;
   readonly thresholds: ReadonlyArray<number>;
-  
+
   constructor(
     callback: IntersectionObserverCallback,
-    options?: IntersectionObserverInit
+    options?: IntersectionObserverInit,
   ) {
     this.root = options?.root ?? null;
-    this.rootMargin = options?.rootMargin ?? '0px';
-    this.thresholds = Array.isArray(options?.threshold) 
-      ? options.threshold 
+    this.rootMargin = options?.rootMargin ?? "0px";
+    this.thresholds = Array.isArray(options?.threshold)
+      ? options.threshold
       : [options?.threshold ?? 0];
   }
-  
+
   observe = vi.fn();
   unobserve = vi.fn();
   disconnect = vi.fn();
@@ -100,15 +100,15 @@ class MockIntersectionObserver {
 }
 
 // Fix for Date.now not being a function in JSDOM
-Object.defineProperty(global.Date, 'now', {
+Object.defineProperty(global.Date, "now", {
   writable: true,
   value: () => new Date().getTime(),
 });
 
 // Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -132,22 +132,23 @@ global.IntersectionObserver = MockIntersectionObserver as any;
 global.ResizeObserver = MockResizeObserver as any;
 
 // Mocking fetch API
-global.fetch = vi.fn(() => 
-  Promise.resolve({
-    json: () => Promise.resolve({}),
-    text: () => Promise.resolve(''),
-    ok: true,
-    status: 200,
-    headers: new Headers(),
-  }) as any
+global.fetch = vi.fn(
+  () =>
+    Promise.resolve({
+      json: () => Promise.resolve({}),
+      text: () => Promise.resolve(""),
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+    }) as any,
 );
 
 // Mock console.error to fail tests on prop type warnings
 const originalConsoleError = console.error;
 console.error = (...args: any[]) => {
   // Check if this is a PropType validation
-  if (args[0]?.includes?.('Failed prop type')) {
+  if (args[0]?.includes?.("Failed prop type")) {
     throw new Error(args[0]);
   }
   originalConsoleError(...args);
-}; 
+};

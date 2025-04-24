@@ -1,22 +1,14 @@
-"""
-Tests for JWT utility functions.
-"""
+"""Tests for JWT utility functions."""
+
+import base64
+import json
+from unittest.mock import MagicMock, patch
 
 import pytest
-import time
-import json
-import base64
-from unittest.mock import patch, MagicMock
 from jose import jwt
-from jose.exceptions import JWTError, ExpiredSignatureError
+from jose.exceptions import JWTError
 
-from app.utils.jwt_utils import (
-    create_supabase_jwt,
-    verify_jwt,
-    extract_user_id_from_token,
-    create_supabase_jwt_for_storage,
-    decode_token
-)
+from app.utils.jwt_utils import create_supabase_jwt, create_supabase_jwt_for_storage, decode_token, extract_user_id_from_token, verify_jwt
 
 
 class TestJwtUtils:
@@ -25,7 +17,7 @@ class TestJwtUtils:
     @patch("app.utils.jwt_utils.settings")
     @patch("app.utils.jwt_utils.jwt.encode")
     @patch("app.utils.jwt_utils.time.time")
-    def test_create_supabase_jwt(self, mock_time, mock_encode, mock_settings):
+    def test_create_supabase_jwt(self, mock_time: MagicMock, mock_encode: MagicMock, mock_settings: MagicMock) -> None:
         """Test create_supabase_jwt function."""
         # Setup
         mock_time.return_value = 1000000000
@@ -47,18 +39,14 @@ class TestJwtUtils:
             "user_metadata": {
                 "user_id": user_id,
             },
-            "user_id": user_id
+            "user_id": user_id,
         }
-        mock_encode.assert_called_once_with(
-            expected_payload,
-            mock_settings.SUPABASE_JWT_SECRET,
-            algorithm="HS256"
-        )
+        mock_encode.assert_called_once_with(expected_payload, mock_settings.SUPABASE_JWT_SECRET, algorithm="HS256")
         assert result == "encoded_jwt_token"
 
     @patch("app.utils.jwt_utils.settings")
     @patch("app.utils.jwt_utils.jwt.decode")
-    def test_verify_jwt_valid(self, mock_decode, mock_settings):
+    def test_verify_jwt_valid(self, mock_decode: MagicMock, mock_settings: MagicMock) -> None:
         """Test verify_jwt with valid token."""
         # Setup
         mock_settings.SUPABASE_JWT_SECRET = "test_jwt_secret"
@@ -69,16 +57,12 @@ class TestJwtUtils:
         result = verify_jwt("valid_token")
 
         # Assert
-        mock_decode.assert_called_once_with(
-            "valid_token",
-            mock_settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"]
-        )
+        mock_decode.assert_called_once_with("valid_token", mock_settings.SUPABASE_JWT_SECRET, algorithms=["HS256"])
         assert result == expected_claims
 
     @patch("app.utils.jwt_utils.settings")
     @patch("app.utils.jwt_utils.jwt.decode")
-    def test_verify_jwt_expired(self, mock_decode, mock_settings):
+    def test_verify_jwt_expired(self, mock_decode: MagicMock, mock_settings: MagicMock) -> None:
         """Test verify_jwt with expired token."""
         # Setup
         mock_settings.SUPABASE_JWT_SECRET = "test_jwt_secret"
@@ -90,7 +74,7 @@ class TestJwtUtils:
 
     @patch("app.utils.jwt_utils.settings")
     @patch("app.utils.jwt_utils.jwt.decode")
-    def test_verify_jwt_invalid(self, mock_decode, mock_settings):
+    def test_verify_jwt_invalid(self, mock_decode: MagicMock, mock_settings: MagicMock) -> None:
         """Test verify_jwt with invalid token."""
         # Setup
         mock_settings.SUPABASE_JWT_SECRET = "test_jwt_secret"
@@ -101,12 +85,10 @@ class TestJwtUtils:
             verify_jwt("invalid_token")
 
     @patch("app.utils.jwt_utils.verify_jwt")
-    def test_extract_user_id_from_token_with_validate_sub_claim(self, mock_verify_jwt):
+    def test_extract_user_id_from_token_with_validate_sub_claim(self, mock_verify_jwt: MagicMock) -> None:
         """Test extract_user_id_from_token with validation and sub claim."""
         # Setup
-        mock_verify_jwt.return_value = {
-            "sub": "test_user_123"
-        }
+        mock_verify_jwt.return_value = {"sub": "test_user_123"}
 
         # Execute
         result = extract_user_id_from_token("valid_token", validate=True)
@@ -116,12 +98,10 @@ class TestJwtUtils:
         assert result == "test_user_123"
 
     @patch("app.utils.jwt_utils.verify_jwt")
-    def test_extract_user_id_from_token_with_validate_user_id_claim(self, mock_verify_jwt):
+    def test_extract_user_id_from_token_with_validate_user_id_claim(self, mock_verify_jwt: MagicMock) -> None:
         """Test extract_user_id_from_token with validation and user_id claim."""
         # Setup
-        mock_verify_jwt.return_value = {
-            "user_id": "test_user_123"
-        }
+        mock_verify_jwt.return_value = {"user_id": "test_user_123"}
 
         # Execute
         result = extract_user_id_from_token("valid_token", validate=True)
@@ -131,14 +111,10 @@ class TestJwtUtils:
         assert result == "test_user_123"
 
     @patch("app.utils.jwt_utils.verify_jwt")
-    def test_extract_user_id_from_token_with_validate_metadata_claim(self, mock_verify_jwt):
+    def test_extract_user_id_from_token_with_validate_metadata_claim(self, mock_verify_jwt: MagicMock) -> None:
         """Test extract_user_id_from_token with validation and user_metadata claim."""
         # Setup
-        mock_verify_jwt.return_value = {
-            "user_metadata": {
-                "user_id": "test_user_123"
-            }
-        }
+        mock_verify_jwt.return_value = {"user_metadata": {"user_id": "test_user_123"}}
 
         # Execute
         result = extract_user_id_from_token("valid_token", validate=True)
@@ -148,12 +124,10 @@ class TestJwtUtils:
         assert result == "test_user_123"
 
     @patch("app.utils.jwt_utils.verify_jwt")
-    def test_extract_user_id_from_token_with_validate_no_id(self, mock_verify_jwt):
+    def test_extract_user_id_from_token_with_validate_no_id(self, mock_verify_jwt: MagicMock) -> None:
         """Test extract_user_id_from_token with validation but no user ID."""
         # Setup
-        mock_verify_jwt.return_value = {
-            "other_claim": "value"
-        }
+        mock_verify_jwt.return_value = {"other_claim": "value"}
 
         # Execute
         result = extract_user_id_from_token("valid_token", validate=True)
@@ -163,12 +137,10 @@ class TestJwtUtils:
         assert result is None
 
     @patch("app.utils.jwt_utils.decode_token")
-    def test_extract_user_id_from_token_without_validate(self, mock_decode_token):
+    def test_extract_user_id_from_token_without_validate(self, mock_decode_token: MagicMock) -> None:
         """Test extract_user_id_from_token without validation."""
         # Setup
-        mock_decode_token.return_value = {
-            "user_id": "test_user_123"
-        }
+        mock_decode_token.return_value = {"user_id": "test_user_123"}
 
         # Execute
         result = extract_user_id_from_token("valid_token", validate=False)
@@ -180,7 +152,7 @@ class TestJwtUtils:
     @patch("app.utils.jwt_utils.settings")
     @patch("app.utils.jwt_utils.jwt.encode")
     @patch("app.utils.jwt_utils.time.time")
-    def test_create_supabase_jwt_for_storage(self, mock_time, mock_encode, mock_settings):
+    def test_create_supabase_jwt_for_storage(self, mock_time: MagicMock, mock_encode: MagicMock, mock_settings: MagicMock) -> None:
         """Test create_supabase_jwt_for_storage function."""
         # Setup
         mock_time.return_value = 1000000000
@@ -193,19 +165,11 @@ class TestJwtUtils:
         result = create_supabase_jwt_for_storage(path, expiry_timestamp)
 
         # Assert
-        expected_payload = {
-            "url": path,
-            "iat": 1000000000,
-            "exp": expiry_timestamp
-        }
-        mock_encode.assert_called_once_with(
-            expected_payload,
-            mock_settings.SUPABASE_JWT_SECRET,
-            algorithm="HS256"
-        )
+        expected_payload = {"url": path, "iat": 1000000000, "exp": expiry_timestamp}
+        mock_encode.assert_called_once_with(expected_payload, mock_settings.SUPABASE_JWT_SECRET, algorithm="HS256")
         assert result == "encoded_storage_jwt"
 
-    def test_decode_token_valid(self):
+    def test_decode_token_valid(self) -> None:
         """Test decode_token with valid token."""
         # Setup - create a valid token structure manually
         payload = {"user_id": "test_user_123", "exp": 9999999999}
@@ -219,7 +183,7 @@ class TestJwtUtils:
         # Assert
         assert result == payload
 
-    def test_decode_token_invalid_format(self):
+    def test_decode_token_invalid_format(self) -> None:
         """Test decode_token with invalid token format."""
         # Execute
         result = decode_token("invalid_token_format")
@@ -227,7 +191,7 @@ class TestJwtUtils:
         # Assert
         assert result is None
 
-    def test_decode_token_invalid_base64(self):
+    def test_decode_token_invalid_base64(self) -> None:
         """Test decode_token with invalid base64 encoding."""
         # Setup - create a token with invalid base64
         token = "header.not_base64.signature"
@@ -238,7 +202,7 @@ class TestJwtUtils:
         # Assert
         assert result is None
 
-    def test_decode_token_invalid_json(self):
+    def test_decode_token_invalid_json(self) -> None:
         """Test decode_token with invalid JSON payload."""
         # Setup - create a token with valid base64 but invalid JSON
         invalid_json = "not json"
@@ -249,4 +213,4 @@ class TestJwtUtils:
         result = decode_token(token)
 
         # Assert
-        assert result is None 
+        assert result is None

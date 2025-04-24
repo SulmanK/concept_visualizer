@@ -3,6 +3,7 @@
 ## Problem Statement
 
 Our current color palette application approach uses dominant color detection and HSV color masking, which has several limitations:
+
 - It doesn't respect object boundaries (treats all blue areas the same regardless of whether they're background, clothing, etc.)
 - It applies colors based on frequency rather than semantic meaning
 - Details and textures are often lost in the transformation
@@ -11,6 +12,7 @@ Our current color palette application approach uses dominant color detection and
 ## Proposed Solution
 
 We propose implementing semantic segmentation to identify meaningful regions in images before applying color palettes. This approach will:
+
 1. Identify specific objects/regions in the image (e.g., person, face, clothing, background)
 2. Map palette colors semantically to appropriate regions
 3. Apply color transformations with awareness of object boundaries
@@ -19,6 +21,7 @@ We propose implementing semantic segmentation to identify meaningful regions in 
 ## Model Selection
 
 ### Requirements
+
 - **Low memory footprint**: Must run efficiently on standard server hardware
 - **Fast inference time**: Processing should take less than 2 seconds per image
 - **Reasonable accuracy**: Must identify key elements like people, clothing, backgrounds
@@ -27,6 +30,7 @@ We propose implementing semantic segmentation to identify meaningful regions in 
 ### Candidate Models
 
 1. **MobileNetV3 + DeepLabV3**
+
    - Memory: ~20MB
    - Inference time: ~300ms on CPU
    - IoU score: ~72% on PASCAL VOC
@@ -34,6 +38,7 @@ We propose implementing semantic segmentation to identify meaningful regions in 
    - Supported by OpenCV's DNN module
 
 2. **EfficientDet-Lite**
+
    - Memory: ~30MB
    - Inference time: ~500ms on CPU
    - IoU score: ~75% on COCO
@@ -57,14 +62,14 @@ We propose implementing semantic segmentation to identify meaningful regions in 
 def segment_image(image):
     # Load pre-trained model
     net = cv2.dnn.readNetFromTensorflow('path/to/model.pb')
-    
+
     # Prepare input blob
     blob = cv2.dnn.blobFromImage(image, 1.0/127.5, (513, 513), (127.5, 127.5, 127.5))
     net.setInput(blob)
-    
+
     # Run inference
     output = net.forward()
-    
+
     # Process and return segmentation masks
     return process_segmentation(output, image.shape)
 ```
@@ -73,15 +78,16 @@ def segment_image(image):
 
 We'll define a mapping between segment classes and palette colors:
 
-| Class ID | Class Name | Palette Color | Priority |
-|----------|------------|---------------|----------|
-| 15 | Person | - | - |
-| 15.1 | Face/Skin | Neutral or Skin Tone | 1 |
-| 15.2 | Clothing | Primary | 2 |
-| 15.3 | Accessories | Accent | 3 |
-| 1-14, 16-20 | Background/Objects | Background/Secondary | 4 |
+| Class ID    | Class Name         | Palette Color        | Priority |
+| ----------- | ------------------ | -------------------- | -------- |
+| 15          | Person             | -                    | -        |
+| 15.1        | Face/Skin          | Neutral or Skin Tone | 1        |
+| 15.2        | Clothing           | Primary              | 2        |
+| 15.3        | Accessories        | Accent               | 3        |
+| 1-14, 16-20 | Background/Objects | Background/Secondary | 4        |
 
 For superhero images specifically, we'll create custom mappings:
+
 - Cape/Cloak → Accent color
 - Suit Body → Primary color
 - Logo/Emblem → Secondary color
@@ -91,6 +97,7 @@ For superhero images specifically, we'll create custom mappings:
 ### 3. Refinement Process
 
 For each detected region:
+
 1. Extract the segmentation mask
 2. Apply color transfer preserving luminance and texture
 3. Blend with edge-aware filtering to maintain details
@@ -116,8 +123,8 @@ The `apply_palette_with_masking_optimized` function in `image_processing.py` wil
 
 ```python
 def apply_palette_with_semantic_mapping(
-    image_url: str, 
-    palette_colors: List[str], 
+    image_url: str,
+    palette_colors: List[str],
     use_segmentation: bool = True
 ) -> bytes:
     # Load image
@@ -131,11 +138,13 @@ def apply_palette_with_semantic_mapping(
 ## Implementation Phases
 
 1. **Phase 1: Model Integration**
+
    - Add model loading and inference functionality
    - Create basic segmentation pipelines
    - Test with simple binary (foreground/background) segmentation
 
 2. **Phase 2: Semantic Mappings**
+
    - Develop mapping strategies for different image types
    - Implement color transfer for each segment type
    - Add configurable mapping rules
@@ -175,6 +184,7 @@ If segmentation fails or produces poor results (determined by confidence thresho
 ## Next Steps
 
 After implementation, future improvements could include:
+
 - Fine-tuning models on our specific image domain
 - Adding more specialized semantic classes for specific themes
-- Implementing style transfer for even better texture preservation 
+- Implementing style transfer for even better texture preservation
