@@ -56,16 +56,16 @@ repos:
             frontend/my-app/src/hooks/__tests__/useTaskSubscription.test.ts
           )$
 
-  # Disable ESLint temporarily until dependencies are fixed
-  # - repo: local
-  #   hooks:
-  #     - id: eslint
-  #       name: eslint
-  #       entry: bash -c 'cd frontend/my-app && npx eslint --config eslint.config.js'
-  #       language: system
-  #       files: \.(js|jsx|ts|tsx)$
-  #       types: [file]
-  #       pass_filenames: true
+  # Re-enable ESLint now that we've installed the dependency
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend/my-app && npx eslint --config eslint.config.js'
+        language: system
+        files: \.(js|jsx|ts|tsx)$
+        types: [file]
+        pass_filenames: true
 
   # Updated TypeScript type checking
   - repo: local
