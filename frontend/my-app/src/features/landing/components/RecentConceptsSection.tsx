@@ -215,10 +215,10 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
                       <ConceptCard
                         concept={concept}
                         initials={adaptedProps.initials}
-                        colorData={adaptedProps.colorData}
                         sampleImageUrl={sampleImageUrl}
                         editButtonText="Refine"
-                        onEdit={(index) => {
+                        includeOriginal={true}
+                        onEdit={(index: number) => {
                           // Map the index to a variation ID
                           let variationId = null;
 
@@ -232,7 +232,7 @@ export const RecentConceptsSection: React.FC<RecentConceptsSectionProps> = ({
 
                           handleEdit(concept.id, variationId);
                         }}
-                        onViewDetails={(index) => {
+                        onViewDetails={(index: number) => {
                           // Map the index to a variation ID
                           let variationId = null;
 
