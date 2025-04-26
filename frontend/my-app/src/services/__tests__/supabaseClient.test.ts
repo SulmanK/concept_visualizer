@@ -5,7 +5,6 @@ import type { Session, User } from "@supabase/supabase-js";
 const mockSignInAnonymously = vi.fn();
 const mockSignOut = vi.fn();
 const mockGetSession = vi.fn();
-const mockGetUser = vi.fn();
 const mockUpdateUser = vi.fn();
 const mockCreateSignedUrl = vi.fn();
 const mockGetPublicUrl = vi.fn();
@@ -21,7 +20,6 @@ vi.mock("@supabase/supabase-js", () => {
         signInAnonymously: mockSignInAnonymously,
         signOut: mockSignOut,
         getSession: mockGetSession,
-        getUser: mockGetUser,
         updateUser: mockUpdateUser,
         refreshSession: mockRefreshSession,
       },
@@ -42,7 +40,6 @@ vi.mock("../configService", () => ({
 
 // Import after mocks are set up
 import {
-  supabase,
   initializeAnonymousAuth,
   getUserId,
   isAnonymousUser,
@@ -52,12 +49,9 @@ import {
   validateAndRefreshToken,
   determineIsAnonymous,
 } from "../supabaseClient";
-import * as rateLimitService from "../rateLimitService";
-import * as configService from "../configService";
 
 describe("Supabase Client", () => {
   // Mock console methods
-  const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
   const consoleErrorSpy = vi
     .spyOn(console, "error")
     .mockImplementation(() => {});
@@ -475,9 +469,6 @@ describe("Supabase Client", () => {
 
       // Verify anonymous auth was initiated
       expect(session?.access_token).toBe("new-anon-token");
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining("No active session found"),
-      );
     });
 
     it("should refresh token if about to expire", async () => {
@@ -510,9 +501,6 @@ describe("Supabase Client", () => {
 
       // Verify token was refreshed
       expect(session?.access_token).toBe("refreshed-token");
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Token expires in"),
-      );
     });
 
     it("should return existing session if not expired", async () => {

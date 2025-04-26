@@ -26,8 +26,8 @@ describe("Validation Utilities", () => {
     });
 
     it("handles null and undefined inputs", () => {
-      expect(isValidEmail(null as any)).toBe(false);
-      expect(isValidEmail(undefined as any)).toBe(false);
+      expect(isValidEmail(null as unknown as string)).toBe(false);
+      expect(isValidEmail(undefined as unknown as string)).toBe(false);
     });
   });
 
@@ -58,8 +58,8 @@ describe("Validation Utilities", () => {
     });
 
     it("handles null and undefined inputs", () => {
-      expect(isValidPassword(null as any)).toBe(false);
-      expect(isValidPassword(undefined as any)).toBe(false);
+      expect(isValidPassword(null as unknown as string)).toBe(false);
+      expect(isValidPassword(undefined as unknown as string)).toBe(false);
     });
   });
 
@@ -83,8 +83,8 @@ describe("Validation Utilities", () => {
     });
 
     it("handles null and undefined inputs", () => {
-      expect(isValidUrl(null as any)).toBe(false);
-      expect(isValidUrl(undefined as any)).toBe(false);
+      expect(isValidUrl(null as unknown as string)).toBe(false);
+      expect(isValidUrl(undefined as unknown as string)).toBe(false);
     });
   });
 
@@ -109,8 +109,8 @@ describe("Validation Utilities", () => {
 
     it("handles empty, null, and undefined inputs", () => {
       expect(isAlphanumeric("")).toBe(false);
-      expect(isAlphanumeric(null as any)).toBe(false);
-      expect(isAlphanumeric(undefined as any)).toBe(false);
+      expect(isAlphanumeric(null as unknown as string)).toBe(false);
+      expect(isAlphanumeric(undefined as unknown as string)).toBe(false);
     });
   });
 
@@ -128,8 +128,8 @@ describe("Validation Utilities", () => {
 
     it("handles invalid inputs", () => {
       expect(isInRange(NaN, 1, 10)).toBe(false);
-      expect(isInRange(null as any, 1, 10)).toBe(false);
-      expect(isInRange(undefined as any, 1, 10)).toBe(false);
+      expect(isInRange(null as unknown as number, 1, 10)).toBe(false);
+      expect(isInRange(undefined as unknown as number, 1, 10)).toBe(false);
     });
   });
 });

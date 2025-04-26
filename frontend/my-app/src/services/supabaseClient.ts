@@ -2,8 +2,7 @@
  * Supabase client configuration for Concept Visualizer
  */
 
-import { createClient, Session, User } from "@supabase/supabase-js";
-import { getBucketName } from "./configService";
+import { createClient, Session } from "@supabase/supabase-js";
 import { fetchRateLimits } from "./rateLimitService";
 import {
   fetchRecentConceptsFromApi,
@@ -348,12 +347,10 @@ export const fetchRecentConcepts = async (
  * This function now uses the backend API instead of direct Supabase access
  *
  * @param conceptId ID of the concept to fetch
- * @param userId User ID for security validation
  * @returns Promise with concept data or null if not found
  */
 export const fetchConceptDetail = async (
   conceptId: string,
-  userId: string,
 ): Promise<ConceptData | null> => {
   try {
     console.log(

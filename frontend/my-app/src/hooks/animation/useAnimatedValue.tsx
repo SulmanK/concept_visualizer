@@ -165,6 +165,7 @@ export const useAnimatedValue = (
     delay,
     onComplete,
     prefersReducedMotion,
+    value,
   ]);
 
   return value;

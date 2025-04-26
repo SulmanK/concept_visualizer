@@ -7,13 +7,13 @@ import {
   renderHook,
 } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
+import { AuthProvider } from "../AuthContext";
 import {
-  AuthProvider,
   useAuth,
   useAuthUser,
   useIsAnonymous,
   useAuthIsLoading,
-} from "../AuthContext";
+} from "../../hooks/useAuth";
 import * as supabaseClient from "../../services/supabaseClient";
 
 // Mock supabaseClient

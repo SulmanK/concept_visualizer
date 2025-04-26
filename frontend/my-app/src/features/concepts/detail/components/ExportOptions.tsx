@@ -55,13 +55,6 @@ export interface ExportOptionsProps {
   onDownload?: (format: ExportFormat, size: ExportSize) => void;
 }
 
-const sizeMap = {
-  small: "256px",
-  medium: "512px",
-  large: "1024px",
-  original: "Max Quality",
-};
-
 /**
  * Component that allows users to export a concept in different formats and sizes
  */
@@ -71,7 +64,6 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   conceptTitle,
   variationName = "",
   isPaletteVariation = false,
-  onDownload,
 }) => {
   const componentId = useRef(
     `export-options-${Math.random().toString(36).substr(2, 9)}`,
@@ -81,7 +73,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("png");
   const [selectedSize, setSelectedSize] = useState<ExportSize>("medium");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
     lastAction: string;
     timestamp: number;
@@ -200,9 +192,12 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
 
   // Clean up any blob URLs when component unmounts or preview changes
   useEffect(() => {
+    // Capture the current ref value to use in cleanup
+    const currentComponentId = componentId.current;
+
     return () => {
       console.log(
-        `[ExportOptions ${componentId.current}] Component unmounting, cleaning up resources`,
+        `[ExportOptions ${currentComponentId}] Component unmounting, cleaning up resources`,
       );
       if (previewUrl && previewUrl.startsWith("blob:")) {
         safeRevokeObjectURL(previewUrl);
@@ -247,21 +242,7 @@ export const ExportOptions: React.FC<ExportOptionsProps> = ({
 
     // Use concept-images bucket by default
     return "concept-images";
-  }, [isPaletteVariation, variationName]);
-
-  // Force clear all React Query state for this component
-  const forceClearMutationState = useCallback(() => {
-    console.log(
-      `[ExportOptions ${componentId.current}] Forcing clear of mutation state`,
-    );
-    resetPreviewMutation();
-    // Wait a small amount of time and check if state is actually reset
-    setTimeout(() => {
-      console.log(
-        `[ExportOptions ${componentId.current}] After reset: isPreviewExporting=${isPreviewExporting}`,
-      );
-    }, 100);
-  }, [resetPreviewMutation, isPreviewExporting]);
+  }, [isPaletteVariation, variationName, storagePath, componentId]);
 
   // Close modal and clean up preview URL when modal closes
   const handleCloseModal = useCallback(() => {

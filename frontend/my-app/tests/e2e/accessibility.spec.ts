@@ -9,7 +9,6 @@ import AxeBuilder from "@axe-core/playwright";
 test.describe("Accessibility", () => {
   test("home page should not have accessibility violations", async ({
     page,
-    mockApi,
   }) => {
     await page.goto("/");
 
@@ -29,7 +28,6 @@ test.describe("Accessibility", () => {
 
   test("concept generation page should not have accessibility violations", async ({
     page,
-    mockApi,
   }) => {
     await page.goto("/create");
 
@@ -49,8 +47,6 @@ test.describe("Accessibility", () => {
 
   test("concept refinement page should not have accessibility violations", async ({
     page,
-    mockApi,
-    mockLocalStorage,
   }) => {
     await page.goto("/refine/test-concept-123");
 

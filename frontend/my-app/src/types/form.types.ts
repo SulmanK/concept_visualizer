@@ -2,8 +2,6 @@
  * Form-related TypeScript interfaces for the Concept Visualizer application.
  */
 
-import { FormStatus } from "./ui.types";
-
 /**
  * Concept generation form data structure
  */

@@ -2,19 +2,14 @@
  * API client for the Concept Visualizer application.
  */
 
-import { supabase, initializeAnonymousAuth } from "./supabaseClient";
+import { supabase } from "./supabaseClient";
 import {
   extractRateLimitHeaders,
   formatTimeRemaining,
   mapEndpointToCategory,
   RateLimitCategory,
 } from "./rateLimitService";
-import axios, {
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosResponse,
-  AxiosError,
-} from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import { queryClient } from "../main";
 
 // Use the full backend URL instead of a relative path
@@ -41,9 +36,8 @@ const toast = (options: {
 
 interface RequestOptions {
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
   withCredentials?: boolean;
-  retryAuth?: boolean; // Whether to retry with fresh auth token on 401
   /**
    * Whether to show a toast notification on rate limit errors
    * @default true
@@ -71,7 +65,7 @@ interface RateLimitErrorResponse {
   limit?: number;
   current?: number;
   period?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Base custom error class
@@ -529,9 +523,15 @@ axiosInstance.interceptors.response.use(
 
       // Try to extract more details from response data if available
       if (response.data) {
-        if (typeof response.data === "object") {
+        // Declare variables outside the case block
+        let updatedRateLimitResponse = { ...rateLimitResponse };
+
+        // Check if the data is an object
+        const isDataObject = typeof response.data === "object";
+
+        if (isDataObject) {
           // Override with any values from the response body
-          rateLimitResponse = {
+          updatedRateLimitResponse = {
             ...rateLimitResponse,
             ...response.data,
             // Ensure we preserve our extracted headers if not in response
@@ -543,6 +543,9 @@ axiosInstance.interceptors.response.use(
             period: response.data.period || rateLimitResponse.period,
           };
         }
+
+        // Update the rateLimitResponse with the new values
+        rateLimitResponse = updatedRateLimitResponse;
       }
 
       // Create custom error with rate limit details
@@ -607,9 +610,11 @@ axiosInstance.interceptors.response.use(
 
       case 422:
         // Handle validation errors
-        const validationErrors =
-          response.data?.errors || response.data?.detail || {};
-        apiError = new ValidationError(errorMessage, url, validationErrors);
+        apiError = new ValidationError(
+          errorMessage,
+          url,
+          response.data?.errors || response.data?.detail || {},
+        );
         break;
 
       default:
@@ -654,97 +659,14 @@ async function get<T>(
  */
 async function post<T>(
   endpoint: string,
-  body: any,
+  body: unknown,
   options: RequestOptions = {},
 ): Promise<{ data: T }> {
-  return request<T>(endpoint, { method: "POST", body, ...options });
-}
-
-/**
- * Get the current auth token from Supabase
- * @returns Authorization header or empty object if no session
- * @deprecated This function is deprecated and will be removed in a future release.
- * Authentication is now handled by the Axios request interceptor.
- */
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  try {
-    console.log("[AUTH] Getting auth headers for request");
-
-    // First check for an existing session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    // If we have a session with a valid token, use it
-    if (session?.access_token) {
-      const now = Math.floor(Date.now() / 1000);
-
-      // If token expires in less than 5 minutes, refresh it
-      if (session.expires_at && session.expires_at - now < 300) {
-        console.log(
-          "[AUTH] Token is about to expire in",
-          session.expires_at - now,
-          "seconds. Refreshing before request",
-        );
-        // Refresh the session
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        if (refreshData.session?.access_token) {
-          const newExpiresAt = refreshData.session.expires_at;
-          const validFor = newExpiresAt ? newExpiresAt - now : "unknown";
-          console.log(
-            "[AUTH] Successfully refreshed token before request. Valid for",
-            validFor,
-            "seconds",
-          );
-          return {
-            Authorization: `Bearer ${refreshData.session.access_token}`,
-          };
-        } else {
-          console.error(
-            "[AUTH] Failed to refresh token - no new token received",
-          );
-        }
-      } else {
-        const validFor = session.expires_at
-          ? session.expires_at - now
-          : "unknown";
-        console.log(
-          "[AUTH] Using existing token for request. Valid for",
-          validFor,
-          "seconds",
-        );
-        return {
-          Authorization: `Bearer ${session.access_token}`,
-        };
-      }
-    }
-
-    console.log(
-      "[AUTH] No valid session found, attempting to sign in anonymously",
-    );
-    // Try to get a new anonymous session
-    const newSession = await initializeAnonymousAuth();
-    if (newSession?.access_token) {
-      const now = Math.floor(Date.now() / 1000);
-      const validFor = newSession.expires_at
-        ? newSession.expires_at - now
-        : "unknown";
-      console.log(
-        "[AUTH] Generated new auth token from anonymous sign-in. Valid for",
-        validFor,
-        "seconds",
-      );
-      return {
-        Authorization: `Bearer ${newSession.access_token}`,
-      };
-    }
-
-    console.error("[AUTH] Failed to get authentication token");
-    return {};
-  } catch (error) {
-    console.error("[AUTH] Error getting auth token:", error);
-    return {};
-  }
+  return request<T>(endpoint, {
+    method: "POST",
+    body,
+    ...options,
+  });
 }
 
 /**
@@ -760,9 +682,6 @@ async function request<T>(
     headers = {},
     body,
     withCredentials = true,
-    retryAuth = true,
-    showToastOnRateLimit = true,
-    rateLimitToastMessage,
     responseType,
     signal,
   }: RequestOptions & { method: string },
@@ -826,7 +745,7 @@ async function exportImage(
   imageIdentifier: string,
   format: ExportFormat,
   size: ExportSize,
-  svgParams?: Record<string, any>,
+  svgParams?: Record<string, unknown>,
   bucket?: string,
   _timestamp?: number, // Add timestamp parameter but don't use it in the request
 ): Promise<Blob> {

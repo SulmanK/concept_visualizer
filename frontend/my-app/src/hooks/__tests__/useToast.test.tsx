@@ -1,8 +1,9 @@
 import React from "react";
 import { render } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
-import { vi, describe, test, expect } from "vitest";
-import useToast, { ToastProvider } from "../useToast";
+import { describe, test, expect } from "vitest";
+import useToast from "../useToast";
+import { ToastProvider } from "../toast/ToastContext";
 
 // Create minimal version of the test
 describe("useToast", () => {

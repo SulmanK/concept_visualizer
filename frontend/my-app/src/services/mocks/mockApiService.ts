@@ -9,7 +9,6 @@ import {
   GenerationResponse,
   PromptRequest,
   RefinementRequest,
-  ColorPalette,
 } from "../../types";
 
 /**

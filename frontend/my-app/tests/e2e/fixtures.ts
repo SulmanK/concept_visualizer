@@ -1,10 +1,19 @@
-import { test as base, Page } from "@playwright/test";
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base } from "@playwright/test";
+
+/**
+ * Custom test fixture type definitions
+ */
+type CustomFixtures = {
+  mockApi: void;
+  mockLocalStorage: void;
+};
 
 /**
  * Custom test fixture that includes common test setup and teardown operations.
  * This helps avoid duplicating code across test files.
  */
-export const test = base.extend({
+export const test = base.extend<CustomFixtures>({
   /**
    * Sets up API mocking for both generation and refinement endpoints.
    */
@@ -53,6 +62,7 @@ export const test = base.extend({
       });
     });
 
+    // Call the 'use' function to signal fixture is ready
     await use();
   },
 
@@ -79,6 +89,7 @@ export const test = base.extend({
       localStorage.setItem("savedConcepts", JSON.stringify(mockConcepts));
     });
 
+    // Call the 'use' function to signal fixture is ready
     await use();
   },
 });

@@ -2,7 +2,7 @@
  * Simple event emitter service for global app events
  */
 
-type EventHandler = (...args: any[]) => void;
+type EventHandler = (...args: unknown[]) => void;
 
 export enum AppEvent {
   CONCEPT_CREATED = "concept_created",
@@ -40,7 +40,7 @@ class EventService {
    * @param event The event to emit
    * @param args Optional arguments to pass to the handlers
    */
-  emit(event: AppEvent, ...args: any[]): void {
+  emit(event: AppEvent, ...args: unknown[]): void {
     console.log(`[EventService] Emitting event: ${event}`);
 
     if (!this.listeners[event]) {

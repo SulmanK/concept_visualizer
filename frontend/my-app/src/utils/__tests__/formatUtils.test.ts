@@ -22,8 +22,8 @@ describe("Format Utilities", () => {
     it("returns empty string for invalid dates", () => {
       const invalidDate = new Date("invalid date");
       expect(formatDate(invalidDate)).toBe("");
-      expect(formatDate(null as any)).toBe("");
-      expect(formatDate(undefined as any)).toBe("");
+      expect(formatDate(null as unknown as Date)).toBe("");
+      expect(formatDate(undefined as unknown as Date)).toBe("");
     });
   });
 
@@ -42,8 +42,8 @@ describe("Format Utilities", () => {
 
     it("returns empty string for invalid amounts", () => {
       expect(formatCurrency(NaN)).toBe("");
-      expect(formatCurrency(null as any)).toBe("");
-      expect(formatCurrency(undefined as any)).toBe("");
+      expect(formatCurrency(null as unknown as number)).toBe("");
+      expect(formatCurrency(undefined as unknown as number)).toBe("");
     });
   });
 
@@ -62,8 +62,8 @@ describe("Format Utilities", () => {
 
     it("returns empty string for invalid numbers", () => {
       expect(formatNumber(NaN)).toBe("");
-      expect(formatNumber(null as any)).toBe("");
-      expect(formatNumber(undefined as any)).toBe("");
+      expect(formatNumber(null as unknown as number)).toBe("");
+      expect(formatNumber(undefined as unknown as number)).toBe("");
     });
   });
 
@@ -84,8 +84,8 @@ describe("Format Utilities", () => {
     it("returns empty string for invalid sizes", () => {
       expect(formatFileSize(-1024)).toBe("");
       expect(formatFileSize(NaN)).toBe("");
-      expect(formatFileSize(null as any)).toBe("");
-      expect(formatFileSize(undefined as any)).toBe("");
+      expect(formatFileSize(null as unknown as number)).toBe("");
+      expect(formatFileSize(undefined as unknown as number)).toBe("");
     });
   });
 });

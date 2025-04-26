@@ -1,24 +1,13 @@
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useEffect,
-  FormEvent,
-} from "react";
+import React, { useState, useRef, useEffect, FormEvent } from "react";
 import { Button } from "../ui/Button";
 import { TextArea } from "../ui/TextArea";
 import { Card } from "../ui/Card";
-import { Input } from "../ui/Input";
-import { FormStatus } from "../../types";
+import { FormStatus } from "../../types/ui.types";
 import { Spinner } from "../ui";
-import { useTaskContext, useOnTaskCleared } from "../../contexts/TaskContext";
-import { useToast } from "../../hooks/useToast";
-import {
-  useErrorHandling,
-  ErrorWithCategory,
-  ErrorCategory,
-} from "../../hooks/useErrorHandling";
-import { ConceptData } from "../../services/supabaseClient";
+import { useTaskContext, useOnTaskCleared } from "../../hooks/useTask";
+
+// Define a refinement method type that was implicitly used
+export type RefinementMethod = "both" | "description" | "feedback";
 
 export interface ConceptRefinementFormProps {
   /**
@@ -126,11 +115,6 @@ export const ConceptRefinementForm: React.FC<ConceptRefinementFormProps> = ({
   const [validationError, setValidationError] = useState<string | undefined>(
     undefined,
   );
-  const [feedback, setFeedback] = useState("");
-  const [refinementMethod, setRefinementMethod] =
-    useState<RefinementMethod>("both");
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   // Get global task status

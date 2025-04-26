@@ -11,7 +11,7 @@ const isDev = import.meta.env.DEV === true;
 /**
  * Log to console only in development mode
  */
-export function devLog(...args: any[]): void {
+export function devLog(...args: unknown[]): void {
   if (isDev) {
     console.log(...args);
   }
@@ -20,7 +20,7 @@ export function devLog(...args: any[]): void {
 /**
  * Log warnings to console only in development mode
  */
-export function devWarn(...args: any[]): void {
+export function devWarn(...args: unknown[]): void {
   if (isDev) {
     console.warn(...args);
   }
@@ -29,7 +29,7 @@ export function devWarn(...args: any[]): void {
 /**
  * Log debug information to console only in development mode
  */
-export function devDebug(...args: any[]): void {
+export function devDebug(...args: unknown[]): void {
   if (isDev) {
     console.debug(...args);
   }
@@ -38,7 +38,7 @@ export function devDebug(...args: any[]): void {
 /**
  * Log info to console only in development mode
  */
-export function devInfo(...args: any[]): void {
+export function devInfo(...args: unknown[]): void {
   if (isDev) {
     console.info(...args);
   }
@@ -48,6 +48,6 @@ export function devInfo(...args: any[]): void {
  * Always log errors to console regardless of environment
  * This ensures critical errors are visible in all environments
  */
-export function logError(...args: any[]): void {
+export function logError(...args: unknown[]): void {
   console.error(...args);
 }

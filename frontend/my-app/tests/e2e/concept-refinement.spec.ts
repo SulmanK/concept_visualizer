@@ -10,7 +10,7 @@ import { test, expect } from "./fixtures";
  * 5. Verify the refined concept appears
  * 6. Save the refined concept
  */
-test("concept refinement flow", async ({ page, mockApi, mockLocalStorage }) => {
+test("concept refinement flow", async ({ page }) => {
   // Navigate directly to the refinement page with a concept ID
   await page.goto("/refine/test-concept-123");
 

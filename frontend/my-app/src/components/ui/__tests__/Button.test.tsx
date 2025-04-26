@@ -26,7 +26,13 @@ describe("Button Component", () => {
     ["outline", "border-indigo-300"],
     ["ghost", "text-indigo-600"],
   ])("renders %s variant correctly", (variant, expectedClass) => {
-    render(<Button variant={variant as any}>Button</Button>);
+    render(
+      <Button
+        variant={variant as "primary" | "secondary" | "outline" | "ghost"}
+      >
+        Button
+      </Button>,
+    );
 
     const button = screen.getByRole("button");
     expect(button.className).toContain(expectedClass);
@@ -38,7 +44,7 @@ describe("Button Component", () => {
     ["md", "text-sm"],
     ["lg", "text-base"],
   ])("renders %s size correctly", (size, expectedClass) => {
-    render(<Button size={size as any}>Button</Button>);
+    render(<Button size={size as "sm" | "md" | "lg"}>Button</Button>);
 
     const button = screen.getByRole("button");
     expect(button.className).toContain(expectedClass);

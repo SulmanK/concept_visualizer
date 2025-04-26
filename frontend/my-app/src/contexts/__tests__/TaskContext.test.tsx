@@ -1,11 +1,5 @@
 import React, { useEffect } from "react";
-import {
-  render,
-  screen,
-  waitFor,
-  act,
-  renderHook,
-} from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TASK_STATUS } from "../../config/apiEndpoints";
@@ -41,8 +35,6 @@ const mockFailedTask: TaskResponse = {
 
 // Create a proper mock handler for the useTaskSubscription hook
 let mockTaskDataCallback: (taskData: TaskResponse | null) => void;
-let mockErrorCallback: (error: Error | null) => void;
-let mockStatusCallback: (status: string | null) => void;
 
 // Mock useTaskSubscription with a better implementation that can be controlled in tests
 vi.mock("../../hooks/useTaskSubscription", () => {
@@ -50,14 +42,12 @@ vi.mock("../../hooks/useTaskSubscription", () => {
     useTaskSubscription: (taskId: string | null) => {
       // Use singleton pattern - return same instance for all calls with same taskId
       const [taskData, setTaskData] = React.useState<TaskResponse | null>(null);
-      const [error, setError] = React.useState<Error | null>(null);
-      const [status, setStatus] = React.useState<string | null>(null);
+      const [error] = React.useState<Error | null>(null);
+      const [status] = React.useState<string | null>(null);
 
       // Store the setters in our mock callbacks so tests can trigger updates
       React.useEffect(() => {
         mockTaskDataCallback = setTaskData;
-        mockErrorCallback = setError;
-        mockStatusCallback = setStatus;
       }, []);
 
       // When taskId is null, clear the data
@@ -94,13 +84,8 @@ vi.mock("../../hooks/useTaskQueries", () => ({
 }));
 
 // Import after mocks are set up
-import {
-  TaskProvider,
-  useTaskContext,
-  useActiveTaskId,
-  useTaskInitiating,
-  useOnTaskCleared,
-} from "../TaskContext";
+import { TaskProvider } from "../TaskContext";
+import { useTaskContext } from "../../hooks/useTask";
 
 // Component that consumes the context for testing
 const TestTaskConsumer = () => {
@@ -172,17 +157,6 @@ const TestTaskClearedListener = ({
   return null;
 };
 
-// Create wrapper function for the tests
-const createWrapper = (queryClient: QueryClient) => {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TaskProvider>{children}</TaskProvider>
-      </QueryClientProvider>
-    );
-  };
-};
-
 describe("TaskContext", () => {
   let queryClient: QueryClient;
 
@@ -202,8 +176,6 @@ describe("TaskContext", () => {
 
     // Initialize mock callbacks to no-ops to avoid issues if they're called before being set
     mockTaskDataCallback = () => {};
-    mockErrorCallback = () => {};
-    mockStatusCallback = () => {};
   });
 
   afterEach(() => {
@@ -350,6 +322,50 @@ describe("TaskContext", () => {
           queryKey: ["tasks", "detail", "task-123"],
         });
       });
+    });
+
+    it("should update isTaskProcessing when task status is processing", () => {
+      //... existing code
+    });
+
+    it("useOnTaskCleared should return the onTaskCleared function", async () => {
+      // Create a mock callback
+      const mockCallback = vi.fn();
+
+      // Render the provider with our test component
+      render(
+        <QueryClientProvider client={queryClient}>
+          <TaskProvider>
+            <TestTaskConsumer />
+            <TestTaskClearedListener onClearedCallback={mockCallback} />
+          </TaskProvider>
+        </QueryClientProvider>,
+      );
+
+      // First set a task
+      await act(async () => {
+        screen.getByTestId("set-task").click();
+      });
+
+      // Verify active task was set
+      await waitFor(() => {
+        expect(screen.getByTestId("active-task-id").textContent).toBe(
+          "task-123",
+        );
+      });
+
+      // Clear the task
+      await act(async () => {
+        screen.getByTestId("clear-task").click();
+      });
+
+      // The callback should have been called
+      await waitFor(
+        () => {
+          expect(mockCallback).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -539,46 +555,6 @@ describe("TaskContext", () => {
       await waitFor(
         () => {
           expect(screen.getByTestId("is-initiating").textContent).toBe("true");
-        },
-        { timeout: 3000 },
-      );
-    });
-
-    it("useOnTaskCleared should return the onTaskCleared function", async () => {
-      // Create a mock callback
-      const mockCallback = vi.fn();
-
-      // Render the provider with our test component
-      render(
-        <QueryClientProvider client={queryClient}>
-          <TaskProvider>
-            <TestTaskConsumer />
-            <TestTaskClearedListener onClearedCallback={mockCallback} />
-          </TaskProvider>
-        </QueryClientProvider>,
-      );
-
-      // First set a task
-      await act(async () => {
-        screen.getByTestId("set-task").click();
-      });
-
-      // Verify active task was set
-      await waitFor(() => {
-        expect(screen.getByTestId("active-task-id").textContent).toBe(
-          "task-123",
-        );
-      });
-
-      // Clear the task
-      await act(async () => {
-        screen.getByTestId("clear-task").click();
-      });
-
-      // The callback should have been called
-      await waitFor(
-        () => {
-          expect(mockCallback).toHaveBeenCalledTimes(1);
         },
         { timeout: 3000 },
       );

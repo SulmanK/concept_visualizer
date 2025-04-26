@@ -100,7 +100,12 @@ describe("ColorPalette Component", () => {
     ["md", "h-8"],
     ["lg", "h-12"],
   ])("renders %s size correctly", (size, expectedClass) => {
-    render(<ColorPalette palette={samplePalette} size={size as any} />);
+    render(
+      <ColorPalette
+        palette={samplePalette}
+        size={size as "sm" | "md" | "lg"}
+      />,
+    );
 
     // Check any color swatch for the expected size class
     const swatch = document.querySelector('[style*="background-color"]');

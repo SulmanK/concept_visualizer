@@ -35,13 +35,6 @@ const mockTaskResponse = {
   is_cancelled: false,
 };
 
-// Completed task response
-const mockCompletedTaskResponse = {
-  ...mockTaskResponse,
-  status: TASK_STATUS.COMPLETED,
-  result_id: "result-456",
-};
-
 describe("useTaskQueries", () => {
   let queryClient: QueryClient;
 
@@ -242,6 +235,30 @@ describe("useTaskQueries", () => {
 
       // We can't reliably test the refetch interval behavior in this environment
       // due to timer issues, but the option is passed to the hook
+    });
+
+    it("should handle completed task status", async () => {
+      // Mock a completed task response
+      const mockCompletedTaskResponse = {
+        ...mockTaskResponse,
+        status: TASK_STATUS.COMPLETED,
+        result_id: "result-456",
+      };
+
+      vi.mocked(apiClient.get).mockResolvedValueOnce({
+        data: mockCompletedTaskResponse,
+      });
+
+      const { result } = renderHook(() => useTaskStatusQuery("task-123"), {
+        wrapper: getWrapper(),
+      });
+
+      // Wait for the query to resolve
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Should have task data with completed status
+      expect(result.current.data?.status).toBe(TASK_STATUS.COMPLETED);
+      expect(result.current.data?.result_id).toBe("result-456");
     });
   });
 

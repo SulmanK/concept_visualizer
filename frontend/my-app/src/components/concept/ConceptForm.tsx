@@ -1,18 +1,12 @@
 import React, { useState, FormEvent, useEffect, useRef } from "react";
 import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
 import { TextArea } from "../ui/TextArea";
 import { Card } from "../ui/Card";
 import { LoadingIndicator } from "../ui/LoadingIndicator";
 import { ErrorMessage, RateLimitErrorMessage } from "../ui/ErrorMessage";
-import { useToast } from "../../hooks/useToast";
-import {
-  useErrorHandling,
-  ErrorWithCategory,
-  ErrorCategory,
-} from "../../hooks/useErrorHandling";
-import { FormStatus } from "../../types";
-import { useTaskContext, useOnTaskCleared } from "../../contexts/TaskContext";
+import { ErrorWithCategory, ErrorCategory } from "../../types";
+import { FormStatus } from "../../types/ui.types";
+import { useTaskContext, useOnTaskCleared } from "../../hooks/useTask";
 
 export interface ConceptFormProps {
   /**
@@ -63,8 +57,6 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
     undefined,
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const toast = useToast();
-  const errorHandler = useErrorHandling();
 
   // Get global task status
   const { hasActiveTask, isTaskPending, isTaskProcessing, activeTaskData } =

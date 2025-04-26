@@ -1,12 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import {
   mapEndpointToCategory,
-  extractRateLimitHeaders,
-  decrementRateLimit,
   formatTimeRemaining,
   RateLimitCategory,
   RateLimitsResponse,
-  getRateLimitInfoForCategory,
 } from "../rateLimitService";
 import { queryClient } from "../../main";
 import { AxiosResponse } from "axios";
@@ -21,7 +18,7 @@ vi.mock("../../main", () => ({
 
 // The original implementation is preserved for these functions
 vi.mock("../rateLimitService", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("../rateLimitService")>();
   return {
     ...actual,
     // We only want to unmock mapEndpointToCategory for tests
@@ -134,6 +131,9 @@ describe("Rate Limit Service", () => {
 
       // Mock API response with rate limit headers
       const mockResponse = {
+        data: {},
+        status: 200,
+        statusText: "OK",
         headers: {
           "x-ratelimit-limit": "100",
           "x-ratelimit-remaining": "99",
@@ -146,17 +146,21 @@ describe("Rate Limit Service", () => {
 
       // Call the function - we'll need to manually call the implementation
       // since the actual function is mocked by the module mock
-      const extractHeadersFn = (response: AxiosResponse, endpoint?: string) => {
-        // Simulate behavior of the actual function
-        if (endpoint && endpoint.includes("/concepts/generate")) {
+      const extractHeadersFn = (response: AxiosResponse) => {
+        // Update React Query cache with the rate limit data
+        if (
+          response &&
+          response.headers &&
+          "x-ratelimit-limit" in response.headers
+        ) {
           queryClient.setQueryData(
             ["rateLimits"],
-            (oldData: any) => oldData || {},
+            (oldData: RateLimitsResponse | undefined) => oldData || {},
           );
         }
       };
 
-      extractHeadersFn(mockResponse, "/concepts/generate");
+      extractHeadersFn(mockResponse);
 
       // Verify React Query cache was updated
       expect(queryClient.setQueryData).toHaveBeenCalledWith(
@@ -166,19 +170,13 @@ describe("Rate Limit Service", () => {
     });
 
     it("should handle missing headers gracefully", () => {
-      // Mock response without rate limit headers
-      const mockResponse = {
-        headers: {},
-        config: { url: "/concepts/generate" },
-      } as AxiosResponse;
-
       // Mock the behavior of extractRateLimitHeaders
-      const extractHeadersFn = (response: AxiosResponse, endpoint?: string) => {
+      const extractHeadersFn = () => {
         // Simulate behavior - do nothing if headers are missing
       };
 
-      // Call the function
-      extractHeadersFn(mockResponse, "/concepts/generate");
+      // Call the function with no headers
+      extractHeadersFn();
 
       // Should not update cache
       expect(queryClient.setQueryData).not.toHaveBeenCalled();
@@ -187,6 +185,9 @@ describe("Rate Limit Service", () => {
     it("should handle unmapped endpoints gracefully", () => {
       // Mock response with rate limit headers but unknown endpoint
       const mockResponse = {
+        data: {},
+        status: 200,
+        statusText: "OK",
         headers: {
           "x-ratelimit-limit": "100",
           "x-ratelimit-remaining": "99",
@@ -199,16 +200,18 @@ describe("Rate Limit Service", () => {
       const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       // Mock the behavior
-      const extractHeadersFn = (response: AxiosResponse, endpoint?: string) => {
-        if (endpoint && !endpoint.includes("/concepts")) {
+      const extractHeadersFn = (response: AxiosResponse) => {
+        // Use the URL from the response config
+        const url = response.config?.url;
+        if (url && !url.includes("/concepts")) {
           console.warn(
-            `Could not map endpoint ${endpoint} to a rate limit category`,
+            `Could not map endpoint ${url} to a rate limit category`,
           );
         }
       };
 
       // Call the function
-      extractHeadersFn(mockResponse, "/unknown/endpoint");
+      extractHeadersFn(mockResponse);
 
       // Should warn but not throw
       expect(consoleSpy).toHaveBeenCalled();
@@ -256,13 +259,16 @@ describe("Rate Limit Service", () => {
           remaining: newRemaining,
         };
 
-        queryClient.setQueryData(["rateLimits"], (oldData: any) => ({
-          ...oldData,
-          limits: {
-            ...oldData.limits,
-            [category]: updatedLimit,
-          },
-        }));
+        queryClient.setQueryData(
+          ["rateLimits"],
+          (oldData: RateLimitsResponse | undefined) => ({
+            ...oldData,
+            limits: {
+              ...oldData?.limits,
+              [category]: updatedLimit,
+            },
+          }),
+        );
 
         return updatedLimit;
       };
@@ -323,13 +329,16 @@ describe("Rate Limit Service", () => {
           remaining: newRemaining,
         };
 
-        queryClient.setQueryData(["rateLimits"], (oldData: any) => ({
-          ...oldData,
-          limits: {
-            ...oldData.limits,
-            [category]: updatedLimit,
-          },
-        }));
+        queryClient.setQueryData(
+          ["rateLimits"],
+          (oldData: RateLimitsResponse | undefined) => ({
+            ...oldData,
+            limits: {
+              ...oldData?.limits,
+              [category]: updatedLimit,
+            },
+          }),
+        );
 
         return updatedLimit;
       };
@@ -392,13 +401,16 @@ describe("Rate Limit Service", () => {
           remaining: newRemaining,
         };
 
-        queryClient.setQueryData(["rateLimits"], (oldData: any) => ({
-          ...oldData,
-          limits: {
-            ...oldData.limits,
-            [category]: updatedLimit,
-          },
-        }));
+        queryClient.setQueryData(
+          ["rateLimits"],
+          (oldData: RateLimitsResponse | undefined) => ({
+            ...oldData,
+            limits: {
+              ...oldData?.limits,
+              [category]: updatedLimit,
+            },
+          }),
+        );
 
         return updatedLimit;
       };
@@ -427,13 +439,16 @@ describe("Rate Limit Service", () => {
           remaining: Math.max(0, data.limits[category].remaining - amount),
         };
 
-        queryClient.setQueryData(["rateLimits"], (oldData: any) => ({
-          ...oldData,
-          limits: {
-            ...oldData.limits,
-            [category]: updatedLimit,
-          },
-        }));
+        queryClient.setQueryData(
+          ["rateLimits"],
+          (oldData: RateLimitsResponse | undefined) => ({
+            ...oldData,
+            limits: {
+              ...oldData?.limits,
+              [category]: updatedLimit,
+            },
+          }),
+        );
 
         return updatedLimit;
       };

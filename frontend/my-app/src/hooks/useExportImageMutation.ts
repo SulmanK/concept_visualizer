@@ -3,12 +3,7 @@ import {
   useQueryClient,
   UseMutationResult,
 } from "@tanstack/react-query";
-import {
-  apiClient,
-  ExportFormat,
-  ExportSize,
-  RateLimitError,
-} from "../services/apiClient";
+import { apiClient, ExportFormat, ExportSize } from "../services/apiClient";
 import { useOptimisticRateLimitUpdate } from "./useRateLimitsQuery";
 import { createQueryErrorHandler } from "../utils/errorUtils";
 import { useErrorHandling } from "./useErrorHandling";
@@ -32,7 +27,7 @@ export interface ExportImageParams {
   /**
    * Optional parameters for SVG conversion (when format is 'svg')
    */
-  svgParams?: Record<string, any>;
+  svgParams?: Record<string, string | number | boolean | undefined>;
 
   /**
    * Storage bucket where the image is stored

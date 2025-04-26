@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Card } from "./Card";
-import { ConceptData, ColorVariationData } from "../../services/supabaseClient";
-import { Link } from "react-router-dom";
+import { ConceptData } from "../../services/supabaseClient";
 import styles from "./ConceptCard.module.css";
 import { OptimizedImage } from "./OptimizedImage";
 
@@ -131,7 +130,7 @@ export interface ConceptCardProps {
    * Optional color variation data including IDs
    * This is used to map UI indices to backend variation IDs
    */
-  colorData?: Array<{
+  variations?: Array<{
     id: string;
     colors: string[];
   }>;
@@ -153,13 +152,11 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   colorVariations,
   images,
   includeOriginal = false,
-  gradient = { from: "blue-400", to: "indigo-500" },
   initials,
   onEdit,
   onViewDetails,
   editButtonText = "Edit",
   sampleImageUrl,
-  colorData,
   preventNavigation = false,
   onColorClick,
 }) => {
@@ -311,22 +308,6 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     }
   }, [concept, finalTitle, includeOriginal, finalImages, finalColorVariations]);
 
-  // Get the color array for the currently selected variation
-  // Adjust index if we're including original (where index 0 is original, 1+ are variations)
-  let colorIndex;
-  if (includeOriginal && selectedVariationIndex > 0) {
-    colorIndex = selectedVariationIndex - 1; // Adjust index for colorVariations array
-  } else if (!includeOriginal) {
-    colorIndex = selectedVariationIndex; // Direct mapping
-  } else {
-    colorIndex = 0; // Default to first variation if original is selected
-  }
-
-  const colors = finalColorVariations[colorIndex] || [];
-
-  // Get the main color from the current variation
-  const mainColor = colors.length > 0 ? colors[0] : "#4F46E5";
-
   // Handle color variation selection
   const handleVariationSelect = (index: number, e?: React.MouseEvent) => {
     if (e) {
@@ -352,8 +333,8 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     }
   };
 
-  // Get the processed image URL for the current selected variation
-  const currentImageUrl = useMemo(() => {
+  // Determine the current image URL based on selected variation
+  const logoImageUrl = useMemo(() => {
     // If sample image URL is provided, use it directly
     if (sampleImageUrl) {
       console.log(`ConceptCard - Using sample image URL: ${sampleImageUrl}`);
@@ -453,70 +434,6 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
     selectedVariationIndex,
     finalImages,
     includeOriginal,
-  ]);
-
-  // Determine the current image URL based on selected variation
-  const logoImageUrl = useMemo(() => {
-    if (concept?.color_variations && concept.color_variations.length > 0) {
-      // For the original/default variation
-      if (
-        (includeOriginal && selectedVariationIndex === 0) ||
-        selectedVariationIndex === 0
-      ) {
-        // Use image_url as the original image
-        return concept.image_url || concept.base_image_url;
-      }
-
-      // For other variations, calculate the proper index
-      const variationIndex = includeOriginal
-        ? selectedVariationIndex - 1
-        : selectedVariationIndex;
-
-      // If we have a valid variation index
-      if (
-        variationIndex >= 0 &&
-        variationIndex < concept.color_variations.length
-      ) {
-        // Use that variation's image
-        return (
-          concept.color_variations[variationIndex].image_url ||
-          concept.image_url
-        );
-      }
-    }
-
-    // Fallbacks for cases without variations
-    // Just use the main image_url
-    if (concept?.image_url) {
-      return concept.image_url;
-    }
-
-    // For sample cards
-    if (sampleImageUrl) {
-      return sampleImageUrl;
-    }
-
-    // Use direct props - check for multiple images
-    if (finalImages && finalImages.length > 0) {
-      const imageIndex = includeOriginal
-        ? selectedVariationIndex
-        : selectedVariationIndex;
-
-      if (imageIndex >= 0 && imageIndex < finalImages.length) {
-        return finalImages[imageIndex];
-      }
-
-      // Fallback to first image
-      return finalImages[0];
-    }
-
-    return null; // No image available, will show initials instead
-  }, [
-    concept,
-    sampleImageUrl,
-    finalImages,
-    includeOriginal,
-    selectedVariationIndex,
   ]);
 
   // Handle edit button click with proper typing for the callback

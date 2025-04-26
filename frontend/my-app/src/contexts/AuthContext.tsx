@@ -1,17 +1,15 @@
 import React, {
-  useContext,
   useEffect,
   useState,
   useRef,
   useCallback,
   useMemo,
 } from "react";
-import { createContext, useContextSelector } from "use-context-selector";
+import { createContext } from "use-context-selector";
 import { Session, User } from "@supabase/supabase-js";
 import {
   supabase,
   initializeAnonymousAuth,
-  isAnonymousUser,
   linkEmailToAnonymousUser,
   signOut,
 } from "../services/supabaseClient";
@@ -34,7 +32,10 @@ function determineIsAnonymous(session: Session | null): boolean {
   return session.user.app_metadata?.is_anonymous === true;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Export the context so it can be imported in the hooks file
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined,
+);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -49,8 +50,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const previousUserIdRef = useRef<string | null>(null);
   const previousIsAnonymousRef = useRef<boolean>(true);
 
-  // We're removing the refreshAuth function and the refresh timer logic
-  // since the Axios interceptors will now handle token refreshing
+  // Define the signOut handler
+  const handleSignOut = useCallback(async (): Promise<boolean> => {
+    console.log("[AUTH:Context] Sign out requested");
+    try {
+      const success = await signOut();
+      if (!success) {
+        console.error("[AUTH:Context] Sign out operation failed");
+        throw new Error("Failed to sign out");
+      }
+      console.log("[AUTH:Context] Sign out successful");
+      return true;
+    } catch (err) {
+      console.error("[AUTH:Context] Error signing out:", err);
+      setError(err instanceof Error ? err : new Error("Failed to sign out"));
+      return false;
+    }
+  }, []);
 
   // Set up auth-error-needs-logout event listener
   useEffect(() => {
@@ -68,10 +84,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       document.removeEventListener("auth-error-needs-logout", handleAuthError);
     };
-  }, []);
+  }, [handleSignOut]);
 
+  // Initialize auth on mount
   useEffect(() => {
-    // Initialize auth on mount
     const initAuth = async () => {
       console.log("[AUTH:Context] Initializing authentication");
       try {
@@ -193,23 +209,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     initAuth();
   }, []);
 
-  const handleSignOut = useCallback(async (): Promise<boolean> => {
-    console.log("[AUTH:Context] Sign out requested");
-    try {
-      const success = await signOut();
-      if (!success) {
-        console.error("[AUTH:Context] Sign out operation failed");
-        throw new Error("Failed to sign out");
-      }
-      console.log("[AUTH:Context] Sign out successful");
-      return true;
-    } catch (err) {
-      console.error("[AUTH:Context] Error signing out:", err);
-      setError(err instanceof Error ? err : new Error("Failed to sign out"));
-      return false;
-    }
-  }, []);
-
   const handleLinkEmail = useCallback(
     async (email: string): Promise<boolean> => {
       console.log("[AUTH:Context] Email linking requested");
@@ -257,45 +256,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = useContextSelector(AuthContext, (state) => state);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
-
-export const useAuthUser = () => {
-  const context = useContextSelector(AuthContext, (state) => state?.user);
-  if (context === undefined) {
-    throw new Error("useAuthUser must be used within an AuthProvider");
-  }
-  return context;
-};
-
-export const useUserId = () => {
-  const context = useContextSelector(AuthContext, (state) => state?.user?.id);
-  if (context === undefined && process.env.NODE_ENV !== "production") {
-    console.warn("useUserId called outside AuthProvider or no user exists");
-  }
-  return context || null;
-};
-
-export const useIsAnonymous = () => {
-  const context = useContextSelector(
-    AuthContext,
-    (state) => state?.isAnonymous,
-  );
-  if (context === undefined) {
-    throw new Error("useIsAnonymous must be used within an AuthProvider");
-  }
-  return context;
-};
-
-export const useAuthIsLoading = () => {
-  const context = useContextSelector(AuthContext, (state) => state?.isLoading);
-  if (context === undefined) {
-    throw new Error("useAuthIsLoading must be used within an AuthProvider");
-  }
-  return context;
-};
+// Hooks are now exported from src/hooks/useAuth.ts

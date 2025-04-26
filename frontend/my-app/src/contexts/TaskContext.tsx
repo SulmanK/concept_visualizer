@@ -1,12 +1,11 @@
 import React, {
-  useContext,
   useState,
   useEffect,
   useCallback,
   useRef,
   ReactNode,
 } from "react";
-import { createContext, useContextSelector } from "use-context-selector";
+import { createContext } from "use-context-selector";
 import { TaskResponse } from "../types/api.types";
 import { useTaskSubscription } from "../hooks/useTaskSubscription";
 import { useQueryClient } from "@tanstack/react-query";
@@ -92,25 +91,19 @@ interface TaskContextType {
   onTaskCleared: (listener: TaskEventListener) => () => void;
 }
 
-const TaskContext = createContext<TaskContextType | undefined>(undefined);
+// Export the context so it can be imported by hooks
+export const TaskContext = createContext<TaskContextType | undefined>(
+  undefined,
+);
 
 interface TaskProviderProps {
   children: ReactNode;
-  pollingInterval?: number;
-}
-
-interface TaskContextData {
-  activeTaskId: string | null;
-  setActiveTask: (taskId: string | null) => void;
 }
 
 /**
  * Provider component for managing the global task state.
  */
-export const TaskProvider: React.FC<TaskProviderProps> = ({
-  children,
-  pollingInterval = 2000, // Keep for backwards compatibility, but not used with Realtime
-}) => {
+export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [isTaskInitiating, setIsTaskInitiating] = useState<boolean>(false);
   // Track when initiating state started
@@ -174,12 +167,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
     },
     [activeTaskId],
   );
-
-  // Create task context data object to avoid circular dependency
-  const taskContextData: TaskContextData = {
-    activeTaskId,
-    setActiveTask,
-  };
 
   // Function to handle task success
   const handleTaskSuccess = useCallback(
@@ -355,38 +342,4 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({
   );
 };
 
-/**
- * Hook to access the task context
- * @returns Task context value
- * @throws Error if used outside of TaskProvider
- */
-export const useTaskContext = (): TaskContextType => {
-  // Use useContextSelector for consistency with other selector hooks
-  const context = useContextSelector(TaskContext, (state) => state);
-  if (context === undefined) {
-    throw new Error("useTaskContext must be used within a TaskProvider");
-  }
-  return context;
-};
-
-// Selector hooks for optimized re-renders
-export const useHasActiveTask = () =>
-  useContextSelector(TaskContext, (state) => state?.hasActiveTask);
-export const useIsTaskProcessing = () =>
-  useContextSelector(TaskContext, (state) => state?.isTaskProcessing);
-export const useIsTaskPending = () =>
-  useContextSelector(TaskContext, (state) => state?.isTaskPending);
-export const useIsTaskCompleted = () =>
-  useContextSelector(TaskContext, (state) => state?.isTaskCompleted);
-export const useIsTaskFailed = () =>
-  useContextSelector(TaskContext, (state) => state?.isTaskFailed);
-export const useLatestResultId = () =>
-  useContextSelector(TaskContext, (state) => state?.latestResultId);
-export const useTaskInitiating = () =>
-  useContextSelector(TaskContext, (state) => state?.isTaskInitiating);
-export const useActiveTaskId = () =>
-  useContextSelector(TaskContext, (state) => state?.activeTaskId);
-export const useOnTaskCleared = () =>
-  useContextSelector(TaskContext, (state) => state?.onTaskCleared);
-
-export default TaskContext;
+// Hooks have been moved to src/hooks/useTask.ts

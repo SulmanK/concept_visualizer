@@ -12,10 +12,10 @@ const isDev = import.meta.env.DEV === true;
  * Logger interface with methods for different log levels
  */
 interface Logger {
-  debug: (message: string, ...args: any[]) => void;
-  info: (message: string, ...args: any[]) => void;
-  warn: (message: string, ...args: any[]) => void;
-  error: (message: string, ...args: any[]) => void;
+  debug: (message: string, ...args: unknown[]) => void;
+  info: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
 }
 
 /**
@@ -46,7 +46,7 @@ export const logger: Logger = isDev ? developmentLogger : productionLogger;
 /**
  * Helper function to log only in development environments
  */
-export function logDev(message: string, ...args: any[]) {
+export function logDev(message: string, ...args: unknown[]) {
   if (isDev) {
     console.log(message, ...args);
   }

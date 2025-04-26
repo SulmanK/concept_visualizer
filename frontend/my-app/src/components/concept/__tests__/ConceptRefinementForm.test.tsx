@@ -1,7 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ConceptRefinementForm } from "../ConceptRefinementForm";
-import { FormStatus } from "../../../types";
 import { vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TaskProvider } from "../../../contexts/TaskContext";

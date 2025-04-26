@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  render,
-  screen,
-  waitFor,
-  act,
-  renderHook,
-} from "@testing-library/react";
+import { render, screen, act, renderHook } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -63,16 +57,15 @@ vi.mock("../../hooks/useRateLimitsQuery", () => {
 });
 
 // Import after the mock is set up
+import { RateLimitProvider } from "../RateLimitContext";
 import {
-  RateLimitProvider,
   useRateLimitContext,
   useRateLimitsData,
   useRateLimitsLoading,
   useRateLimitsError,
   useRateLimitsRefetch,
   useRateLimitsDecrement,
-} from "../RateLimitContext";
-import * as useRateLimitsQueryModule from "../../hooks/useRateLimitsQuery";
+} from "../../hooks/useRateLimits";
 
 // Component that consumes the context for testing
 const TestRateLimitConsumer = () => {

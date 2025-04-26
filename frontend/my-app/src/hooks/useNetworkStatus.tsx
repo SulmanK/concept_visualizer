@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useToast } from "./useToast";
 import { apiClient } from "../services/apiClient";
 
+// Add interface for NetworkInformation
+interface NetworkInformation {
+  effectiveType: string;
+  addEventListener: (type: string, listener: EventListener) => void;
+  removeEventListener: (type: string, listener: EventListener) => void;
+}
+
 export interface NetworkStatus {
   /**
    * Whether the browser is currently online
@@ -65,54 +72,6 @@ export const useNetworkStatus = (options?: {
 
   const toast = useToast();
 
-  // Check connection by fetching a small resource
-  const checkConnection = useCallback(async (): Promise<boolean> => {
-    try {
-      // Try the main endpoint, but if it fails, we'll consider the app online anyway
-      // as long as the browser reports we're online
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
-        await apiClient.get(checkEndpoint, {
-          headers: { "Cache-Control": "no-cache" },
-          signal: controller.signal,
-          showToastOnRateLimit: false, // Don't show rate limit toasts for health checks
-        });
-
-        clearTimeout(timeoutId);
-        setLastCheckedAt(new Date());
-
-        updateOnlineStatus(true);
-        return true;
-      } catch (error) {
-        console.warn("Health check endpoint error:", error);
-        // If the health check endpoint fails but the browser says we're online,
-        // we'll consider ourselves online
-        setLastCheckedAt(new Date());
-
-        // Use the browser's online status as a fallback
-        updateOnlineStatus(navigator.onLine);
-        return navigator.onLine;
-      }
-    } catch (error) {
-      // Final fallback - network error or timeout
-      setLastCheckedAt(new Date());
-
-      if (isOnline) {
-        setIsOnline(false);
-        setOfflineSince(new Date());
-        if (notifyOnStatusChange) {
-          toast.showWarning(
-            "You appear to be offline. Some features may be unavailable.",
-          );
-        }
-      }
-
-      return false;
-    }
-  }, [checkEndpoint, isOnline, notifyOnStatusChange, toast]);
-
   // Helper function to update the online status and show notifications
   const updateOnlineStatus = useCallback(
     (online: boolean) => {
@@ -138,6 +97,60 @@ export const useNetworkStatus = (options?: {
     },
     [isOnline, notifyOnStatusChange, toast],
   );
+
+  // Check connection by fetching a small resource
+  const checkConnection = useCallback(async (): Promise<boolean> => {
+    try {
+      // Try the main endpoint, but if it fails, we'll consider the app online anyway
+      // as long as the browser reports we're online
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        await apiClient.get(checkEndpoint, {
+          headers: { "Cache-Control": "no-cache" },
+          signal: controller.signal,
+          showToastOnRateLimit: false, // Don't show rate limit toasts for health checks
+        });
+
+        clearTimeout(timeoutId);
+        setLastCheckedAt(new Date());
+
+        updateOnlineStatus(true);
+        return true;
+      } catch (apiError) {
+        console.warn("Health check endpoint error:", apiError);
+        // If the health check endpoint fails but the browser says we're online,
+        // we'll consider ourselves online
+        setLastCheckedAt(new Date());
+
+        // Use the browser's online status as a fallback
+        updateOnlineStatus(navigator.onLine);
+        return navigator.onLine;
+      }
+    } catch {
+      // Final fallback - network error or timeout
+      setLastCheckedAt(new Date());
+
+      if (isOnline) {
+        setIsOnline(false);
+        setOfflineSince(new Date());
+        if (notifyOnStatusChange) {
+          toast.showWarning(
+            "You appear to be offline. Some features may be unavailable.",
+          );
+        }
+      }
+
+      return false;
+    }
+  }, [
+    checkEndpoint,
+    isOnline,
+    notifyOnStatusChange,
+    toast,
+    updateOnlineStatus,
+  ]);
 
   // Handle browser's online/offline events
   useEffect(() => {
@@ -168,7 +181,9 @@ export const useNetworkStatus = (options?: {
 
     // Get network connection type if available
     if ("connection" in navigator) {
-      const connection = (navigator as any).connection;
+      const connection = (
+        navigator as unknown as { connection: NetworkInformation }
+      ).connection;
 
       if (connection) {
         setConnectionType(connection.effectiveType);
@@ -197,7 +212,7 @@ export const useNetworkStatus = (options?: {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [checkConnection, notifyOnStatusChange, toast]);
+  }, [checkConnection, notifyOnStatusChange, toast, updateOnlineStatus]);
 
   // Periodically check connection
   useEffect(() => {

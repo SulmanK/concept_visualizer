@@ -1,10 +1,5 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import type {
-  AxiosInstance,
-  AxiosRequestConfig,
-  AxiosError,
-  AxiosResponse,
-} from "axios";
+import { vi, describe, it, expect, beforeEach } from "vitest";
+import type { AxiosError } from "axios";
 import { API_BASE_URL } from "../../config/apiEndpoints";
 import {
   AuthError,
@@ -49,11 +44,20 @@ const mockAxiosInstance = {
   request: vi.fn(), // Add mock for the generic request method if used by interceptors
 };
 
+// Define a type for the error parameter in isAxiosError
+interface ErrorWithIsAxiosErrorFlag {
+  isAxiosError?: boolean;
+  [key: string]: unknown;
+}
+
 vi.mock("axios", () => {
   return {
     default: {
       create: vi.fn().mockReturnValue(mockAxiosInstance),
-      isAxiosError: vi.fn((error: any) => error && error.isAxiosError === true), // More robust check
+      isAxiosError: vi.fn(
+        (error: ErrorWithIsAxiosErrorFlag) =>
+          error && error.isAxiosError === true,
+      ),
     },
   };
 });
@@ -75,10 +79,9 @@ vi.mock("../rateLimitService", () => ({
 }));
 
 // Import after mock setup
-import { apiClient, setAuthToken, clearAuthToken } from "../apiClient";
+import { apiClient } from "../apiClient";
 import { supabase } from "../supabaseClient";
 import * as rateLimitService from "../rateLimitService";
-import axios from "axios";
 
 // Mock localStorage
 const localStorageMock = (() => {

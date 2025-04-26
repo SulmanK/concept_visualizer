@@ -1,8 +1,7 @@
 import React, { useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useRecentConcepts } from "../../../../hooks/useConceptQueries";
-import { useUserId } from "../../../../contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useUserId } from "../../../../hooks/useAuth";
 import { ConceptCard } from "../../../../components/ui/ConceptCard";
 import { ConceptData } from "../../../../services/supabaseClient";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
