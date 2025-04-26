@@ -1,12 +1,7 @@
 import React from "react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { SkeletonLoader } from "../SkeletonLoader";
-
-// Add this to help with debugging
-const logElement = (element) => {
-  console.log("Element HTML:", element.outerHTML);
-};
 
 describe("SkeletonLoader", () => {
   // Clean up after each test
@@ -52,7 +47,6 @@ describe("SkeletonLoader", () => {
     const { unmount: unmountLg } = render(
       <SkeletonLoader type="text" lineHeight="lg" lines={1} />,
     );
-    const lgSkeleton = screen.getByRole("status").outerHTML;
     unmountLg();
 
     // Instead of comparing full DOM elements, let's skip this test

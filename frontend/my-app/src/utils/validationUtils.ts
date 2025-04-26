@@ -34,7 +34,7 @@ export function isValidPassword(
 
   if (
     requireSpecialChar &&
-    !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(password)
+    !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]+/.test(password)
   ) {
     return false;
   }
@@ -66,7 +66,7 @@ export function isValidUrl(url: string, requireProtocol = true): boolean {
       return false;
     }
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

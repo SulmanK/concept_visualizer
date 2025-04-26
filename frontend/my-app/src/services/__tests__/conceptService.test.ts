@@ -5,6 +5,7 @@ import {
 } from "../conceptService";
 import { apiClient } from "../apiClient";
 import { API_ENDPOINTS } from "../../config/apiEndpoints";
+import { AxiosError } from "axios";
 
 // Mock dependencies
 vi.mock("../apiClient", () => ({
@@ -187,10 +188,22 @@ describe("Concept Service", () => {
     });
 
     it("should return null for 404 errors", async () => {
-      // Mock 404 response
-      const notFoundError = new Error("Not found");
-      (notFoundError as any).response = { status: 404 };
-      vi.mocked(apiClient.get).mockRejectedValueOnce(notFoundError);
+      // Create a custom error object that will pass the instanceof AxiosError check
+      const error = {
+        isAxiosError: true,
+        response: {
+          status: 404,
+          statusText: "Not Found",
+        },
+        message: "Request failed with status code 404",
+        name: "AxiosError",
+        toJSON: () => ({ message: "Request failed with status code 404" }),
+      };
+
+      // Make the error pass instanceof AxiosError check
+      Object.setPrototypeOf(error, AxiosError.prototype);
+
+      vi.mocked(apiClient.get).mockRejectedValueOnce(error);
 
       // Call the function
       const result = await fetchConceptDetailFromApi("nonexistent-id");
@@ -207,7 +220,9 @@ describe("Concept Service", () => {
     it("should throw for non-404 errors", async () => {
       // Mock API error
       const mockError = new Error("Server error");
-      (mockError as any).response = { status: 500 };
+      (mockError as unknown as { response: { status: number } }).response = {
+        status: 500,
+      };
       vi.mocked(apiClient.get).mockRejectedValueOnce(mockError);
 
       // Call the function and expect it to throw

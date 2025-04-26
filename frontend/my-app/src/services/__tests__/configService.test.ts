@@ -1,11 +1,10 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import {
   fetchConfig,
   getConfig,
   getBucketName,
   useConfig,
-  defaultConfig,
   AppConfig,
 } from "../configService";
 
@@ -33,7 +32,6 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Need to mock getConfig before using it
-const originalGetConfig = getConfig;
 vi.mock("../configService", () => {
   // Create a local reference to avoid hoisting issues
   const serverConfig = {
@@ -59,15 +57,10 @@ vi.mock("../configService", () => {
     fetchConfig: vi.fn(),
     getBucketName: vi.fn(),
     useConfig: vi.fn(),
-    defaultConfig: serverConfig,
   };
 });
 
 describe("Config Service", () => {
-  const consoleErrorSpy = vi
-    .spyOn(console, "error")
-    .mockImplementation(() => {});
-
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getConfig).mockReturnValue(testServerConfig);

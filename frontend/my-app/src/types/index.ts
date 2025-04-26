@@ -14,6 +14,9 @@ export * from "./ui.types";
 // Form Types
 export * from "./form.types";
 
+// Error Types
+export * from "./error.types";
+
 /**
  * Form status type
  */

@@ -2,7 +2,6 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { RefinementPage } from "../RefinementPage";
-import * as supabaseClient from "../../../services/supabaseClient";
 import * as useConceptMutationsModule from "../../../hooks/useConceptMutations";
 import { withRoutesWrapper } from "../../../test-wrappers";
 

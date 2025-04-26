@@ -39,7 +39,7 @@ describe("ConceptResult Component", () => {
   test("renders placeholder when no concept data is available", () => {
     render(
       <ConceptResult
-        concept={null as any}
+        concept={null}
         onRefineRequest={mockRefineRequest}
         onColorSelect={mockColorSelect}
       />,

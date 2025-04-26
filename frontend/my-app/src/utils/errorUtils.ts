@@ -13,7 +13,7 @@ import { useErrorHandling } from "../hooks/useErrorHandling";
  * @param options - Additional options for the error handler
  * @returns A function to wrap async operations with error handling
  */
-export const createAsyncErrorHandler = <T>(
+export const createAsyncErrorHandler = (
   errorHandler: UseErrorHandlingResult,
   options: {
     showToast?: boolean;
@@ -22,11 +22,10 @@ export const createAsyncErrorHandler = <T>(
     context?: string;
   } = {},
 ) => {
-  const { handleError, showErrorToast, showAndClearError } = errorHandler;
+  const { handleError, showErrorToast } = errorHandler;
 
   const {
     showToast = false,
-    defaultErrorMessage = "An error occurred",
     onError = () => {},
     context = "unknown",
   } = options;

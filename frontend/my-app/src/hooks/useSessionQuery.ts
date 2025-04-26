@@ -6,7 +6,7 @@ import { createQueryErrorHandler } from "../utils/errorUtils";
 interface SessionResponse {
   session_id: string;
   created: boolean;
-  [key: string]: any;
+  [key: string]: string | number | boolean | null | undefined;
 }
 
 interface SyncSessionInput {

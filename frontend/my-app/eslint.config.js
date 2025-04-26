@@ -4,6 +4,22 @@ import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
+// Create a clean globals object to avoid whitespace issues
+const browserGlobals = {
+  window: "readonly",
+  document: "readonly",
+  navigator: "readonly",
+  console: "readonly",
+  fetch: "readonly",
+  alert: "readonly",
+  localStorage: "readonly",
+  sessionStorage: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly",
+  setInterval: "readonly",
+  clearInterval: "readonly",
+};
+
 export default tseslint.config(
   { ignores: ["dist"] },
   {
@@ -11,7 +27,7 @@ export default tseslint.config(
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: browserGlobals,
     },
     plugins: {
       "react-hooks": reactHooks,

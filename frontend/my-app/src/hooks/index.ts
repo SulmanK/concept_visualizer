@@ -14,8 +14,45 @@ export { useTaskSubscription } from "./useTaskSubscription";
 export { useSessionSyncMutation } from "./useSessionQuery";
 export { useConfigQuery } from "./useConfigQuery";
 
+// Auth Hooks
+export {
+  useAuth,
+  useAuthUser,
+  useUserId,
+  useIsAnonymous,
+  useAuthIsLoading,
+} from "./useAuth";
+
+// Rate Limit Hooks
+export {
+  useRateLimitsData,
+  useRateLimitsLoading,
+  useRateLimitsError,
+  useRateLimitsRefetch,
+  useRateLimitsDecrement,
+  useRateLimitContext,
+  useDecrementRateLimit,
+} from "./useRateLimits";
+
+// Task Hooks
+export {
+  useTaskContext,
+  useHasActiveTask,
+  useIsTaskProcessing,
+  useIsTaskPending,
+  useIsTaskCompleted,
+  useIsTaskFailed,
+  useLatestResultId,
+  useTaskInitiating,
+  useActiveTaskId,
+  useOnTaskCleared,
+  useActiveTaskData,
+  useClearActiveTask,
+} from "./useTask";
+
 // Error and Loading Hooks
-export { useToast, ToastProvider } from "./useToast";
+export { useToast } from "./useToast";
+export { ToastProvider } from "./toast/ToastContext";
 export { useErrorHandling } from "./useErrorHandling";
 export { useNetworkStatus } from "./useNetworkStatus";
 

@@ -1,25 +1,13 @@
 import React, { useState, useEffect } from "react";
-import {
-  useParams,
-  useNavigate,
-  useLocation,
-  useSearchParams,
-} from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useRefineConceptMutation } from "../../hooks/useConceptMutations";
 import { RefinementHeader } from "./components/RefinementHeader";
 import { RefinementForm } from "./components/RefinementForm";
 import { ComparisonView } from "./components/ComparisonView";
 import { RefinementActions } from "./components/RefinementActions";
 import { Card } from "../../components/ui/Card";
-import {
-  useAuth,
-  useUserId,
-  useAuthIsLoading,
-} from "../../contexts/AuthContext";
+import { useUserId } from "../../hooks/useAuth";
 import { useConceptDetail } from "../../hooks/useConceptQueries";
-import { TaskResponse } from "../../types";
-import { useErrorHandling } from "../../hooks/useErrorHandling";
-import { createAsyncErrorHandler } from "../../utils/errorUtils";
 
 /**
  * Main page component for the Concept Refinement feature
@@ -32,14 +20,24 @@ export const RefinementPage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const colorId = searchParams.get("colorId");
   const userId = useUserId();
-  const isAuthLoading = useAuthIsLoading();
-  const errorHandler = useErrorHandling();
-  const handleAsyncError = createAsyncErrorHandler(errorHandler, {
-    defaultErrorMessage: "Failed to load concept",
-    context: "refinementPage",
-  });
 
-  const [originalConcept, setOriginalConcept] = useState<any>(null);
+  // Define a specific type for the concept instead of using any
+  interface ConceptData {
+    id: string;
+    imageUrl: string;
+    logoDescription: string;
+    themeDescription: string;
+    colorVariation?: {
+      id: string;
+      palette_name: string;
+      image_url: string;
+      colors: string[];
+    };
+  }
+
+  const [originalConcept, setOriginalConcept] = useState<ConceptData | null>(
+    null,
+  );
   const {
     data: conceptData,
     isLoading: isLoadingConcept,
@@ -91,10 +89,8 @@ export const RefinementPage: React.FC = () => {
 
   // Use React Query mutation hook for refinement
   const {
-    mutate: refineConceptMutation,
     data: taskData,
     isPending,
-    isSuccess,
     isError,
     error,
     reset: resetRefinement,
@@ -131,12 +127,7 @@ export const RefinementPage: React.FC = () => {
     return error instanceof Error ? error.message : String(error);
   };
 
-  const handleRefineConcept = (
-    refinementPrompt: string,
-    logoDescription: string,
-    themeDescription: string,
-    preserveAspects: string[],
-  ) => {
+  const handleRefineConcept = () => {
     // Refinement is disabled - functionality under construction
     console.log(
       "Refinement functionality is currently disabled (under construction)",

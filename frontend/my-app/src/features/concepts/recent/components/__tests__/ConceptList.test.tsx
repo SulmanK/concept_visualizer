@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { ConceptList } from "../ConceptList";
 import { vi } from "vitest";
@@ -10,8 +10,8 @@ vi.mock("../../../../../hooks/useConceptQueries", () => ({
   useRecentConcepts: vi.fn(),
 }));
 
-// Mock the AuthContext specifically for useUserId
-vi.mock("../../../../../contexts/AuthContext", () => ({
+// Mock the useAuth hook for useUserId
+vi.mock("../../../../../hooks/useAuth", () => ({
   useUserId: () => "test-user-id",
 }));
 

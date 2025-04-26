@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
-import useToast from "./useToast";
-import { formatTimeRemaining } from "../services/rateLimitService";
+import { useToast } from "./useToast";
 import {
   RateLimitError,
   AuthError,
@@ -39,6 +38,56 @@ export interface ErrorWithCategory {
   // API error specific properties
   status?: number;
   url?: string;
+}
+
+/**
+ * Interface for generic error objects that might come from various sources
+ */
+interface GenericErrorObject {
+  // Common error properties
+  message?: string;
+  name?: string;
+  code?: string;
+  status?: number;
+  statusCode?: number;
+
+  // Network/Request specific properties
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+      error?: string;
+      details?: string;
+      errors?: unknown;
+      limit?: number;
+      current?: number;
+      period?: string;
+      reset_after_seconds?: number;
+    };
+    headers?: {
+      [key: string]: string;
+    };
+  };
+
+  // Other common error properties
+  error?: {
+    message?: string;
+  };
+  data?: {
+    message?: string;
+  };
+
+  // Rate limit specific properties
+  limit?: number;
+  current?: number;
+  period?: string;
+  resetAfterSeconds?: number;
+
+  // Validation specific properties
+  validationErrors?: Record<string, string[]>;
+
+  // Other properties
+  stack?: string;
 }
 
 export interface UseErrorHandlingResult {
@@ -192,7 +241,7 @@ export const useErrorHandling = (
 
     // Handle axios or fetch errors
     if (typeof error === "object" && error !== null) {
-      const err = error as any;
+      const err = error as GenericErrorObject;
 
       // Check for rate limit errors based on status code or message
       if (
@@ -261,7 +310,7 @@ export const useErrorHandling = (
     }
 
     if (typeof error === "object" && error !== null) {
-      const err = error as any;
+      const err = error as GenericErrorObject;
 
       // Handle common error object patterns
       if (err.message) {
@@ -287,7 +336,7 @@ export const useErrorHandling = (
       // Try JSON serialization for debugging
       try {
         return `Error: ${JSON.stringify(error)}`;
-      } catch (e) {
+      } catch {
         // Fallback if JSON serialization fails
         return "An unexpected error occurred";
       }
@@ -302,7 +351,7 @@ export const useErrorHandling = (
   const extractErrorDetails = useCallback(
     (error: unknown): string | undefined => {
       if (typeof error === "object" && error !== null) {
-        const err = error as any;
+        const err = error as GenericErrorObject;
 
         // Try to extract detailed error information
         if (err.response?.data?.details) {
@@ -312,7 +361,7 @@ export const useErrorHandling = (
         if (err.response?.data?.errors) {
           try {
             return JSON.stringify(err.response.data.errors);
-          } catch (e) {
+          } catch {
             return undefined;
           }
         }
@@ -368,7 +417,7 @@ export const useErrorHandling = (
             "This might be due to hitting a rate limit or the server being temporarily unavailable. Please try again later.";
         } else if (typeof error === "object" && error !== null) {
           // Try to extract rate limit data from generic error objects
-          const err = error as any;
+          const err = error as GenericErrorObject;
           errorWithCategory.limit = err.limit || err.response?.data?.limit;
           errorWithCategory.current =
             err.current || err.response?.data?.current;

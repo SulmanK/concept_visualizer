@@ -2,28 +2,14 @@
  * Component for displaying detailed concept information
  */
 
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  lazy,
-  Suspense,
-  useCallback,
-} from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { ColorPalette } from "../../../components/ui/ColorPalette";
 import { ErrorBoundary, OptimizedImage } from "../../../components/ui";
 import { ColorVariationData } from "../../../services/supabaseClient";
-import { useAuth } from "../../../contexts/AuthContext";
+import { useAuth } from "../../../hooks/useAuth";
 import { ExportOptions } from "./components/ExportOptions";
 import { useConceptDetail } from "../../../hooks/useConceptQueries";
-import { useQueryClient } from "@tanstack/react-query";
-import { eventService, AppEvent } from "../../../services/eventService";
-
-// Replace static import with lazy loaded import
-const EnhancedImagePreview = lazy(
-  () => import("./components/EnhancedImagePreview"),
-);
 
 /**
  * Custom hook to fetch concept detail data
@@ -67,7 +53,6 @@ const ConceptDetailContent: React.FC = () => {
     data: concept,
     isLoading: loading,
     error: queryError,
-    refetch,
   } = useConceptDetailWithLogging(conceptId, user?.id);
 
   const [selectedVariation, setSelectedVariation] =
@@ -654,9 +639,6 @@ const ConceptDetailContent: React.FC = () => {
  * Wrapper component with ErrorBoundary
  */
 export const ConceptDetailPage: React.FC = () => {
-  const params = useParams();
-  const conceptId = params.conceptId || "";
-
   return (
     <ErrorBoundary
       errorMessage="We're having trouble loading this concept. Please try again or return to the home page."

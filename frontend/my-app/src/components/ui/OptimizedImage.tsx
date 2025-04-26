@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, HTMLAttributes } from "react";
 
-interface OptimizedImageProps {
+interface OptimizedImageProps extends HTMLAttributes<HTMLDivElement> {
   /**
    * Source URL of the image
    */
@@ -49,9 +49,9 @@ interface OptimizedImageProps {
   backgroundColor?: string;
 
   /**
-   * Additional props
+   * Optional callback for error handling
    */
-  [x: string]: any;
+  onError?: () => void;
 }
 
 /**
@@ -67,6 +67,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   objectFit = "contain",
   placeholder,
   backgroundColor = "#f3f4f6",
+  onError,
   ...rest
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -118,6 +119,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const handleError = () => {
     setError(true);
     console.error(`Failed to load image: ${src}`);
+    if (onError) {
+      onError();
+    }
   };
 
   // Style object for the image

@@ -4,7 +4,6 @@ import { OptimizedImage } from "../ui/OptimizedImage";
 interface ConceptImageProps {
   path?: string;
   url?: string;
-  isPalette?: boolean;
   alt: string;
   className?: string;
   lazy?: boolean;
@@ -17,7 +16,6 @@ interface ConceptImageProps {
 const ConceptImage: React.FC<ConceptImageProps> = ({
   path,
   url,
-  isPalette = false,
   alt,
   className,
   lazy = true,

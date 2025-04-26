@@ -1,9 +1,23 @@
 import React, { ReactElement } from "react";
-import { render, RenderOptions } from "@testing-library/react";
+import {
+  render as rtlRender,
+  RenderOptions,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  act,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Create a custom render method that includes providers
 interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
+  queryClient?: QueryClient;
+}
+
+// Define the type for global with queryClient
+interface GlobalWithQueryClient extends NodeJS.Global {
   queryClient?: QueryClient;
 }
 
@@ -18,7 +32,7 @@ export function customRender(
   // Use the global queryClient if available or create a new one
   const queryClient =
     options.queryClient ||
-    (global as any).queryClient ||
+    (global as GlobalWithQueryClient).queryClient ||
     new QueryClient({
       defaultOptions: {
         queries: {
@@ -34,11 +48,11 @@ export function customRender(
     );
   };
 
-  return render(ui, { wrapper: AllTheProviders, ...options });
+  return rtlRender(ui, { wrapper: AllTheProviders, ...options });
 }
 
-// re-export everything from testing-library
-export * from "@testing-library/react";
+// Export specific functions from testing-library
+export { screen, waitFor, waitForElementToBeRemoved, act, fireEvent, within };
 
 // Override render method
 export { customRender as render };

@@ -1,6 +1,5 @@
 import React from "react";
 import { ErrorWithCategory } from "../../hooks/useErrorHandling";
-import { formatTimeRemaining } from "../../services/rateLimitService";
 
 export type ErrorType =
   | "validation"
@@ -270,22 +269,6 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
           : "You've reached your usage limit for this month. Please try again next month.";
       default:
         return "If this issue persists, please contact support.";
-    }
-  };
-
-  // Format time with countdown for rate limit errors
-  const formatRateLimitTime = (seconds: number) => {
-    if (seconds <= 0) return "less than a minute";
-
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (minutes === 0) {
-      return `${remainingSeconds} second${remainingSeconds !== 1 ? "s" : ""}`;
-    } else if (remainingSeconds === 0) {
-      return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-    } else {
-      return `${minutes}m ${remainingSeconds}s`;
     }
   };
 

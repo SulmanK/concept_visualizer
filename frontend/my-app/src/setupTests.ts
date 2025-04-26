@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { vi, expect, afterEach } from "vitest";
+import { vi, afterEach } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
@@ -12,7 +12,13 @@ global.jest = {
   spyOn: vi.spyOn,
   resetAllMocks: vi.resetAllMocks,
   clearAllMocks: vi.clearAllMocks,
-} as any;
+} as {
+  fn: typeof vi.fn;
+  mock: typeof vi.mock;
+  spyOn: typeof vi.spyOn;
+  resetAllMocks: typeof vi.resetAllMocks;
+  clearAllMocks: typeof vi.clearAllMocks;
+};
 
 // Create a mock DOM element for the root
 const mockRootElement = document.createElement("div");
@@ -128,8 +134,9 @@ class MockResizeObserver {
 }
 
 // Set global mocks
-global.IntersectionObserver = MockIntersectionObserver as any;
-global.ResizeObserver = MockResizeObserver as any;
+global.IntersectionObserver =
+  MockIntersectionObserver as unknown as typeof IntersectionObserver;
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
 // Mocking fetch API
 global.fetch = vi.fn(
@@ -140,14 +147,14 @@ global.fetch = vi.fn(
       ok: true,
       status: 200,
       headers: new Headers(),
-    }) as any,
+    }) as unknown as Response,
 );
 
 // Mock console.error to fail tests on prop type warnings
 const originalConsoleError = console.error;
-console.error = (...args: any[]) => {
+console.error = (...args: unknown[]) => {
   // Check if this is a PropType validation
-  if (args[0]?.includes?.("Failed prop type")) {
+  if (typeof args[0] === "string" && args[0]?.includes?.("Failed prop type")) {
     throw new Error(args[0]);
   }
   originalConsoleError(...args);

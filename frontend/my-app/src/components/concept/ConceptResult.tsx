@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { GenerationResponse, ColorPalette } from "../../types";
-import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { ColorPalette as ColorPaletteComponent } from "../ui/ColorPalette";
-import { logger } from "../../utils/logger";
-import { devLog, devWarn, logError } from "../../utils/dev-logging";
+import { logError, devWarn } from "../../utils/dev-logging";
 import styles from "./ConceptResult.module.css";
 
 export interface ConceptResultProps {
@@ -70,9 +68,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
   const [selectedVariation, setSelectedVariation] = useState<number | null>(
     null,
   );
-  const [imageLoadErrors, setImageLoadErrors] = useState<
-    Record<string, boolean>
-  >({});
 
   useEffect(() => {
     // Reset selected variation when concept changes
@@ -187,19 +182,6 @@ export const ConceptResult: React.FC<ConceptResultProps> = ({
     if (onColorSelect) {
       onColorSelect(color);
     }
-  };
-
-  const getCurrentPaletteColors = () => {
-    const palette = getCurrentPalette();
-    return Array.isArray(palette)
-      ? palette
-      : (Object.values(palette as ColorPalette).filter(
-          (val) => typeof val === "string",
-        ) as string[]);
-  };
-
-  const getImageElements = () => {
-    return variations.map((variation) => variation.image_url);
   };
 
   // Function to create a proper ColorPalette object from an array or existing object

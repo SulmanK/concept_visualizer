@@ -40,16 +40,6 @@ interface RateLimitCache {
 // Global cache for rate limits from the API
 const rateLimitCache: Record<string, RateLimitCache> = {};
 
-// Map to track category to endpoint relationships for reverse lookup
-const categoryToEndpointMap: Record<string, string[]> = {
-  generate_concept: ["/concepts/generate"],
-  refine_concept: ["/concepts/refine"],
-  store_concept: ["/concepts/store"],
-  get_concepts: ["/concepts/list"],
-  export_action: ["/export/process"],
-  sessions: ["/sessions"],
-};
-
 /**
  * Map API endpoint to rate limit category
  * @param endpoint API endpoint path

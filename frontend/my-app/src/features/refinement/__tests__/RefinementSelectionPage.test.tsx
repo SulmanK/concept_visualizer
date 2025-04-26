@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { RefinementSelectionPage } from "../RefinementSelectionPage";
 import { vi } from "vitest";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Create a custom wrapper just for these tests
 import { MemoryRouter } from "react-router-dom";
@@ -57,6 +57,7 @@ import { useRecentConcepts } from "../../../hooks/useConceptQueries";
 
 // Simple wrapper for our tests
 const renderWithProviders = (ui: React.ReactElement) => {
+  // Create a new QueryClient for each test
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -65,12 +66,11 @@ const renderWithProviders = (ui: React.ReactElement) => {
     },
   });
 
-  // Create a custom provider component that includes all necessary providers
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>,
   );
-
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
 };
 
 describe("RefinementSelectionPage Component", () => {

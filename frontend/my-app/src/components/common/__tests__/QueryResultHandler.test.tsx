@@ -2,8 +2,6 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { QueryResultHandler } from "../QueryResultHandler";
-import { LoadingIndicator } from "../../ui/LoadingIndicator";
-import { ErrorMessage } from "../../ui/ErrorMessage";
 
 // Mock the UI components
 vi.mock("../../ui/LoadingIndicator", () => ({
@@ -180,7 +178,7 @@ describe("QueryResultHandler", () => {
       </div>
     ));
 
-    const { debug } = render(
+    render(
       <QueryResultHandler isLoading={false} error={null} data={mockData}>
         {childrenFn}
       </QueryResultHandler>,

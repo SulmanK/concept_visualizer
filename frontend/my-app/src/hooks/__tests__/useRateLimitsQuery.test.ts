@@ -197,7 +197,7 @@ describe('useRateLimitsQuery', () => {
 
     it('should handle decrement with no initial data', async () => {
       // Mock no data returned
-      vi.mocked(rateLimitService.fetchRateLimits).mockResolvedValueOnce(undefined as any);
+      vi.mocked(rateLimitService.fetchRateLimits).mockResolvedValueOnce(undefined);
 
       const { result } = renderHook(() => useRateLimitsQuery(), {
         wrapper: createWrapper()

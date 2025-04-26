@@ -9,7 +9,7 @@ import { test, expect } from "./fixtures";
  * 4. Submit the form
  * 5. Verify the generated concept appears
  */
-test("concept generation flow", async ({ page, mockApi }) => {
+test("concept generation flow", async ({ page }) => {
   // Navigate to the home page
   await page.goto("/");
 

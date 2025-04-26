@@ -7,6 +7,7 @@
 import { API_ENDPOINTS } from "../config/apiEndpoints";
 import { apiClient } from "./apiClient";
 import { ConceptData } from "./supabaseClient"; // Reuse existing interfaces
+import { AxiosError } from "axios";
 
 /**
  * Fetch recent concepts from the API
@@ -94,9 +95,9 @@ export const fetchConceptDetailFromApi = async (
     console.log(`[API] Fetched concept detail in ${endTime - startTime}ms`);
 
     return response.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Handle 404 - concept not found
-    if (error.response && error.response.status === 404) {
+    if (error instanceof AxiosError && error.response?.status === 404) {
       console.log(`[API] Concept with ID ${conceptId} not found`);
       return null;
     }

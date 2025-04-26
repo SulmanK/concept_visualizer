@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRecentConcepts } from "../../hooks/useConceptQueries";
-import { ConceptData, ColorVariationData } from "../../services/supabaseClient";
-import { useAuth } from "../../contexts/AuthContext";
+import { ConceptData } from "../../services/supabaseClient";
+import { useAuth } from "../../hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { OptimizedImage } from "../../components/ui/OptimizedImage";
 

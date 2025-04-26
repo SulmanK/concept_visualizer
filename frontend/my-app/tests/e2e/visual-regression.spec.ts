@@ -24,7 +24,7 @@ async function stabilizePage(page) {
   });
 }
 
-test("visual regression - home page", async ({ page, mockApi }) => {
+test("visual regression - home page", async ({ page }) => {
   // Navigate to the home page
   await page.goto("/");
 
@@ -38,10 +38,7 @@ test("visual regression - home page", async ({ page, mockApi }) => {
   });
 });
 
-test("visual regression - concept generation page", async ({
-  page,
-  mockApi,
-}) => {
+test("visual regression - concept generation page", async ({ page }) => {
   // Navigate to the concept generation page
   await page.goto("/create");
 
@@ -76,11 +73,7 @@ test("visual regression - concept generation page", async ({
   });
 });
 
-test("visual regression - refinement page", async ({
-  page,
-  mockApi,
-  mockLocalStorage,
-}) => {
+test("visual regression - refinement page", async ({ page }) => {
   // Navigate to the refinement page
   await page.goto("/refine/test-concept-123");
 

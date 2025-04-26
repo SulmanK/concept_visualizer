@@ -22,8 +22,6 @@ interface RateLimitsPanelProps {
   title?: string;
   /** Whether to display the refresh button */
   showRefresh?: boolean;
-  /** Function to close the panel (optional) */
-  onClose?: () => void;
   /** CSS className for additional styling */
   className?: string;
 }
@@ -34,20 +32,13 @@ interface RateLimitsPanelProps {
 export const RateLimitsPanel: React.FC<RateLimitsPanelProps> = ({
   title = "API Rate Limits",
   showRefresh = true,
-  onClose,
   className,
 }) => {
   const theme = useTheme();
   const [refreshCooldown, setRefreshCooldown] = useState(0);
 
   // Use React Query hook
-  const {
-    data: rateLimits,
-    isLoading,
-    error,
-    refetch,
-    decrementLimit,
-  } = useRateLimitsQuery();
+  const { data: rateLimits, isLoading, error, refetch } = useRateLimitsQuery();
 
   // Handle refresh button click with cooldown
   const handleRefresh = useCallback(() => {

@@ -1,8 +1,7 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConceptForm } from "../ConceptForm";
-import { FormStatus } from "../../../types";
 
 // Mock React DOM as it's trying to access the DOM
 vi.mock("react-dom/client", () => ({
@@ -120,9 +119,7 @@ vi.mock("../../ui/ErrorMessage", () => ({
 
 // Mock other UI components
 vi.mock("../../ui/LoadingIndicator", () => ({
-  LoadingIndicator: ({ size }) => (
-    <div data-testid="loading-indicator">Loading...</div>
-  ),
+  LoadingIndicator: () => <div data-testid="loading-indicator">Loading...</div>,
 }));
 
 vi.mock("../../ui/Button", () => ({

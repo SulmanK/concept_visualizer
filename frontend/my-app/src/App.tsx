@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,7 +8,7 @@ import {
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import MainLayout from "./components/layout/MainLayout";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ToastProvider } from "./hooks/useToast";
+import { ToastProvider } from "./hooks/toast/ToastContext";
 import { RateLimitProvider } from "./contexts/RateLimitContext";
 import { ErrorBoundary, OfflineStatus, ErrorMessage } from "./components/ui";
 import ApiToastListener from "./components/ui/ApiToastListener";
@@ -16,6 +16,7 @@ import { TaskProvider } from "./contexts/TaskContext";
 import TaskStatusBar from "./components/TaskStatusBar";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
 import { useErrorHandling } from "./hooks/useErrorHandling";
+import { DebugInfo, ErrorCategory } from "./types";
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() =>
@@ -151,7 +152,7 @@ const AppRoutes = () => {
  * Inner app component that uses hooks that require ToastProvider context
  */
 const AppContent = () => {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const errorHandler = useErrorHandling({
     // Don't show toasts for errors that will be displayed in the global error UI
     showToasts: false,
@@ -256,7 +257,7 @@ const AppContent = () => {
                     <ErrorMessage
                       message={errorHandler.error.message}
                       details={errorHandler.error.details}
-                      type={errorHandler.error.category as any}
+                      type={errorHandler.error.category as ErrorCategory}
                       className="shadow-lg border-2"
                       status={errorHandler.error.status}
                       onDismiss={errorHandler.clearError}

@@ -77,7 +77,7 @@ vi.mock("../../../contexts/TaskContext", () => ({
     setIsTaskInitiating: vi.fn(),
     hasActiveTask: false,
   }),
-  useOnTaskCleared: () => (callback) => {
+  useOnTaskCleared: () => () => {
     // Return a mock unsubscribe function
     return () => {};
   },
@@ -101,11 +101,10 @@ vi.mock("../../../hooks/useToast", () => {
 
 // Now import React and other modules
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { LandingPage } from "../LandingPage";
 import * as useConceptMutationsModule from "../../../hooks/useConceptMutations";
-import { mockApiService } from "../../../services/mocks/mockApiService";
-import { setupMockApi, resetMockApi } from "../../../services/mocks/testSetup";
+import { resetMockApi } from "../../../services/mocks/testSetup";
 import { AllProvidersWrapper } from "../../../test-wrappers";
 
 // Mock useErrorHandling
@@ -144,27 +143,6 @@ afterAll(() => {
 // Use the AllProvidersWrapper for all tests
 const renderWithAllProviders = (ui: React.ReactElement) => {
   return render(<AllProvidersWrapper>{ui}</AllProvidersWrapper>);
-};
-
-// Setup mockApiService for specific scenarios
-const setupSuccessScenario = () => {
-  setupMockApi({
-    responseDelay: 0,
-    customResponses: {
-      generateConcept: {
-        imageUrl: "https://example.com/test-concept.png",
-        colorPalette: {
-          primary: "#4F46E5",
-          secondary: "#818CF8",
-          accent: "#C4B5FD",
-          background: "#F5F3FF",
-          text: "#1E1B4B",
-        },
-        generationId: "test-123",
-        createdAt: new Date().toISOString(),
-      },
-    },
-  });
 };
 
 describe("LandingPage Component", () => {

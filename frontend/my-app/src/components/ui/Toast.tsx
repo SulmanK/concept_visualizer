@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 export type ToastType = "success" | "error" | "info" | "warning";
 
@@ -132,15 +132,15 @@ export const Toast: React.FC<ToastProps> = ({
     }
   };
 
-  // Handle toast dismissal
-  const handleDismiss = () => {
+  // Handle toast dismissal - wrapped in useCallback to prevent recreating the function on each render
+  const handleDismiss = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       if (onDismiss) {
         onDismiss(id);
       }
     }, 300); // Wait for fade out animation
-  };
+  }, [onDismiss, id]);
 
   // Auto-dismiss countdown
   useEffect(() => {
@@ -161,7 +161,7 @@ export const Toast: React.FC<ToastProps> = ({
         clearTimeout(timeout);
       };
     }
-  }, [duration]);
+  }, [duration, handleDismiss]);
 
   return (
     <div

@@ -1,7 +1,6 @@
-import React, { ReactNode } from "react";
 import { renderHook, act } from "@testing-library/react";
 import { vi, describe, test, expect, beforeEach, afterEach } from "vitest";
-import useErrorHandling, { ErrorCategory } from "../useErrorHandling";
+import useErrorHandling from "../useErrorHandling";
 
 // Create simplified mock versions of the error classes
 class NetworkError extends Error {
@@ -32,28 +31,6 @@ class RateLimitError extends Error {
     this.current = current;
     this.period = period;
     this.resetAfterSeconds = resetAfterSeconds;
-  }
-}
-
-class ValidationError extends Error {
-  errors: Record<string, string[]>;
-
-  constructor(message: string, errors: Record<string, string[]>) {
-    super(message);
-    this.name = "ValidationError";
-    this.errors = errors;
-  }
-}
-
-class ApiError extends Error {
-  status: number;
-  url: string;
-
-  constructor(message: string, status: number, url: string) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.url = url;
   }
 }
 

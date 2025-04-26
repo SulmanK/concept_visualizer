@@ -25,7 +25,7 @@ export function useTaskSubscription(taskId: string | null) {
   );
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [shouldReconnect, setShouldReconnect] = useState(false);
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch the initial task data
@@ -46,108 +46,6 @@ export function useTaskSubscription(taskId: string | null) {
     }
   }, [initialData, taskData, taskId]);
 
-  // Function to create and subscribe to a channel
-  const createAndSubscribeToChannel = (taskId: string) => {
-    if (!taskId) return null;
-
-    console.log(`[TaskSubscription] Creating channel for task ${taskId}`);
-
-    try {
-      // Create a channel for this specific task
-      const channel = supabase
-        .channel(`task-updates-${taskId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "tasks",
-            filter: `id=eq.${taskId}`,
-          },
-          (payload) => {
-            console.log(
-              `[TaskSubscription] Received update for task ${taskId}:`,
-              payload,
-            );
-
-            // The payload.new contains the updated task data
-            const updatedTask = payload.new as TaskResponse;
-
-            // Update the local state
-            setTaskData(updatedTask);
-
-            // Also update the query cache
-            queryClient.setQueryData(
-              queryKeys.tasks.detail(taskId),
-              updatedTask,
-            );
-          },
-        )
-        .on("system", { event: "connection_state_change" }, (status) => {
-          console.log(`[TaskSubscription] Connection status changed:`, status);
-          setSubscriptionStatus(status?.event);
-
-          // If connection state is CLOSED, attempt reconnection
-          if (status?.event === "CLOSED") {
-            console.log(
-              `[TaskSubscription] Connection closed, will attempt reconnect`,
-            );
-            setShouldReconnect(true);
-          }
-        })
-        .on("system", { event: "channel_state_change" }, (status) => {
-          console.log(`[TaskSubscription] Channel status changed:`, status);
-        })
-        .on("system", { event: "disconnected" }, () => {
-          console.log(`[TaskSubscription] Disconnected from Supabase Realtime`);
-          setSubscriptionStatus("disconnected");
-          setShouldReconnect(true);
-        })
-        .on("system", { event: "error" }, (err) => {
-          console.error(`[TaskSubscription] Error in subscription:`, err);
-          setSubscriptionError(new Error("Subscription error"));
-          setSubscriptionStatus("error");
-          setShouldReconnect(true);
-        });
-
-      // Subscribe to the channel
-      channel.subscribe((status) => {
-        console.log(`[TaskSubscription] Subscription status:`, status);
-        setSubscriptionStatus(status);
-
-        if (status === "SUBSCRIBED") {
-          console.log(
-            `[TaskSubscription] Successfully subscribed to updates for task ${taskId}`,
-          );
-          // Reset reconnection attempts on successful subscription
-          setReconnectAttempts(0);
-          setShouldReconnect(false);
-        } else if (status === "CHANNEL_ERROR") {
-          console.error(
-            `[TaskSubscription] Error subscribing to task ${taskId}`,
-          );
-          setSubscriptionError(
-            new Error("Failed to subscribe to task updates"),
-          );
-          setShouldReconnect(true);
-        } else if (status === "TIMED_OUT") {
-          console.error(
-            `[TaskSubscription] Subscription timed out for task ${taskId}`,
-          );
-          setSubscriptionError(new Error("Subscription timed out"));
-          setShouldReconnect(true);
-        }
-      });
-
-      return channel;
-    } catch (error) {
-      console.error(`[TaskSubscription] Error creating channel:`, error);
-      setSubscriptionError(new Error(`Failed to create channel: ${error}`));
-      setShouldReconnect(true);
-      return null;
-    }
-  };
-
   // Set up Supabase Realtime subscription
   useEffect(() => {
     if (!taskId) {
@@ -161,6 +59,113 @@ export function useTaskSubscription(taskId: string | null) {
     console.log(
       `[TaskSubscription] Setting up subscription for task ${taskId}`,
     );
+
+    // Function to create and subscribe to a channel
+    const createAndSubscribeToChannel = (taskId: string) => {
+      if (!taskId) return null;
+
+      console.log(`[TaskSubscription] Creating channel for task ${taskId}`);
+
+      try {
+        // Create a channel for this specific task
+        const channel = supabase
+          .channel(`task-updates-${taskId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "tasks",
+              filter: `id=eq.${taskId}`,
+            },
+            (payload) => {
+              console.log(
+                `[TaskSubscription] Received update for task ${taskId}:`,
+                payload,
+              );
+
+              // The payload.new contains the updated task data
+              const updatedTask = payload.new as TaskResponse;
+
+              // Update the local state
+              setTaskData(updatedTask);
+
+              // Also update the query cache
+              queryClient.setQueryData(
+                queryKeys.tasks.detail(taskId),
+                updatedTask,
+              );
+            },
+          )
+          .on("system", { event: "connection_state_change" }, (status) => {
+            console.log(
+              `[TaskSubscription] Connection status changed:`,
+              status,
+            );
+            setSubscriptionStatus(status?.event);
+
+            // If connection state is CLOSED, attempt reconnection
+            if (status?.event === "CLOSED") {
+              console.log(
+                `[TaskSubscription] Connection closed, will attempt reconnect`,
+              );
+              setShouldReconnect(true);
+            }
+          })
+          .on("system", { event: "channel_state_change" }, (status) => {
+            console.log(`[TaskSubscription] Channel status changed:`, status);
+          })
+          .on("system", { event: "disconnected" }, () => {
+            console.log(
+              `[TaskSubscription] Disconnected from Supabase Realtime`,
+            );
+            setSubscriptionStatus("disconnected");
+            setShouldReconnect(true);
+          })
+          .on("system", { event: "error" }, (err) => {
+            console.error(`[TaskSubscription] Error in subscription:`, err);
+            setSubscriptionError(new Error("Subscription error"));
+            setSubscriptionStatus("error");
+            setShouldReconnect(true);
+          });
+
+        // Subscribe to the channel
+        channel.subscribe((status) => {
+          console.log(`[TaskSubscription] Subscription status:`, status);
+          setSubscriptionStatus(status);
+
+          if (status === "SUBSCRIBED") {
+            console.log(
+              `[TaskSubscription] Successfully subscribed to updates for task ${taskId}`,
+            );
+            // Reset reconnection attempts on successful subscription
+            setReconnectAttempts(0);
+            setShouldReconnect(false);
+          } else if (status === "CHANNEL_ERROR") {
+            console.error(
+              `[TaskSubscription] Error subscribing to task ${taskId}`,
+            );
+            setSubscriptionError(
+              new Error("Failed to subscribe to task updates"),
+            );
+            setShouldReconnect(true);
+          } else if (status === "TIMED_OUT") {
+            console.error(
+              `[TaskSubscription] Subscription timed out for task ${taskId}`,
+            );
+            setSubscriptionError(new Error("Subscription timed out"));
+            setShouldReconnect(true);
+          }
+        });
+
+        return channel;
+      } catch (error) {
+        console.error(`[TaskSubscription] Error creating channel:`, error);
+        setSubscriptionError(new Error(`Failed to create channel: ${error}`));
+        setShouldReconnect(true);
+        return null;
+      }
+    };
 
     // Create and subscribe to the channel
     channelRef.current = createAndSubscribeToChannel(taskId);

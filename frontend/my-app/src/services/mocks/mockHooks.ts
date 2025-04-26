@@ -30,7 +30,7 @@ export function useMockApi() {
     setError(undefined);
   }, []);
 
-  const get = useCallback(async <T>(endpoint: string) => {
+  const get = useCallback(async <T>() => {
     setLoading(true);
     setError(undefined);
 
@@ -55,7 +55,7 @@ export function useMockApi() {
     }
   }, []);
 
-  const post = useCallback(async <T>(endpoint: string, body: any) => {
+  const post = useCallback(async <T>(endpoint: string, body: unknown) => {
     setLoading(true);
     setError(undefined);
 
@@ -97,7 +97,7 @@ export function useMockApi() {
  * Mock implementation of useConceptGeneration hook
  */
 export function useMockConceptGeneration() {
-  const { post, loading, error, clearError } = useMockApi();
+  const { post, loading, clearError } = useMockApi();
   const [state, setState] = useState<MockHookState>({
     status: "idle",
     result: null,
@@ -184,7 +184,7 @@ export function useMockConceptGeneration() {
  * Mock implementation of useConceptRefinement hook
  */
 export function useMockConceptRefinement() {
-  const { post, loading, error, clearError } = useMockApi();
+  const { post, loading, clearError } = useMockApi();
   const [state, setState] = useState<MockHookState>({
     status: "idle",
     result: null,

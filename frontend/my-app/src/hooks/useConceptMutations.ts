@@ -5,34 +5,51 @@ import {
   RefinementRequest,
   TaskResponse,
 } from "../types/api.types";
-import { useToast } from "./useToast";
-import { useAuth } from "../contexts/AuthContext";
 import { useErrorHandling } from "./useErrorHandling";
 import { createQueryErrorHandler } from "../utils/errorUtils";
-import { useRateLimitsDecrement } from "../contexts/RateLimitContext";
-import { useState } from "react";
-import { useTaskContext } from "../contexts/TaskContext";
+import { useRateLimitsDecrement } from "./useRateLimits";
+import { useCallback } from "react";
+import { useTaskContext } from "./useTask";
 import { API_ENDPOINTS } from "../config/apiEndpoints";
 import { queryKeys } from "../config/queryKeys";
 import { useNetworkStatus } from "./useNetworkStatus";
-import { ConceptData } from "../services/supabaseClient";
+
+// Define a RateLimitDetails interface for better type safety
+interface RateLimitDetails {
+  message: string;
+  limit: number;
+  current: number;
+  period: string;
+  resetAfterSeconds: number;
+}
 
 /**
  * Extract a more user-friendly error message from API error responses
  */
-const getErrorMessageFromResponse = (error: any): string => {
+const getErrorMessageFromResponse = (error: Error | unknown): string => {
   // Default error message
   let message = "An unexpected error occurred";
 
   try {
     // Check if it's an axios error with response data
-    if (error.response) {
+    if (error && typeof error === "object" && "response" in error) {
+      const axiosError = error as {
+        response?: {
+          status?: number;
+          data?: {
+            detail?: string | Array<{ msg?: string; message?: string }>;
+            message?: string;
+            error?: string;
+          };
+        };
+      };
+
       // Handle 422 Unprocessable Entity errors
-      if (error.response.status === 422) {
-        const data = error.response.data;
+      if (axiosError.response?.status === 422) {
+        const data = axiosError.response.data;
 
         // Extract validation error details
-        if (data.detail) {
+        if (data?.detail) {
           if (Array.isArray(data.detail)) {
             // Get the first validation error message
             const firstError = data.detail[0];
@@ -43,8 +60,12 @@ const getErrorMessageFromResponse = (error: any): string => {
             }
           } else if (typeof data.detail === "string") {
             return data.detail;
-          } else if (data.detail.msg) {
-            return data.detail.msg;
+          } else if (
+            typeof data.detail === "object" &&
+            data.detail &&
+            "msg" in data.detail
+          ) {
+            return (data.detail as { msg: string }).msg;
           }
         }
 
@@ -53,16 +74,16 @@ const getErrorMessageFromResponse = (error: any): string => {
       }
 
       // Extract message from other error responses
-      if (error.response.data) {
-        if (error.response.data.message) {
-          message = error.response.data.message;
-        } else if (error.response.data.error) {
-          message = error.response.data.error;
-        } else if (typeof error.response.data === "string") {
-          message = error.response.data;
+      if (axiosError.response?.data) {
+        if (axiosError.response.data.message) {
+          message = axiosError.response.data.message;
+        } else if (axiosError.response.data.error) {
+          message = axiosError.response.data.error;
+        } else if (typeof axiosError.response.data === "string") {
+          message = axiosError.response.data;
         }
       }
-    } else if (error.message) {
+    } else if (error instanceof Error && error.message) {
       // Direct error message
       message = error.message;
     }
@@ -78,7 +99,6 @@ const getErrorMessageFromResponse = (error: any): string => {
  */
 export function useGenerateConceptMutation() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
   const {
@@ -88,14 +108,20 @@ export function useGenerateConceptMutation() {
     setLatestResultId,
   } = useTaskContext();
   const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [rateLimitDetails, setRateLimitDetails] = useState<{
-    message: string;
-    limit?: number;
-    current?: number;
-    period?: string;
-    resetAfterSeconds?: number;
-  } | null>(null);
+
+  // We need these functions for side effects in error handling
+  const setIsRateLimited = useCallback((value: boolean) => {
+    // Side effect only - variable not directly used
+    console.log(`Setting rate limited state: ${value}`);
+  }, []);
+
+  const setRateLimitDetails = useCallback(
+    (details: RateLimitDetails | null) => {
+      // Side effect only - variable not directly used
+      console.log(`Setting rate limit details`, details);
+    },
+    [],
+  );
 
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: "Failed to generate concept",
@@ -331,7 +357,6 @@ export function useGenerateConceptMutation() {
  */
 export function useRefineConceptMutation() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const errorHandler = useErrorHandling();
   const decrementLimit = useRateLimitsDecrement();
   const {
@@ -341,14 +366,20 @@ export function useRefineConceptMutation() {
     setLatestResultId,
   } = useTaskContext();
   const networkStatus = useNetworkStatus({ notifyOnStatusChange: false });
-  const [isRateLimited, setIsRateLimited] = useState(false);
-  const [rateLimitDetails, setRateLimitDetails] = useState<{
-    message: string;
-    limit?: number;
-    current?: number;
-    period?: string;
-    resetAfterSeconds?: number;
-  } | null>(null);
+
+  // We need these functions for side effects in error handling
+  const setIsRateLimited = useCallback((value: boolean) => {
+    // Side effect only - variable not directly used
+    console.log(`Setting rate limited state: ${value}`);
+  }, []);
+
+  const setRateLimitDetails = useCallback(
+    (details: RateLimitDetails | null) => {
+      // Side effect only - variable not directly used
+      console.log(`Setting rate limit details`, details);
+    },
+    [],
+  );
 
   const { onQueryError } = createQueryErrorHandler(errorHandler, {
     defaultErrorMessage: "Failed to refine concept",

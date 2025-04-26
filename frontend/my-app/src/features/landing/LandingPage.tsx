@@ -1,20 +1,18 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useGenerateConceptMutation } from "../../hooks/useConceptMutations";
 import {
   useRecentConcepts,
   useConceptDetail,
 } from "../../hooks/useConceptQueries";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { ErrorBoundary } from "../../components/ui";
 import { ConceptHeader } from "./components/ConceptHeader";
 import { ConceptFormSection } from "./components/ConceptFormSection";
 import { ResultsSection } from "./components/ResultsSection";
 import { RecentConceptsSection } from "./components/RecentConceptsSection";
-import { ConceptData } from "../../services/supabaseClient";
 import { useQueryClient } from "@tanstack/react-query";
-import { TaskResponse } from "../../types";
-import { useTaskContext } from "../../contexts/TaskContext";
+import { useTaskContext } from "../../hooks/useTask";
 
 /**
  * Main landing page content component
@@ -23,7 +21,6 @@ const LandingPageContent: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const {
-    activeTaskId,
     isTaskCompleted,
     isTaskPending,
     isTaskProcessing,
@@ -38,7 +35,6 @@ const LandingPageContent: React.FC = () => {
     mutate: generateConceptMutation,
     data: taskData,
     isPending: isSubmitting,
-    isSuccess: isTaskStarted,
     isError,
     error,
     reset: resetGeneration,
