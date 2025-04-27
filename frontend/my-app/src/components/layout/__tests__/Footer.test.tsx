@@ -96,16 +96,38 @@ describe("Footer Component", () => {
     expect(copyright).toBeInTheDocument();
   });
 
-  // Snapshot tests
-  describe("Snapshots", () => {
-    test("default footer snapshot", () => {
+  // Replace snapshot tests with more robust structural tests
+  describe("Structure and Layout", () => {
+    test("footer has correct structural elements", () => {
       const { container } = renderWithRouter(<Footer />);
-      expect(container.firstChild).toMatchSnapshot();
+
+      // Check for main footer element
+      const footer = container.querySelector("footer");
+      expect(footer).toBeInTheDocument();
+
+      // Check for key sections
+      const linkSections = footer?.querySelectorAll("h3");
+      expect(linkSections?.length).toBe(2); // Features and Resources sections
+      expect(footer?.querySelector(".border-t")).toBeInTheDocument(); // Has a divider
+
+      // Social links should exist
+      const socialLinks = footer?.querySelectorAll("a[aria-label]");
+      expect(socialLinks?.length).toBeGreaterThan(0);
     });
 
-    test("footer with custom year snapshot", () => {
+    test("footer with custom year has correct structure", () => {
       const { container } = renderWithRouter(<Footer year={2025} />);
-      expect(container.firstChild).toMatchSnapshot();
+
+      // Check for main footer element
+      const footer = container.querySelector("footer");
+      expect(footer).toBeInTheDocument();
+
+      // Check for copyright section
+      const copyrightSection = footer?.querySelector(".border-t");
+      expect(copyrightSection).toBeInTheDocument();
+
+      // Verify year appears in the right section
+      expect(copyrightSection?.textContent).toContain("2025");
     });
   });
 });
