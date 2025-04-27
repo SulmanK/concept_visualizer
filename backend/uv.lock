@@ -319,7 +319,7 @@ requires-dist = [
     { name = "types-requests", marker = "extra == 'dev'", specifier = ">=2.31.0.2" },
     { name = "upstash-redis", specifier = ">=1.0.0" },
     { name = "uvicorn", specifier = ">=0.23.2" },
-    { name = "vtracer", specifier = ">=0.0.11" },
+    { name = "vtracer", specifier = ">=0.6.11" },
 ]
 
 [[package]]
