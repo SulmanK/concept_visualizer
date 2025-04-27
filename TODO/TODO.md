@@ -1,104 +1,225 @@
-Okay, let's focus on resolving the SVG export issue related to the `vtracer` library. The error message `AttributeError: module 'vtracer' has no attribute 'Configuration'` is the key clue. It means the way your code is trying to configure `vtracer` (using `vtracer.Configuration()`) is incorrect for the version you have installed or the current API of the library.
+Okay, I understand the problem. You want the signed URLs for concept images to expire only _after_ the scheduled cleanup job (which runs daily at midnight UTC and removes concepts older than 3 days) has had a chance to remove the corresponding concept data.
 
-The file locking error (`WinError 32`) might be a secondary consequence – if the `vtracer` call fails prematurely due to the `AttributeError`, the temporary files might not be properly released before the `finally` block tries to delete them. Fixing the main error will likely resolve this too, but we'll include a check for file handling.
+Here's a breakdown of the issue and the solution:
 
-Here's a plan to fix the SVG conversion:
+**Problem:**
 
-**Phase 1: Investigation & Verification**
+1.  **Concept Data Lifespan:** Concepts are kept for 3 days.
+2.  **Cleanup Schedule:** A job runs daily at 00:00 UTC to delete concepts older than 3 days.
+3.  **Signed URL Lifespan:** Currently generated with a fixed duration (e.g., 3 days = 259200 seconds).
+4.  **Mismatch:** A concept created just after midnight UTC might have its 3-day lifespan end _before_ the next midnight UTC cleanup. Its signed URL (with a fixed 3-day expiry) could expire hours before the cleanup job removes the concept record, leading to broken images in the UI for concepts that _should_ still be visible.
 
-1.  **Verify `vtracer` Version:**
+**Goal:**
 
-    - **Action:** Check your `backend/pyproject.toml` file for the exact version constraint specified for the `vtracer` dependency (e.g., `vtracer>=0.0.11`).
-    - **Action:** In your activated backend virtual environment, run `uv pip show vtracer` to confirm the _actually installed_ version. Ensure it matches the expected version range.
-    - **Goal:** Confirm you are working with the intended version of the library.
+Calculate the signed URL expiry (`expires_in` seconds) such that it lasts until the _next_ midnight UTC _after_ the concept's 3-day age is reached, plus a small buffer.
 
-2.  **Consult `vtracer` Documentation (Crucial Step):**
-    - **Action:** Go to the `vtracer` PyPI page (`https://pypi.org/project/vtracer/`) and find the link to its documentation or GitHub repository.
-    - **Action:** Review the usage examples for the installed version, specifically focusing on how to call the main conversion function (likely `vtracer.convert_image_to_svg`) and how to pass configuration options (like `color_mode`, `path_precision`, `filter_speckle`, etc.).
-    - **Goal:** Understand the correct API usage for passing parameters. _Hypothesis:_ Parameters are likely passed as direct keyword arguments to the conversion function, not via a `Configuration` object. Also check if `vtracer.ColorMode.COLOR` or `vtracer.ColorMode.BINARY` are still valid enums or if string values like `'color'` or `'binary'` should be used.
+**Solution Steps:**
 
-**Phase 2: Code Refactoring (`_convert_to_svg` method)**
+1.  **Identify `created_at`:** When generating a signed URL for a concept image or variation, you need the `created_at` timestamp of the _parent concept_.
+2.  **Calculate Eligibility Time:** Determine when the concept becomes eligible for deletion: `eligible_deletion_time = concept.created_at + timedelta(days=3)`.
+3.  **Find Next Cleanup Time:** Find the timestamp of the _next_ 00:00 UTC _after_ `eligible_deletion_time`.
+4.  **Add Buffer:** Add a small safety buffer (e.g., 15-30 minutes) to the next cleanup time to ensure the URL is valid slightly past midnight: `target_expiry_time = next_cleanup_time + timedelta(minutes=15)`.
+5.  **Calculate `expires_in`:** Calculate the duration in seconds between `now` (the time the URL is generated) and `target_expiry_time`. This is the value to pass to `create_signed_url`.
 
-3.  **Refactor Color Mode Conversion:**
+**Implementation Changes:**
 
-    - **File:** `backend/app/services/export/service.py`
-    - **Action:** Locate the `_convert_to_svg` method.
-    - **Action:** Remove the lines creating the `config = vtracer.Configuration()` object.
-    - **Action:** Modify the call to `vtracer.convert_image_to_svg` for the `color` mode. Instead of passing the `config` object, pass the parameters directly as keyword arguments based on the documentation found in Step 2.
-    - **Example (adjust based on actual docs):**
+1.  **Helper Function for Expiry Calculation:** Create a utility function to calculate the required `expires_in` duration.
 
-      ```python
-      # Remove: config = vtracer.Configuration()
-      # Remove: config.color_mode = vtracer.ColorMode.COLOR # Check if ColorMode enum exists
-      # Remove: config.hierarchical = True
-      # Remove: config.filter_speckle = 4
-      # Remove: config.path_precision = 3
-      # Remove: Parameter setting from svg_params onto config
+    ```python
+    # backend/app/utils/datetime_utils.py (or similar location)
+    from datetime import datetime, timedelta, timezone
 
-      # Replace the call vtracer.convert_image_to_svg(input_path, output_path, config) with something like:
-      vtracer.convert_image_to_svg(
-          input_path,
-          output_path,
-          color_mode='color', # Or whatever the correct string/enum is
-          hierarchical=True,
-          filter_speckle=svg_params.get('filter_speckle', 4) if svg_params else 4,
-          path_precision=svg_params.get('path_precision', 3) if svg_params else 3,
-          # Add other relevant parameters based on vtracer docs and svg_params
-          # Example: corner_threshold=svg_params.get('corner_threshold', 60) if svg_params else 60,
-          # Example: length_threshold=svg_params.get('length_threshold', 4.0) if svg_params else 4.0,
-          # ... etc
-      )
-      ```
+    def calculate_url_expiry_seconds(created_at_ts: datetime) -> int:
+        """
+        Calculates the expiry duration in seconds for a signed URL,
+        ensuring it lasts until the next cleanup cycle after 3 days.
+        """
+        now = datetime.now(timezone.utc)
 
-    - **Action:** Ensure the `mode` parameter from `svg_params` correctly maps to the `color_mode` argument (or its equivalent) for `vtracer`. Verify the expected value (e.g., string `'color'` vs. an enum).
-    - **Action:** Ensure parameters passed in the `svg_params` dictionary correctly override the defaults when calling the function.
+        # Ensure created_at is timezone-aware (UTC)
+        if created_at_ts.tzinfo is None:
+            # Assume UTC if naive, or convert if it has another timezone
+            created_at_utc = created_at_ts.replace(tzinfo=timezone.utc)
+        else:
+            created_at_utc = created_at_ts.astimezone(timezone.utc)
 
-4.  **Refactor Simplified/Monochrome Mode Conversion:**
-    - **File:** `backend/app/services/export/service.py`
-    - **Action:** Locate the `else` block within `_convert_to_svg` that handles non-color modes (likely the `_create_simple_svg_from_image` call, which itself calls `vtracer.convert_image_to_svg`).
-    - **Action:** Apply the same refactoring as in Step 3 to the call within `_create_simple_svg_from_image`. Remove `vtracer.Configuration()`.
-    - **Action:** Pass parameters like `color_mode` (e.g., `'binary'`), `hierarchical`, `filter_speckle`, `path_precision`, `corner_threshold`, `length_threshold` directly as keyword arguments. Verify the correct names and values from the documentation.
+        # Concept becomes eligible for deletion after 3 days
+        eligible_deletion_time = created_at_utc + timedelta(days=3)
 
-**Phase 3: File Handling & Cleanup**
+        # Find the date part of the *next* day after eligibility
+        next_day_date = (eligible_deletion_time.date() + timedelta(days=1))
 
-5.  **Ensure Proper File Closing (Optional but Recommended):**
+        # Construct the datetime for the next midnight UTC
+        next_cleanup_time = datetime(
+            next_day_date.year,
+            next_day_date.month,
+            next_day_date.day,
+            0, 0, 0, tzinfo=timezone.utc
+        )
 
-    - **File:** `backend/app/services/export/service.py`
-    - **Action:** Inside the `_convert_to_svg` method's `finally` block, ensure the temporary file objects (`temp_input`, `temp_output`) are explicitly closed _before_ `os.unlink` is called, although the `with` statement should handle this. This is just an extra precaution.
+        # Add a small buffer (e.g., 15 minutes) to ensure URL is valid slightly past cleanup time
+        target_expiry_time = next_cleanup_time + timedelta(minutes=15)
 
-      ```python
-      finally:
-          # Optional: Explicitly close if needed, though 'with' should handle it
-          # if 'temp_input' in locals() and not temp_input.closed:
-          #     temp_input.close()
-          # if 'temp_output' in locals() and not temp_output.closed:
-          #     temp_output.close()
+        # Calculate duration from now until the target expiry time
+        duration = target_expiry_time - now
 
-          # Clean up temporary files
-          try:
-              if 'input_path' in locals() and os.path.exists(input_path):
-                   os.unlink(input_path)
-              if 'output_path' in locals() and os.path.exists(output_path):
-                   os.unlink(output_path)
-          except (OSError, PermissionError) as e:
-              logger.warning(f"Error cleaning up temp files: {str(e)}")
-      ```
+        # Calculate expiry in seconds, ensuring a minimum duration (e.g., 1 minute)
+        expires_in_seconds = max(60, int(duration.total_seconds()))
 
-    - **Action:** Wrap the `os.unlink` calls in their own `try...except (OSError, PermissionError, FileNotFoundError)` block to log warnings instead of crashing if cleanup fails (e.g., due to unexpected locking or the file already being gone).
+        # Log the calculation for debugging
+        # logger.debug(f"Calculated expiry: Now={now}, Created={created_at_utc}, Eligible={eligible_deletion_time}, NextCleanup={next_cleanup_time}, TargetExpiry={target_expiry_time}, ExpiresIn={expires_in_seconds}s")
 
-**Phase 4: Testing**
+        return expires_in_seconds
+    ```
 
-6.  **Test SVG Export:**
-    - **Action:** Run the backend server.
-    - **Action:** Use the frontend or an API client (like Postman or Insomnia) to trigger an SVG export request via the `/api/export/process` endpoint.
-    - **Check:** Verify that the `AttributeError` no longer occurs.
-    - **Check:** Confirm that a valid SVG file is generated and returned.
-    - **Check:** Monitor the backend logs for any `WinError 32` or file cleanup warnings.
-7.  **Test Different SVG Parameters:**
-    - **Action:** Send export requests with different values in the optional `svg_params` field (if your frontend/request allows it).
-    - **Check:** Verify that the parameters influence the output SVG as expected (e.g., fewer colors, different path precision). This confirms parameters are being passed correctly to the updated `vtracer` call.
-8.  **Test Simplified Mode:**
-    - **Action:** If applicable, test the SVG export flow that results in the simplified/binary mode being used.
-    - **Check:** Ensure this path also works correctly without `AttributeError`.
+2.  **Modify Data Retrieval to Generate URLs:** The best place to generate these correctly expiring URLs is when the concept data (which includes `created_at`) is fetched. Update the `ConceptStorage` methods (`get_recent_concepts` and `get_concept_detail`, and their service role counterparts) to calculate and generate the URLs.
 
-This plan directly addresses the `AttributeError` by adapting the code to the correct `vtracer` API usage and includes steps to mitigate potential file locking issues during cleanup.
+    ```python
+    # backend/app/core/supabase/concept_storage.py
+    import logging
+    from datetime import datetime
+    from typing import Any, Dict, List, Optional, cast
+    # ... other imports ...
+    from app.utils.datetime_utils import calculate_url_expiry_seconds # Import the new helper
+    # ... other imports ...
+
+    logger = logging.getLogger(__name__)
+
+    class ConceptStorage:
+        # ... (init method remains the same) ...
+
+        def _generate_signed_urls_for_concept(self, concept: Dict[str, Any]) -> None:
+            """Helper to generate signed URLs for a concept and its variations."""
+            try:
+                created_at_str = concept.get("created_at")
+                if not created_at_str:
+                    self.logger.warning(f"Concept {concept.get('id')} missing created_at timestamp.")
+                    return # Cannot calculate expiry without created_at
+
+                # Parse created_at string (assuming ISO format with timezone)
+                # Handle potential parsing errors
+                try:
+                    # Attempt parsing with timezone info first
+                    created_at_dt = datetime.fromisoformat(created_at_str)
+                except ValueError:
+                     # Fallback for formats without timezone (assume UTC)
+                    try:
+                       created_at_dt = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                       if created_at_dt.tzinfo is None:
+                           created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        self.logger.error(f"Could not parse created_at: {created_at_str}")
+                        return
+
+                expires_in = calculate_url_expiry_seconds(created_at_dt)
+
+                # Generate URL for the main concept image
+                image_path = concept.get("image_path")
+                if image_path:
+                    try:
+                         # Use the ImageStorage helper for consistency
+                        concept["image_url"] = self.client.storage.get_signed_url(
+                            path=image_path,
+                            bucket=self.client.storage.concept_bucket, # Assuming ImageStorage has bucket names
+                            expiry_seconds=expires_in
+                        )
+                    except Exception as url_err:
+                         self.logger.error(f"Failed to generate signed URL for concept {concept.get('id')} path {image_path}: {url_err}")
+                         concept["image_url"] = None # Set to None if URL generation fails
+
+
+                # Generate URLs for color variations
+                variations = concept.get("color_variations", [])
+                if variations:
+                    for variation in variations:
+                        variation_path = variation.get("image_path")
+                        if variation_path:
+                             try:
+                                 variation["image_url"] = self.client.storage.get_signed_url(
+                                     path=variation_path,
+                                     bucket=self.client.storage.palette_bucket, # Assuming ImageStorage has bucket names
+                                     expiry_seconds=expires_in
+                                 )
+                             except Exception as var_url_err:
+                                 self.logger.error(f"Failed to generate signed URL for variation {variation.get('id')} path {variation_path}: {var_url_err}")
+                                 variation["image_url"] = None # Set to None if URL generation fails
+
+
+            except Exception as e:
+                self.logger.error(f"Error generating signed URLs for concept {concept.get('id')}: {e}")
+
+
+        def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+            try:
+                # --- Existing logic to fetch concepts ---
+                concepts = self._get_recent_concepts_with_service_role(user_id, limit) # Or the regular client fetch
+                if concepts is None: concepts = [] # Ensure it's a list
+
+                if concepts:
+                    concept_ids = [concept["id"] for concept in concepts]
+                    variations_by_concept = self.get_variations_by_concept_ids(concept_ids)
+
+                    # Attach variations and GENERATE SIGNED URLS
+                    for concept in concepts:
+                        concept_id = concept["id"]
+                        concept["color_variations"] = variations_by_concept.get(concept_id, [])
+                        self._generate_signed_urls_for_concept(concept) # Generate URLs here
+
+                return concepts
+            except Exception as e:
+                self.logger.error(f"Error retrieving recent concepts: {e}")
+                return []
+
+        # Apply similar logic to _get_recent_concepts_with_service_role
+        def _get_recent_concepts_with_service_role(self, user_id: str, limit: int) -> Optional[List[Dict[str, Any]]]:
+            # ... (fetching logic) ...
+            if response.status_code == 200:
+                concepts = cast(List[Dict[str, Any]], response.json())
+                # --- Existing logic to attach variations (if needed here) ---
+                if concepts:
+                     # Generate URLs AFTER fetching variations if necessary
+                     concept_ids = [c['id'] for c in concepts]
+                     variations_map = self._get_variations_by_concept_ids_with_service_role(concept_ids) or {}
+                     for concept in concepts:
+                          concept['color_variations'] = variations_map.get(concept['id'], [])
+                          self._generate_signed_urls_for_concept(concept) # Generate URLs
+                return concepts
+            # ... (rest of the method) ...
+
+
+        def get_concept_detail(self, concept_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+            try:
+                # --- Existing logic to fetch concept detail ---
+                concept_detail = self._get_concept_detail_with_service_role(concept_id, user_id) # Or regular client fetch
+                if not concept_detail:
+                     return None
+
+                # GENERATE SIGNED URLS before returning
+                self._generate_signed_urls_for_concept(concept_detail)
+
+                return concept_detail
+            except Exception as e:
+                self.logger.error(f"Error retrieving concept details: {e}")
+                return None
+
+        # Apply similar logic to _get_concept_detail_with_service_role
+        def _get_concept_detail_with_service_role(self, concept_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+             # ... (fetching logic) ...
+            if response.status_code == 200:
+                concepts = response.json()
+                if concepts:
+                    concept = concepts[0]
+                    # Fetch variations...
+                    # ... variations fetched into concept['color_variations'] ...
+                    self._generate_signed_urls_for_concept(concept) # Generate URLs
+                    return cast(Dict[str, Any], concept)
+                # ... (rest of the method) ...
+
+
+        # Ensure get_variations_by_concept_ids and its service role counterpart
+        # DO NOT generate signed URLs themselves, as expiry depends on the parent concept's created_at
+        def get_variations_by_concept_ids(self, concept_ids: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+             # ... (fetch variations) ...
+             # NO URL GENERATION HERE
+             return variations_by_concept
+    ```

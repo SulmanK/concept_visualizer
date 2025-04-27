@@ -126,7 +126,7 @@ class ImageStorage:
         """Get a signed URL for an image in storage.
 
         This method provides a stable interface that forwards to get_signed_url with a standard
-        expiration time of 3 days (259200 seconds).
+        expiration time of 4 days (345600 seconds).
 
         Args:
             path: Path to the image in storage (format: user_id/filename)
@@ -137,15 +137,15 @@ class ImageStorage:
 
         Note:
             - The path MUST follow the pattern `{user_id}/...` for RLS policies to work
-            - The signed URL is valid for 3 days (259200 seconds)
+            - The signed URL is valid for 4 days (345600 seconds)
             - This method ensures consistent URL handling across the application
         """
         if not path:
             self.logger.warning("Empty path provided to get_image_url")
             return None
 
-        # Forward to get_signed_url with 3-day expiration
-        return self.get_signed_url(path=path, bucket=bucket, expiry_seconds=259200)
+        # Forward to get_signed_url with 4-day expiration
+        return self.get_signed_url(path=path, bucket=bucket, expiry_seconds=345600)
 
     async def apply_color_palette(self, image_path: str, palette: List[str], user_id: str) -> Optional[str]:
         """Apply a color palette to an image and store the result.

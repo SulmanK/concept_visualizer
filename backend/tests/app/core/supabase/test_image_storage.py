@@ -126,7 +126,7 @@ class TestGetImageUrl:
 
             # Assert
             assert result == expected_url
-            mock_get_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=259200)
+            mock_get_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=345600)
 
     def test_get_image_url_empty_path(self, image_storage: ImageStorage) -> None:
         """Test get_image_url with empty path."""
