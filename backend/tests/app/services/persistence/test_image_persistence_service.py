@@ -551,7 +551,7 @@ class TestImagePersistenceService:
 
         # Verify storage method was called - note the parameter difference here
         # The actual implementation uses bucket and expiry_seconds whereas the test was using bucket_name and expires_in
-        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/image.png", bucket="concept-images", expiry_seconds=259200)
+        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/image.png", bucket="concept-images", expiry_seconds=345600)
 
         # Verify the result
         assert url == "https://example.com/signed-url"
@@ -573,7 +573,7 @@ class TestImagePersistenceService:
         url = service.get_signed_url("user-123/palette.png", is_palette=True)
 
         # Verify correct bucket was used
-        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/palette.png", bucket="palette-images", expiry_seconds=259200)
+        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/palette.png", bucket="palette-images", expiry_seconds=345600)
 
         # Verify the result
         assert url == "https://example.com/signed-url"
