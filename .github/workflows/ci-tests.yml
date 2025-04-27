@@ -1,0 +1,68 @@
+name: CI Tests (Backend & Frontend)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  backend-tests:
+    name: Run Backend Tests (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend # Set default directory for backend steps
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install backend dependencies
+        # Install editable with dev dependencies for pytest
+        run: uv pip install -e ".[dev]"
+
+      - name: Run Pytest
+        run: uv run pytest tests/ # Specify the tests directory
+
+  frontend-tests:
+    name: Run Frontend Tests (Node.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend/my-app # Set default directory for frontend steps
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm" # Enable caching for npm dependencies
+          cache-dependency-path: frontend/my-app/package-lock.json # Cache based on lock file
+
+      - name: Install frontend dependencies
+        # Use 'ci' for clean installs in CI environments based on package-lock.json
+        run: npm ci
+
+      - name: Run NPM Tests
+        # The 'CI=true' environment variable makes test runners like Jest
+        # run non-interactively and exit after tests complete.
+        run: npm test
+        env:
+          CI: true
