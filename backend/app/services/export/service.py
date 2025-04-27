@@ -476,21 +476,18 @@ class ExportService(ExportServiceInterface):
                             # Save as PNG for best color fidelity
                             image.save(input_path, format="PNG")
 
-                            # Use vtracer for color vectorization
-                            config = vtracer.Configuration()
-                            config.color_mode = vtracer.ColorMode.COLOR
-                            config.hierarchical = True
-                            config.filter_speckle = 4
-                            config.path_precision = 3
+                            # Use vtracer for color vectorization with direct parameters
+                            filter_speckle = 4
+                            path_precision = 3
 
                             # Setup from SVG params if provided
-                            if svg_params:
-                                if "filter_speckle" in svg_params:
-                                    config.filter_speckle = int(svg_params["filter_speckle"])
-                                # Add more parameter handling as needed
+                            if svg_params and "filter_speckle" in svg_params:
+                                filter_speckle = int(svg_params["filter_speckle"])
 
-                            # Run the tracer
-                            vtracer.convert_image_to_svg(input_path, output_path, config)
+                            # Run the tracer with parameters directly
+                            vtracer.convert_image_to_svg_py(
+                                input_path, output_path, colormode="color", hierarchical="stacked", mode="spline", filter_speckle=filter_speckle, path_precision=path_precision
+                            )
                         else:
                             # Use a simpler approach for monochrome/simplified
                             self._create_simple_svg_from_image(image, output_path)
@@ -531,16 +528,11 @@ class ExportService(ExportServiceInterface):
         temp_gray_path = output_path + ".temp.png"
         try:
             gray_image.save(temp_gray_path, format="PNG")
-            # Configure for line art/monochrome
-            config = vtracer.Configuration()
-            config.color_mode = vtracer.ColorMode.BINARY
-            config.hierarchical = False
-            config.filter_speckle = 4
-            config.path_precision = 8
-            config.corner_threshold = 60
-            config.length_threshold = 4.0
-            # Run the tracer
-            vtracer.convert_image_to_svg(temp_gray_path, output_path, config)
+
+            # Run the tracer with binary mode parameters
+            vtracer.convert_image_to_svg_py(
+                temp_gray_path, output_path, colormode="binary", hierarchical="stacked", mode="spline", filter_speckle=4, path_precision=8, corner_threshold=60, length_threshold=4.0
+            )
         finally:
             # Clean up
             try:
