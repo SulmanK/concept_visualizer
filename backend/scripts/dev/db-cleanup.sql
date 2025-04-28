@@ -4,7 +4,7 @@ RETURNS TABLE (id UUID, image_path TEXT) AS $$
 BEGIN
     RETURN QUERY
     SELECT c.id, c.image_path
-    FROM concepts c
+    FROM concepts_dev c
     WHERE c.created_at < NOW() - (days_threshold * INTERVAL '1 day');
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -15,7 +15,7 @@ RETURNS TABLE (id UUID, image_path TEXT) AS $$
 BEGIN
     RETURN QUERY
     SELECT cv.id, cv.image_path
-    FROM color_variations cv
+    FROM color_variations_dev cv
     WHERE cv.concept_id = ANY(concept_ids);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -24,7 +24,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION delete_variations_for_concepts(concept_ids UUID[])
 RETURNS VOID AS $$
 BEGIN
-    DELETE FROM color_variations
+    DELETE FROM color_variations_dev
     WHERE concept_id = ANY(concept_ids);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -33,7 +33,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION delete_concepts(concept_ids UUID[])
 RETURNS VOID AS $$
 BEGIN
-    DELETE FROM concepts
+    DELETE FROM concepts_dev
     WHERE id = ANY(concept_ids);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -44,7 +44,7 @@ RETURNS TABLE (id UUID, status TEXT, type TEXT, updated_at TIMESTAMPTZ) AS $$
 BEGIN
     RETURN QUERY
     SELECT t.id, t.status, t.type, t.updated_at
-    FROM tasks t
+    FROM tasks_dev t
     WHERE t.status IN ('pending', 'processing')
     AND t.updated_at < NOW() - (minutes_threshold * INTERVAL '1 minute');
 END;
@@ -54,7 +54,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE FUNCTION mark_tasks_as_failed(task_ids UUID[], error_message TEXT)
 RETURNS VOID AS $$
 BEGIN
-    UPDATE tasks
+    UPDATE tasks_dev
     SET status = 'failed',
         error_message = $2,
         updated_at = NOW()
@@ -68,7 +68,7 @@ RETURNS TABLE (id UUID, type TEXT, status TEXT, created_at TIMESTAMPTZ, updated_
 BEGIN
     RETURN QUERY
     SELECT t.id, t.type, t.status, t.created_at, t.updated_at
-    FROM tasks t
+    FROM tasks_dev t
     WHERE t.user_id = user_id_param
     AND t.status IN ('pending', 'processing')
     ORDER BY t.created_at DESC;
