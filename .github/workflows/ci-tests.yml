@@ -34,12 +34,30 @@ jobs:
       - name: Create virtual environment
         run: uv venv
 
+      - name: Create test environment file
+        run: |
+          echo "SUPABASE_URL=https://example.supabase.co" > .env.test
+          echo "SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mocktoken" >> .env.test
+          echo "SUPABASE_JWT_SECRET=your-test-jwt-secret" >> .env.test
+          echo "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mockservicetoken" >> .env.test
+          echo "JIGSAWSTACK_API_KEY=mock-jigsawstack-key" >> .env.test
+          echo "REDIS_URL=redis://localhost:6379" >> .env.test
+          echo "ENVIRONMENT=test" >> .env.test
+
       - name: Install backend dependencies
         # Install editable with dev dependencies for pytest
         run: uv pip install -e ".[dev]"
 
       - name: Run Pytest
         run: uv run pytest tests/ # Specify the tests directory
+        env:
+          SUPABASE_URL: "https://example.supabase.co"
+          SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mocktoken"
+          SUPABASE_JWT_SECRET: "your-test-jwt-secret"
+          SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mockservicetoken"
+          JIGSAWSTACK_API_KEY: "mock-jigsawstack-key"
+          REDIS_URL: "redis://localhost:6379"
+          ENVIRONMENT: "test"
 
   backend-lint:
     name: Run Backend Linting and Type Checking
