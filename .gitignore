@@ -170,17 +170,20 @@ coverage/
 .env.develop
 .env.main
 .env.local
-.env.main
 .env.development.local
 .env.test.local
 .env.production.local
 frontend/**/.env
+frontend/**/.env.*
 backend/**/.env
+backend/**/.env.*
 **/.env.local
 **/.env.development
 **/.env.test
 **/.env.production
 **/secrets.json
+**/*.env.develop
+**/*.env.main
 
 # Editor directories and files
 .vscode/*
