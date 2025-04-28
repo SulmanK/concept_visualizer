@@ -196,6 +196,48 @@ The application uses environment variables for managing all sensitive credential
 
 Never commit actual credentials to the repository. The repository contains example files (`.env.example`) with placeholder values that should be used as templates.
 
+### Branch-Based Environment Switching
+
+This project implements automatic environment switching based on Git branches. When you check out different branches, the system automatically copies the appropriate environment configuration files for that branch.
+
+#### How it works
+
+1. The project uses a Git `post-checkout` hook that runs after switching branches
+2. When you switch to `develop` or `main`, the hook copies the corresponding `.env.develop` or `.env.main` to `.env` in both backend and frontend
+3. The application then uses these environment-specific configurations
+
+#### Setup
+
+Run the setup script to create the necessary environment files:
+
+```bash
+# Make the setup script executable (if not already)
+chmod +x scripts/setup_env_files.sh
+
+# Run the setup script
+./scripts/setup_env_files.sh
+```
+
+This will create:
+
+- `.env.develop` - Contains development environment settings
+- `.env.main` - Contains production environment settings with placeholders
+- `.env.example` - Template showing all required variables
+
+After running the script, make sure the Git hook is executable:
+
+```bash
+chmod +x .git/hooks/post-checkout
+```
+
+Now, when you switch branches with `git checkout develop` or `git checkout main`, the appropriate environment files will be automatically applied.
+
+#### Notes
+
+- The `.env` files themselves are not tracked in Git (they're in `.gitignore`)
+- Only the branch-specific templates (`.env.develop`, `.env.main`) may be committed, with placeholders for sensitive values
+- After switching branches, review your `.env` files to ensure they have the correct values
+
 ### Setting Up Credentials
 
 1. Copy the example environment files to create your own:

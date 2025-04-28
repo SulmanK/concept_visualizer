@@ -1,120 +1,169 @@
-Okay, let's create a GitHub Actions workflow file to run your backend (`pytest`) and frontend (`npm test`) tests automatically. This workflow will trigger on pushes to `main` and `develop`, and on pull requests targeting these branches.
+Okay, let's create a design plan to implement the Git `post-checkout` hook for automatically switching your local `.env` files based on the checked-out branch (`develop` or `main`).
 
-**Steps:**
+**Design Plan: Automatic Local `.env` Switching via Git Hook**
 
-1.  **Create the Workflow File:** ✅
+**1. Goal:**
 
-    - In the root of your project, create the directory path `.github/workflows/` if it doesn't already exist.
-    - Inside `.github/workflows/`, create a new file named `ci-tests.yml`.
+- Enable developers to automatically use different local configuration settings (especially credentials) stored in `.env` files when switching between the `develop` and `main` branches locally.
+- Ensure the application code (FastAPI backend, React frontend) always reads from standard `.env` files without needing branch-specific logic for configuration loading.
+- Keep sensitive production credentials out of the main codebase history if possible.
 
-2.  **Add the Workflow Content:** ✅ Paste the following YAML content into `ci-tests.yml`:
+**2. Approach:**
 
-```yaml
-name: CI Tests (Backend & Frontend)
+- Utilize a Git `post-checkout` hook. This script runs automatically _after_ a successful `git checkout` operation.
+- The hook will detect the current branch name.
+- Based on the branch name, it will copy the appropriate pre-defined, branch-specific environment file (e.g., `.env.develop`) to the standard `.env` location used by the application.
+- The standard `.env` files will be listed in `.gitignore` to prevent committing local configurations and secrets.
 
-on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
-  workflow_dispatch: # Allows manual triggering
+**3. Prerequisites:**
 
-jobs:
-  backend-tests:
-    name: Run Backend Tests (Python)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend # Set default directory for backend steps
+- Git installed and initialized in the project repository.
+- Developers need shell access (like Bash, Zsh) to run the hook script.
+- Agreement on how to manage secrets within the team (see Step 6).
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+**4. File Structure & Naming Convention:**
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+- **Backend:**
+  - `backend/.env`: **(Gitignored)** The active environment file loaded by the FastAPI app. _This file will be overwritten by the hook._
+  - `backend/.env.develop`: **(Potentially Committed)** Contains settings and credentials for the `develop` branch/environment.
+  - `backend/.env.main`: **(Potentially Committed - Use Placeholders for Secrets)** Contains settings and credentials/placeholders for the `main` branch/production environment.
+  - `backend/.env.example`: **(Committed)** Template file showing required variables.
+- **Frontend:**
+  - `frontend/my-app/.env`: **(Gitignored)** The active environment file loaded by Vite/React. _This file will be overwritten by the hook._
+  - `frontend/my-app/.env.develop`: **(Potentially Committed)** Contains settings for the `develop` branch.
+  - `frontend/my-app/.env.main`: **(Potentially Committed - Use Placeholders for Secrets)** Contains settings/placeholders for the `main` branch.
+  - `frontend/my-app/.env.example`: **(Committed)** Template file.
 
-      - name: Install uv
-        run: pip install uv
+**5. `.gitignore` Update:**
 
-      - name: Install backend dependencies
-        # Install editable with dev dependencies for pytest
-        run: uv pip install -e ".[dev]"
+Ensure the following lines are present in your root `.gitignore` file:
 
-      - name: Run Pytest
-        run: uv run pytest tests/ # Specify the tests directory
-
-  frontend-tests:
-    name: Run Frontend Tests (Node.js)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend/my-app # Set default directory for frontend steps
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js 18
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm" # Enable caching for npm dependencies
-          cache-dependency-path: frontend/my-app/package-lock.json # Cache based on lock file
-
-      - name: Install frontend dependencies
-        # Use 'ci' for clean installs in CI environments based on package-lock.json
-        run: npm ci
-
-      - name: Run NPM Tests
-        # The 'CI=true' environment variable often makes test runners like Jest
-        # run non-interactively and exit after tests complete.
-        run: npm test
-        env:
-          CI: true
+```gitignore
+# Environment files containing secrets or local settings
+backend/.env
+frontend/my-app/.env
+*.local
 ```
 
-**Explanation:**
+**6. Secrets Management Strategy:**
 
-1.  **`name`**: The name of the workflow as it appears in the GitHub Actions UI.
-2.  **`on`**: Defines the events that trigger the workflow:
-    - `push`: Runs when code is pushed to `main` or `develop`.
-    - `pull_request`: Runs when a pull request is opened or updated targeting `main` or `develop`.
-    - `workflow_dispatch`: Allows manual triggering from the Actions tab.
-3.  **`jobs`**: Defines the tasks to run. We have two parallel jobs: `backend-tests` and `frontend-tests`.
-4.  **`backend-tests` Job:**
-    - `name`: Display name for the job.
-    - `runs-on`: Specifies the runner environment (Ubuntu Linux).
-    - `defaults.run.working-directory`: Sets the default directory for subsequent `run` steps to `./backend`.
-    - **Steps:**
-      - `Checkout code`: Gets the repository code onto the runner.
-      - `Set up Python`: Installs the specified Python version (3.11).
-      - `Install uv`: Installs your package manager using pip.
-      - `Install backend dependencies`: Uses `uv` to install the backend package in editable mode (`-e`) along with its `[dev]` dependencies (which should include `pytest`).
-      - `Run Pytest`: Executes `pytest` using `uv run` within the backend directory, targeting the `tests/` subdirectory.
-5.  **`frontend-tests` Job:**
-    - `name`, `runs-on`, `defaults.run.working-directory`: Similar setup, but targeting `./frontend/my-app`.
-    - **Steps:**
-      - `Checkout code`: Gets the repository code.
-      - `Set up Node.js`: Installs Node.js version 18.
-      - `cache: 'npm'`: Enables caching of `node_modules` based on `package-lock.json` to speed up subsequent runs.
-      - `Install frontend dependencies`: Uses `npm ci` which is recommended for CI as it installs dependencies exactly as specified in `package-lock.json`.
-      - `Run NPM Tests`: Executes the `test` script defined in your `frontend/my-app/package.json`. The `CI: true` environment variable is often necessary for test runners like Jest (used by Create React App/Vite) to run in a non-interactive mode suitable for CI.
+- **Decision Needed:** How will actual secrets be handled in the `.env.develop` and `.env.main` files?
+  - **Option A (Recommended for Dev, Placeholders for Prod):** Commit `backend/.env.develop` and `frontend/my-app/.env.develop` with real **development** credentials (if acceptable within team security policy). Commit `backend/.env.main` and `frontend/my-app/.env.main` with **placeholders** for production secrets (e.g., `YOUR_PROD_API_KEY_HERE`). Developers will need to get production secrets securely if they need to test the `main` branch config locally.
+  - **Option B (Placeholders Everywhere):** Commit all `.env.develop` and `.env.main` files with **only placeholders**. Developers must always obtain credentials for _both_ environments from a secure source (Vault, 1Password, etc.) and manually populate their local, gitignored `.env` file _after_ the hook copies the appropriate placeholder file.
+  - **Option C (Not Recommended for Prod Secrets):** Commit real secrets in all files. Only viable for highly trusted, private repositories.
+- **Action:** Choose a strategy and populate the `.env.develop` and `.env.main` files accordingly.
 
-**To Use This:** ✅
+**7. Git Hook Script (`post-checkout`):**
 
-1.  Save the YAML content into `.github/workflows/ci-tests.yml`.
-2.  Commit and push this file to your repository (on `develop` first, then merge to `main`).
-3.  GitHub Actions will automatically detect this file and start running the workflow on the specified triggers (pushes/PRs to `main` or `develop`). You can monitor the progress under the "Actions" tab of your GitHub repository.
+- **Location:** Create this file at the **root** of your project repository inside the `.git/hooks/` directory. The full path will be `.git/hooks/post-checkout`.
+- **Content:**
 
-**Important Notes:**
+```bash
+#!/bin/bash
+# Git hook to switch .env files based on the checked-out branch.
 
-- **Test Dependencies:** Ensure `pytest` and any other testing libraries are listed under the `[project.optional-dependencies.dev]` section in your `backend/pyproject.toml`. Ensure your frontend testing dependencies are in `frontend/my-app/package.json` (usually under `devDependencies`).
-- **Frontend Test Script:** ✅ Verify that the `test` script in `frontend/my-app/package.json` is configured to run non-interactively (e.g., doesn't default to watch mode). Using `CI=true` usually handles this for common React setups.
-- **Environment Variables for Tests:** This workflow currently _does not_ inject any secrets or environment variables from `.env` files. Your tests should ideally mock external dependencies (like Supabase, JigsawStack). If your tests _require_ specific environment variables (e.g., pointing to a _test_ database or API), you would need to add steps to create a temporary `.env` file during the CI run or (better) pass them using GitHub Actions secrets/variables if they are sensitive. For non-sensitive test config, you could potentially commit a `.env.test` file and copy it.
+# --- Configuration ---
+BACKEND_DIR="backend"
+FRONTEND_DIR="frontend/my-app"
+BRANCHES_TO_MANAGE=("develop" "main") # Add other branches if needed
+
+# --- Helper Function ---
+copy_env_file() {
+    local branch_name="$1"
+    local target_env_file="$2" # Full path to the target .env (e.g., backend/.env)
+    local branch_specific_source_suffix=".${branch_name}" # e.g., .develop
+
+    # Get the directory and base name of the target file
+    local target_dir=$(dirname "$target_env_file")
+    local target_basename=$(basename "$target_env_file") # Should be .env
+    local source_filename="${target_basename}${branch_specific_source_suffix}" # e.g., .env.develop
+    local source_env_file="${target_dir}/${source_filename}" # Full path to source
+
+    # Check if the branch-specific file exists
+    if [ -f "$source_env_file" ]; then
+        echo "Git Hook: Branch '$branch_name' detected. Copying '$source_env_file' to '$target_env_file'..."
+        # Copy the branch-specific file to the target .env location
+        cp "$source_env_file" "$target_env_file"
+        echo "Git Hook: -> Copied '$source_filename' to '$target_basename'."
+    else
+        echo "Git Hook: Branch '$branch_name' detected, but no specific file found at '$source_env_file'."
+        echo "Git Hook: -> Leaving '$target_env_file' untouched."
+        # Optionally, remove the .env file if no branch-specific version exists:
+        # echo "Git Hook: -> Removing '$target_env_file'."
+        # rm -f "$target_env_file"
+    fi
+}
+
+# --- Main Hook Logic ---
+previous_head=$1
+new_head=$2
+is_branch_checkout=$3 # 1 if it was a branch checkout, 0 if a file checkout
+
+# Only run if it was a branch checkout (or initial checkout)
+if [[ "$is_branch_checkout" == "1" ]]; then
+    current_branch=$(git symbolic-ref --short HEAD)
+
+    # Check if the current branch is one we manage env files for
+    branch_is_managed=false
+    for managed_branch in "${BRANCHES_TO_MANAGE[@]}"; do
+        if [[ "$current_branch" == "$managed_branch" ]]; then
+            branch_is_managed=true
+            break
+        fi
+    done
+
+    if $branch_is_managed; then
+        echo "Git Hook: Switched to managed branch '$current_branch'. Updating .env files..."
+
+        # Update Backend .env
+        copy_env_file "$current_branch" "${BACKEND_DIR}/.env"
+
+        # Update Frontend .env
+        copy_env_file "$current_branch" "${FRONTEND_DIR}/.env"
+
+        echo "Git Hook: Finished updating .env files."
+    else
+        echo "Git Hook: Switched to branch '$current_branch'. No managed .env actions defined for this branch."
+    fi
+else
+    # Optional: uncomment if you want feedback on file checkouts
+    # echo "Git Hook: File checkout detected, skipping .env update."
+    : # No-op for file checkouts
+fi
+
+exit 0
+```
+
+**8. Hook Installation (Local Setup Required):**
+
+- Every developer cloning the repository needs to make the hook script executable:
+  ```bash
+  chmod +x .git/hooks/post-checkout
+  ```
+- **Note:** Since the `.git` directory is not tracked by Git, this hook setup is local. Consider adding instructions to your project's `README.md` or using tools like `husky` or `pre-commit` if you want to automate hook installation for the team.
+
+**9. Developer Workflow:**
+
+1.  Clone the repository.
+2.  Install the `post-checkout` hook (`chmod +x .git/hooks/post-checkout`).
+3.  Run `git checkout develop`. The hook will automatically copy `.env.develop` to `.env` in both backend and frontend directories.
+4.  **Crucial:** If the `.env.develop` files contain placeholders, obtain the actual development secrets from the secure source (Vault, 1Password, team lead) and manually update the contents of the local, gitignored `backend/.env` and `frontend/my-app/.env` files.
+5.  Run the backend (`uvicorn ...`) and frontend (`npm run dev`). They will load the development settings from the `.env` files.
+6.  Run `git checkout main`. The hook automatically copies `.env.main` to `.env`.
+7.  If testing locally with production settings (and if `.env.main` has placeholders), update the local `.env` files with production secrets (if authorized and necessary).
+8.  Run the apps again; they will now use the main/production settings.
+
+**10. Testing & Verification:**
+
+1.  After setting up the hook, run `git checkout develop`. Check the contents of `backend/.env` and `frontend/my-app/.env`. They should match the `.develop` versions.
+2.  Run `git checkout main`. Check the contents again; they should match the `.main` versions.
+3.  Run `git checkout some-other-feature-branch`. The hook should indicate that no specific action is taken for this branch, and the `.env` files should remain unchanged from the previous state (likely the `main` settings if that was the last managed branch checked out).
+
+This plan provides a clear path to implementing the automatic `.env` switching based on your checked-out branch for local development, while respecting your constraint of not changing the application's config loading logic. Remember the importance of the local hook setup and the chosen secrets management strategy.
+
+## Implementation Status
+
+- [x] Created Git `post-checkout` hook for automatic environment switching
+- [x] Added setup script `scripts/setup_env_files.sh` to create necessary environment files
+- [x] Updated README.md with instructions for environment switching
+- [x] Chose Option A for secrets management (real dev credentials, placeholders for prod)
