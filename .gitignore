@@ -168,6 +168,7 @@ coverage/
 # Environment and secret files
 .env
 .env.local
+.env.main
 .env.development.local
 .env.test.local
 .env.production.local
@@ -203,3 +204,4 @@ pnpm-debug.log*
 lerna-debug.log*
 /frontend/my-app/dist
 /frontend/my-app/dist-analyze
+/frontend/my-app/.env.develop
