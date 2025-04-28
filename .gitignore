@@ -167,6 +167,8 @@ coverage/
 
 # Environment and secret files
 .env
+.env.develop
+.env.main
 .env.local
 .env.development.local
 .env.test.local
