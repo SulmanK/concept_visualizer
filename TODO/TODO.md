@@ -1,225 +1,169 @@
-Okay, I understand the problem. You want the signed URLs for concept images to expire only _after_ the scheduled cleanup job (which runs daily at midnight UTC and removes concepts older than 3 days) has had a chance to remove the corresponding concept data.
+Okay, let's create a design plan to implement the Git `post-checkout` hook for automatically switching your local `.env` files based on the checked-out branch (`develop` or `main`).
 
-Here's a breakdown of the issue and the solution:
+**Design Plan: Automatic Local `.env` Switching via Git Hook**
 
-**Problem:**
+**1. Goal:**
 
-1.  **Concept Data Lifespan:** Concepts are kept for 3 days.
-2.  **Cleanup Schedule:** A job runs daily at 00:00 UTC to delete concepts older than 3 days.
-3.  **Signed URL Lifespan:** Currently generated with a fixed duration (e.g., 3 days = 259200 seconds).
-4.  **Mismatch:** A concept created just after midnight UTC might have its 3-day lifespan end _before_ the next midnight UTC cleanup. Its signed URL (with a fixed 3-day expiry) could expire hours before the cleanup job removes the concept record, leading to broken images in the UI for concepts that _should_ still be visible.
+- Enable developers to automatically use different local configuration settings (especially credentials) stored in `.env` files when switching between the `develop` and `main` branches locally.
+- Ensure the application code (FastAPI backend, React frontend) always reads from standard `.env` files without needing branch-specific logic for configuration loading.
+- Keep sensitive production credentials out of the main codebase history if possible.
 
-**Goal:**
+**2. Approach:**
 
-Calculate the signed URL expiry (`expires_in` seconds) such that it lasts until the _next_ midnight UTC _after_ the concept's 3-day age is reached, plus a small buffer.
+- Utilize a Git `post-checkout` hook. This script runs automatically _after_ a successful `git checkout` operation.
+- The hook will detect the current branch name.
+- Based on the branch name, it will copy the appropriate pre-defined, branch-specific environment file (e.g., `.env.develop`) to the standard `.env` location used by the application.
+- The standard `.env` files will be listed in `.gitignore` to prevent committing local configurations and secrets.
 
-**Solution Steps:**
+**3. Prerequisites:**
 
-1.  **Identify `created_at`:** When generating a signed URL for a concept image or variation, you need the `created_at` timestamp of the _parent concept_.
-2.  **Calculate Eligibility Time:** Determine when the concept becomes eligible for deletion: `eligible_deletion_time = concept.created_at + timedelta(days=3)`.
-3.  **Find Next Cleanup Time:** Find the timestamp of the _next_ 00:00 UTC _after_ `eligible_deletion_time`.
-4.  **Add Buffer:** Add a small safety buffer (e.g., 15-30 minutes) to the next cleanup time to ensure the URL is valid slightly past midnight: `target_expiry_time = next_cleanup_time + timedelta(minutes=15)`.
-5.  **Calculate `expires_in`:** Calculate the duration in seconds between `now` (the time the URL is generated) and `target_expiry_time`. This is the value to pass to `create_signed_url`.
+- Git installed and initialized in the project repository.
+- Developers need shell access (like Bash, Zsh) to run the hook script.
+- Agreement on how to manage secrets within the team (see Step 6).
 
-**Implementation Changes:**
+**4. File Structure & Naming Convention:**
 
-1.  **Helper Function for Expiry Calculation:** Create a utility function to calculate the required `expires_in` duration.
+- **Backend:**
+  - `backend/.env`: **(Gitignored)** The active environment file loaded by the FastAPI app. _This file will be overwritten by the hook._
+  - `backend/.env.develop`: **(Potentially Committed)** Contains settings and credentials for the `develop` branch/environment.
+  - `backend/.env.main`: **(Potentially Committed - Use Placeholders for Secrets)** Contains settings and credentials/placeholders for the `main` branch/production environment.
+  - `backend/.env.example`: **(Committed)** Template file showing required variables.
+- **Frontend:**
+  - `frontend/my-app/.env`: **(Gitignored)** The active environment file loaded by Vite/React. _This file will be overwritten by the hook._
+  - `frontend/my-app/.env.develop`: **(Potentially Committed)** Contains settings for the `develop` branch.
+  - `frontend/my-app/.env.main`: **(Potentially Committed - Use Placeholders for Secrets)** Contains settings/placeholders for the `main` branch.
+  - `frontend/my-app/.env.example`: **(Committed)** Template file.
 
-    ```python
-    # backend/app/utils/datetime_utils.py (or similar location)
-    from datetime import datetime, timedelta, timezone
+**5. `.gitignore` Update:**
 
-    def calculate_url_expiry_seconds(created_at_ts: datetime) -> int:
-        """
-        Calculates the expiry duration in seconds for a signed URL,
-        ensuring it lasts until the next cleanup cycle after 3 days.
-        """
-        now = datetime.now(timezone.utc)
+Ensure the following lines are present in your root `.gitignore` file:
 
-        # Ensure created_at is timezone-aware (UTC)
-        if created_at_ts.tzinfo is None:
-            # Assume UTC if naive, or convert if it has another timezone
-            created_at_utc = created_at_ts.replace(tzinfo=timezone.utc)
-        else:
-            created_at_utc = created_at_ts.astimezone(timezone.utc)
+```gitignore
+# Environment files containing secrets or local settings
+backend/.env
+frontend/my-app/.env
+*.local
+```
 
-        # Concept becomes eligible for deletion after 3 days
-        eligible_deletion_time = created_at_utc + timedelta(days=3)
+**6. Secrets Management Strategy:**
 
-        # Find the date part of the *next* day after eligibility
-        next_day_date = (eligible_deletion_time.date() + timedelta(days=1))
+- **Decision Needed:** How will actual secrets be handled in the `.env.develop` and `.env.main` files?
+  - **Option A (Recommended for Dev, Placeholders for Prod):** Commit `backend/.env.develop` and `frontend/my-app/.env.develop` with real **development** credentials (if acceptable within team security policy). Commit `backend/.env.main` and `frontend/my-app/.env.main` with **placeholders** for production secrets (e.g., `YOUR_PROD_API_KEY_HERE`). Developers will need to get production secrets securely if they need to test the `main` branch config locally.
+  - **Option B (Placeholders Everywhere):** Commit all `.env.develop` and `.env.main` files with **only placeholders**. Developers must always obtain credentials for _both_ environments from a secure source (Vault, 1Password, etc.) and manually populate their local, gitignored `.env` file _after_ the hook copies the appropriate placeholder file.
+  - **Option C (Not Recommended for Prod Secrets):** Commit real secrets in all files. Only viable for highly trusted, private repositories.
+- **Action:** Choose a strategy and populate the `.env.develop` and `.env.main` files accordingly.
 
-        # Construct the datetime for the next midnight UTC
-        next_cleanup_time = datetime(
-            next_day_date.year,
-            next_day_date.month,
-            next_day_date.day,
-            0, 0, 0, tzinfo=timezone.utc
-        )
+**7. Git Hook Script (`post-checkout`):**
 
-        # Add a small buffer (e.g., 15 minutes) to ensure URL is valid slightly past cleanup time
-        target_expiry_time = next_cleanup_time + timedelta(minutes=15)
+- **Location:** Create this file at the **root** of your project repository inside the `.git/hooks/` directory. The full path will be `.git/hooks/post-checkout`.
+- **Content:**
 
-        # Calculate duration from now until the target expiry time
-        duration = target_expiry_time - now
+```bash
+#!/bin/bash
+# Git hook to switch .env files based on the checked-out branch.
 
-        # Calculate expiry in seconds, ensuring a minimum duration (e.g., 1 minute)
-        expires_in_seconds = max(60, int(duration.total_seconds()))
+# --- Configuration ---
+BACKEND_DIR="backend"
+FRONTEND_DIR="frontend/my-app"
+BRANCHES_TO_MANAGE=("develop" "main") # Add other branches if needed
 
-        # Log the calculation for debugging
-        # logger.debug(f"Calculated expiry: Now={now}, Created={created_at_utc}, Eligible={eligible_deletion_time}, NextCleanup={next_cleanup_time}, TargetExpiry={target_expiry_time}, ExpiresIn={expires_in_seconds}s")
+# --- Helper Function ---
+copy_env_file() {
+    local branch_name="$1"
+    local target_env_file="$2" # Full path to the target .env (e.g., backend/.env)
+    local branch_specific_source_suffix=".${branch_name}" # e.g., .develop
 
-        return expires_in_seconds
-    ```
+    # Get the directory and base name of the target file
+    local target_dir=$(dirname "$target_env_file")
+    local target_basename=$(basename "$target_env_file") # Should be .env
+    local source_filename="${target_basename}${branch_specific_source_suffix}" # e.g., .env.develop
+    local source_env_file="${target_dir}/${source_filename}" # Full path to source
 
-2.  **Modify Data Retrieval to Generate URLs:** The best place to generate these correctly expiring URLs is when the concept data (which includes `created_at`) is fetched. Update the `ConceptStorage` methods (`get_recent_concepts` and `get_concept_detail`, and their service role counterparts) to calculate and generate the URLs.
+    # Check if the branch-specific file exists
+    if [ -f "$source_env_file" ]; then
+        echo "Git Hook: Branch '$branch_name' detected. Copying '$source_env_file' to '$target_env_file'..."
+        # Copy the branch-specific file to the target .env location
+        cp "$source_env_file" "$target_env_file"
+        echo "Git Hook: -> Copied '$source_filename' to '$target_basename'."
+    else
+        echo "Git Hook: Branch '$branch_name' detected, but no specific file found at '$source_env_file'."
+        echo "Git Hook: -> Leaving '$target_env_file' untouched."
+        # Optionally, remove the .env file if no branch-specific version exists:
+        # echo "Git Hook: -> Removing '$target_env_file'."
+        # rm -f "$target_env_file"
+    fi
+}
 
-    ```python
-    # backend/app/core/supabase/concept_storage.py
-    import logging
-    from datetime import datetime
-    from typing import Any, Dict, List, Optional, cast
-    # ... other imports ...
-    from app.utils.datetime_utils import calculate_url_expiry_seconds # Import the new helper
-    # ... other imports ...
+# --- Main Hook Logic ---
+previous_head=$1
+new_head=$2
+is_branch_checkout=$3 # 1 if it was a branch checkout, 0 if a file checkout
 
-    logger = logging.getLogger(__name__)
+# Only run if it was a branch checkout (or initial checkout)
+if [[ "$is_branch_checkout" == "1" ]]; then
+    current_branch=$(git symbolic-ref --short HEAD)
 
-    class ConceptStorage:
-        # ... (init method remains the same) ...
+    # Check if the current branch is one we manage env files for
+    branch_is_managed=false
+    for managed_branch in "${BRANCHES_TO_MANAGE[@]}"; do
+        if [[ "$current_branch" == "$managed_branch" ]]; then
+            branch_is_managed=true
+            break
+        fi
+    done
 
-        def _generate_signed_urls_for_concept(self, concept: Dict[str, Any]) -> None:
-            """Helper to generate signed URLs for a concept and its variations."""
-            try:
-                created_at_str = concept.get("created_at")
-                if not created_at_str:
-                    self.logger.warning(f"Concept {concept.get('id')} missing created_at timestamp.")
-                    return # Cannot calculate expiry without created_at
+    if $branch_is_managed; then
+        echo "Git Hook: Switched to managed branch '$current_branch'. Updating .env files..."
 
-                # Parse created_at string (assuming ISO format with timezone)
-                # Handle potential parsing errors
-                try:
-                    # Attempt parsing with timezone info first
-                    created_at_dt = datetime.fromisoformat(created_at_str)
-                except ValueError:
-                     # Fallback for formats without timezone (assume UTC)
-                    try:
-                       created_at_dt = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
-                       if created_at_dt.tzinfo is None:
-                           created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
-                    except ValueError:
-                        self.logger.error(f"Could not parse created_at: {created_at_str}")
-                        return
+        # Update Backend .env
+        copy_env_file "$current_branch" "${BACKEND_DIR}/.env"
 
-                expires_in = calculate_url_expiry_seconds(created_at_dt)
+        # Update Frontend .env
+        copy_env_file "$current_branch" "${FRONTEND_DIR}/.env"
 
-                # Generate URL for the main concept image
-                image_path = concept.get("image_path")
-                if image_path:
-                    try:
-                         # Use the ImageStorage helper for consistency
-                        concept["image_url"] = self.client.storage.get_signed_url(
-                            path=image_path,
-                            bucket=self.client.storage.concept_bucket, # Assuming ImageStorage has bucket names
-                            expiry_seconds=expires_in
-                        )
-                    except Exception as url_err:
-                         self.logger.error(f"Failed to generate signed URL for concept {concept.get('id')} path {image_path}: {url_err}")
-                         concept["image_url"] = None # Set to None if URL generation fails
+        echo "Git Hook: Finished updating .env files."
+    else
+        echo "Git Hook: Switched to branch '$current_branch'. No managed .env actions defined for this branch."
+    fi
+else
+    # Optional: uncomment if you want feedback on file checkouts
+    # echo "Git Hook: File checkout detected, skipping .env update."
+    : # No-op for file checkouts
+fi
 
+exit 0
+```
 
-                # Generate URLs for color variations
-                variations = concept.get("color_variations", [])
-                if variations:
-                    for variation in variations:
-                        variation_path = variation.get("image_path")
-                        if variation_path:
-                             try:
-                                 variation["image_url"] = self.client.storage.get_signed_url(
-                                     path=variation_path,
-                                     bucket=self.client.storage.palette_bucket, # Assuming ImageStorage has bucket names
-                                     expiry_seconds=expires_in
-                                 )
-                             except Exception as var_url_err:
-                                 self.logger.error(f"Failed to generate signed URL for variation {variation.get('id')} path {variation_path}: {var_url_err}")
-                                 variation["image_url"] = None # Set to None if URL generation fails
+**8. Hook Installation (Local Setup Required):**
 
+- Every developer cloning the repository needs to make the hook script executable:
+  ```bash
+  chmod +x .git/hooks/post-checkout
+  ```
+- **Note:** Since the `.git` directory is not tracked by Git, this hook setup is local. Consider adding instructions to your project's `README.md` or using tools like `husky` or `pre-commit` if you want to automate hook installation for the team.
 
-            except Exception as e:
-                self.logger.error(f"Error generating signed URLs for concept {concept.get('id')}: {e}")
+**9. Developer Workflow:**
 
+1.  Clone the repository.
+2.  Install the `post-checkout` hook (`chmod +x .git/hooks/post-checkout`).
+3.  Run `git checkout develop`. The hook will automatically copy `.env.develop` to `.env` in both backend and frontend directories.
+4.  **Crucial:** If the `.env.develop` files contain placeholders, obtain the actual development secrets from the secure source (Vault, 1Password, team lead) and manually update the contents of the local, gitignored `backend/.env` and `frontend/my-app/.env` files.
+5.  Run the backend (`uvicorn ...`) and frontend (`npm run dev`). They will load the development settings from the `.env` files.
+6.  Run `git checkout main`. The hook automatically copies `.env.main` to `.env`.
+7.  If testing locally with production settings (and if `.env.main` has placeholders), update the local `.env` files with production secrets (if authorized and necessary).
+8.  Run the apps again; they will now use the main/production settings.
 
-        def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-            try:
-                # --- Existing logic to fetch concepts ---
-                concepts = self._get_recent_concepts_with_service_role(user_id, limit) # Or the regular client fetch
-                if concepts is None: concepts = [] # Ensure it's a list
+**10. Testing & Verification:**
 
-                if concepts:
-                    concept_ids = [concept["id"] for concept in concepts]
-                    variations_by_concept = self.get_variations_by_concept_ids(concept_ids)
+1.  After setting up the hook, run `git checkout develop`. Check the contents of `backend/.env` and `frontend/my-app/.env`. They should match the `.develop` versions.
+2.  Run `git checkout main`. Check the contents again; they should match the `.main` versions.
+3.  Run `git checkout some-other-feature-branch`. The hook should indicate that no specific action is taken for this branch, and the `.env` files should remain unchanged from the previous state (likely the `main` settings if that was the last managed branch checked out).
 
-                    # Attach variations and GENERATE SIGNED URLS
-                    for concept in concepts:
-                        concept_id = concept["id"]
-                        concept["color_variations"] = variations_by_concept.get(concept_id, [])
-                        self._generate_signed_urls_for_concept(concept) # Generate URLs here
+This plan provides a clear path to implementing the automatic `.env` switching based on your checked-out branch for local development, while respecting your constraint of not changing the application's config loading logic. Remember the importance of the local hook setup and the chosen secrets management strategy.
 
-                return concepts
-            except Exception as e:
-                self.logger.error(f"Error retrieving recent concepts: {e}")
-                return []
+## Implementation Status
 
-        # Apply similar logic to _get_recent_concepts_with_service_role
-        def _get_recent_concepts_with_service_role(self, user_id: str, limit: int) -> Optional[List[Dict[str, Any]]]:
-            # ... (fetching logic) ...
-            if response.status_code == 200:
-                concepts = cast(List[Dict[str, Any]], response.json())
-                # --- Existing logic to attach variations (if needed here) ---
-                if concepts:
-                     # Generate URLs AFTER fetching variations if necessary
-                     concept_ids = [c['id'] for c in concepts]
-                     variations_map = self._get_variations_by_concept_ids_with_service_role(concept_ids) or {}
-                     for concept in concepts:
-                          concept['color_variations'] = variations_map.get(concept['id'], [])
-                          self._generate_signed_urls_for_concept(concept) # Generate URLs
-                return concepts
-            # ... (rest of the method) ...
-
-
-        def get_concept_detail(self, concept_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-            try:
-                # --- Existing logic to fetch concept detail ---
-                concept_detail = self._get_concept_detail_with_service_role(concept_id, user_id) # Or regular client fetch
-                if not concept_detail:
-                     return None
-
-                # GENERATE SIGNED URLS before returning
-                self._generate_signed_urls_for_concept(concept_detail)
-
-                return concept_detail
-            except Exception as e:
-                self.logger.error(f"Error retrieving concept details: {e}")
-                return None
-
-        # Apply similar logic to _get_concept_detail_with_service_role
-        def _get_concept_detail_with_service_role(self, concept_id: str, user_id: str) -> Optional[Dict[str, Any]]:
-             # ... (fetching logic) ...
-            if response.status_code == 200:
-                concepts = response.json()
-                if concepts:
-                    concept = concepts[0]
-                    # Fetch variations...
-                    # ... variations fetched into concept['color_variations'] ...
-                    self._generate_signed_urls_for_concept(concept) # Generate URLs
-                    return cast(Dict[str, Any], concept)
-                # ... (rest of the method) ...
-
-
-        # Ensure get_variations_by_concept_ids and its service role counterpart
-        # DO NOT generate signed URLs themselves, as expiry depends on the parent concept's created_at
-        def get_variations_by_concept_ids(self, concept_ids: List[str]) -> Dict[str, List[Dict[str, Any]]]:
-             # ... (fetch variations) ...
-             # NO URL GENERATION HERE
-             return variations_by_concept
-    ```
+- [x] Created Git `post-checkout` hook for automatic environment switching
+- [x] Added setup script `scripts/setup_env_files.sh` to create necessary environment files
+- [x] Updated README.md with instructions for environment switching
+- [x] Chose Option A for secrets management (real dev credentials, placeholders for prod)
