@@ -1,0 +1,3 @@
+TRUNCATE TABLE concepts_dev CASCADE;
+TRUNCATE TABLE color_variations_dev CASCADE;
+TRUNCATE TABLE tasks_dev CASCADE;
