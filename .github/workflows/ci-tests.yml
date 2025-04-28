@@ -34,16 +34,6 @@ jobs:
       - name: Create virtual environment
         run: uv venv
 
-      - name: Create test environment file
-        run: |
-          echo "SUPABASE_URL=https://example.supabase.co" > .env.test
-          echo "SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjQyMjQwMCwiZXhwIjo0NzcyMDgyNDAwfQ.L2lxgGUlc6yI02Y-I8xp7nlp3zw-gvkgSMo6tvdQTn4" >> .env.test
-          echo "SUPABASE_JWT_SECRET=your-test-jwt-secret" >> .env.test
-          echo "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjE2NDIyNDAwLCJleHAiOjQ3NzIwODI0MDB9.imv7CtAGdtX9Ww3WbNr6xkjnQnxk8J_WkDDW2QO-qA0" >> .env.test
-          echo "JIGSAWSTACK_API_KEY=mock-jigsawstack-key" >> .env.test
-          echo "REDIS_URL=redis://localhost:6379" >> .env.test
-          echo "ENVIRONMENT=test" >> .env.test
-
       - name: Install backend dependencies
         # Install editable with dev dependencies for pytest
         run: uv pip install -e ".[dev]"
@@ -51,13 +41,17 @@ jobs:
       - name: Run Pytest
         run: uv run pytest tests/ # Specify the tests directory
         env:
-          SUPABASE_URL: "https://example.supabase.co"
-          SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjQyMjQwMCwiZXhwIjo0NzcyMDgyNDAwfQ.L2lxgGUlc6yI02Y-I8xp7nlp3zw-gvkgSMo6tvdQTn4"
-          SUPABASE_JWT_SECRET: "your-test-jwt-secret"
-          SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjE2NDIyNDAwLCJleHAiOjQ3NzIwODI0MDB9.imv7CtAGdtX9Ww3WbNr6xkjnQnxk8J_WkDDW2QO-qA0"
-          JIGSAWSTACK_API_KEY: "mock-jigsawstack-key"
-          REDIS_URL: "redis://localhost:6379"
-          ENVIRONMENT: "test"
+          CONCEPT_SUPABASE_URL: "https://example.supabase.co"
+          CONCEPT_SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjQyMjQwMCwiZXhwIjo0NzcyMDgyNDAwfQ.L2lxgGUlc6yI02Y-I8xp7nlp3zw-gvkgSMo6tvdQTn4"
+          CONCEPT_SUPABASE_JWT_SECRET: "your-test-jwt-secret"
+          CONCEPT_SUPABASE_SERVICE_ROLE: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjE2NDIyNDAwLCJleHAiOjQ3NzIwODI0MDB9.imv7CtAGdtX9Ww3WbNr6xkjnQnxk8J_WkDDW2QO-qA0"
+          CONCEPT_JIGSAWSTACK_API_KEY: "mock-jigsawstack-key"
+          CONCEPT_UPSTASH_REDIS_ENDPOINT: "localhost"
+          CONCEPT_UPSTASH_REDIS_PASSWORD: "password"
+          CONCEPT_UPSTASH_REDIS_PORT: "6379"
+          CONCEPT_STORAGE_BUCKET_CONCEPT: "test-concepts"
+          CONCEPT_STORAGE_BUCKET_PALETTE: "test-palettes"
+          CONCEPT_ENVIRONMENT: "test"
 
   backend-lint:
     name: Run Backend Linting and Type Checking
@@ -105,13 +99,6 @@ jobs:
       - name: Install frontend dependencies
         # Use 'ci' for clean installs in CI environments based on package-lock.json
         run: npm ci
-
-      - name: Create test environment file
-        run: |
-          echo "VITE_SUPABASE_URL=https://example.supabase.co" > .env.test
-          echo "VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlc3QiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjQyMjQwMCwiZXhwIjo0NzcyMDgyNDAwfQ.L2lxgGUlc6yI02Y-I8xp7nlp3zw-gvkgSMo6tvdQTn4" >> .env.test
-          echo "VITE_API_URL=http://localhost:8000/api" >> .env.test
-          echo "VITE_ENVIRONMENT=test" >> .env.test
 
       - name: Run NPM Tests
         # The 'CI=true' environment variable makes test runners like Jest
