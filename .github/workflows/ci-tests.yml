@@ -83,12 +83,23 @@ jobs:
         # Use 'ci' for clean installs in CI environments based on package-lock.json
         run: npm ci
 
+      - name: Create test environment file
+        run: |
+          echo "VITE_SUPABASE_URL=https://example.supabase.co" > .env.test
+          echo "VITE_SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mocktoken" >> .env.test
+          echo "VITE_API_URL=http://localhost:8000/api" >> .env.test
+          echo "VITE_ENVIRONMENT=test" >> .env.test
+
       - name: Run NPM Tests
         # The 'CI=true' environment variable makes test runners like Jest
         # run non-interactively and exit after tests complete.
         run: npm test
         env:
           CI: true
+          VITE_SUPABASE_URL: "https://example.supabase.co"
+          VITE_SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mocktoken"
+          VITE_API_URL: "http://localhost:8000/api"
+          VITE_ENVIRONMENT: "test"
 
   frontend-lint:
     name: Run Frontend Linting and Type Checking
