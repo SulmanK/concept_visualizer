@@ -338,4 +338,6 @@ Enable realtime in each of the database tables
 
    6. Click "Add secret"
 
+6. Make sure to add the secret for the dev and prod.
+
 ## Step 7: Captcha
