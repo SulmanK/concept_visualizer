@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_settings_from_env() -> Generator[None, None, None]:
-    """
-    Mock the settings object with values from environment variables.
+    """Mock the settings object with values from environment variables.
+
     This ensures that CI environment variables are properly used during tests.
     """
     # Create a mock object that looks like the settings object
@@ -31,12 +31,23 @@ def mock_settings_from_env() -> Generator[None, None, None]:
     mock.STORAGE_BUCKET_PALETTE = os.getenv("CONCEPT_STORAGE_BUCKET_PALETTE", "test-palettes")
     mock.ENVIRONMENT = os.getenv("CONCEPT_ENVIRONMENT", "test")
 
+    # Database table settings
+    mock.DB_TABLE_TASKS = os.getenv("CONCEPT_DB_TABLE_TASKS", "tasks")
+    mock.DB_TABLE_CONCEPTS = os.getenv("CONCEPT_DB_TABLE_CONCEPTS", "concepts")
+    mock.DB_TABLE_PALETTES = os.getenv("CONCEPT_DB_TABLE_PALETTES", "palettes")
+
     # Log what we're using
     logger.info(f"Using Supabase URL: {mock.SUPABASE_URL}")
     logger.info(f"Using environment: {mock.ENVIRONMENT}")
+    logger.info(f"Using DB tables: tasks={mock.DB_TABLE_TASKS}, concepts={mock.DB_TABLE_CONCEPTS}, palettes={mock.DB_TABLE_PALETTES}")
 
     # Patch all the places where settings is imported
-    patches = [patch("app.core.supabase.client.settings", mock), patch("app.core.supabase.concept_storage.settings", mock), patch("app.core.config.settings", mock)]
+    patches = [
+        patch("app.core.supabase.client.settings", mock),
+        patch("app.core.supabase.concept_storage.settings", mock),
+        patch("app.core.config.settings", mock),
+        patch("app.services.task.service.settings", mock),
+    ]
 
     try:
         # Apply all patches

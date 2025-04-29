@@ -44,6 +44,9 @@ class Settings(BaseSettings):
         STORAGE_BUCKET_PALETTE: Name of the storage bucket for palettes
         STORAGE_BUCKET_CONCEPT: Name of the storage bucket for concepts
         RATE_LIMITING_ENABLED: Flag to enable/disable rate limiting
+        DB_TABLE_TASKS: Name of the tasks table in the database
+        DB_TABLE_CONCEPTS: Name of the concepts table in the database
+        DB_TABLE_PALETTES: Name of the palettes table in the database
     """
 
     # API settings
@@ -65,6 +68,11 @@ class Settings(BaseSettings):
     # Storage bucket settings
     STORAGE_BUCKET_PALETTE: str = "your-bucket-name"
     STORAGE_BUCKET_CONCEPT: str = "your-bucket-name"
+
+    # Database table settings
+    DB_TABLE_TASKS: str = "tasks"
+    DB_TABLE_CONCEPTS: str = "concepts"
+    DB_TABLE_PALETTES: str = "palettes"
 
     # Logging settings
     LOG_LEVEL: str = "INFO"
@@ -140,6 +148,15 @@ class Settings(BaseSettings):
                 message="Storage bucket name for palettes is required",
                 variable_name="CONCEPT_STORAGE_BUCKET_PALETTE",
             )
+
+        # Database table validation is not required as they have sensible defaults
+        # But we should log if they're using custom table names
+        if self.DB_TABLE_TASKS != "tasks":
+            logger.info(f"Using custom tasks table name: {self.DB_TABLE_TASKS}")
+        if self.DB_TABLE_CONCEPTS != "concepts":
+            logger.info(f"Using custom concepts table name: {self.DB_TABLE_CONCEPTS}")
+        if self.DB_TABLE_PALETTES != "palettes":
+            logger.info(f"Using custom palettes table name: {self.DB_TABLE_PALETTES}")
 
         # Redis is required for rate limiting if enabled
         if self.RATE_LIMITING_ENABLED:
@@ -250,3 +267,6 @@ if settings.LOG_LEVEL == "DEBUG":
     logger.debug(f"Redis password: {get_masked_value(settings.UPSTASH_REDIS_PASSWORD)}")
     logger.debug(f"Storage bucket (palette): {get_masked_value(settings.STORAGE_BUCKET_PALETTE, 3)}")
     logger.debug(f"Storage bucket (concept): {get_masked_value(settings.STORAGE_BUCKET_CONCEPT, 3)}")
+    logger.debug(f"DB table (tasks): {settings.DB_TABLE_TASKS}")
+    logger.debug(f"DB table (concepts): {settings.DB_TABLE_CONCEPTS}")
+    logger.debug(f"DB table (palettes): {settings.DB_TABLE_PALETTES}")

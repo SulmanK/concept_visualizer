@@ -29,6 +29,8 @@ class ConceptStorage:
         """
         self.client = client
         self.logger = logging.getLogger("supabase_concept")
+        self.concepts_table = settings.DB_TABLE_CONCEPTS
+        self.palettes_table = settings.DB_TABLE_PALETTES
 
     def store_concept(self, concept_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Store a new concept.
@@ -83,7 +85,7 @@ class ConceptStorage:
 
             # Fall back to regular client if service role fails
             self.logger.warning("Service role insert failed, trying regular client")
-            response = self.client.client.table("concepts").insert(insert_data).execute()
+            response = self.client.client.table(self.concepts_table).insert(insert_data).execute()
 
             # Check if we have data in the response
             if not hasattr(response, "data") or not response.data:
@@ -130,7 +132,7 @@ class ConceptStorage:
             import requests
 
             api_url = settings.SUPABASE_URL
-            table_endpoint = f"{api_url}/rest/v1/concepts"
+            table_endpoint = f"{api_url}/rest/v1/{self.concepts_table}"
 
             response = requests.post(
                 table_endpoint,
@@ -203,7 +205,7 @@ class ConceptStorage:
 
             # Fall back to regular client if service role fails
             self.logger.warning("Service role insert for variations failed, trying regular client")
-            response = self.client.client.table("color_variations").insert(clean_variations).execute()
+            response = self.client.client.table(self.palettes_table).insert(clean_variations).execute()
 
             # Check if we have data in the response
             if not hasattr(response, "data") or not response.data:
@@ -248,7 +250,7 @@ class ConceptStorage:
             import requests
 
             api_url = settings.SUPABASE_URL
-            table_endpoint = f"{api_url}/rest/v1/color_variations"
+            table_endpoint = f"{api_url}/rest/v1/{self.palettes_table}"
 
             response = requests.post(
                 table_endpoint,
@@ -262,8 +264,9 @@ class ConceptStorage:
             )
 
             if response.status_code == 201:
-                self.logger.info("Successfully stored color variations with service role key")
-                return cast(List[Dict[str, Any]], response.json())
+                self.logger.info(f"Successfully stored {len(clean_variations)} color variations with service role key")
+                result_data = response.json()
+                return cast(List[Dict[str, Any]], result_data)
             else:
                 self.logger.warning(f"Service role insert for variations failed: {response.status_code}, {response.text}")
                 return None
@@ -294,7 +297,7 @@ class ConceptStorage:
             # Security: Always filter by user_id to ensure users only see their own data
             # IMPORTANT: Do NOT fetch color_variations here - we will batch fetch them separately
             response = (
-                self.client.client.table("concepts")
+                self.client.client.table(self.concepts_table)
                 .select("*")  # NOT "*, color_variations(*)" - we'll fetch variations separately
                 .eq("user_id", user_id)
                 .order("created_at", desc=True)
@@ -352,7 +355,7 @@ class ConceptStorage:
             api_url = settings.SUPABASE_URL
 
             # Get the concepts WITHOUT their variations
-            concepts_endpoint = f"{api_url}/rest/v1/concepts" f"?select=*" f"&user_id=eq.{user_id}" f"&order=created_at.desc" f"&limit={limit}"
+            concepts_endpoint = f"{api_url}/rest/v1/{self.concepts_table}" f"?select=*" f"&user_id=eq.{user_id}" f"&order=created_at.desc" f"&limit={limit}"
 
             response = requests.get(
                 concepts_endpoint,
@@ -400,7 +403,7 @@ class ConceptStorage:
 
             # Fall back to regular client
             # Query the concept with security check for user_id
-            response = self.client.client.table("concepts").select("*, color_variations(*)").eq("id", concept_id).eq("user_id", user_id).execute()
+            response = self.client.client.table(self.concepts_table).select(f"*, {self.palettes_table}(*)").eq("id", concept_id).eq("user_id", user_id).execute()
 
             # Check if we have data in the response
             if not hasattr(response, "data") or not response.data:
@@ -440,7 +443,7 @@ class ConceptStorage:
             api_url = settings.SUPABASE_URL
 
             # Get the concept with user_id verification (for security)
-            concept_endpoint = f"{api_url}/rest/v1/concepts" f"?id=eq.{concept_id}" f"&user_id=eq.{user_id}"
+            concept_endpoint = f"{api_url}/rest/v1/{self.concepts_table}" f"?id=eq.{concept_id}" f"&user_id=eq.{user_id}"
 
             response = requests.get(
                 concept_endpoint,
@@ -459,7 +462,7 @@ class ConceptStorage:
                     concept = concepts[0]
 
                     # Get color variations for this concept
-                    variations_endpoint = f"{api_url}/rest/v1/color_variations" f"?select=*" f"&concept_id=eq.{concept_id}"
+                    variations_endpoint = f"{api_url}/rest/v1/{self.palettes_table}" f"?select=*" f"&concept_id=eq.{concept_id}"
 
                     variations_response = requests.get(
                         variations_endpoint,
@@ -500,7 +503,7 @@ class ConceptStorage:
         """
         try:
             # First get all concept IDs for this user
-            concepts_result = self.client.client.table("concepts").select("id").eq("user_id", user_id).execute()
+            concepts_result = self.client.client.table(self.concepts_table).select("id").eq("user_id", user_id).execute()
 
             if not concepts_result.data:
                 self.logger.info(f"No concepts found for user ID {mask_id(user_id)}")
@@ -511,7 +514,7 @@ class ConceptStorage:
 
             # Delete all color variations for these concepts
             for concept_id in concept_ids:
-                self.client.client.table("color_variations").delete().eq("concept_id", concept_id).execute()
+                self.client.client.table(self.palettes_table).delete().eq("concept_id", concept_id).execute()
 
             return True
         except Exception as e:
@@ -529,7 +532,7 @@ class ConceptStorage:
         """
         try:
             # Due to foreign key constraints, this will also delete color variations
-            self.client.client.table("concepts").delete().eq("user_id", user_id).execute()
+            self.client.client.table(self.concepts_table).delete().eq("user_id", user_id).execute()
             return True
         except Exception as e:
             self.logger.error(f"Error deleting concepts: {e}")
@@ -555,7 +558,7 @@ class ConceptStorage:
             self.logger.warning("Service role query for task failed, trying regular client")
 
             # Get the concept
-            query = self.client.client.table("concepts").select("*").eq("task_id", task_id).eq("user_id", user_id).limit(1)
+            query = self.client.client.table(self.concepts_table).select("*").eq("task_id", task_id).eq("user_id", user_id).limit(1)
 
             response = query.execute()
 
@@ -604,7 +607,7 @@ class ConceptStorage:
 
             api_url = settings.SUPABASE_URL
             query_params = f"task_id=eq.{task_id}&user_id=eq.{user_id}&limit=1"
-            table_endpoint = f"{api_url}/rest/v1/concepts?{query_params}"
+            table_endpoint = f"{api_url}/rest/v1/{self.concepts_table}?{query_params}"
 
             response = requests.get(
                 table_endpoint,
@@ -656,7 +659,7 @@ class ConceptStorage:
 
             # We need to create an "in" filter for the concept_ids
             # Using .or_ to build a query like "concept_id.eq(id1),concept_id.eq(id2),..."
-            builder: BaseFilterRequestBuilder = self.client.client.table("color_variations").select("*")
+            builder: BaseFilterRequestBuilder = self.client.client.table(self.palettes_table).select("*")
             for i, concept_id in enumerate(concept_ids):
                 if i == 0:
                     builder = builder.eq("concept_id", concept_id)
@@ -721,7 +724,7 @@ class ConceptStorage:
 
             # We'll collect all variations in one go to minimize round trips
             concept_filter = f"concept_id=in.({','.join(concept_ids)})"
-            table_endpoint = f"{api_url}/rest/v1/color_variations?select=*&{concept_filter}"
+            table_endpoint = f"{api_url}/rest/v1/{self.palettes_table}?select=*&{concept_filter}"
 
             response = requests.get(
                 table_endpoint,

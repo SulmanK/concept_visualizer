@@ -6,6 +6,7 @@ This module provides services for storing and retrieving concepts from Supabase.
 import logging
 from typing import Any, Dict, List, Optional
 
+from app.core.config import settings
 from app.core.exceptions import DatabaseTransactionError
 from app.core.supabase.client import SupabaseClient
 from app.core.supabase.concept_storage import ConceptStorage
@@ -142,7 +143,7 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                         raise DatabaseTransactionError(
                             message=f"Failed to store color variations. Concept cleanup was {cleanup_status}.",
                             operation="insert",
-                            table="color_variations",
+                            table=settings.DB_TABLE_PALETTES,
                             details={
                                 "concept_id": masked_concept_id,
                                 "cleanup_successful": cleanup_successful,
@@ -165,7 +166,7 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                     raise DatabaseTransactionError(
                         message=f"Error storing color variations: {str(e)}. {cleanup_msg}.",
                         operation="insert",
-                        table="color_variations",
+                        table=settings.DB_TABLE_PALETTES,
                         details={
                             "concept_id": masked_concept_id,
                             "cleanup_successful": cleanup_successful,
@@ -200,11 +201,11 @@ class ConceptPersistenceService(ConceptPersistenceServiceInterface):
                 # First delete any color variations to avoid constraint violations
                 service_client = self.supabase.get_service_role_client()
                 if service_client:
-                    service_client.table("color_variations").delete().eq("concept_id", concept_id).execute()
-                    service_client.table("concepts").delete().eq("id", concept_id).execute()
+                    service_client.table(settings.DB_TABLE_PALETTES).delete().eq("concept_id", concept_id).execute()
+                    service_client.table(settings.DB_TABLE_CONCEPTS).delete().eq("id", concept_id).execute()
                 else:
-                    self.supabase.client.table("color_variations").delete().eq("concept_id", concept_id).execute()
-                    self.supabase.client.table("concepts").delete().eq("id", concept_id).execute()
+                    self.supabase.client.table(settings.DB_TABLE_PALETTES).delete().eq("concept_id", concept_id).execute()
+                    self.supabase.client.table(settings.DB_TABLE_CONCEPTS).delete().eq("id", concept_id).execute()
 
                 self.logger.info(f"Successfully deleted concept {masked_concept_id} during cleanup")
                 return True
