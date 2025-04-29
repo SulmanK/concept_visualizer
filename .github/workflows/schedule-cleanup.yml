@@ -19,7 +19,7 @@ jobs:
       - name: Set environment variables based on branch
         id: set-env
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "SUPABASE_URL=https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data" >> $GITHUB_ENV
             echo "SUPABASE_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
           else
