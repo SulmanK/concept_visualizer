@@ -274,7 +274,9 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   useEffect(() => {
     if (subscriptionError) {
       console.error("[TaskContext] Subscription error:", subscriptionError);
-      // Here we could implement fallback logic like fetching task data manually
+      // We don't need to implement fallback logic here as the useTaskSubscription
+      // hook already manages errors properly and won't report successful subscriptions
+      // as errors anymore
     }
   }, [subscriptionError]);
 

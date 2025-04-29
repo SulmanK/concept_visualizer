@@ -75,7 +75,7 @@ class TestStoreConceptMethod:
 
             # Assert
             assert result == {"id": "concept-123"}
-            mock_client.client.table.assert_called_once_with("concepts")
+            mock_client.client.table.assert_called_once_with(concept_storage.concepts_table)
             insert_mock.assert_called_once()
             execute_mock.assert_called_once()
 
@@ -177,7 +177,7 @@ class TestStoreColorVariations:
             assert result is not None
             assert len(result) == 2
             assert result == [{"id": "var-1"}, {"id": "var-2"}]
-            mock_client.client.table.assert_called_once_with("color_variations")
+            mock_client.client.table.assert_called_once_with(concept_storage.palettes_table)
             insert_mock.assert_called_once()
             execute_mock.assert_called_once()
 
@@ -285,7 +285,7 @@ class TestGetRecentConcepts:
             assert len(result) == 2
             assert result[0]["id"] == "concept-1"
             assert result[1]["id"] == "concept-2"
-            mock_client.client.table.assert_called_once_with("concepts")
+            mock_client.client.table.assert_called_once_with(concept_storage.concepts_table)
 
     def test_get_recent_concepts_empty(self, concept_storage: ConceptStorage, mock_client: MagicMock) -> None:
         """Test get_recent_concepts with no results."""
@@ -501,7 +501,7 @@ class TestDeleteAllConcepts:
 
         # Assert
         assert result is True
-        mock_client.client.table.assert_called_once_with("concepts")
+        mock_client.client.table.assert_called_once_with(concept_storage.concepts_table)
         delete_mock.assert_called_once()
         eq_mock.assert_called_once_with("user_id", user_id)
         execute_mock.assert_called_once()

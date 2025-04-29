@@ -4,6 +4,7 @@ import { supabase } from "../services/supabaseClient";
 import { TaskResponse } from "../types/api.types";
 import { queryKeys } from "../config/queryKeys";
 import { useTaskStatusQuery } from "./useTaskQueries";
+import { getTableName } from "../services/databaseConfig";
 
 // Constants for reconnection
 const RECONNECT_TIMEOUT = 5000; // 5 seconds
@@ -27,6 +28,9 @@ export function useTaskSubscription(taskId: string | null) {
   const [shouldReconnect, setShouldReconnect] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const queryClient = useQueryClient();
+
+  // Get the tasks table name from environment
+  const tasksTable = getTableName("tasks");
 
   // Fetch the initial task data
   const {
@@ -57,7 +61,7 @@ export function useTaskSubscription(taskId: string | null) {
     }
 
     console.log(
-      `[TaskSubscription] Setting up subscription for task ${taskId}`,
+      `[TaskSubscription] Setting up subscription for task ${taskId} on table ${tasksTable}`,
     );
 
     // Function to create and subscribe to a channel
@@ -75,7 +79,7 @@ export function useTaskSubscription(taskId: string | null) {
             {
               event: "UPDATE",
               schema: "public",
-              table: "tasks",
+              table: tasksTable,
               filter: `id=eq.${taskId}`,
             },
             (payload) => {
@@ -123,10 +127,16 @@ export function useTaskSubscription(taskId: string | null) {
             setShouldReconnect(true);
           })
           .on("system", { event: "error" }, (err) => {
-            console.error(`[TaskSubscription] Error in subscription:`, err);
-            setSubscriptionError(new Error("Subscription error"));
-            setSubscriptionStatus("error");
-            setShouldReconnect(true);
+            // Only set error if the message indicates an actual error
+            // "Subscribed to PostgreSQL" with status "ok" is not an error
+            if (err.status !== "ok") {
+              console.error(`[TaskSubscription] Error in subscription:`, err);
+              setSubscriptionError(new Error("Subscription error"));
+              setSubscriptionStatus("error");
+              setShouldReconnect(true);
+            } else {
+              console.log(`[TaskSubscription] System event:`, err);
+            }
           });
 
         // Subscribe to the channel
@@ -136,11 +146,13 @@ export function useTaskSubscription(taskId: string | null) {
 
           if (status === "SUBSCRIBED") {
             console.log(
-              `[TaskSubscription] Successfully subscribed to updates for task ${taskId}`,
+              `[TaskSubscription] Successfully subscribed to updates for task ${taskId} on table ${tasksTable}`,
             );
             // Reset reconnection attempts on successful subscription
             setReconnectAttempts(0);
             setShouldReconnect(false);
+            // Clear any previous errors since we're now successfully subscribed
+            setSubscriptionError(null);
           } else if (status === "CHANNEL_ERROR") {
             console.error(
               `[TaskSubscription] Error subscribing to task ${taskId}`,
@@ -180,7 +192,7 @@ export function useTaskSubscription(taskId: string | null) {
         channelRef.current = null;
       }
     };
-  }, [taskId, queryClient, shouldReconnect]);
+  }, [taskId, queryClient, shouldReconnect, tasksTable]);
 
   // Handle reconnection logic
   useEffect(() => {

@@ -294,9 +294,16 @@ To connect your application to Supabase:
 
 4. Important: Never expose the `service_role` key in client-side code; it bypasses RLS policies
 
-## Step 5: Allow Anonymous sign-ins
+## Step 5: Authentication Settings
 
-## Step 5: Edge Function
+1. Go to Authenication and under Sign In / Sign Up enable "Allow anonymouse sign-ins"
+2. Go to URL Configuration and set our localhost
+
+## Step 6: Realtime
+
+Enable realtime in each of the database tables
+
+## Step 6: Edge Function
 
 ## Deployment Steps
 
@@ -330,7 +337,5 @@ To connect your application to Supabase:
    - Value: ``
 
    6. Click "Add secret"
-
-## Step 6: Realtime
 
 ## Step 7: Captcha
