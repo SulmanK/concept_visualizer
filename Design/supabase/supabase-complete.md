@@ -313,7 +313,7 @@ Enable realtime in each of the database tables
 3. Deploy the edge function:
    ```bash
    cd backend
-   supabase functions deploy cleanup-old-data --project-ref pstdcfittpjhxzynbdbu --no-verify-jwt
+   supabase functions deploy cleanup-old-data --project-ref <proj_id> --no-verify-jwt
    ```
 4. Set up environment variables:
    ```bash
