@@ -167,3 +167,14 @@ This plan provides a clear path to implementing the automatic `.env` switching b
 - [x] Added setup script `scripts/setup_env_files.sh` to create necessary environment files
 - [x] Updated README.md with instructions for environment switching
 - [x] Chose Option A for secrets management (real dev credentials, placeholders for prod)
+- [ ] **Backend Production Preparation**
+  - [ ] Implement secure environment variable management
+  - [ ] Configure proper CORS for production domains
+  - [ ] Set up production-appropriate logging levels
+  - [ ] Optimize FastAPI application for production
+  - [ ] Create separate development/staging/production configurations
+- [ ] **Frontend Production Optimization**
+  - [ ] Optimize bundle size with code splitting
+  - [ ] Configure proper caching strategies
+  - [ ] Implement performance monitoring
+  - [ ] Create optimized Docker build for production
