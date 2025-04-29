@@ -13,10 +13,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set environment variables based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prod" ]]; then
+            echo "SUPABASE_URL=https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data" >> $GITHUB_ENV
+            echo "SUPABASE_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
+          else
+            echo "SUPABASE_URL=https://ksuxhgigxymqoqmxekic.supabase.co/functions/v1/cleanup-old-data" >> $GITHUB_ENV
+            echo "SUPABASE_KEY=${{ secrets.SUPABASE_DEV_ANON_KEY }}" >> $GITHUB_ENV
+          fi
+
       - name: Call Cleanup Edge Function
         run: |
-          curl -L -X POST 'https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data' \
-            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
+          curl -L -X POST '${{ env.SUPABASE_URL }}' \
+            -H 'Authorization: Bearer ${{ env.SUPABASE_KEY }}' \
             -H 'Content-Type: application/json'
 
       - name: Log completion

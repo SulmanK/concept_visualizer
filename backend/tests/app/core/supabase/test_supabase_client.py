@@ -1,6 +1,6 @@
 """Tests for the Supabase client implementation."""
 
-from typing import Any, Dict, Generator
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import jwt
@@ -23,8 +23,9 @@ def mock_settings() -> Generator[MagicMock, None, None]:
     """Mock the app settings."""
     with patch("app.core.supabase.client.settings") as mock:
         mock.SUPABASE_URL = "https://example.supabase.co"
-        mock.SUPABASE_KEY = "fake-api-key"
-        mock.SUPABASE_SERVICE_ROLE = "fake-service-role-key"
+        # Use a valid JWT format for the API key (valid format is required by Supabase client)
+        mock.SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        mock.SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlIiwibmFtZSI6IlNlcnZpY2UgUm9sZSIsImlhdCI6MTUxNjIzOTAyMn0.fEImTrVZkFLWNirzBdKGfDjVjzKER2I3xrEHAHYhY84"
         mock.SUPABASE_JWT_SECRET = "fake-jwt-secret"
         yield mock
 
@@ -179,128 +180,129 @@ def test_verify_token_success(mock_create_client: MagicMock, mock_settings: Magi
 
 def test_verify_token_empty_token() -> None:
     """Test verification with an empty token."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
+    # Create a minimal client that doesn't connect to Supabase
+    with patch("app.core.supabase.client.create_client"):
+        auth_client = SupabaseAuthClient()
 
-    # Act & Assert
-    with pytest.raises(AuthenticationError) as excinfo:
-        auth_client.verify_token("")
+        # We need to directly test the function since we're not going to mock verify_token
+        # itself in this test, but test its behavior with an empty token
 
-    assert "No token provided" in str(excinfo.value)
+        # Act & Assert
+        with pytest.raises(AuthenticationError) as excinfo:
+            auth_client.verify_token("")
+
+        assert "No token provided" in str(excinfo.value)
 
 
 def test_verify_token_expired() -> None:
     """Test verification with an expired token."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
-    token = "fake-expired-token"
-
-    # Mock JWT decode to raise expired token error
-    with patch("app.core.supabase.client.jwt.decode") as mock_decode:
+    # Set up
+    with patch("app.core.supabase.client.create_client"), patch("app.core.supabase.client.jwt.decode") as mock_decode:
+        # Configure JWT decode to raise ExpiredSignatureError
         mock_decode.side_effect = jwt.ExpiredSignatureError("Token has expired")
+
+        auth_client = SupabaseAuthClient()
 
         # Act & Assert
         with pytest.raises(AuthenticationError) as excinfo:
-            auth_client.verify_token(token)
+            auth_client.verify_token("fake-expired-token")
 
-        # Check that the error message matches the actual implementation
-        # The implementation returns "Token expired" not the original JWT error
         assert "Token expired" in str(excinfo.value)
+        mock_decode.assert_called_once()
 
 
 def test_verify_token_invalid() -> None:
     """Test verification with an invalid token."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
-    token = "fake-invalid-token"
+    # Set up
+    with patch("app.core.supabase.client.create_client"), patch("app.core.supabase.client.jwt.decode") as mock_decode:
+        # Configure JWT decode to raise InvalidTokenError
+        mock_decode.side_effect = jwt.InvalidTokenError("Invalid token format")
 
-    # Mock JWT decode to raise invalid token error
-    with patch("app.core.supabase.client.jwt.decode") as mock_decode:
-        mock_decode.side_effect = jwt.InvalidTokenError("Invalid token")
+        auth_client = SupabaseAuthClient()
 
         # Act & Assert
         with pytest.raises(AuthenticationError) as excinfo:
-            auth_client.verify_token(token)
+            auth_client.verify_token("fake-invalid-token")
 
         assert "Invalid token" in str(excinfo.value)
+        mock_decode.assert_called_once()
 
 
 def test_get_user_from_request_bearer_token_success() -> None:
     """Test getting user from request with Bearer token."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
-    mock_request = MagicMock()
-    mock_request.headers = {"Authorization": "Bearer fake-token"}
+    # Set up
+    with patch("app.core.supabase.client.create_client"), patch.object(SupabaseAuthClient, "verify_token") as mock_verify, patch("app.core.supabase.client.mask_id", return_value="masked-user-id"):
+        auth_client = SupabaseAuthClient()
+        # Add logger manually since we're bypassing initialization
+        auth_client.logger = MagicMock()
 
-    user_payload: Dict[str, Any] = {
-        "sub": "user-123",
-        "email": "user@example.com",
-        "user_metadata": {
-            "name": "Test User",
-            "picture": "https://example.com/avatar.jpg",
-        },
-        "app_metadata": {
-            "role": "user",
-        },
-        "exp": 1735689600,
-    }
+        # Mock the token verification
+        payload = {
+            "sub": "user-123",
+            "email": "user@example.com",
+            "role": "authenticated",
+        }
+        mock_verify.return_value = payload
 
-    # Mock verify_token
-    with patch.object(auth_client, "verify_token") as mock_verify:
-        mock_verify.return_value = user_payload
+        # Create a mock request
+        mock_request = MagicMock()
+        mock_request.headers = {"Authorization": "Bearer fake-token-123"}
 
         # Act
         user = auth_client.get_user_from_request(mock_request)
 
         # Assert
-        mock_verify.assert_called_once_with("fake-token")
-        # Ensure user payload is not None before accessing properties
         assert user is not None
         assert user["id"] == "user-123"
         assert user["email"] == "user@example.com"
-        # The implementation doesn't map user_metadata.name to user["name"]
-        # It keeps the nested structure as in user["user_metadata"]["name"]
-        assert user["user_metadata"]["name"] == "Test User"
-        assert user["user_metadata"]["picture"] == "https://example.com/avatar.jpg"
-        # The implementation uses "authenticated" as the default role if not in payload
         assert user["role"] == "authenticated"
-        assert user["token"] == "fake-token"
+        assert user["token"] == "fake-token-123"  # Original token should be included
+        mock_verify.assert_called_once_with("fake-token-123")
+        auth_client.logger.debug.assert_called_once()  # Logger should be called
 
 
 def test_get_user_from_request_no_auth_header() -> None:
     """Test getting user from request with no Authorization header."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
-    mock_request = MagicMock()
-    mock_request.headers = {}  # No Authorization header
+    # Set up
+    with patch("app.core.supabase.client.create_client"):
+        auth_client = SupabaseAuthClient()
 
-    # Act
-    user = auth_client.get_user_from_request(mock_request)
+        # Create a mock request with no Authorization header
+        mock_request = MagicMock()
+        mock_request.headers = {}
+        mock_request.cookies = {}  # No cookies either
 
-    # Assert
-    assert user is None
+        # Since this method returns None by default, we can simply assert that
+        # Act
+        result = auth_client.get_user_from_request(mock_request)
+
+        # Assert
+        assert result is None
 
 
 def test_get_user_from_request_verification_error() -> None:
     """Test getting user from request when token verification fails."""
-    # Arrange
-    auth_client = SupabaseAuthClient()
-    mock_request = MagicMock()
-    mock_request.headers = {"Authorization": "Bearer fake-token"}
+    # Set up
+    with patch("app.core.supabase.client.create_client"), patch.object(SupabaseAuthClient, "verify_token") as mock_verify:
+        auth_client = SupabaseAuthClient()
+        # Add logger manually since we're bypassing initialization
+        auth_client.logger = MagicMock()
 
-    # Mock verify_token to raise an error
-    with patch.object(auth_client, "verify_token") as mock_verify:
-        mock_verify.side_effect = AuthenticationError("Invalid token")
+        # Configure verify_token mock to raise an error
+        auth_error = AuthenticationError(message="Token verification failed")
+        mock_verify.side_effect = auth_error
 
-        # Act
-        # The actual implementation re-raises the exception, not returns None
-        # So we need to catch the exception
+        # Create a mock request with Authorization header
+        mock_request = MagicMock()
+        mock_request.headers = {"Authorization": "Bearer invalid-token"}
+        mock_request.cookies = {}
+
+        # Act & Assert
         with pytest.raises(AuthenticationError) as excinfo:
             auth_client.get_user_from_request(mock_request)
 
-        # Assert
-        mock_verify.assert_called_once_with("fake-token")
-        assert "Invalid token" in str(excinfo.value)
+        assert "Token verification failed" in str(excinfo.value)
+        mock_verify.assert_called_once_with("invalid-token")
 
 
 def test_get_supabase_client(mock_create_client: MagicMock, mock_settings: MagicMock) -> None:

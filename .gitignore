@@ -209,3 +209,4 @@ pnpm-debug.log*
 lerna-debug.log*
 /frontend/my-app/dist
 /frontend/my-app/dist-analyze
+/frontend/my-app/.env-test

@@ -1,7 +1,7 @@
 """Tests for the TaskService implementation."""
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -58,7 +58,7 @@ async def test_create_task_success(task_service: TaskService, mock_supabase_clie
     assert insert_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -99,7 +99,7 @@ async def test_create_task_fallback_to_regular_client(task_service: TaskService,
     assert insert_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    mock_supabase_client.client.table.assert_called_once_with("tasks")
+    mock_supabase_client.client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -180,7 +180,7 @@ async def test_update_task_status_success(task_service: TaskService, mock_supaba
     assert eq_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -213,7 +213,7 @@ async def test_update_task_status_with_error_message(task_service: TaskService, 
     assert eq_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -239,7 +239,7 @@ async def test_update_task_status_not_found(task_service: TaskService, mock_supa
     with pytest.raises(TaskNotFoundError) as excinfo:
         await task_service.update_task_status(task_id, status)
 
-    assert f"Task with ID {task_id[:4]}**** not found" in str(excinfo.value)
+    assert f"Task not found: {task_id}" in str(excinfo.value)
     assert eq_chain.execute.called
 
 
@@ -272,7 +272,7 @@ async def test_update_task_status_fallback_to_regular_client(task_service: TaskS
     assert eq_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    mock_supabase_client.client.table.assert_called_once_with("tasks")
+    mock_supabase_client.client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -305,7 +305,7 @@ async def test_get_task_success(task_service: TaskService, mock_supabase_client:
     assert eq2_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -332,7 +332,7 @@ async def test_get_task_not_found(task_service: TaskService, mock_supabase_clien
     with pytest.raises(TaskNotFoundError) as excinfo:
         await task_service.get_task(task_id, user_id)
 
-    assert f"Task with ID {task_id[:4]}**** not found" in str(excinfo.value)
+    assert f"Task not found: {task_id}" in str(excinfo.value)
     assert eq2_chain.execute.called
 
 
@@ -367,7 +367,7 @@ async def test_get_tasks_by_user_success(task_service: TaskService, mock_supabas
     assert limit_chain.execute.called
     assert result == tasks
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -403,7 +403,7 @@ async def test_get_tasks_by_user_with_status_filter(task_service: TaskService, m
     assert status_eq_chain.execute.called
     assert result == tasks
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -436,7 +436,7 @@ async def test_get_tasks_by_user_with_custom_limit(task_service: TaskService, mo
     assert result == tasks
     assert len(result) == limit
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -452,27 +452,35 @@ async def test_delete_task_success(task_service: TaskService, mock_supabase_clie
 
     # Configure the service role client
     service_client = mock_supabase_client.get_service_role_client.return_value
-    delete_chain = service_client.table.return_value.delete.return_value
-    eq_chain = delete_chain.eq.return_value
-    eq2_chain = eq_chain.eq.return_value
 
-    # Set up the execute mock to return the mock response
-    eq2_chain.execute = MagicMock(return_value=mock_response)
+    # Set up the execution chain correctly based on the implementation
+    # The actual call is:  service_client.table(self.tasks_table).delete().eq("id", task_id).eq("user_id", user_id).execute()
+    execute_mock = MagicMock(return_value=mock_response)
+    eq2_mock = MagicMock()
+    eq2_mock.execute = execute_mock
 
-    # Mock the get_task method using patch
-    with patch.object(task_service, "get_task", new_callable=AsyncMock) as mock_get_task:
-        # Configure the mock to return a task
-        mock_get_task.return_value = {"id": task_id, "user_id": user_id}
+    eq1_mock = MagicMock()
+    eq1_mock.eq.return_value = eq2_mock
 
-        # Act
-        result = await task_service.delete_task(task_id, user_id)
+    delete_mock = MagicMock()
+    delete_mock.eq.return_value = eq1_mock
 
-        # Assert
-        assert result is True
-        mock_get_task.assert_called_once_with(task_id, user_id)
-        assert eq2_chain.execute.called
-        mock_supabase_client.get_service_role_client.assert_called_once()
-        service_client.table.assert_called_once_with("tasks")
+    table_mock = MagicMock()
+    table_mock.delete.return_value = delete_mock
+
+    service_client.table.return_value = table_mock
+
+    # Act
+    result = await task_service.delete_task(task_id, user_id)
+
+    # Assert
+    assert result is True
+    mock_supabase_client.get_service_role_client.assert_called_once()
+    service_client.table.assert_called_once_with(task_service.tasks_table)
+    table_mock.delete.assert_called_once()
+    delete_mock.eq.assert_called_once_with("id", task_id)
+    eq1_mock.eq.assert_called_once_with("user_id", user_id)
+    eq2_mock.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -482,51 +490,64 @@ async def test_delete_task_not_found(task_service: TaskService, mock_supabase_cl
     task_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
 
-    # Mock the get_task method using patch
-    with patch.object(task_service, "get_task", new_callable=AsyncMock) as mock_get_task:
-        # Configure the mock to raise TaskNotFoundError
-        mock_get_task.side_effect = TaskNotFoundError(task_id)
+    # Configure the service role client
+    service_client = mock_supabase_client.get_service_role_client.return_value
 
-        # Act & Assert
-        with pytest.raises(TaskNotFoundError) as excinfo:
-            await task_service.delete_task(task_id, user_id)
+    # Set up the execution chain correctly based on the implementation
+    # The actual call is:  service_client.table(self.tasks_table).delete().eq("id", task_id).eq("user_id", user_id).execute()
+    mock_response = MagicMock()
+    mock_response.data = []  # Empty result means task not found
 
-        assert f"Task with ID {task_id[:4]}**** not found" in str(excinfo.value)
-        mock_get_task.assert_called_once_with(task_id, user_id)
-        # Service client should not be called because error is raised earlier
-        mock_supabase_client.get_service_role_client.assert_not_called()
+    execute_mock = MagicMock(return_value=mock_response)
+    eq2_mock = MagicMock()
+    eq2_mock.execute = execute_mock
+
+    eq1_mock = MagicMock()
+    eq1_mock.eq.return_value = eq2_mock
+
+    delete_mock = MagicMock()
+    delete_mock.eq.return_value = eq1_mock
+
+    table_mock = MagicMock()
+    table_mock.delete.return_value = delete_mock
+
+    service_client.table.return_value = table_mock
+
+    # Act & Assert
+    with pytest.raises(TaskNotFoundError) as excinfo:
+        await task_service.delete_task(task_id, user_id)
+
+    assert f"Task not found: {task_id}" in str(excinfo.value)
+    mock_supabase_client.get_service_role_client.assert_called_once()
+    service_client.table.assert_called_once_with(task_service.tasks_table)
+    table_mock.delete.assert_called_once()
+    delete_mock.eq.assert_called_once_with("id", task_id)
+    eq1_mock.eq.assert_called_once_with("user_id", user_id)
+    eq2_mock.execute.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_delete_task_delete_fails(task_service: TaskService, mock_supabase_client: MagicMock) -> None:
-    """Test task deletion when database delete operation fails."""
+    """Test task deletion when database operation fails."""
     # Arrange
     task_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
 
     # Configure the service role client
     service_client = mock_supabase_client.get_service_role_client.return_value
-    delete_chain = service_client.table.return_value.delete.return_value
-    eq_chain = delete_chain.eq.return_value
-    eq2_chain = eq_chain.eq.return_value
+    service_client.table.side_effect = Exception("Service client error")
 
-    # Set up the execute mock to return a response with empty data
-    mock_response = MagicMock()
-    mock_response.data = []  # Empty result means delete failed
-    eq2_chain.execute = MagicMock(return_value=mock_response)
+    # Configure the regular client to fail too
+    mock_supabase_client.client.table.side_effect = Exception("Database error")
 
-    # Mock the get_task method using patch
-    with patch.object(task_service, "get_task", new_callable=AsyncMock) as mock_get_task:
-        # Configure the mock to return a task
-        mock_get_task.return_value = {"id": task_id, "user_id": user_id}
+    # Act & Assert
+    with pytest.raises(TaskError) as excinfo:
+        await task_service.delete_task(task_id, user_id)
 
-        # Act & Assert
-        with pytest.raises(TaskError) as excinfo:
-            await task_service.delete_task(task_id, user_id)
-
-        assert "Failed to delete task" in str(excinfo.value)
-        mock_get_task.assert_called_once_with(task_id, user_id)
-        assert eq2_chain.execute.called
+    assert "Failed to delete task" in str(excinfo.value)
+    # Verify both clients were attempted
+    service_client.table.assert_called_once_with(task_service.tasks_table)
+    mock_supabase_client.client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -565,7 +586,7 @@ async def test_get_task_by_result_id_success(task_service: TaskService, mock_sup
     assert eq2_chain.execute.called
     assert result == task_data
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)
 
 
 @pytest.mark.asyncio
@@ -595,4 +616,4 @@ async def test_get_task_by_result_id_not_found(task_service: TaskService, mock_s
     assert eq2_chain.execute.called
     assert result is None
     mock_supabase_client.get_service_role_client.assert_called_once()
-    service_client.table.assert_called_once_with("tasks")
+    service_client.table.assert_called_once_with(task_service.tasks_table)

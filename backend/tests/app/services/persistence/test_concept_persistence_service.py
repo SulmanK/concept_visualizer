@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.core.config import settings
 from app.core.exceptions import DatabaseTransactionError
 from app.core.supabase.concept_storage import ConceptStorage
 from app.services.persistence.concept_persistence_service import ConceptPersistenceService, NotFoundError, PersistenceError
@@ -249,9 +250,9 @@ class TestConceptPersistenceService:
 
         # Set up the table side effect
         def table_side_effect(table_name: str) -> MagicMock:
-            if table_name == "color_variations":
+            if table_name == settings.DB_TABLE_PALETTES:
                 return mock_var_table
-            elif table_name == "concepts":
+            elif table_name == settings.DB_TABLE_CONCEPTS:
                 return mock_concept_table
             return MagicMock()
 
@@ -272,20 +273,18 @@ class TestConceptPersistenceService:
 
         # Verify table calls
         assert mock_service_client.table.call_count == 2
-        mock_service_client.table.assert_any_call("color_variations")
-        mock_service_client.table.assert_any_call("concepts")
+        mock_service_client.table.assert_any_call(settings.DB_TABLE_PALETTES)
+        mock_service_client.table.assert_any_call(settings.DB_TABLE_CONCEPTS)
 
-        # Verify color_variations chain
-        mock_var_table.delete.assert_called_once()
+        # Verify delete calls
         mock_var_delete.eq.assert_called_once_with("concept_id", "concept-123")
-        mock_var_eq.execute.assert_called_once()
-
-        # Verify concepts chain
-        mock_concept_table.delete.assert_called_once()
         mock_concept_delete.eq.assert_called_once_with("id", "concept-123")
+
+        # Verify execute calls
+        mock_var_eq.execute.assert_called_once()
         mock_concept_eq.execute.assert_called_once()
 
-        # Verify result is True
+        # Verify the result
         assert result is True
 
     @pytest.mark.asyncio
@@ -312,9 +311,9 @@ class TestConceptPersistenceService:
 
         # Set up table method to return different mocks depending on the argument
         def table_side_effect(table_name: str) -> MagicMock:
-            if table_name == "color_variations":
+            if table_name == settings.DB_TABLE_PALETTES:
                 return mock_variations_delete
-            elif table_name == "concepts":
+            elif table_name == settings.DB_TABLE_CONCEPTS:
                 return mock_concepts_delete
             return MagicMock()
 
@@ -333,15 +332,17 @@ class TestConceptPersistenceService:
         mock_get_service_role.assert_called_once()
 
         # Verify that both table methods were called
-        mock_service_client.table.assert_any_call("color_variations")
+        mock_service_client.table.assert_any_call(settings.DB_TABLE_PALETTES)
 
-        # Verify variations table methods were called correctly
-        mock_variations_delete.delete.assert_called_once()
+        # Verify that only the variations table methods were called completely
         mock_variations_delete.eq.assert_called_once_with("concept_id", "concept-123")
         mock_variations_eq.execute.assert_called_once()
 
-        # Verify exception handling worked properly
-        assert result is False
+        # Concepts table methods should not be called due to exception
+        mock_concepts_delete.eq.assert_not_called()
+
+        # Verify the result
+        assert result is False, "Should return False when an exception occurs"
 
     @pytest.mark.asyncio
     async def test_get_concept_detail_success(self, service: ConceptPersistenceService, mock_concept_storage: MagicMock) -> None:
