@@ -28,7 +28,6 @@ Okay, here is the consolidated, step-by-step Phase 2 plan incorporating all the 
       logging.googleapis.com \
       monitoring.googleapis.com \
       cloudbuild.googleapis.com \
-      eventarc.googleapis.com\
       --project=YOUR_PROJECT_ID_HERE
     ```
 6.  **Create GCS Bucket for Terraform State (Manual/Bootstrap):**
@@ -37,14 +36,12 @@ Okay, here is the consolidated, step-by-step Phase 2 plan incorporating all the 
     - **Example Name:** `yourproject-tfstate` (Replace with your globally unique name).
     - **Purpose:** Securely store Terraform state files for both `dev` and `prod` workspaces.
 7.  **Grant Initial IAM Setter Permission:** Manually grant the identity running the _first_ `terraform apply` (likely your user account) the permission to _set IAM policies on the state bucket_. The `roles/storage.admin` role on the bucket is sufficient initially.
-
     ```bash
     gcloud storage buckets add-iam-policy-binding gs://yourproject-tfstate \
       --member="user:your-gcp-email@example.com" \
       --role="roles/storage.admin" \
       --project="project-hosting-tfstate-bucket" # Project where bucket lives
     ```
-
 8.  **Create Project Directory Structure:**
     - `mkdir terraform`
     - `mkdir terraform/environments`

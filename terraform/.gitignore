@@ -1,0 +1,9 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+# Optional: Ignore tfvars if not committing sensitive defaults
+environments/*.tfvars

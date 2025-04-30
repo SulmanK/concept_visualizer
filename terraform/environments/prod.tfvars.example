@@ -1,0 +1,13 @@
+project_id                      = "your-prod-project-id" # <-- REPLACE
+region                          = "us-east1"
+zone                            = "us-east1-b"
+environment                     = "prod"
+naming_prefix                   = "concept-viz-prod"
+terraform_state_bucket_name     = "your-unique-tf-state-bucket-name-here" # <-- REPLACE
+terraform_runner_user_emails    = ["your-gcp-email@example.com"] # <-- REPLACE
+terraform_cicd_sa_email         = "" # Set later if needed for CI/CD
+allow_ssh_ips                   = [] # Prod should not have SSH open generally
+api_vm_machine_type             = "e2-small"
+worker_min_instances            = 1
+worker_max_instances            = 10
+# Add other prod vars from variables.tf if needed
