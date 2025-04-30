@@ -47,6 +47,8 @@ class Settings(BaseSettings):
         DB_TABLE_TASKS: Name of the tasks table in the database
         DB_TABLE_CONCEPTS: Name of the concepts table in the database
         DB_TABLE_PALETTES: Name of the palettes table in the database
+        PUB_SUB_TOPIC_ID: Topic ID for Google Cloud Pub/Sub
+        PUB_SUB_PROJECT_ID: Project ID for Google Cloud Pub/Sub
     """
 
     # API settings
@@ -87,6 +89,10 @@ class Settings(BaseSettings):
 
     # Rate limiting settings
     RATE_LIMITING_ENABLED: bool = True
+
+    # Google Cloud Pub/Sub settings
+    PUB_SUB_TOPIC_ID: str = "concept-tasks"
+    PUB_SUB_PROJECT_ID: str = "your-project-id"
 
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(

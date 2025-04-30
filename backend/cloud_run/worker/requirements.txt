@@ -1,0 +1,21 @@
+# API and HTTP client
+httpx>=0.25.0
+pydantic>=2.4.2
+pydantic-settings>=2.8.1
+
+# Google Cloud
+google-cloud-pubsub>=2.21.0
+
+# Image processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+vtracer>=0.6.11
+
+# Supabase
+supabase>=1.0.3
+
+# JigsawStack
+jigsawstack>=0.1.31
+
+# Utilities
+python-dotenv>=1.0.0
