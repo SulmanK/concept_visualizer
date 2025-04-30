@@ -160,6 +160,13 @@ resource "google_project_iam_member" "cicd_sa_logging_admin" {
   member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
 
+# Add Workload Identity Pool Admin role to CI/CD service account
+resource "google_project_iam_member" "cicd_sa_workload_identity_admin" {
+  project = var.project_id
+  role    = "roles/iam.workloadIdentityPoolAdmin"
+  member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
 # IAM for State Bucket (Managed within Terraform)
 resource "google_storage_bucket_iam_member" "state_bucket_user_access" {
   for_each = toset(var.terraform_runner_user_emails)

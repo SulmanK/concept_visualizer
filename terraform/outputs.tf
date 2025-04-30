@@ -70,6 +70,21 @@ output "github_pool_name" {
   value       = google_iam_workload_identity_pool.github_pool.name
 }
 
+output "github_pool_id" {
+  description = "GitHub Workload Identity Pool ID with suffix."
+  value       = google_iam_workload_identity_pool.github_pool.workload_identity_pool_id
+}
+
+output "github_provider_id" {
+  description = "GitHub Workload Identity Provider ID."
+  value       = google_iam_workload_identity_pool_provider.github_provider.workload_identity_pool_provider_id
+}
+
+output "workload_identity_full_provider_name" {
+  description = "The full resource name of the workload identity provider."
+  value       = google_iam_workload_identity_pool_provider.github_provider.name
+}
+
 output "project_id" {
   description = "GCP Project ID."
   value       = var.project_id
