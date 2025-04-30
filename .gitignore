@@ -254,3 +254,5 @@ lerna-debug.log*
 /terraform/tfplan
 /terraform/.terraform.lock.hcl
 /terraform/tfplan.secrets
+/Design/Deployment-refactor/my-secrets.md
+/Design/Deployment-refactor/my-setup.md

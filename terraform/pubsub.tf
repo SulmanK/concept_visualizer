@@ -4,7 +4,7 @@ resource "google_pubsub_topic" "tasks_topic" {
   name    = "${var.naming_prefix}-tasks-${var.environment}"
   project = var.project_id
 
-  message_retention_duration = "604800s"  # 7 days in seconds
+  message_retention_duration = "604800s" # 7 days in seconds
 }
 
 resource "google_pubsub_subscription" "worker_subscription" {
@@ -16,12 +16,12 @@ resource "google_pubsub_subscription" "worker_subscription" {
   ack_deadline_seconds = 60
 
   # Configure message retention
-  message_retention_duration = "604800s"  # 7 days retention
+  message_retention_duration = "604800s" # 7 days retention
 
   # Configure retry policy
   retry_policy {
     minimum_backoff = "10s"
-    maximum_backoff = "600s"  # 10 minutes
+    maximum_backoff = "600s" # 10 minutes
   }
 
   # Enable exactly once delivery if needed

@@ -1,0 +1,90 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy_backend.yml"
+
+jobs:
+  deploy:
+    name: Deploy to GCP
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Set environment-specific variables
+      - name: Set Environment Specifics
+        id: set_env
+        run: |
+          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.DEV_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "GCP_ZONE=${{ secrets.DEV_GCP_ZONE }}" >> $GITHUB_ENV
+            echo "NAMING_PREFIX=${{ secrets.DEV_NAMING_PREFIX }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.DEV_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.DEV_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.DEV_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "GCP_ZONE=${{ secrets.PROD_GCP_ZONE }}" >> $GITHUB_ENV
+            echo "NAMING_PREFIX=${{ secrets.PROD_NAMING_PREFIX }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.PROD_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+          else
+            echo "Branch is not develop or main, skipping deployment."
+            exit 0
+          fi
+          echo "REGION=${{ secrets.GCP_REGION }}" >> $GITHUB_ENV
+
+      # Authenticate with the appropriate environment credentials
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
+
+      - name: Deploy Cloud Run Worker
+        run: |
+          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          SERVICE_NAME="${{ env.NAMING_PREFIX }}-worker"
+
+          # Deploy the worker to Cloud Run
+          gcloud run deploy "$SERVICE_NAME" \
+            --image="$IMAGE_URL" \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --quiet
+
+      - name: Deploy API to Compute Engine MIG (Rolling Update)
+        run: |
+          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${{ github.sha }}"
+          SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
+          MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm"
+
+          echo "Source Template: $SOURCE_TEMPLATE_NAME"
+          echo "New Template Name: $TEMPLATE_NAME"
+          echo "MIG Name: $MIG_NAME"
+          echo "New Image: $IMAGE_URL"
+
+          # Create a new instance template based on the latest one, but with the new image
+          gcloud compute instance-templates create "$TEMPLATE_NAME" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --source-instance-template="$SOURCE_TEMPLATE_NAME" \
+            --metadata=docker-image="$IMAGE_URL"
+
+          # Start a rolling update on the Managed Instance Group
+          gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
+            --version=template="$TEMPLATE_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --max-surge=1 \
+            --max-unavailable=0
