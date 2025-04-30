@@ -1,0 +1,13 @@
+project_id                      = "your-dev-project-id" # <-- REPLACE
+region                          = "us-central1"
+zone                            = "us-central1-a"
+environment                     = "dev"
+naming_prefix                   = "concept-viz-dev"
+terraform_state_bucket_name     = "your-unique-tf-state-bucket-name-here" # <-- REPLACE
+terraform_runner_user_emails    = ["your-gcp-email@example.com"] # <-- REPLACE
+terraform_cicd_sa_email         = "" # Set later if needed for CI/CD
+allow_ssh_ips                   = ["YOUR_HOME_OR_OFFICE_IP/32"] # Optional
+api_vm_machine_type             = "e2-micro"
+worker_min_instances            = 0
+worker_max_instances            = 3
+# Add other dev vars from variables.tf if needed
