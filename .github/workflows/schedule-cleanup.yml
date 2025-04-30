@@ -20,11 +20,13 @@ jobs:
         id: set-env
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "SUPABASE_URL=https://pstdcfittpjhxzynbdbu.supabase.co/functions/v1/cleanup-old-data" >> $GITHUB_ENV
-            echo "SUPABASE_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
+            echo "SUPABASE_KEY=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
           else
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
             echo "SUPABASE_URL=https://ksuxhgigxymqoqmxekic.supabase.co/functions/v1/cleanup-old-data" >> $GITHUB_ENV
-            echo "SUPABASE_KEY=${{ secrets.SUPABASE_DEV_ANON_KEY }}" >> $GITHUB_ENV
+            echo "SUPABASE_KEY=${{ secrets.DEV_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
           fi
 
       - name: Call Cleanup Edge Function
@@ -35,8 +37,8 @@ jobs:
 
       - name: Log completion
         if: ${{ success() }}
-        run: echo "Data cleanup function executed successfully"
+        run: echo "Data cleanup function executed successfully for ${{ env.ENVIRONMENT }} environment"
 
       - name: Log failure
         if: ${{ failure() }}
-        run: echo "Failed to execute data cleanup function"
+        run: echo "Failed to execute data cleanup function for ${{ env.ENVIRONMENT }} environment"

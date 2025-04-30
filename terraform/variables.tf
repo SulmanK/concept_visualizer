@@ -102,3 +102,9 @@ variable "pubsub_lite_subscribe_mib_per_sec" {
   type        = number
   default     = 2
 }
+
+variable "github_repo" {
+  description = "The full name of the GitHub repository in the format 'OWNER/REPO' (e.g., 'username/concept_visualizer'). Used for Workload Identity Federation."
+  type        = string
+  default     = ""
+}

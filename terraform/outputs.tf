@@ -5,9 +5,24 @@ output "api_vm_external_ip" {
   value       = try(google_compute_address.api_static_ip[0].address, "Check the IP of the VM created by the Instance Group Manager")
 }
 
+output "api_igm_name" {
+  description = "Name of the Managed Instance Group for the API."
+  value       = google_compute_instance_group_manager.api_igm.name
+}
+
+output "api_igm_zone" {
+  description = "Zone of the API Instance Group Manager."
+  value       = google_compute_instance_group_manager.api_igm.zone
+}
+
 output "worker_service_name" {
   description = "Name of the Cloud Run worker service."
   value       = google_cloud_run_v2_service.worker.name
+}
+
+output "worker_service_region" {
+  description = "Region of the Cloud Run worker service."
+  value       = google_cloud_run_v2_service.worker.location
 }
 
 output "worker_service_url" {
@@ -38,4 +53,24 @@ output "api_service_account_email" {
 output "worker_service_account_email" {
   description = "Email of the Worker Service Account."
   value       = google_service_account.worker_service_account.email
+}
+
+output "cicd_service_account_email" {
+  description = "Email of the CI/CD Service Account for GitHub Actions."
+  value       = google_service_account.cicd_service_account.email
+}
+
+output "workload_identity_provider" {
+  description = "Workload Identity Provider ID for GitHub Actions."
+  value       = "projects/${var.project_id}/locations/global/workloadIdentityPools/${google_iam_workload_identity_pool.github_pool.workload_identity_pool_id}/providers/${google_iam_workload_identity_pool_provider.github_provider.workload_identity_pool_provider_id}"
+}
+
+output "github_pool_name" {
+  description = "GitHub Workload Identity Pool Name."
+  value       = google_iam_workload_identity_pool.github_pool.name
+}
+
+output "project_id" {
+  description = "GCP Project ID."
+  value       = var.project_id
 }
