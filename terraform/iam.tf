@@ -167,6 +167,13 @@ resource "google_project_iam_member" "cicd_sa_workload_identity_admin" {
   member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
 
+# Add IAM binding for CI/CD service account to impersonate Compute Engine default service account
+resource "google_service_account_iam_member" "cicd_sa_compute_service_account_user" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
 # IAM for State Bucket (Managed within Terraform)
 resource "google_storage_bucket_iam_member" "state_bucket_user_access" {
   for_each = toset(var.terraform_runner_user_emails)
