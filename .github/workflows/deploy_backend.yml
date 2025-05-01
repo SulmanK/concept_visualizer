@@ -53,7 +53,7 @@ jobs:
 
       - name: Deploy Cloud Run Worker
         run: |
-          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
           SERVICE_NAME="${{ env.NAMING_PREFIX }}-worker"
 
           # Deploy the worker to Cloud Run
@@ -65,7 +65,7 @@ jobs:
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
         run: |
-          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${{ github.sha }}"
           SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm"
