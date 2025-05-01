@@ -188,8 +188,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:latest
+            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -201,7 +201,7 @@ jobs:
           file: ./backend/Dockerfile.worker
           push: true
           tags: |
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}
-            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:latest
+            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
