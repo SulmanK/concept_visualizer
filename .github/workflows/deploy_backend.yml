@@ -1,6 +1,11 @@
 name: Deploy Backend
 
 on:
+  workflow_run:
+    workflows: ["CI Tests & Deployment"]
+    types:
+      - completed
+    branches: [develop, main]
   push:
     branches: [develop, main]
     paths:
@@ -10,6 +15,8 @@ on:
 jobs:
   deploy:
     name: Deploy to GCP
+    # Only run if the CI workflow succeeded or the deployment was manually triggered by a push
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
