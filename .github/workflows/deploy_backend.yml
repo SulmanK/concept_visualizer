@@ -85,8 +85,7 @@ jobs:
             --region="${{ env.REGION }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
             --entry-point=handle_pubsub \
-            --docker-repository="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}" \
-            --docker-image="concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}" \
+            --image="$WORKER_IMAGE_URL" \
             --trigger-topic="$TASKS_TOPIC_NAME" \
             --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
             --timeout=540s \
