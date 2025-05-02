@@ -80,6 +80,19 @@ jobs:
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
 
+          # Create a directory for the function deployment
+          mkdir -p function-deploy
+          cd function-deploy
+
+          # Create a simple function.json file to indicate this is a container deployment
+          echo '{
+            "buildpacks": null,
+            "dockerfiles": {
+              "dockerfile": "FROM ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+            }
+          }' > function.json
+
+          # Deploy the function with the source being the current directory
           gcloud functions deploy "$FUNCTION_NAME" \
             --gen2 \
             --region="${{ env.REGION }}" \
@@ -93,7 +106,7 @@ jobs:
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
             --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_dev,CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
             --set-secrets="$SECRETS_ARG" \
-            --source="docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/concept-viz-dev-docker-repo/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}" \
+            --source="." \
             --quiet
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
