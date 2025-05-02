@@ -15,19 +15,14 @@ output "api_igm_zone" {
   value       = google_compute_instance_group_manager.api_igm.zone
 }
 
-output "worker_service_name" {
-  description = "Name of the Cloud Run worker service."
-  value       = google_cloud_run_v2_service.worker.name
+output "worker_function_name" {
+  description = "Name of the Cloud Function worker."
+  value       = google_cloudfunctions2_function.worker_function.name
 }
 
-output "worker_service_region" {
-  description = "Region of the Cloud Run worker service."
-  value       = google_cloud_run_v2_service.worker.location
-}
-
-output "worker_service_url" {
-  description = "URL of the Cloud Run worker service (internal)."
-  value       = google_cloud_run_v2_service.worker.uri
+output "worker_function_region" {
+  description = "Region of the Cloud Function worker."
+  value       = google_cloudfunctions2_function.worker_function.location
 }
 
 output "artifact_registry_repository_url" {

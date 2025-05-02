@@ -1,9 +1,10 @@
-"""Cloud Run worker for processing Concept Visualizer tasks.
+"""Cloud Function worker for processing Concept Visualizer tasks.
 
-This module provides the main function for the Cloud Run worker that processes
+This module provides the main function for the Cloud Function worker that processes
 tasks from Pub/Sub and updates the database accordingly.
 """
 
+import asyncio
 import base64
 import json
 import logging
@@ -11,8 +12,9 @@ import os
 import traceback
 from typing import Any, Dict
 
+import functions_framework
 import httpx
-from google.cloud import pubsub_v1
+from functions_framework import CloudEvent
 
 from app.core.config import settings
 from app.core.constants import TASK_STATUS_COMPLETED, TASK_STATUS_FAILED, TASK_STATUS_PROCESSING, TASK_TYPE_GENERATION, TASK_TYPE_REFINEMENT
@@ -523,120 +525,39 @@ async def process_pubsub_message(message: Dict[str, Any], services: Dict[str, An
         raise ValueError(f"Unknown task type: {task_type}")
 
 
-def process_task(event: Dict[str, Any], context: Any) -> None:
-    """Cloud Run function triggered by a Pub/Sub message.
+@functions_framework.cloud_event
+def handle_pubsub(cloud_event: CloudEvent) -> None:
+    """Cloud Function entry point triggered by Pub/Sub CloudEvents.
 
     Args:
-        event: The dictionary with a base64-encoded data field containing the message
-        context: Metadata for the event
+        cloud_event: The CloudEvent object containing the Pub/Sub message
     """
-    import asyncio
-
-    logger.info("Received message")
-
-    # Get the message data
+    logger = logging.getLogger("concept-worker-function")
     try:
-        if "data" not in event:
-            logger.error("No data field in the event")
+        # Extract and decode the Pub/Sub message data
+        if "message" not in cloud_event.data or "data" not in cloud_event.data["message"]:
+            logger.error("Invalid CloudEvent format: Missing message data.")
+            # Acknowledge implicitly by returning, or raise to potentially trigger retry
             return
 
-        # Decode the message data from base64
-        message_data = base64.b64decode(event["data"]).decode("utf-8")
-        message = json.loads(message_data)
+        message_data_base64 = cloud_event.data["message"]["data"]
+        message_data_bytes = base64.b64decode(message_data_base64)
+        message = json.loads(message_data_bytes.decode("utf-8"))
+        task_id = message.get("task_id", "UNKNOWN")
+        logger.info(f"Processing Pub/Sub message for task ID: {task_id}")
 
-        logger.info(f"Processing message for task ID: {message.get('task_id')}")
-
-        # Initialize services
+        # Initialize services *per invocation*
         services = initialize_services()
 
-        # Create an asyncio event loop and run the async processing function
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(process_pubsub_message(message, services))
-        finally:
-            loop.close()
+        # Run the async processing logic
+        # Using asyncio.run is suitable for Cloud Functions entry points
+        asyncio.run(process_pubsub_message(message, services))
 
-        logger.info(f"Successfully processed message for task ID: {message.get('task_id')}")
+        logger.info(f"Successfully processed task ID: {task_id}")
+        # Function completes, execution environment terminates
 
     except Exception as e:
-        logger.error(f"Error processing message: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
-
-
-if __name__ == "__main__":
-    """Main entry point for the worker when run as a standalone service.
-
-    This is used when running as a Cloud Run service rather than a function.
-    It creates a subscription to the Pub/Sub topic and processes messages.
-    """
-    import asyncio
-
-    logger.info("Starting Concept Visualizer worker service")
-
-    project_id = os.environ.get("CONCEPT_PUB_SUB_PROJECT_ID", settings.PUB_SUB_PROJECT_ID)
-    topic_id = os.environ.get("CONCEPT_PUB_SUB_TOPIC_ID", settings.PUB_SUB_TOPIC_ID)
-    subscription_id = f"{topic_id}-subscription"
-
-    # Initialize the Pub/Sub subscriber client
-    subscriber = pubsub_v1.SubscriberClient()
-    subscription_path = subscriber.subscription_path(project_id, subscription_id)
-
-    # Create the subscription if it doesn't exist
-    try:
-        subscriber.get_subscription(subscription=subscription_path)
-        logger.info(f"Subscription {subscription_id} already exists")
-    except Exception as e:
-        logger.info(f"Subscription doesn't exist, creating it: {str(e)}")
-        topic_path = subscriber.topic_path(project_id, topic_id)
-        subscription = subscriber.create_subscription(request={"name": subscription_path, "topic": topic_path})
-        logger.info(f"Created subscription: {subscription.name}")
-
-    # Initialize services once at startup
-    services = initialize_services()
-    logger.info("Services initialized")
-
-    # Helper function to process messages
-    def process_message(message: pubsub_v1.subscriber.message.Message) -> None:
-        """Process a message from the subscription.
-
-        Args:
-            message: The Pub/Sub message to process
-        """
-        try:
-            logger.info(f"Received message with ID: {message.message_id}")
-            data = json.loads(message.data.decode("utf-8"))
-
-            # Create an asyncio event loop and run the async processing function
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(process_pubsub_message(data, services))
-            finally:
-                loop.close()
-
-            # Acknowledge the message
-            message.ack()
-            logger.info(f"Successfully processed message with ID: {message.message_id}")
-        except Exception as e:
-            logger.error(f"Error processing message {message.message_id}: {str(e)}")
-            logger.debug(f"Exception traceback: {traceback.format_exc()}")
-
-            # Don't acknowledge the message to allow for retry
-            message.nack()
-
-    # Set up the subscriber
-    future = subscriber.subscribe(subscription_path, process_message)
-
-    logger.info(f"Listening for messages on {subscription_path}")
-
-    # Keep the main thread from exiting
-    try:
-        future.result()
-    except KeyboardInterrupt:
-        future.cancel()
-        logger.info("Subscription cancelled")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        future.cancel()
-        logger.info("Subscription cancelled due to error")
+        task_id = message.get("task_id", "UNKNOWN") if "message" in locals() else "UNKNOWN"
+        logger.error(f"FATAL error processing task {task_id}: {e}", exc_info=True)
+        # Re-raising signals failure to the platform for potential retries
+        raise
