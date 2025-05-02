@@ -62,25 +62,25 @@ variable "api_vm_machine_type" {
 }
 
 variable "worker_cpu" {
-  description = "CPU allocation for the Cloud Run worker."
+  description = "CPU allocation for the Cloud Function worker."
   type        = string
   default     = "1"
 }
 
 variable "worker_memory" {
-  description = "Memory allocation for the Cloud Run worker."
+  description = "Memory allocation for the Cloud Function worker."
   type        = string
-  default     = "512Mi"
+  default     = "2048Mi"
 }
 
 variable "worker_min_instances" {
-  description = "Minimum number of Cloud Run worker instances."
+  description = "Minimum number of Cloud Function worker instances."
   type        = number
   default     = 0
 }
 
 variable "worker_max_instances" {
-  description = "Maximum number of Cloud Run worker instances."
+  description = "Maximum number of Cloud Function worker instances."
   type        = number
   default     = 5
 }

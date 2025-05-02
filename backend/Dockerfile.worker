@@ -22,8 +22,12 @@ COPY cloud_run/worker/ worker/
 # Make sure Python output is sent straight to terminal
 ENV PYTHONUNBUFFERED=1
 
+# Set environment variable for the function framework
+ENV FUNCTION_TARGET=handle_pubsub
+ENV FUNCTION_SIGNATURE_TYPE=cloudevent
+
 # Set application environment variables with default values
-# These should be overridden in the Cloud Run deployment
+# These should be overridden in the Cloud Function deployment
 ENV CONCEPT_ENVIRONMENT="production" \
     CONCEPT_LOG_LEVEL="INFO" \
     CONCEPT_PUB_SUB_TOPIC_ID="concept-tasks" \
@@ -33,5 +37,5 @@ ENV CONCEPT_ENVIRONMENT="production" \
     CONCEPT_STORAGE_BUCKET_CONCEPT="concepts" \
     CONCEPT_STORAGE_BUCKET_PALETTE="palettes"
 
-# Run the worker
-CMD ["python", "worker/main.py"]
+# Run the Functions Framework
+CMD ["functions-framework", "--target=${FUNCTION_TARGET}", "--signature-type=${FUNCTION_SIGNATURE_TYPE}"]

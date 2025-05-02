@@ -32,6 +32,9 @@ jobs:
             echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.DEV_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
             echo "CICD_SERVICE_ACCOUNT=${{ secrets.DEV_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.DEV_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+            echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "WORKER_MIN_INSTANCES=${{ secrets.DEV_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 10 }}" >> $GITHUB_ENV
           elif [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
@@ -40,6 +43,9 @@ jobs:
             echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
             echo "CICD_SERVICE_ACCOUNT=${{ secrets.PROD_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+            echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "WORKER_MIN_INSTANCES=${{ secrets.PROD_WORKER_MIN_INSTANCES || 1 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 20 }}" >> $GITHUB_ENV
           else
             echo "Branch is not develop or main, skipping deployment."
             exit 0
@@ -53,16 +59,41 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
 
-      - name: Deploy Cloud Run Worker
+      - name: Deploy Cloud Function Worker
         run: |
-          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
-          SERVICE_NAME="${{ env.NAMING_PREFIX }}-worker"
+          FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
+          WORKER_IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          TASKS_TOPIC_NAME="${{ env.NAMING_PREFIX }}-tasks-${{ env.ENVIRONMENT }}"
 
-          # Deploy the worker to Cloud Run
-          gcloud run deploy "$SERVICE_NAME" \
-            --image="$IMAGE_URL" \
+          echo "Deploying Function: $FUNCTION_NAME"
+          echo "Using Image: $WORKER_IMAGE_URL"
+          echo "Trigger Topic: $TASKS_TOPIC_NAME"
+          echo "Service Account: ${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}"
+
+          # Construct --set-secrets argument dynamically
+          SECRETS_ARG=""
+          SECRETS_ARG+="CONCEPT_SUPABASE_URL=${{ env.NAMING_PREFIX }}-supabase-url-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_KEY=${{ env.NAMING_PREFIX }}-supabase-key-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_SERVICE_ROLE=${{ env.NAMING_PREFIX }}-supabase-service-role-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_JWT_SECRET=${{ env.NAMING_PREFIX }}-supabase-jwt-secret-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_JIGSAWSTACK_API_KEY=${{ env.NAMING_PREFIX }}-jigsawstack-api-key-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
+
+          gcloud functions deploy "$FUNCTION_NAME" \
+            --gen2 \
             --region="${{ env.REGION }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
+            --entry-point=handle_pubsub \
+            --image="$WORKER_IMAGE_URL" \
+            --trigger-topic="$TASKS_TOPIC_NAME" \
+            --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
+            --timeout=900s \
+            --memory=2048Mi \
+            --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
+            --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
+            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
+            --set-secrets="$SECRETS_ARG" \
             --quiet
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
