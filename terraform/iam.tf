@@ -160,6 +160,13 @@ resource "google_project_iam_member" "cicd_sa_logging_admin" {
   member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
 
+# Add Cloud Functions Admin role to CI/CD service account
+resource "google_project_iam_member" "cicd_sa_cloudfunctions_admin" {
+  project = var.project_id
+  role    = "roles/cloudfunctions.admin"
+  member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
 # Add Workload Identity Pool Admin role to CI/CD service account
 resource "google_project_iam_member" "cicd_sa_workload_identity_admin" {
   project = var.project_id
@@ -170,6 +177,13 @@ resource "google_project_iam_member" "cicd_sa_workload_identity_admin" {
 # Add IAM binding for CI/CD service account to impersonate Compute Engine default service account
 resource "google_service_account_iam_member" "cicd_sa_compute_service_account_user" {
   service_account_id = "projects/${var.project_id}/serviceAccounts/${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
+# Add IAM binding for CI/CD service account to impersonate the worker service account
+resource "google_service_account_iam_member" "cicd_sa_worker_service_account_user" {
+  service_account_id = google_service_account.worker_service_account.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
