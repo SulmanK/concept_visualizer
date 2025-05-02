@@ -85,10 +85,10 @@ jobs:
             --region="${{ env.REGION }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
             --entry-point=handle_pubsub \
-            --image="$WORKER_IMAGE_URL" \
+            --source="$WORKER_IMAGE_URL" \
             --trigger-topic="$TASKS_TOPIC_NAME" \
             --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
-            --timeout=900s \
+            --timeout=540s \
             --memory=2048Mi \
             --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
