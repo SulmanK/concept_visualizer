@@ -24,14 +24,14 @@ app = Flask(__name__)
 
 
 @app.route("/", methods=["GET"])
-def health_check():
+def health_check() -> tuple[dict[str, str], int]:
     """Health check endpoint for Cloud Run."""
     logger.info("Health check request received")
     return {"status": "healthy", "service": "concept-worker"}, 200
 
 
 @app.route("/_ah/warmup", methods=["GET"])
-def warmup():
+def warmup() -> tuple[dict[str, str], int]:
     """Warmup endpoint for Cloud Run."""
     logger.info("Warmup request received")
     return {"status": "warmed_up"}, 200
