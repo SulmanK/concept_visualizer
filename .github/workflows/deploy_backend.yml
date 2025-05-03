@@ -101,8 +101,10 @@ jobs:
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
         run: |
+          # Use a shorter version of the SHA for template name (first 8 characters)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
-          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${{ github.sha }}"
+          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
           SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
 
