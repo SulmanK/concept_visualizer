@@ -2,14 +2,16 @@
 httpx>=0.25.0
 pydantic>=2.4.2
 pydantic-settings>=2.8.1
+flask>=2.0.0
 
 # Google Cloud
 google-cloud-pubsub>=2.21.0
+google-cloud-storage>=2.10.0
 functions-framework>=3.0.0  # For Cloud Function (2nd Gen)
 
 # Image processing
 pillow>=10.0.0
-opencv-python>=4.8.0
+opencv-python-headless>=4.8.0  # Headless version for cloud environments
 vtracer>=0.6.11
 
 # Supabase
@@ -18,5 +20,10 @@ supabase>=1.0.3
 # JigsawStack
 jigsawstack>=0.1.31
 
+# Redis
+redis>=5.0.0
+
 # Utilities
 python-dotenv>=1.0.0
+asyncio>=3.4.3
+gunicorn>=20.1.0  # For running the WSGI server
