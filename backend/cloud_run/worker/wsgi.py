@@ -38,6 +38,7 @@ def warmup():
 
 
 if __name__ == "__main__":
-    PORT = int(os.getenv("PORT", 8080))
+    # Get port from environment variable (set by Cloud Run)
+    PORT = int(os.getenv("PORT", "8080"))
     logger.info(f"Starting WSGI server on port {PORT}")
     app.run(host="0.0.0.0", port=PORT)
