@@ -126,7 +126,7 @@ jobs:
             --project="${{ env.GCP_PROJECT_ID }}" \
             --source-instance="$INSTANCE" \
             --source-instance-zone="${{ env.GCP_ZONE }}" \
-            --no-address \
+            --network-interface="no-address" \
             --metadata=docker-image="$IMAGE_URL"
 
           # Start a rolling update on the Managed Instance Group
