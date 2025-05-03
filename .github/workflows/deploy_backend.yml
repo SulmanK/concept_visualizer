@@ -84,13 +84,17 @@ jobs:
           mkdir -p function-deploy
           cd function-deploy
 
-          # Create a simple function.json file to indicate this is a container deployment
-          echo '{
-            "buildpacks": null,
-            "dockerfiles": {
-              "dockerfile": "FROM ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          # Create a function.json file that correctly tells GCP this is a container deployment
+          cat > function.json << EOF
+          {
+            "buildConfig": {
+              "runtime": "docker",
+              "source": {
+                "image": "${WORKER_IMAGE_URL}"
+              }
             }
-          }' > function.json
+          }
+          EOF
 
           # Deploy the function with the source being the current directory
           gcloud functions deploy "$FUNCTION_NAME" \
