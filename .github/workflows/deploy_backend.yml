@@ -80,7 +80,8 @@ jobs:
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
 
-          # Deploy the function directly from the worker source directory
+          # Deploy the function using the 'backend' directory as source
+          # And specify the location of the main file using GOOGLE_FUNCTION_SOURCE runtime env var
           gcloud functions deploy "$FUNCTION_NAME" \
             --gen2 \
             --region="${{ env.REGION }}" \
@@ -93,10 +94,9 @@ jobs:
             --memory=2048Mi \
             --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
-            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
+            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379,GOOGLE_FUNCTION_SOURCE=cloud_run/worker/main.py" \
             --set-secrets="$SECRETS_ARG" \
-            --source="./backend/cloud_run/worker" \
-            --set-build-env-vars="PYTHONPATH=../.." \
+            --source="./backend" \
             --allow-unauthenticated \
             --quiet
 
