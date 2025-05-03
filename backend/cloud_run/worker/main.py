@@ -35,6 +35,23 @@ logging.basicConfig(
 logger = logging.getLogger("concept-worker")
 
 
+# Add HTTP handler for health checks
+@functions_framework.http
+def http_endpoint(request):
+    """HTTP handler for health checks.
+
+    Cloud Run will use this endpoint to verify that the instance is healthy.
+
+    Args:
+        request: HTTP request object
+
+    Returns:
+        An HTTP response
+    """
+    logger.info("Received health check request")
+    return {"status": "healthy", "message": "Concept worker is ready to process tasks"}
+
+
 def initialize_services() -> Dict[str, Any]:
     """Initialize all required services for task processing.
 

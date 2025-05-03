@@ -1,0 +1,44 @@
+# Exclude local development artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+
+# Exclude version control
+.git/
+.gitignore
+
+# Exclude specific testing and documentation
+tests/
+docs/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Exclude editor/IDE settings
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Exclude log files
+*.log
