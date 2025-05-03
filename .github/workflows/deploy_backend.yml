@@ -126,8 +126,8 @@ jobs:
             --project="${{ env.GCP_PROJECT_ID }}" \
             --source-instance="$INSTANCE" \
             --source-instance-zone="${{ env.GCP_ZONE }}" \
+            --no-address \
             --metadata=docker-image="$IMAGE_URL"
-            --no-address   # avoid copying the static external IP
 
           # Start a rolling update on the Managed Instance Group
           gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
