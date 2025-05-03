@@ -61,11 +61,6 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
 
-      # Update Cloud SDK to ensure we have the latest versions and commands
-      - name: Update Cloud SDK
-        run: |
-          gcloud components update --quiet
-
       - name: Deploy Cloud Function Worker
         run: |
           FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
