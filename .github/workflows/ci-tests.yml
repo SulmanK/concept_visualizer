@@ -192,16 +192,3 @@ jobs:
             ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      # Build and Push Worker Image
-      - name: Build and Push Worker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile.worker
-          push: true
-          tags: |
-            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}
-            ${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
