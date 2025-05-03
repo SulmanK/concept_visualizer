@@ -62,7 +62,7 @@ jobs:
       - name: Deploy Cloud Function Worker
         run: |
           FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
-          WORKER_IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          WORKER_IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.event.workflow_run.head_sha || github.sha }}"
           TASKS_TOPIC_NAME="${{ env.NAMING_PREFIX }}-tasks-${{ env.ENVIRONMENT }}"
 
           echo "Deploying Function: $FUNCTION_NAME"
@@ -80,23 +80,7 @@ jobs:
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
 
-          # Create a directory for the function deployment
-          mkdir -p function-deploy
-          cd function-deploy
-
-          # Create a function.json file that correctly tells GCP this is a container deployment
-          cat > function.json << EOF
-          {
-            "buildConfig": {
-              "runtime": "docker",
-              "source": {
-                "image": "${WORKER_IMAGE_URL}"
-              }
-            }
-          }
-          EOF
-
-          # Deploy the function with the source being the current directory
+          # Deploy the function using the container image directly
           gcloud functions deploy "$FUNCTION_NAME" \
             --gen2 \
             --region="${{ env.REGION }}" \
@@ -108,9 +92,9 @@ jobs:
             --memory=2048Mi \
             --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
-            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_dev,CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
+            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
             --set-secrets="$SECRETS_ARG" \
-            --source="." \
+            --source="${WORKER_IMAGE_URL}" \
             --quiet
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
