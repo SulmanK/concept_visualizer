@@ -61,6 +61,11 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
 
+      # Update Cloud SDK to ensure we have the latest versions and commands
+      - name: Update Cloud SDK
+        run: |
+          gcloud components update --quiet
+
       - name: Deploy Cloud Function Worker
         run: |
           FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
@@ -111,10 +116,19 @@ jobs:
           echo "MIG Name: $MIG_NAME"
           echo "New Image: $IMAGE_URL"
 
-          # Create a new instance template based on the latest one, but with the new image
+          # Find a running VM to clone from the managed instance group
+          INSTANCE=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --format='value(instance.basename())' --limit=1)
+
+          echo "Found instance to clone: $INSTANCE"
+
+          # Create a new instance template based on the running instance, but with the new image
           gcloud compute instance-templates create "$TEMPLATE_NAME" \
             --project="${{ env.GCP_PROJECT_ID }}" \
-            --source-instance-template="$SOURCE_TEMPLATE_NAME" \
+            --source-instance="$INSTANCE" \
+            --source-instance-zone="${{ env.GCP_ZONE }}" \
             --metadata=docker-image="$IMAGE_URL"
 
           # Start a rolling update on the Managed Instance Group
