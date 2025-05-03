@@ -104,7 +104,7 @@ jobs:
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${{ github.sha }}"
           SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
-          MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm"
+          MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
 
           echo "Source Template: $SOURCE_TEMPLATE_NAME"
           echo "New Template Name: $TEMPLATE_NAME"
