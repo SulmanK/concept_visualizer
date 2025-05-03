@@ -19,12 +19,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # Set environment-specific variables
       - name: Set Environment Specifics
         id: set_env
         run: |
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+          if [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "develop" ]]; then
             echo "ENVIRONMENT=dev" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.DEV_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "GCP_ZONE=${{ secrets.DEV_GCP_ZONE }}" >> $GITHUB_ENV
@@ -35,7 +37,7 @@ jobs:
             echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "WORKER_MIN_INSTANCES=${{ secrets.DEV_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
             echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 10 }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "GCP_ZONE=${{ secrets.PROD_GCP_ZONE }}" >> $GITHUB_ENV
@@ -62,11 +64,9 @@ jobs:
       - name: Deploy Cloud Function Worker
         run: |
           FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
-          WORKER_IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-worker-${{ env.ENVIRONMENT }}:${{ github.event.workflow_run.head_sha || github.sha }}"
           TASKS_TOPIC_NAME="${{ env.NAMING_PREFIX }}-tasks-${{ env.ENVIRONMENT }}"
 
           echo "Deploying Function: $FUNCTION_NAME"
-          echo "Using Image: $WORKER_IMAGE_URL"
           echo "Trigger Topic: $TASKS_TOPIC_NAME"
           echo "Service Account: ${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}"
 
@@ -80,11 +80,12 @@ jobs:
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
           SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
 
-          # Deploy the function using the container image directly
+          # Deploy the function directly from source (backend subdirectory)
           gcloud functions deploy "$FUNCTION_NAME" \
             --gen2 \
             --region="${{ env.REGION }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
+            --runtime=python311 \
             --entry-point=handle_pubsub \
             --run-service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
             --trigger-topic="$TASKS_TOPIC_NAME" \
@@ -94,7 +95,7 @@ jobs:
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
             --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=${{ env.NAMING_PREFIX }}-concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=${{ env.NAMING_PREFIX }}-palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
             --set-secrets="$SECRETS_ARG" \
-            --docker-image="${WORKER_IMAGE_URL}" \
+            --source="./backend" \
             --quiet
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
