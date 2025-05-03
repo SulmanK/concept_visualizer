@@ -101,16 +101,9 @@ jobs:
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
         run: |
-          # Ensure jq is installed (should be available by default in GitHub Actions runners)
-          if ! command -v jq &> /dev/null; then
-            echo "jq is not installed, installing..."
-            sudo apt-get update
-            sudo apt-get install -y jq
-          fi
-
-          # Use a shorter version of the SHA for template name (first 8 characters)
-          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          # Use a shorter hash (first 8 characters) to avoid name length issues
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
           SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
@@ -120,35 +113,21 @@ jobs:
           echo "MIG Name: $MIG_NAME"
           echo "New Image: $IMAGE_URL"
 
-          # Get information about the source template
-          SOURCE_TEMPLATE_INFO=$(gcloud compute instance-templates describe "$SOURCE_TEMPLATE_NAME" --project="${{ env.GCP_PROJECT_ID }}" --format="json")
+          # Find a running VM to clone from the managed instance group
+          INSTANCE=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --format='value(instance.basename())' --limit=1)
 
-          # Extract machine type, network tags, and other necessary configuration from the source template
-          MACHINE_TYPE=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.machineType')
-          NETWORK_TAGS=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.tags.items // [] | join(",")')
-          NETWORK=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.networkInterfaces[0].network')
-          SUBNET=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.networkInterfaces[0].subnetwork // ""')
-          SERVICE_ACCOUNT=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.serviceAccounts[0].email // ""')
-          SCOPE=$(echo "$SOURCE_TEMPLATE_INFO" | jq -r '.properties.serviceAccounts[0].scopes // [] | join(",")')
+          echo "Found instance to clone: $INSTANCE"
 
-          echo "Machine Type: $MACHINE_TYPE"
-          echo "Network Tags: $NETWORK_TAGS"
-          echo "Network: $NETWORK"
-          echo "Subnet: $SUBNET"
-          echo "Service Account: $SERVICE_ACCOUNT"
-
-          # Create a new instance template with the same configuration but updated container image
+          # Create a new instance template based on the running instance, but with the new image
           gcloud compute instance-templates create "$TEMPLATE_NAME" \
             --project="${{ env.GCP_PROJECT_ID }}" \
-            --machine-type="$MACHINE_TYPE" \
-            $([ -n "$NETWORK_TAGS" ] && echo "--tags=$NETWORK_TAGS") \
-            $([ -n "$NETWORK" ] && echo "--network=$NETWORK") \
-            $([ -n "$SUBNET" ] && echo "--subnet=$SUBNET") \
-            $([ -n "$SERVICE_ACCOUNT" ] && echo "--service-account=$SERVICE_ACCOUNT") \
-            $([ -n "$SCOPE" ] && echo "--scopes=$SCOPE") \
-            --metadata=docker-image="$IMAGE_URL" \
-            --no-restart-on-failure \
-            --maintenance-policy=MIGRATE
+            --source-instance="$INSTANCE" \
+            --source-instance-zone="${{ env.GCP_ZONE }}" \
+            --metadata=docker-image="$IMAGE_URL"
+            --no-address   # avoid copying the static external IP
 
           # Start a rolling update on the Managed Instance Group
           gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
