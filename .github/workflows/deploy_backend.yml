@@ -105,29 +105,27 @@ jobs:
           # Use a shorter hash (first 8 characters) to avoid name length issues
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
-          SOURCE_TEMPLATE_NAME=$(gcloud compute instance-templates list --project="${{ env.GCP_PROJECT_ID }}" --filter="name~'^${{ env.NAMING_PREFIX }}-api-tpl'" --sort-by=~creationTimestamp --limit=1 --format='value(name)')
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
 
-          echo "Source Template: $SOURCE_TEMPLATE_NAME"
           echo "New Template Name: $TEMPLATE_NAME"
           echo "MIG Name: $MIG_NAME"
           echo "New Image: $IMAGE_URL"
 
-          # Find a running VM to clone from the managed instance group
-          INSTANCE=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
-            --zone="${{ env.GCP_ZONE }}" \
-            --project="${{ env.GCP_PROJECT_ID }}" \
-            --format='value(instance.basename())' --limit=1)
-
-          echo "Found instance to clone: $INSTANCE"
-
-          # Create a new instance template based on the running instance, but with the new image
+          # Create a new instance template with the required configuration
           gcloud compute instance-templates create "$TEMPLATE_NAME" \
             --project="${{ env.GCP_PROJECT_ID }}" \
-            --source-instance="$INSTANCE" \
-            --source-instance-zone="${{ env.GCP_ZONE }}" \
-            --network-interface="no-address" \
-            --metadata=docker-image="$IMAGE_URL"
+            --machine-type=e2-micro \
+            --network-tier=STANDARD \
+            --maintenance-policy=MIGRATE \
+            --provisioning-model=STANDARD \
+            --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
+            --scopes=https://www.googleapis.com/auth/cloud-platform \
+            --tags=http-server,https-server,concept-api \
+            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image=projects/debian-cloud/global/images/debian-11-bullseye-v20250425,mode=rw,size=10,type=pd-balanced \
+            --no-address \
+            --subnet=default \
+            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,docker-image="$IMAGE_URL" \
+            --description="Template for Concept API instances"
 
           # Start a rolling update on the Managed Instance Group
           gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
