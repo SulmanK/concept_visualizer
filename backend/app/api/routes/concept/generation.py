@@ -26,7 +26,6 @@ from app.models.concept.request import PromptRequest
 from app.models.concept.response import GenerationResponse
 from app.models.task.response import TaskResponse
 from app.services.task.service import TaskError
-from app.utils.api_limits import apply_multiple_rate_limits
 from app.utils.security.mask import mask_id, mask_path
 
 # Configure logging
@@ -64,16 +63,7 @@ async def generate_concept(
     commons.process_request(req)
 
     try:
-        # Apply both generation and storage rate limits
-        await apply_multiple_rate_limits(
-            req,
-            [
-                {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
-                {"endpoint": "/concepts/store", "rate_limit": "10/month"},
-            ],
-        )
-
-        # Store rate limit info after the actual rate limiting
+        # Store rate limit info for headers
         try:
             user_id = None
             if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
@@ -303,38 +293,22 @@ async def generate_concept_with_palettes(
 ) -> TaskResponse:
     """Generate a new visual concept with multiple color palettes.
 
-    This endpoint creates a background task to generate a concept with multiple
-    color palette variations. The task ID is returned immediately, and the
-    client can poll for completion status.
-
     Args:
         request: The prompt request containing logo and theme descriptions
         response: FastAPI response object
-        req: The FastAPI request object for rate limiting
-        num_palettes: Number of color palette variations to generate (default: 7)
+        req: The FastAPI request object
+        num_palettes: Number of color palettes to generate
         commons: Common dependencies including services
 
     Returns:
-        TaskResponse: The task information, including ID for polling status
+        TaskResponse: The task data for async processing
 
     Raises:
         ValidationError: If the request validation fails
         UnauthorizedError: If user is not authenticated
-        ServiceUnavailableError: If there was an error creating the task
+        ServiceUnavailableError: If there was an error generating the concept
     """
-    # Process the request to extract user information
-    commons.process_request(req)
-
     try:
-        # Use API limits utility to manage rate limiting
-        await apply_multiple_rate_limits(
-            req,
-            [
-                {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
-                {"endpoint": "/concepts/store", "rate_limit": "10/month"},
-            ],
-        )
-
         # Get user ID from commons
         user_id = commons.user_id
 
