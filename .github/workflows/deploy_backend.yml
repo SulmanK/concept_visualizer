@@ -122,7 +122,7 @@ jobs:
             --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
             --scopes=https://www.googleapis.com/auth/cloud-platform \
             --tags=http-server,https-server,concept-api \
-            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image=projects/debian-cloud/global/images/debian-11-bullseye-v20250425,mode=rw,size=10,type=pd-balanced \
+            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
             --no-address \
             --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
             --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,docker-image="$IMAGE_URL" \
