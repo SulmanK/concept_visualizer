@@ -111,20 +111,29 @@ jobs:
           echo "MIG Name: $MIG_NAME"
           echo "New Image: $IMAGE_URL"
 
+          # Get the static IP that Terraform has created for this environment
+          STATIC_IP_NAME="${{ env.NAMING_PREFIX }}-api-ip-${{ env.ENVIRONMENT }}"
+          STATIC_IP=$(gcloud compute addresses describe "$STATIC_IP_NAME" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format="get(address)")
+
+          echo "Using static IP: $STATIC_IP"
+
           # Create a new instance template with the required configuration
           gcloud compute instance-templates create "$TEMPLATE_NAME" \
             --project="${{ env.GCP_PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
             --machine-type=e2-micro \
-            --network-tier=STANDARD \
+            --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
             --maintenance-policy=MIGRATE \
             --provisioning-model=STANDARD \
             --service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
             --scopes=https://www.googleapis.com/auth/cloud-platform \
             --tags=http-server,https-server,concept-api \
             --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
-            --no-address \
             --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
+            --address="$STATIC_IP" \
             --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,docker-image="$IMAGE_URL" \
             --description="Template for Concept API instances"
 

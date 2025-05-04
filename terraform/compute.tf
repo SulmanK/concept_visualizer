@@ -1,10 +1,11 @@
 # terraform/compute.tf
 
 resource "google_compute_address" "api_static_ip" {
-  count   = var.environment == "prod" ? 1 : 0 # Only for prod in this example
-  name    = "${var.naming_prefix}-api-ip-${var.environment}"
-  project = var.project_id
-  region  = var.region
+  count        = 1  # Create for both dev and prod environments now
+  name         = "${var.naming_prefix}-api-ip-${var.environment}"
+  project      = var.project_id
+  region       = var.region
+  network_tier = var.environment == "prod" ? "PREMIUM" : "STANDARD"  # Use STANDARD tier for dev to reduce costs
 }
 
 resource "google_compute_instance_template" "api_template" {
@@ -23,8 +24,8 @@ resource "google_compute_instance_template" "api_template" {
   network_interface {
     network = data.google_compute_network.default_network.id
     access_config {
-      nat_ip       = try(google_compute_address.api_static_ip[0].address, null) # Assign static IP if it exists
-      network_tier = "PREMIUM"
+      nat_ip       = google_compute_address.api_static_ip[0].address  # Always use static IP now
+      network_tier = var.environment == "prod" ? "PREMIUM" : "STANDARD"  # Match network tier with the static IP
     }
   }
 
