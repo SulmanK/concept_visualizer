@@ -33,8 +33,8 @@ resource "google_cloudfunctions2_function" "worker_function" {
     environment_variables = {
       ENVIRONMENT                    = var.environment
       GCP_PROJECT_ID                 = var.project_id
-      CONCEPT_STORAGE_BUCKET_CONCEPT = "${var.naming_prefix}-concept-images-${var.environment}"
-      CONCEPT_STORAGE_BUCKET_PALETTE = "${var.naming_prefix}-palette-images-${var.environment}"
+      CONCEPT_STORAGE_BUCKET_CONCEPT = "concept-images-${var.environment}"
+      CONCEPT_STORAGE_BUCKET_PALETTE = "palette-images-${var.environment}"
       CONCEPT_DB_TABLE_TASKS         = "tasks_${var.environment}"
       CONCEPT_DB_TABLE_CONCEPTS      = "concepts_${var.environment}"
       CONCEPT_DB_TABLE_PALETTES      = "color_variations_${var.environment}"
