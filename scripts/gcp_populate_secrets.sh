@@ -121,7 +121,7 @@ set_secret() {
     sleep 5
 
     # Add version to the secret - might fail if the secret exists but isn't ready yet
-    if ! echo "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=- 2>/dev/null; then
+    if ! printf "%s" "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=- 2>/dev/null; then
         echo "Failed to add version directly. Trying alternative approach..."
 
         # Check if the secret exists at all
@@ -129,13 +129,13 @@ set_secret() {
             echo "Secret exists but is not ready. Retrying with delay..."
             # Secret exists but might not be ready, try with more delay
             sleep 10
-            echo "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=-
+            printf "%s" "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=-
         else
             # Secret doesn't exist, create it
             echo "Secret doesn't exist at all. Creating it..."
             gcloud secrets create "$full_secret_id" --project="$PROJECT_ID" --replication-policy="automatic"
             sleep 5
-            echo "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=-
+            printf "%s" "$secret_value" | gcloud secrets versions add "$full_secret_id" --project="$PROJECT_ID" --data-file=-
         fi
     else
         echo "Successfully added version to the secret."
