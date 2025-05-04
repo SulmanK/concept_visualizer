@@ -1,0 +1,17 @@
+{
+  "specversion": "1.0",
+  "type": "google.cloud.pubsub.topic.v1.messagePublished",
+  "source": "//pubsub.googleapis.com/projects/local-test-project/topics/local-test-topic",
+  "subject": "local-message-id-1",
+  "id": "local-event-id-1",
+  "time": "2025-05-04T01:50:24Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "message": {
+      "data": "ewogICJ0YXNrX2lkIjogIjEyM2U0NTY3LWU4OWItMTJkMy1hNDU2LTQyNjYxNDE3NDAwMCIsCiAgInVzZXJfaWQiOiAidGVzdC11c2VyLWZvci1sb2NhbCIsCiAgImxvZ29fZGVzY3JpcHRpb24iOiAiQSBjdXRlIHBhbmRhIGVhdGluZyBiYW1ib28iLAogICJ0aGVtZV9kZXNjcmlwdGlvbiI6ICJNaW5pbWFsaXN0LCBncmVlbiBhbmQgd2hpdGUiLAogICJudW1fcGFsZXR0ZXMiOiAzLAogICJ0YXNrX3R5cGUiOiAiY29uY2VwdF9nZW5lcmF0aW9uIgp9IA==",
+      "messageId": "local-message-id-1",
+      "publishTime": "2025-05-04T01:50:24Z"
+    },
+    "subscription": "projects/local-test-project/subscriptions/local-test-sub"
+  }
+}
