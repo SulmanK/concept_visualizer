@@ -77,8 +77,6 @@ load_env_var "CONCEPT_SUPABASE_JWT_SECRET"
 load_env_var "CONCEPT_JIGSAWSTACK_API_KEY"
 load_env_var "CONCEPT_UPSTASH_REDIS_ENDPOINT"
 load_env_var "CONCEPT_UPSTASH_REDIS_PASSWORD"
-load_env_var "CONCEPT_SUPABASE_CONCEPT_IMAGES_BUCKET"
-load_env_var "CONCEPT_SUPABASE_PALETTE_IMAGES_BUCKET"
 
 # Get the project ID from the relevant tfvars file
 TERRAFORM_DIR="$PROJECT_ROOT/terraform"
@@ -154,7 +152,5 @@ set_secret "supabase-jwt-secret" "CONCEPT_SUPABASE_JWT_SECRET"
 set_secret "jigsawstack-api-key" "CONCEPT_JIGSAWSTACK_API_KEY"
 set_secret "redis-endpoint" "CONCEPT_UPSTASH_REDIS_ENDPOINT"
 set_secret "redis-password" "CONCEPT_UPSTASH_REDIS_PASSWORD"
-set_secret "supabase-concept-images-bucket" "CONCEPT_SUPABASE_CONCEPT_IMAGES_BUCKET"
-set_secret "supabase-palette-images-bucket" "CONCEPT_SUPABASE_PALETTE_IMAGES_BUCKET"
 
 echo "All secrets populated successfully!"

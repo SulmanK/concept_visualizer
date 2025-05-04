@@ -34,8 +34,8 @@ echo "Running startup for environment: $ENVIRONMENT in project: $GCP_PROJECT_ID,
 # --- Set Configuration Environment Variables ---
 echo "Setting configuration environment variables..."
 export ENVIRONMENT="$ENVIRONMENT"
-export CONCEPT_STORAGE_BUCKET_CONCEPT="${NAMING_PREFIX}-concept-images-${ENVIRONMENT}"
-export CONCEPT_STORAGE_BUCKET_PALETTE="${NAMING_PREFIX}-palette-images-${ENVIRONMENT}"
+export CONCEPT_STORAGE_BUCKET_CONCEPT="concept-images-${ENVIRONMENT}"
+export CONCEPT_STORAGE_BUCKET_PALETTE="palette-images-${ENVIRONMENT}"
 export CONCEPT_DB_TABLE_TASKS="tasks_${ENVIRONMENT}"
 export CONCEPT_DB_TABLE_CONCEPTS="concepts_${ENVIRONMENT}"
 export CONCEPT_DB_TABLE_PALETTES="color_variations_${ENVIRONMENT}"
