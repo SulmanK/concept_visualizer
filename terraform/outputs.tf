@@ -2,7 +2,7 @@
 
 output "api_vm_external_ip" {
   description = "External IP address of the API VM."
-  value       = try(google_compute_address.api_static_ip[0].address, "Check the IP of the VM created by the Instance Group Manager")
+  value       = google_compute_address.api_static_ip[0].address
 }
 
 output "api_igm_name" {
