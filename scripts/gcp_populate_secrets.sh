@@ -154,3 +154,17 @@ set_secret "redis-endpoint" "CONCEPT_UPSTASH_REDIS_ENDPOINT"
 set_secret "redis-password" "CONCEPT_UPSTASH_REDIS_PASSWORD"
 
 echo "All secrets populated successfully!"
+
+# Print reminder about GitHub Actions secrets
+echo -e "\n===== GITHUB ACTIONS SECRETS REMINDER =====\n"
+echo "Remember to set these GitHub Actions secrets for CI/CD:"
+echo "1. ${ENVIRONMENT^^}_GCP_PROJECT_ID: $PROJECT_ID"
+echo "2. ${ENVIRONMENT^^}_GCP_ZONE: (from your tfvars file)"
+echo "3. ${ENVIRONMENT^^}_NAMING_PREFIX: $NAMING_PREFIX"
+echo "4. ${ENVIRONMENT^^}_API_SERVICE_ACCOUNT_EMAIL: (from Terraform outputs)"
+echo "5. ${ENVIRONMENT^^}_WORKER_SERVICE_ACCOUNT_EMAIL: (from Terraform outputs)"
+echo "6. ${ENVIRONMENT^^}_CICD_SERVICE_ACCOUNT_EMAIL: (from Terraform outputs)"
+echo "7. ${ENVIRONMENT^^}_WORKLOAD_IDENTITY_PROVIDER: (from Terraform outputs)"
+echo "8. ${ENVIRONMENT^^}_ARTIFACT_REGISTRY_REPO_NAME: (from Terraform outputs)"
+echo "9. GCP_REGION: (from your tfvars file)"
+echo -e "\nYou can get most of these values by running: ./scripts/gcp_apply.sh"

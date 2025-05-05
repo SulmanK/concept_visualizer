@@ -172,3 +172,24 @@ else
 fi
 
 echo -e "\nDeployment process completed!"
+
+# Display important output values for setting up GitHub Actions
+echo -e "\n===== IMPORTANT OUTPUT VALUES FOR CI/CD SETUP =====\n"
+echo "Copy these values to set up your GitHub repository secrets:"
+echo -e "\nAPI Service Account Email for $ENVIRONMENT environment (DEV_API_SERVICE_ACCOUNT_EMAIL or PROD_API_SERVICE_ACCOUNT_EMAIL):"
+terraform output -raw api_service_account_email
+
+echo -e "\nWorker Service Account Email for $ENVIRONMENT environment (DEV_WORKER_SERVICE_ACCOUNT_EMAIL or PROD_WORKER_SERVICE_ACCOUNT_EMAIL):"
+terraform output -raw worker_service_account_email
+
+echo -e "\nCI/CD Service Account Email for $ENVIRONMENT environment (DEV_CICD_SERVICE_ACCOUNT_EMAIL or PROD_CICD_SERVICE_ACCOUNT_EMAIL):"
+terraform output -raw cicd_service_account_email
+
+echo -e "\nWorkload Identity Provider for $ENVIRONMENT environment (DEV_WORKLOAD_IDENTITY_PROVIDER or PROD_WORKLOAD_IDENTITY_PROVIDER):"
+terraform output -raw workload_identity_provider
+
+echo -e "\nArtifact Registry Repository URL for $ENVIRONMENT environment (DEV_ARTIFACT_REGISTRY_REPO_NAME or PROD_ARTIFACT_REGISTRY_REPO_NAME):"
+terraform output -raw artifact_registry_repository_url
+
+echo -e "\nExternal IP for API VM for $ENVIRONMENT environment:"
+terraform output -raw api_vm_external_ip
