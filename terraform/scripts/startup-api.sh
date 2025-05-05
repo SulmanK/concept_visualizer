@@ -71,10 +71,21 @@ fetch_secret() {
     local secret_name_suffix=$1
     local env_var_name=$2
     local secret_id="${NAMING_PREFIX}-${secret_name_suffix}-${ENVIRONMENT}"
-    local value=$(gcloud secrets versions access latest --secret="$secret_id" --project="$GCP_PROJECT_ID" 2>/dev/null || echo "SECRET_NOT_FOUND")
+
+    # First try with the correct naming pattern (naming_prefix-secret-environment)
+    local value=$(gcloud secrets versions access latest --secret="$secret_id" --project="$GCP_PROJECT_ID" 2>/dev/null)
+
+    # If that fails, try the alternate pattern that includes environment in the naming prefix
+    if [ $? -ne 0 ]; then
+        local alt_secret_id="${NAMING_PREFIX}-${ENVIRONMENT}-${secret_name_suffix}-${ENVIRONMENT}"
+        echo "First attempt failed, trying alternate secret name: $alt_secret_id"
+        value=$(gcloud secrets versions access latest --secret="$alt_secret_id" --project="$GCP_PROJECT_ID" 2>/dev/null || echo "SECRET_NOT_FOUND")
+    fi
 
     if [[ "$value" == "SECRET_NOT_FOUND" ]]; then
-        echo "Warning: Secret '$secret_id' not found or access denied."
+        echo "Warning: Secret '$secret_id' and alternate patterns not found or access denied."
+    else
+        echo "Secret '$secret_name_suffix' found and loaded."
     fi
     export "$env_var_name"="$value"
 }
