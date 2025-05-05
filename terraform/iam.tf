@@ -188,6 +188,13 @@ resource "google_service_account_iam_member" "cicd_sa_worker_service_account_use
   member             = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
 
+# Add IAM binding for CI/CD service account to impersonate the API service account
+resource "google_service_account_iam_member" "cicd_sa_api_service_account_user" {
+  service_account_id = google_service_account.api_service_account.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
 # IAM for State Bucket (Managed within Terraform)
 resource "google_storage_bucket_iam_member" "state_bucket_user_access" {
   for_each = toset(var.terraform_runner_user_emails)
