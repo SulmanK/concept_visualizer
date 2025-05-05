@@ -110,7 +110,62 @@ ARTIFACT_REGISTRY_REPO="${NAMING_PREFIX}-docker-repo" # Matches terraform resour
 API_IMAGE_URL="${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/concept-api-${ENVIRONMENT}:latest" # Assumes :latest tag
 
 echo "Pulling latest API image: $API_IMAGE_URL"
-docker pull "$API_IMAGE_URL" || echo "Warning: Failed to pull image '$API_IMAGE_URL'. Maybe it hasn't been pushed yet?"
+# Add retry logic with progressive backoff to handle the case where the image isn't pushed yet
+MAX_ATTEMPTS=15 # ~15 minutes of total retry time
+ATTEMPT=1
+PULL_SUCCESS=false
+
+while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$PULL_SUCCESS" = "false" ]; do
+    echo "Attempt $ATTEMPT of $MAX_ATTEMPTS to pull image..."
+
+    if docker pull "$API_IMAGE_URL"; then
+        echo "API image pulled successfully on attempt $ATTEMPT!"
+        PULL_SUCCESS=true
+    else
+        echo "Failed to pull image on attempt $ATTEMPT."
+
+        if [ $ATTEMPT -eq 1 ]; then
+            # First attempt diagnostics
+            echo "Checking if Artifact Registry is accessible..."
+            gcloud artifacts repositories describe $ARTIFACT_REGISTRY_REPO --location=$REGION --project=$GCP_PROJECT_ID || echo "Could not access Artifact Registry repository"
+
+            echo "Trying to list available images in repository..."
+            gcloud artifacts docker images list ${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO} --project=$GCP_PROJECT_ID --limit=5 || echo "Failed to list images"
+
+            echo "Checking Docker auth configuration..."
+            cat ~/.docker/config.json 2>/dev/null || echo "Docker config file not found"
+        fi
+
+        # Calculate exponential backoff delay (starts at 30 seconds, increases exponentially)
+        DELAY=$((30 * 2 ** (ATTEMPT - 1)))
+        # Cap maximum delay at 5 minutes
+        if [ $DELAY -gt 300 ]; then
+            DELAY=300
+        fi
+
+        echo "Waiting for $DELAY seconds before next attempt..."
+        sleep $DELAY
+        ATTEMPT=$((ATTEMPT + 1))
+    fi
+done
+
+# Final check for successful pull
+if [ "$PULL_SUCCESS" = "false" ]; then
+    echo "ERROR: Failed to pull the API image after $MAX_ATTEMPTS attempts."
+    echo "This could be because the image hasn't been pushed yet or there's an issue with the Artifact Registry."
+    echo "Startup will continue but the container might fail to start."
+
+    # Try fallback to a stable/default image if available
+    echo "Attempting to pull fallback image..."
+    if docker pull "gcr.io/google-samples/hello-app:1.0"; then
+        echo "Fallback image pulled successfully."
+        # Use fallback for demo/testing purposes only
+        API_IMAGE_URL="gcr.io/google-samples/hello-app:1.0"
+        echo "WARNING: Using fallback demo image instead of actual API image."
+    else
+        echo "Even fallback image pull failed, Docker may not be configured correctly."
+    fi
+fi
 
 # --- Run API Container ---
 CONTAINER_NAME="concept-api"
@@ -120,9 +175,17 @@ echo "Removing existing container '$CONTAINER_NAME' if present..."
 docker rm "$CONTAINER_NAME" || true
 
 echo "Starting API container '$CONTAINER_NAME'..."
+# First check if the image exists locally
+if ! docker image inspect "$API_IMAGE_URL" &>/dev/null; then
+  echo "Error: Image '$API_IMAGE_URL' not found locally. Container cannot be started."
+  echo "Listing available images:"
+  docker images
+  exit 1
+fi
+
 # Pass ALL required env vars (config + secrets) to the container
 # Using --env-file might be cleaner if many vars, requires creating a file
-docker run -d --name "$CONTAINER_NAME" \
+if ! docker run -d --name "$CONTAINER_NAME" \
   -p 80:8000 \
   --env ENVIRONMENT \
   --env CONCEPT_STORAGE_BUCKET_CONCEPT \
@@ -141,13 +204,25 @@ docker run -d --name "$CONTAINER_NAME" \
   --env CONCEPT_UPSTASH_REDIS_ENDPOINT \
   --env CONCEPT_UPSTASH_REDIS_PASSWORD \
   --restart always \
-  "$API_IMAGE_URL"
+  "$API_IMAGE_URL"; then
 
-if [ $? -eq 0 ]; then
-    echo "API container '$CONTAINER_NAME' started successfully."
+  echo "Error: Failed to start API container '$CONTAINER_NAME'."
+  echo "Docker run command failed. Checking container logs for more details:"
+  docker logs "$CONTAINER_NAME" 2>/dev/null || echo "No logs available - container may not have started"
+
+  echo "Checking system resources:"
+  df -h
+  free -m
+
+  echo "Checking Docker system info:"
+  docker system df
+  docker info
+
+  echo "Container startup failed - VM may not function correctly!"
 else
-    echo "Error: Failed to start API container '$CONTAINER_NAME'."
-    # You might want to add more detailed error checking/logging here
+  echo "API container '$CONTAINER_NAME' started successfully."
+  echo "Container is running with the following details:"
+  docker ps --filter "name=$CONTAINER_NAME" --format "ID: {{.ID}}, Image: {{.Image}}, Status: {{.Status}}, Ports: {{.Ports}}"
 fi
 
 echo "Startup script finished."
