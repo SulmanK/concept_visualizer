@@ -161,8 +161,119 @@ fi
 
 echo -e "\nInfrastructure deployment completed successfully!"
 
-# STEP 5: Upload startup scripts to the created storage bucket
-echo -e "\n===== STEP 5: Uploading startup scripts to storage bucket =====\n"
+# NEW STEP: Build and push API Docker image (now after infrastructure exists)
+echo -e "\n===== STEP 5: Building and pushing API Docker image =====\n"
+# Extract variables needed for Docker build
+PROJECT_ID=$(grep 'project_id' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+REGION=$(grep 'region' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+NAMING_PREFIX=$(grep 'naming_prefix' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+
+# Construct the image name
+ARTIFACT_REGISTRY_REPO="${NAMING_PREFIX}-docker-repo"
+API_IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/concept-api-${ENVIRONMENT}:latest"
+
+echo "Building Docker image: $API_IMAGE_NAME"
+
+# Configure Docker to use Artifact Registry
+gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+
+# Navigate to the backend directory
+cd "$PROJECT_ROOT/backend"
+
+# Build and push the Docker image
+docker build -t "$API_IMAGE_NAME" -f Dockerfile .
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to build Docker image."
+    echo "VM may not start correctly without a valid image."
+else
+    echo "Pushing Docker image to Artifact Registry: $API_IMAGE_NAME"
+    docker push "$API_IMAGE_NAME"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to push Docker image to Artifact Registry."
+        echo "VM may not start correctly without a valid image in the repository."
+    else
+        echo "Docker image successfully built and pushed!"
+    fi
+fi
+
+# Return to Terraform directory
+cd "$TERRAFORM_DIR"
+
+echo -e "\n===== ADDRESSING STARTUP TIMING COORDINATION =====\n"
+echo "The VM startup script will attempt to pull the Docker image we just pushed."
+echo "The startup script has been configured with retry logic to handle this timing issue."
+echo "We'll still verify the VM status to ensure proper coordination."
+
+# Check VM status before attempting a restart
+echo -e "\nChecking VM status..."
+
+# Get the instance group name from Terraform outputs
+VM_IGM_NAME=$(terraform output -raw api_igm_name)
+VM_IGM_ZONE=$(terraform output -raw api_igm_zone)
+
+echo "Instance Group: $VM_IGM_NAME in zone $VM_IGM_ZONE"
+
+# Wait long enough for VMs to be fully booted and packages to be installed
+echo "Waiting to allow the VM to complete its initial startup and package installation..."
+echo "This prevents interrupting critical system setup processes."
+sleep 120
+
+# Check if instances exist and their status
+VM_INSTANCE_PREFIX="${NAMING_PREFIX}-api-vm-${ENVIRONMENT}"
+INSTANCES=$(gcloud compute instances list \
+  --filter="name~'^${VM_INSTANCE_PREFIX}'" \
+  --project="$PROJECT_ID" \
+  --format="value(name,zone,status)")
+
+if [ -z "$INSTANCES" ]; then
+  echo "No instances found matching the pattern '${VM_INSTANCE_PREFIX}'."
+  echo "The VM may still be initializing. The VM startup script will attempt to pull the image with retries."
+  echo "No manual restart required at this point - the VM will start the container when ready."
+else
+  echo "Found instances:"
+  echo "$INSTANCES"
+
+  # Check if all instances are in RUNNING state
+  if echo "$INSTANCES" | grep -q "RUNNING"; then
+    echo "VM instances are running. The startup script should be able to pull the new image."
+
+    # Ask if user wants to restart instances
+    read -p "Do you want to restart the instances to ensure they pick up the new image? (y/n) " RESTART_VMS
+
+    if [[ "$RESTART_VMS" == "y" || "$RESTART_VMS" == "Y" ]]; then
+      echo "Initiating restart of VM instances..."
+
+      # Try rolling action restart first
+      if gcloud compute instance-groups managed rolling-action restart "$VM_IGM_NAME" \
+         --zone="$VM_IGM_ZONE" \
+         --project="$PROJECT_ID"; then
+        echo "Successfully initiated rolling restart of the VM instance group."
+      else
+        echo "Warning: Failed to restart VM instance group with the rolling-action command."
+        echo "Trying to restart instances individually..."
+
+        echo "$INSTANCES" | while read -r INSTANCE_NAME INSTANCE_ZONE STATUS; do
+          if [ "$STATUS" = "RUNNING" ]; then
+            echo "Restarting instance: $INSTANCE_NAME in zone: $INSTANCE_ZONE"
+            gcloud compute instances reset "$INSTANCE_NAME" --zone="$INSTANCE_ZONE" --project="$PROJECT_ID" || \
+              echo "Warning: Failed to restart instance $INSTANCE_NAME"
+          else
+            echo "Instance $INSTANCE_NAME is not in RUNNING state (current: $STATUS). Skipping restart."
+          fi
+        done
+      fi
+    else
+      echo "Skipping VM restart. The startup script should still be able to pull the new image with its retry logic."
+    fi
+  else
+    echo "VM instances exist but are not in RUNNING state yet."
+    echo "The VM startup script has retry logic and will pull the image when available."
+    echo "No restart needed at this point."
+  fi
+fi
+
+# Original STEP 5: Upload startup scripts (now STEP 6)
+echo -e "\n===== STEP 6: Uploading startup scripts to storage bucket =====\n"
 "$SCRIPT_DIR/upload_startup_scripts.sh"
 if [ $? -ne 0 ]; then
     echo "Warning: Failed to upload startup scripts. VMs may not initialize correctly."
