@@ -160,3 +160,15 @@ if [ $? -ne 0 ]; then
 fi
 
 echo -e "\nInfrastructure deployment completed successfully!"
+
+# STEP 5: Upload startup scripts to the created storage bucket
+echo -e "\n===== STEP 5: Uploading startup scripts to storage bucket =====\n"
+"$SCRIPT_DIR/upload_startup_scripts.sh"
+if [ $? -ne 0 ]; then
+    echo "Warning: Failed to upload startup scripts. VMs may not initialize correctly."
+    echo "Please run scripts/upload_startup_scripts.sh manually."
+else
+    echo "Startup scripts uploaded successfully."
+fi
+
+echo -e "\nDeployment process completed!"
