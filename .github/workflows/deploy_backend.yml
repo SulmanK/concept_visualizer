@@ -166,7 +166,9 @@ jobs:
 
           # Wait for the instances to be stable
           echo "Waiting for instance group to become stable"
-          gcloud compute instance-groups managed wait-until stable "$MIG_NAME" \
+          gcloud compute instance-groups managed wait-until \
+            --stable \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
-            --timeout=300
+            --timeout=300 \
+            "$MIG_NAME"
