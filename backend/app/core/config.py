@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     API_PREFIX: str = "/api"
 
     # CORS settings
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "https://*.vercel.app"]
 
     # JigsawStack API settings
     JIGSAWSTACK_API_KEY: str = "dummy_key"
