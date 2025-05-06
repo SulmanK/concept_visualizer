@@ -136,7 +136,11 @@ jobs:
             --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
             --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
             --address="$STATIC_IP" \
-            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,docker-image="$IMAGE_URL" \
+            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,\
+            environment=${{ env.ENVIRONMENT }},\
+            naming_prefix=${{ env.NAMING_PREFIX }},\
+            region=${{ env.REGION }},\
+            docker-image="$IMAGE_URL" \
             --description="Template for Concept API instances"
 
           # Update the Instance Group to use the new template
