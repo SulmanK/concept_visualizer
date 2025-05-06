@@ -106,7 +106,7 @@ if [ $? -ne 0 ]; then echo "Warning: Failed to configure docker for Artifact Reg
 
 # --- Pull API Image ---
 # Construct image URL dynamically
-ARTIFACT_REGISTRY_REPO="${NAMING_PREFIX}-${ENVIRONMENT}-docker-repo" # Matches terraform resource name pattern
+ARTIFACT_REGISTRY_REPO="${NAMING_PREFIX}-docker-repo" # Matches terraform resource name pattern
 API_IMAGE_URL="${REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/concept-api-${ENVIRONMENT}:latest" # Assumes :latest tag
 
 echo "Pulling latest API image: $API_IMAGE_URL"
