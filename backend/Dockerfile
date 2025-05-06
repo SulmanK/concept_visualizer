@@ -1,39 +1,56 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim as builder
+# syntax=docker/dockerfile:1               # enables nicer syntax hints
 
+############################
+# 1️⃣  COMMON BASE IMAGE
+############################
+FROM python:3.11-slim AS base
+
+# Fail-fast, no .pyc files
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# --- ✨ NEW: install the native libs cv2 needs ✨ ---
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libgl1           \
+        libglib2.0-0     \
+    && rm -rf /var/lib/apt/lists/*
+
+
+############################
+# 2️⃣  BUILD STAGE
+############################
+FROM base AS builder
 WORKDIR /app
 
-# Install uv
-RUN pip install uv
+# ‘uv’ is your build tool
+RUN pip install --no-cache-dir uv
 
-# Copy pyproject.toml for dependency resolution
-COPY pyproject.toml pyproject.toml
-COPY README.md README.md
+# copy metadata first for better layer caching
+COPY pyproject.toml README.md ./
 
-# Copy application code
+# copy source
 COPY app /app/app
 
-# Install dependencies, including the app itself in editable mode
+# install deps (incl. “.[dev]” extras so tests still work)
 RUN uv pip install --system --no-cache -e .[dev]
 
-# Runtime stage
-FROM python:3.11-slim
 
+############################
+# 3️⃣  RUNTIME IMAGE
+############################
+FROM base
 WORKDIR /app
 
-# Copy installed dependencies from the builder stage
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# bring in pre-built site-packages + entrypoints
+COPY --from=builder /usr/local /usr/local
 
-# Copy application code
+# bring in source (handy for runtime templates / alembic, etc.)
 COPY app /app/app
 COPY run.py /app/run.py
 
-# Expose the port the app runs on
 EXPOSE 8000
-
-# Set default number of workers
 ENV UVICORN_WORKERS=2
 
-# Command to run the application using Uvicorn with multiple workers
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS}"]
+# Gunicorn isn’t needed; uvicorn with --workers is fine here
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
