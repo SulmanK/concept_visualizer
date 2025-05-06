@@ -103,7 +103,7 @@ jobs:
 
       - name: Deploy API to Compute Engine MIG (Rolling Update)
         run: |
-          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
           # Use a shorter hash (first 8 characters) to avoid name length issues
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
