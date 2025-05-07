@@ -1,18 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/api/healthz",
+      "destination": "http://35.211.60.188/api/health/ping"
+    },
+    {
       "source": "/api/:path*",
       "destination": "http://35.211.60.188/api/:path*"
     },
     {
-      "source": "/api/healthz",
-      "destination": "http://35.211.60.188/api/health/ping"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/((?!api/|_next/|static/|images/|favicon.ico|sw.js).*)",
-      "dest": "/index.html"
+      "source": "/((?!_next/static|static|favicon.ico|vite.svg|assets/).*)",
+      "destination": "/index.html"
     }
   ]
 }
