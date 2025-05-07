@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://35.211.60.188/api/:path*"
+      "destination": "http://35.211.200.118/api/:path*"
     },
     {
       "source": "/api/healthz",
-      "destination": "http://35.211.60.188/api/health/ping"
+      "destination": "http://35.211.200.118/api/health/ping"
     }
   ]
 }
