@@ -65,6 +65,10 @@ export CONCEPT_API_PREFIX="/api"
 export CONCEPT_UPSTASH_REDIS_PORT="6379"
 # Add other non-secret config vars needed by the backend app
 
+# Construct Pub/Sub topic name
+PUB_SUB_TOPIC_NAME_IN_GCP="${NAMING_PREFIX}-tasks-${ENVIRONMENT}"
+echo "Using Pub/Sub topic: $PUB_SUB_TOPIC_NAME_IN_GCP"
+
 # --- Fetch Secrets ---
 echo "Fetching secrets..."
 fetch_secret() {
@@ -203,6 +207,8 @@ if ! docker run -d --name "$CONTAINER_NAME" \
   --env CONCEPT_JIGSAWSTACK_API_KEY \
   --env CONCEPT_UPSTASH_REDIS_ENDPOINT \
   --env CONCEPT_UPSTASH_REDIS_PASSWORD \
+  --env CONCEPT_PUB_SUB_PROJECT_ID="$GCP_PROJECT_ID" \
+  --env CONCEPT_PUB_SUB_TOPIC_ID="$PUB_SUB_TOPIC_NAME_IN_GCP" \
   --restart always \
   "$API_IMAGE_URL"; then
 
