@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "http://35.211.60.188/api/:path*"
+    },
+    {
+      "source": "/api/healthz",
+      "destination": "http://35.211.60.188/api/health/ping"
     }
   ]
 }

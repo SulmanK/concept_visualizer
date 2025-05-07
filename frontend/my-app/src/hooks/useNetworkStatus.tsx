@@ -56,7 +56,7 @@ export const useNetworkStatus = (options?: {
 }): NetworkStatus => {
   const {
     notifyOnStatusChange = true,
-    checkEndpoint = "/health",
+    checkEndpoint = "/health/ping",
     checkInterval = 120000, // 2 minutes
   } = options || {};
 
