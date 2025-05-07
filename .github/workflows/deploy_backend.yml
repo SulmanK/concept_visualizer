@@ -132,7 +132,7 @@ jobs:
             --provisioning-model=STANDARD \
             --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
             --scopes=https://www.googleapis.com/auth/cloud-platform \
-            --tags=http-server,https-server,concept-api \
+            --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
             --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
             --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
             --address="$STATIC_IP" \
