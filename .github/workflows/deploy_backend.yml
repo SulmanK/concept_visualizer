@@ -37,7 +37,7 @@ jobs:
             echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "WORKER_MIN_INSTANCES=${{ secrets.DEV_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
-            echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 10 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
           elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
@@ -48,8 +48,8 @@ jobs:
             echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
             echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
-            echo "WORKER_MIN_INSTANCES=${{ secrets.PROD_WORKER_MIN_INSTANCES || 1 }}" >> $GITHUB_ENV
-            echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 20 }}" >> $GITHUB_ENV
+            echo "WORKER_MIN_INSTANCES=${{ secrets.PROD_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
           else
             echo "Branch is not develop or main, skipping deployment."
             exit 0
@@ -109,7 +109,7 @@ jobs:
           TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
 
-          echo "New Template Name: $TEMPLATE_NAME"
+          echo "Target Template Name: $TEMPLATE_NAME"
           echo "MIG Name: $MIG_NAME"
           echo "New Image: $IMAGE_URL"
 
@@ -122,22 +122,35 @@ jobs:
 
           echo "Using static IP: $STATIC_IP"
 
-          # Create a new instance template with the required configuration
-          gcloud compute instance-templates create "$TEMPLATE_NAME" \
-            --project="${{ env.GCP_PROJECT_ID }}" \
-            --region="${{ env.REGION }}" \
-            --machine-type=e2-micro \
-            --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
-            --maintenance-policy=MIGRATE \
-            --provisioning-model=STANDARD \
-            --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
-            --scopes=https://www.googleapis.com/auth/cloud-platform \
-            --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
-            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
-            --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
-            --address="$STATIC_IP" \
-            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
-            --description="Template for Concept API instances"
+          # Check if the instance template already exists
+          echo "Checking if instance template '$TEMPLATE_NAME' already exists..."
+          if gcloud compute instance-templates describe "$TEMPLATE_NAME" --project="${{ env.GCP_PROJECT_ID }}" --region="${{ env.REGION }}" --quiet &> /dev/null; then
+            echo "Instance template '$TEMPLATE_NAME' already exists. Skipping creation."
+          else
+            echo "Creating new instance template '$TEMPLATE_NAME'..."
+            # Create a new instance template with the required configuration
+            gcloud compute instance-templates create "$TEMPLATE_NAME" \
+              --project="${{ env.GCP_PROJECT_ID }}" \
+              --region="${{ env.REGION }}" \
+              --machine-type=e2-micro \
+              --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
+              --maintenance-policy=MIGRATE \
+              --provisioning-model=STANDARD \
+              --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
+              --scopes=https://www.googleapis.com/auth/cloud-platform \
+              --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
+              --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
+              --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
+              --address="$STATIC_IP" \
+              --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
+              --description="Template for Concept API instances (${{ github.sha }})"
+            # Check the exit code of the create command
+            if [ $? -ne 0 ]; then
+              echo "Error: Failed to create instance template '$TEMPLATE_NAME'."
+              exit 1
+            fi
+            echo "Instance template '$TEMPLATE_NAME' created successfully."
+          fi
 
           # Update the Instance Group to use the new template
           echo "Setting new instance template on the Instance Group Manager"
