@@ -5,7 +5,7 @@
 
 A web application for generating and refining visual concepts like logos and color palettes using AI assistance. Describe your ideas, and let the AI bring them to life!
 
-[Concept Visualizer Demo](./docs/assets/demo.mp4)
+[Concept Visualizer Demo](./docs/assets/demo.gif)
 
 ## Table of Contents
 
