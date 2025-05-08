@@ -7,6 +7,13 @@ A web application for generating and refining visual concepts like logos and col
 
 ![Concept Visualizer Demo](./docs/assets/demo.gif)
 
+<a href="https://jigsawstack.com/?ref=powered-by" rel="follow">
+  <img
+    src="https://jigsawstack.com/badge.svg"
+    alt="Powered by JigsawStack. The One API for your next big thing."
+  />
+</a>
+
 ## Table of Contents
 
 - [Features](#features)
