@@ -1,0 +1,2 @@
+-r cloud_run/worker/requirements.txt
+-e .  # install the backend package itself

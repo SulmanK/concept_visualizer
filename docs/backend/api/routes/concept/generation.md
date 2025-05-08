@@ -4,7 +4,10 @@ This documentation covers the concept generation endpoints in the Concept Visual
 
 ## Overview
 
-The `generation.py` module provides endpoints for generating visual concepts (logos and themes) based on text descriptions. It supports both synchronous and asynchronous generation processes with background task management.
+The `generation.py` module provides endpoints for generating visual concepts (logos and themes) based on text descriptions. It supports both:
+
+- Direct generation with a synchronous endpoint that handles concept creation and storage
+- Background task-based generation with palette variations to handle longer-running processes
 
 ## Models
 
@@ -22,12 +25,15 @@ class PromptRequest(BaseModel):
 ```python
 class GenerationResponse(BaseModel):
     """Response model for concept generation."""
-    concept_id: str
+    prompt_id: str
     image_url: str
     logo_description: str
     theme_description: str
-    created_at: datetime
-    palette_variations: List[PaletteVariation] = []
+    created_at: str
+    color_palette: Optional[Dict[str, Any]] = None
+    original_image_url: Optional[str] = None
+    refinement_prompt: Optional[str] = None
+    variations: List[Dict[str, Any]] = []
 ```
 
 ```python
@@ -36,9 +42,14 @@ class TaskResponse(BaseModel):
     task_id: str
     status: str
     message: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    result: Optional[Dict[str, Any]] = None
+    type: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    result_id: Optional[str] = None
+    image_url: Optional[str] = None
+    error_message: Optional[str] = None
 ```
 
 ## Available Endpoints
@@ -52,11 +63,11 @@ async def generate_concept(
     response: Response,
     req: Request,
     commons: CommonDependencies = Depends(),
-):
+) -> GenerationResponse:
     """Generate a new visual concept based on the provided prompt and store it."""
 ```
 
-This endpoint generates a concept immediately and returns the result in the response. It's suitable for simple concepts but may time out for complex generations.
+This endpoint generates a concept, extracts colors from it, and stores both the image and concept metadata in the database. It returns the result immediately in the response.
 
 #### Request
 
@@ -74,14 +85,26 @@ Content-Type: application/json
 
 ```json
 {
-  "concept_id": "1234-5678-9012-3456",
+  "prompt_id": "1234-5678-9012-3456",
   "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
   "logo_description": "A modern coffee shop logo with coffee beans",
   "theme_description": "Warm brown tones, natural feeling",
   "created_at": "2023-01-01T12:00:00.123456",
-  "palette_variations": []
+  "color_palette": null,
+  "original_image_url": null,
+  "refinement_prompt": null,
+  "variations": []
 }
 ```
+
+The endpoint performs the following steps:
+
+1. Validates input and checks rate limits
+2. Generates the base concept using the concept service
+3. Extracts colors from the generated image
+4. Stores the image in Supabase Storage
+5. Creates and stores concept metadata including extracted colors
+6. Returns the concept details in the response
 
 ### Asynchronous Concept Generation with Palettes
 
@@ -89,16 +112,15 @@ Content-Type: application/json
 @router.post("/generate-with-palettes", response_model=TaskResponse)
 async def generate_concept_with_palettes(
     request: PromptRequest,
-    background_tasks: BackgroundTasks,
     response: Response,
     req: Request,
     num_palettes: int = 7,
     commons: CommonDependencies = Depends(),
-):
-    """Generate a new visual concept with palette variations as a background task."""
+) -> TaskResponse:
+    """Generate a new visual concept with multiple color palettes."""
 ```
 
-This endpoint creates a background task to generate a concept with multiple palette variations. It returns immediately with a task ID that can be used to check the status.
+This endpoint creates a background task to generate a concept with multiple palette variations. It publishes a message to Google Pub/Sub to trigger the background processing. The endpoint returns immediately with a task ID that can be used to check the status.
 
 #### Request
 
@@ -114,7 +136,7 @@ Content-Type: application/json
 
 Parameters:
 
-- `num_palettes`: Number of palette variations to generate (default: 7, max: 10)
+- `num_palettes`: Number of palette variations to generate (default: 7)
 
 #### Response
 
@@ -122,12 +144,27 @@ Parameters:
 {
   "task_id": "task-1234-5678-9012-3456",
   "status": "pending",
-  "message": "Concept generation started",
+  "message": "Concept generation task created and queued for processing",
+  "type": "concept_generation",
   "created_at": "2023-01-01T12:00:00.123456",
   "updated_at": null,
-  "result": null
+  "completed_at": null,
+  "metadata": {
+    "logo_description": "A modern coffee shop logo with coffee beans",
+    "theme_description": "Warm brown tones, natural feeling",
+    "num_palettes": 5
+  },
+  "result_id": null,
+  "image_url": null,
+  "error_message": null
 }
 ```
+
+The endpoint performs the following steps:
+
+1. Creates a task record in the database
+2. Publishes a message to Pub/Sub with task details
+3. Returns task information in the response
 
 ### Task Status Check
 
@@ -137,8 +174,8 @@ async def get_task_status(
     task_id: str,
     req: Request,
     commons: CommonDependencies = Depends(),
-):
-    """Get the status of a background task."""
+) -> TaskResponse:
+    """Get the status of a concept generation task."""
 ```
 
 This endpoint allows checking the status of a background task, including retrieving the final result when complete.
@@ -155,10 +192,19 @@ GET /api/concepts/task/task-1234-5678-9012-3456
 {
   "task_id": "task-1234-5678-9012-3456",
   "status": "processing",
-  "message": "Generating palette variations",
+  "message": "Task is processing",
+  "type": "concept_generation",
   "created_at": "2023-01-01T12:00:00.123456",
   "updated_at": "2023-01-01T12:00:05.123456",
-  "result": null
+  "completed_at": null,
+  "result_id": null,
+  "image_url": null,
+  "error_message": null,
+  "metadata": {
+    "logo_description": "A modern coffee shop logo with coffee beans",
+    "theme_description": "Warm brown tones, natural feeling",
+    "num_palettes": 5
+  }
 }
 ```
 
@@ -168,58 +214,33 @@ GET /api/concepts/task/task-1234-5678-9012-3456
 {
   "task_id": "task-1234-5678-9012-3456",
   "status": "completed",
-  "message": "Concept generation completed",
+  "message": "Task is completed",
+  "type": "concept_generation",
   "created_at": "2023-01-01T12:00:00.123456",
   "updated_at": "2023-01-01T12:00:30.123456",
-  "result": {
-    "concept_id": "1234-5678-9012-3456",
-    "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
+  "completed_at": "2023-01-01T12:00:30.123456",
+  "result_id": "1234-5678-9012-3456",
+  "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
+  "error_message": null,
+  "metadata": {
     "logo_description": "A modern coffee shop logo with coffee beans",
     "theme_description": "Warm brown tones, natural feeling",
-    "created_at": "2023-01-01T12:00:30.123456",
-    "palette_variations": [
-      {
-        "id": "palette-1",
-        "image_url": "https://storage.example.com/palettes/palette-1.png",
-        "colors": ["#5A3921", "#8C593B", "#D9B18C", "#F2E2CE"]
-      },
-      {
-        "id": "palette-2",
-        "image_url": "https://storage.example.com/palettes/palette-2.png",
-        "colors": ["#3C280D", "#704E2E", "#B7906F", "#E8D4B5"]
-      }
-      // Additional palette variations...
-    ]
+    "num_palettes": 5
   }
 }
 ```
 
-## Background Task Implementation
+## Background Task Processing
 
-The module implements a background task processor for generating concepts with palette variations:
+The background task processing occurs in a Cloud Function triggered by the Pub/Sub message. The function performs the following steps:
 
-```python
-async def generate_concept_background_task(
-    task_id: str,
-    logo_description: str,
-    theme_description: str,
-    user_id: str,
-    num_palettes: int,
-    image_service: ImageServiceInterface,
-    concept_service: ConceptServiceInterface,
-    concept_persistence_service: StorageServiceInterface,
-    task_service: TaskServiceInterface
-):
-    """Background task for generating concepts with palette variations."""
-```
-
-This function:
-
-1. Updates the task status to "processing"
-2. Generates the base concept
-3. Creates palette variations
-4. Stores all images in Supabase Storage
-5. Updates the task with the final result or error information
+1. Retrieves the task from the database
+2. Updates the task status to "processing"
+3. Generates the base concept
+4. Creates palette variations
+5. Stores all images in Supabase Storage
+6. Stores concept metadata in the database
+7. Updates the task with the final result or error information
 
 ## Rate Limiting
 
@@ -238,6 +259,7 @@ The endpoints handle various error cases:
 - `UnauthorizedError`: If the user is not authenticated
 - `ServiceUnavailableError`: If the concept generation service is unavailable
 - `BadRequestError`: For invalid parameters or rate limit exceeded
+- `ResourceNotFoundError`: If the requested task is not found
 - `InternalServerError`: For unexpected errors
 
 ## Usage Examples
@@ -248,12 +270,10 @@ The endpoints handle various error cases:
 // Start concept generation
 async function generateConcept(logoDescription, themeDescription) {
   try {
-    // Submit the generation request
     const response = await fetch("/api/concepts/generate-with-palettes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify({
         logo_description: logoDescription,
@@ -261,52 +281,51 @@ async function generateConcept(logoDescription, themeDescription) {
       }),
     });
 
-    if (!response.ok) {
-      throw new Error("Concept generation failed");
-    }
-
-    const taskData = await response.json();
-
-    // Start polling for task status
-    return pollTaskStatus(taskData.task_id);
+    const data = await response.json();
+    return data; // Contains task_id to track progress
   } catch (error) {
-    console.error("Failed to start concept generation:", error);
-    return null;
+    console.error("Error starting concept generation:", error);
+    throw error;
   }
 }
 
-// Poll for task status until complete
-async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const response = await fetch(`/api/concepts/task/${taskId}`, {
-        headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to check task status");
-      }
-
-      const taskData = await response.json();
-
-      // If task is complete or failed, return the result
-      if (taskData.status === "completed" || taskData.status === "failed") {
-        return taskData;
-      }
-
-      // Wait before polling again
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    } catch (error) {
-      console.error("Error polling task status:", error);
-      // Continue polling despite errors
-    }
+// Check task status
+async function checkTaskStatus(taskId) {
+  try {
+    const response = await fetch(`/api/concepts/task/${taskId}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error checking task status:", error);
+    throw error;
   }
+}
 
-  throw new Error("Task polling timed out");
+// Poll task status until complete
+async function pollTaskUntilComplete(taskId, onProgress) {
+  const poll = async () => {
+    const status = await checkTaskStatus(taskId);
+    onProgress(status);
+
+    if (status.status === "completed" || status.status === "failed") {
+      return status;
+    }
+
+    // Wait 2 seconds before checking again
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return poll();
+  };
+
+  return poll();
 }
 ```
+
+## Security Considerations
+
+- All endpoints require authentication
+- Tasks are user-scoped to prevent unauthorized access
+- Rate limiting protects against abuse
+- Error messages are sanitized to prevent information disclosure
 
 ## Related Files
 

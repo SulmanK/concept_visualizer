@@ -1,0 +1,176 @@
+name: Deploy Backend
+
+on:
+  workflow_run:
+    workflows: ["CI Tests & Deployment"]
+    types:
+      - completed
+    branches: [develop, main]
+
+jobs:
+  deploy:
+    name: Deploy to GCP
+    # Only run if the CI workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      # Set environment-specific variables
+      - name: Set Environment Specifics
+        id: set_env
+        run: |
+          if [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "develop" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.DEV_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "GCP_ZONE=${{ secrets.DEV_GCP_ZONE }}" >> $GITHUB_ENV
+            echo "NAMING_PREFIX=${{ secrets.DEV_NAMING_PREFIX }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.DEV_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.DEV_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.DEV_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+            echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "WORKER_MIN_INSTANCES=${{ secrets.DEV_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 10 }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "GCP_ZONE=${{ secrets.PROD_GCP_ZONE }}" >> $GITHUB_ENV
+            echo "NAMING_PREFIX=${{ secrets.PROD_NAMING_PREFIX }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.PROD_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+            echo "WORKER_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_WORKER_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "WORKER_MIN_INSTANCES=${{ secrets.PROD_WORKER_MIN_INSTANCES || 1 }}" >> $GITHUB_ENV
+            echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 20 }}" >> $GITHUB_ENV
+          else
+            echo "Branch is not develop or main, skipping deployment."
+            exit 0
+          fi
+          echo "REGION=${{ secrets.GCP_REGION }}" >> $GITHUB_ENV
+
+      # Authenticate with the appropriate environment credentials
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
+
+      - name: Deploy Cloud Function Worker
+        run: |
+          FUNCTION_NAME="${{ env.NAMING_PREFIX }}-worker-${{ env.ENVIRONMENT }}"
+          TASKS_TOPIC_NAME="${{ env.NAMING_PREFIX }}-tasks-${{ env.ENVIRONMENT }}"
+
+          echo "Deploying Function: $FUNCTION_NAME"
+          echo "Trigger Topic: $TASKS_TOPIC_NAME"
+          echo "Service Account: ${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}"
+
+          # Construct --set-secrets argument dynamically
+          SECRETS_ARG=""
+          SECRETS_ARG+="CONCEPT_SUPABASE_URL=${{ env.NAMING_PREFIX }}-supabase-url-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_KEY=${{ env.NAMING_PREFIX }}-supabase-key-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_SERVICE_ROLE=${{ env.NAMING_PREFIX }}-supabase-service-role-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_SUPABASE_JWT_SECRET=${{ env.NAMING_PREFIX }}-supabase-jwt-secret-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_JIGSAWSTACK_API_KEY=${{ env.NAMING_PREFIX }}-jigsawstack-api-key-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ env.NAMING_PREFIX }}-redis-endpoint-${{ env.ENVIRONMENT }}:latest,"
+          SECRETS_ARG+="CONCEPT_UPSTASH_REDIS_PASSWORD=${{ env.NAMING_PREFIX }}-redis-password-${{ env.ENVIRONMENT }}:latest"
+
+          # Deploy the function using the 'backend' directory as source with the shim main.py
+          gcloud functions deploy "$FUNCTION_NAME" \
+            --gen2 \
+            --region="${{ env.REGION }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --runtime=python311 \
+            --entry-point=handle_pubsub \
+            --run-service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
+            --trigger-topic="$TASKS_TOPIC_NAME" \
+            --timeout=540s \
+            --memory=2048Mi \
+            --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
+            --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
+            --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
+            --set-secrets="$SECRETS_ARG" \
+            --source="./backend" \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Deploy API to Compute Engine MIG (Rolling Update)
+        run: |
+          IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          # Use a shorter hash (first 8 characters) to avoid name length issues
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
+          MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
+
+          echo "New Template Name: $TEMPLATE_NAME"
+          echo "MIG Name: $MIG_NAME"
+          echo "New Image: $IMAGE_URL"
+
+          # Get the static IP that Terraform has created for this environment
+          STATIC_IP_NAME="${{ env.NAMING_PREFIX }}-api-ip-${{ env.ENVIRONMENT }}"
+          STATIC_IP=$(gcloud compute addresses describe "$STATIC_IP_NAME" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format="get(address)")
+
+          echo "Using static IP: $STATIC_IP"
+
+          # Create a new instance template with the required configuration
+          gcloud compute instance-templates create "$TEMPLATE_NAME" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --machine-type=e2-micro \
+            --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
+            --maintenance-policy=MIGRATE \
+            --provisioning-model=STANDARD \
+            --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
+            --scopes=https://www.googleapis.com/auth/cloud-platform \
+            --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
+            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
+            --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
+            --address="$STATIC_IP" \
+            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
+            --description="Template for Concept API instances"
+
+          # Update the Instance Group to use the new template
+          echo "Setting new instance template on the Instance Group Manager"
+          gcloud compute instance-groups managed set-instance-template "$MIG_NAME" \
+            --template="$TEMPLATE_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}"
+
+          # Get existing instances in the MIG
+          echo "Getting existing instances in the group"
+          INSTANCES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --format="value(name)")
+
+          # For each instance, recreate it with the new template
+          if [ -n "$INSTANCES" ]; then
+            for INSTANCE in $INSTANCES; do
+              echo "Recreating instance $INSTANCE with new template"
+              gcloud compute instance-groups managed recreate-instances "$MIG_NAME" \
+                --instances="$INSTANCE" \
+                --zone="${{ env.GCP_ZONE }}" \
+                --project="${{ env.GCP_PROJECT_ID }}"
+            done
+          else
+            echo "No instances found in the MIG, skipping recreation"
+          fi
+
+          # Wait for the instances to be stable
+          echo "Waiting for instance group to become stable"
+          gcloud compute instance-groups managed wait-until \
+            --stable \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --timeout=300 \
+            "$MIG_NAME"

@@ -1,0 +1,12 @@
+{
+  "task_id": "123e4567-e89b-12d3-a456-426614174001",
+  "user_id": "test-user-for-local",
+  "concept_id": "123e4567-e89b-12d3-a456-426614174002",
+  "logo_variations": [
+    {
+      "variation_id": "var-1",
+      "logo_description": "A cute panda eating bamboo, simplified design"
+    }
+  ],
+  "task_type": "concept_refinement"
+}

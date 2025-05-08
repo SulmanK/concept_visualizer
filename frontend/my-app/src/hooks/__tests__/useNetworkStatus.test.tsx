@@ -237,7 +237,7 @@ describe("useNetworkStatus", () => {
 
     // Should make API call to health endpoint
     expect(apiClient.get).toHaveBeenCalledWith(
-      "/health",
+      "/health/ping",
       expect.objectContaining({
         headers: { "Cache-Control": "no-cache" },
       }),

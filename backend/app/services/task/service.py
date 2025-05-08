@@ -151,9 +151,11 @@ class TaskService(TaskServiceInterface):
             if result_id:
                 update_data["result_id"] = result_id
 
-            # Add error_message if provided
+            # Add error_message if provided, sanitize to remove problematic characters
             if error_message:
-                update_data["error_message"] = error_message
+                # Sanitize error message to remove any non-printable characters
+                sanitized_error = "".join(c if c.isprintable() else " " for c in error_message)
+                update_data["error_message"] = sanitized_error
 
             # Update using service role client to bypass RLS policies
             try:

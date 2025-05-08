@@ -97,6 +97,241 @@
       - Run `terraform plan -var-file=environments/dev.tfvars` and `terraform apply -var-file=environments/dev.tfvars` (repeat for `prod`).
       - Manually populate secret values in GCP Secret Manager.
 
+Here are the modified scripts and updated instructions:
+
+**Refined Phase 2 (Branch-Aware Scripts)**
+
+- **Goal:** Define and provision GCP infrastructure using Terraform, with helper scripts that **automatically target the `dev` or `prod` environment based on the current Git branch (`develop` or `main`)**.
+- **Branch:** `feature/infrastructure` branch off `develop`.
+
+- **Files to Create/Modify:**
+
+  1.  **Terraform Configuration (inside `terraform/`)**:
+
+      - _No changes needed here compared to the previous refinement._ Ensure `variables.tf`, `outputs.tf`, resource files, and `environments/dev.tfvars`, `environments/prod.tfvars` are set up correctly.
+
+  2.  **Helper Scripts (e.g., inside `scripts/`)**:
+
+      - **Modify:** `scripts/gcp_apply.sh`: Remove `-e` flag handling, add Git branch detection logic.
+      - **Modify:** `scripts/gcp_destroy.sh`: Remove `-e` flag handling, add Git branch detection logic, ensure confirmation uses the detected environment.
+
+  3.  **README for Terraform (inside `terraform/`)**:
+      - **Modify:** `terraform/README.md`: Update to explain the new branch-aware behavior. Remove instructions for the `-e` flag. Emphasize that the scripts **must be run while checked out on either the `develop` or `main` branch**.
+
+- **Modified Helper Script Implementations:**
+
+  **`scripts/gcp_apply.sh` (Branch-Aware)**:
+
+  ```bash
+  #!/bin/bash
+  set -euo pipefail # Exit on error, treat unset variables as errors, catch pipeline failures
+
+  # --- Configuration ---
+  TERRAFORM_DIR="terraform" # Relative path to your terraform directory
+  TFVARS_DIR="environments" # Subdirectory for .tfvars files within TERRAFORM_DIR
+  DEV_BRANCH="develop"
+  PROD_BRANCH="main"
+
+  # --- Script Logic ---
+  echo "--- Determining environment from Git branch ---"
+  CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+  if [[ $? -ne 0 ]]; then
+      echo "Error: Could not determine current Git branch. Are you in a Git repository?"
+      exit 1
+  fi
+  echo "Current branch: $CURRENT_BRANCH"
+
+  TARGET_ENVIRONMENT=""
+  if [[ "$CURRENT_BRANCH" == "$DEV_BRANCH" ]]; then
+      TARGET_ENVIRONMENT="dev"
+  elif [[ "$CURRENT_BRANCH" == "$PROD_BRANCH" ]]; then
+      TARGET_ENVIRONMENT="prod"
+  else
+      echo "Error: This script can only be run from the '$DEV_BRANCH' or '$PROD_BRANCH' branch."
+      echo "You are currently on branch '$CURRENT_BRANCH'."
+      exit 1
+  fi
+  echo "Target environment determined as: $TARGET_ENVIRONMENT"
+
+  TFVARS_FILE="${TFVARS_DIR}/${TARGET_ENVIRONMENT}.tfvars"
+  PLAN_FILE="${TARGET_ENVIRONMENT}.tfplan"
+
+  echo "--- Applying Terraform configuration for environment: $TARGET_ENVIRONMENT ---"
+
+  # Navigate to Terraform directory
+  if ! cd "$TERRAFORM_DIR"; then
+      echo "Error: Could not navigate to Terraform directory: $TERRAFORM_DIR"
+      exit 1
+  fi
+  echo "Changed directory to $(pwd)"
+
+
+  # Ensure the .tfvars file exists
+  if [[ ! -f "$TFVARS_FILE" ]]; then
+    echo "Error: Terraform variables file not found for environment '$TARGET_ENVIRONMENT': $TFVARS_FILE"
+    exit 1
+  fi
+  echo "Using variables file: $TFVARS_FILE"
+
+  # Initialize Terraform (safe to run multiple times)
+  echo "Running terraform init..."
+  terraform init -input=false -no-color # Add flags for non-interactive init
+  if [ $? -ne 0 ]; then echo "Error: Terraform init failed."; exit 1; fi
+
+  # Select the correct workspace
+  echo "Selecting workspace: $TARGET_ENVIRONMENT..."
+  if ! terraform workspace select "$TARGET_ENVIRONMENT"; then
+      echo "Workspace '$TARGET_ENVIRONMENT' not found. Creating..."
+      terraform workspace new "$TARGET_ENVIRONMENT"
+      if [ $? -ne 0 ]; then
+          echo "Error: Failed to create or select workspace '$TARGET_ENVIRONMENT'."
+          exit 1
+      fi
+  fi
+
+  # Validate the configuration
+  echo "Validating Terraform configuration..."
+  terraform validate -no-color
+  if [ $? -ne 0 ]; then echo "Error: Terraform validation failed."; exit 1; fi
+
+  # Plan the changes
+  echo "Planning Terraform changes..."
+  terraform plan -var-file="$TFVARS_FILE" -out="$PLAN_FILE" -input=false -no-color
+  if [ $? -ne 0 ]; then
+    echo "Error: Terraform plan failed."
+    exit 1
+  fi
+
+  # Apply the changes (consider removing -auto-approve for prod safety!)
+  echo "Applying Terraform changes for '$TARGET_ENVIRONMENT' (auto-approved)..."
+  terraform apply -auto-approve "$PLAN_FILE"
+  if [ $? -ne 0 ]; then
+    echo "Error: Terraform apply failed for '$TARGET_ENVIRONMENT'."
+    # Consider cleanup or manual intervention steps here
+    exit 1
+  fi
+
+  echo "--- Terraform apply completed successfully for environment: $TARGET_ENVIRONMENT ---"
+
+  # Go back to the original directory
+  cd - > /dev/null
+  ```
+
+  **`scripts/gcp_destroy.sh` (Branch-Aware)**:
+
+  ```bash
+  #!/bin/bash
+  set -euo pipefail
+
+  # --- Configuration ---
+  TERRAFORM_DIR="terraform"
+  TFVARS_DIR="environments"
+  DEV_BRANCH="develop"
+  PROD_BRANCH="main"
+
+  # --- Script Logic ---
+  echo "--- Determining environment to destroy from Git branch ---"
+  CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+  if [[ $? -ne 0 ]]; then
+      echo "Error: Could not determine current Git branch. Are you in a Git repository?"
+      exit 1
+  fi
+  echo "Current branch: $CURRENT_BRANCH"
+
+  TARGET_ENVIRONMENT=""
+  if [[ "$CURRENT_BRANCH" == "$DEV_BRANCH" ]]; then
+      TARGET_ENVIRONMENT="dev"
+  elif [[ "$CURRENT_BRANCH" == "$PROD_BRANCH" ]]; then
+      TARGET_ENVIRONMENT="prod"
+  else
+      echo "Error: This script can only be run from the '$DEV_BRANCH' or '$PROD_BRANCH' branch to destroy the corresponding environment."
+      echo "You are currently on branch '$CURRENT_BRANCH'."
+      exit 1
+  fi
+  echo "Target environment determined as: $TARGET_ENVIRONMENT"
+
+  TFVARS_FILE="${TFVARS_DIR}/${TARGET_ENVIRONMENT}.tfvars"
+
+  echo "--- WARNING: This will destroy Terraform-managed infrastructure for environment: $TARGET_ENVIRONMENT ---"
+
+  # Navigate to Terraform directory
+  if ! cd "$TERRAFORM_DIR"; then
+      echo "Error: Could not navigate to Terraform directory: $TERRAFORM_DIR"
+      exit 1
+  fi
+  echo "Changed directory to $(pwd)"
+
+  # Ensure the .tfvars file exists
+  if [[ ! -f "$TFVARS_FILE" ]]; then
+    echo "Error: Terraform variables file not found for environment '$TARGET_ENVIRONMENT': $TFVARS_FILE"
+    exit 1
+  fi
+  echo "Using variables file: $TFVARS_FILE"
+
+  # Initialize Terraform
+  echo "Running terraform init..."
+  terraform init -input=false -no-color
+  if [ $? -ne 0 ]; then echo "Error: Terraform init failed."; exit 1; fi
+
+  # Select the correct workspace
+  echo "Selecting workspace: $TARGET_ENVIRONMENT..."
+  if ! terraform workspace select "$TARGET_ENVIRONMENT"; then
+      echo "Error: Workspace '$TARGET_ENVIRONMENT' does not exist. Cannot destroy."
+      exit 1
+  fi
+
+  # CRITICAL: Add confirmation prompt
+  read -p "Are you absolutely sure you want to destroy the '$TARGET_ENVIRONMENT' environment (derived from branch '$CURRENT_BRANCH')? Type '$TARGET_ENVIRONMENT' to confirm: " CONFIRMATION
+  if [[ "$CONFIRMATION" != "$TARGET_ENVIRONMENT" ]]; then
+    echo "Confirmation incorrect. Destroy operation cancelled."
+    exit 1
+  fi
+
+  echo "Proceeding with destroy operation for '$TARGET_ENVIRONMENT'..."
+
+  # Destroy the resources (consider removing -auto-approve for extra safety, especially for prod!)
+  terraform destroy -var-file="$TFVARS_FILE" -auto-approve
+  if [ $? -ne 0 ]; then
+    echo "Error: Terraform destroy failed for '$TARGET_ENVIRONMENT'."
+    exit 1
+  fi
+
+  echo "--- Terraform destroy completed successfully for environment: $TARGET_ENVIRONMENT ---"
+  echo "Note: Manually created resources (like the state bucket or manually added secret values) might need separate cleanup."
+
+  # Go back to the original directory
+  cd - > /dev/null
+  ```
+
+- **Actions (Revised Workflow):**
+
+  1.  **(Prerequisites)** Install Terraform, authenticate `gcloud`, manually create GCS state bucket, `terraform init` in `terraform/`, `terraform workspace new dev`, `terraform workspace new prod`, `chmod +x scripts/*.sh`.
+  2.  **To Deploy/Update `dev`:**
+      - `git checkout develop`
+      - Run `scripts/gcp_apply.sh`
+  3.  **To Deploy/Update `prod`:**
+      - `git checkout main`
+      - Run `scripts/gcp_apply.sh`
+  4.  **To Destroy `dev`:**
+      - `git checkout develop`
+      - Run `scripts/gcp_destroy.sh` (and confirm carefully)
+  5.  **To Destroy `prod`:**
+      - `git checkout main`
+      - Run `scripts/gcp_destroy.sh` (and confirm _very_ carefully, maybe remove `-auto-approve` from the script for prod destroy).
+  6.  **Manually Populate Secret Values:** Do this _after_ the first successful `apply` for each environment.
+
+**Key Changes:**
+
+1.  **No `-e` flag:** The scripts no longer take or require the environment flag.
+2.  **Git Branch Detection:** `CURRENT_BRANCH=$(git symbolic-ref --short HEAD)` gets the current branch.
+3.  **Branch-to-Environment Mapping:** An `if/elif/else` block maps `develop` to `dev` and `main` to `prod`.
+4.  **Error on Other Branches:** The scripts will exit if run on any branch other than `develop` or `main`.
+5.  **Variable Usage:** The `TARGET_ENVIRONMENT` variable (derived from the branch) is used to select the workspace and the `.tfvars` file.
+6.  **Confirmation Prompt:** The destroy script's confirmation prompt now includes the detected environment name for clarity.
+7.  **Non-interactive flags:** Added `-input=false -no-color` to `terraform init` and `plan` for better script compatibility. Added `-auto-approve` to `apply` and `destroy` (use with caution, especially for destroy).
+
+This setup achieves your goal: the scripts become branch-aware, simplifying the command you need to run while ensuring you operate on the infrastructure corresponding to your current primary branch (`develop` or `main`).
+
 ---
 
 **Phase 3: Implement Deployment Architecture (Feature Branch)**
@@ -113,7 +348,7 @@
 
   2.  **Configuration:**
 
-      - **Modify:** `backend/app/core/config.py`: Add settings like `PUB_SUB_PROJECT_ID`, `PUB_SUB_TOPIC_ID_DEV`, `PUB_SUB_TOPIC_ID_PROD`. Add config for worker environment (e.g., reading Supabase keys from env vars).
+      - **Modify:** `backend/app/core/config.py`: Add settings like `PUB_SUB_TOPIC_ID": reading from the .env file calling CONCEPT_PUB_SUB_TOPIC_ID
       - **Modify:** `backend/.env.example` and `backend/.env`: Add new Pub/Sub variables.
 
   3.  **API Route Refactoring:**

@@ -12,6 +12,20 @@ This service acts as an abstraction layer over the Supabase database, providing:
 4. Security controls for concept access
 5. Metadata management for concepts and associated color palettes
 
+## Exception Types
+
+The service defines specific exception types for error handling:
+
+```python
+class PersistenceError(Exception):
+    """Exception raised for persistence errors."""
+    pass
+
+class NotFoundError(Exception):
+    """Exception raised when a resource is not found."""
+    pass
+```
+
 ## ConceptPersistenceService Class
 
 The primary class for concept persistence operations:
@@ -49,6 +63,7 @@ async def store_concept(self, concept_data: Dict[str, Any]) -> str:
             - image_path: Path to the generated base image
             - image_url: URL to the generated base image (optional)
             - color_palettes: Optional list of color palette dictionaries
+            - is_anonymous: Whether the concept is anonymous (default: True)
 
     Returns:
         ID of the stored concept
@@ -57,16 +72,37 @@ async def store_concept(self, concept_data: Dict[str, Any]) -> str:
         PersistenceError: If storage fails
         DatabaseTransactionError: If a multi-step operation fails and cleanup is required
     """
-    # Implementation...
 ```
 
 This comprehensive method handles:
 
-- Storing the core concept data
+- Storing the core concept data in the database
 - Attaching color palette variations if provided
 - Transaction management with rollback capabilities
 - Error handling with detailed logging
 - Security considerations with PII masking
+
+#### Transaction Management
+
+When storing complex concept data with multiple components (like color palettes):
+
+1. Core concept data is stored first
+2. Color palettes are stored in a separate transaction
+3. If color palette storage fails, core concept is automatically deleted
+4. Detailed transaction status is recorded in logs
+
+```python
+async def _delete_concept(self, concept_id: str) -> bool:
+    """
+    Helper method to delete a concept as part of transaction cleanup.
+
+    Args:
+        concept_id: ID of the concept to delete
+
+    Returns:
+        True if deletion was successful, False otherwise
+    """
+```
 
 ### Retrieving Concept Details
 
@@ -86,15 +122,14 @@ async def get_concept_detail(self, concept_id: str, user_id: str) -> Dict[str, A
         NotFoundError: If concept not found
         PersistenceError: If retrieval fails
     """
-    # Implementation...
 ```
 
 Retrieves complete concept information including:
 
-- Base concept data
-- Associated color palettes
-- Image paths and URLs
-- Security checking to ensure the user has access
+- Base concept data (ID, descriptions, creation time)
+- Associated color palettes with image URLs
+- Security checking to ensure the user has access to the concept
+- URL generation for images stored in Supabase Storage
 
 ### Listing Recent Concepts
 
@@ -108,20 +143,20 @@ async def get_recent_concepts(self, user_id: str, limit: int = 10) -> List[Dict[
         limit: Maximum number of concepts to return
 
     Returns:
-        List of recent concepts
+        List of recent concepts with their color variations
 
     Raises:
         PersistenceError: If retrieval fails
     """
-    # Implementation...
 ```
 
 Retrieves a paginated list of recent concepts with:
 
-- Core concept data
-- Thumbnail image URLs
-- Creation timestamps
+- Core concept data (ID, descriptions, creation time)
+- Image URLs for the concepts
+- Color variations with their own image URLs
 - Limited to the specified user for security
+- Ordered by creation time (newest first)
 
 ### Deleting Concepts
 
@@ -139,7 +174,6 @@ async def delete_all_concepts(self, user_id: str) -> bool:
     Raises:
         PersistenceError: If deletion fails
     """
-    # Implementation...
 ```
 
 Handles bulk deletion operations with:
@@ -166,7 +200,6 @@ async def get_concept_by_task_id(self, task_id: str, user_id: str) -> Optional[D
     Raises:
         PersistenceError: If retrieval fails
     """
-    # Implementation...
 ```
 
 Supports the asynchronous task workflow by:
@@ -175,72 +208,60 @@ Supports the asynchronous task workflow by:
 - Enabling status checking for long-running operations
 - Maintaining security boundaries with user validation
 
-## Transaction Management
+## Integration with Supabase
 
-The service implements sophisticated transaction management to ensure data consistency:
-
-```python
-async def _delete_concept(self, concept_id: str) -> bool:
-    """
-    Helper method to delete a concept as part of transaction cleanup.
-
-    Args:
-        concept_id: ID of the concept to delete
-
-    Returns:
-        True if deletion was successful, False otherwise
-    """
-    # Implementation...
-```
-
-When storing complex concept data with multiple components (like color palettes):
-
-1. Core concept data is stored first
-2. If color palette storage fails, core concept is automatically deleted
-3. Detailed transaction status is recorded in logs
-4. Service role escalation is used when necessary for cleanup
-
-## Error Handling
-
-The service defines custom exception types:
+The service uses the `ConceptStorage` class to handle direct interactions with the Supabase database:
 
 ```python
-class PersistenceError(Exception):
-    """Exception raised for persistence errors."""
+# Using concept_storage for database operations
+concept = self.concept_storage.store_concept(core_concept_data)
 
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
-
-
-class NotFoundError(Exception):
-    """Exception raised when a resource is not found."""
-
-    def __init__(self, message: str):
-        self.message = message
-        super().__init__(self.message)
+# Directly using Supabase client for cleanup operations
+result = self.supabase.table(settings.DB_TABLE_CONCEPTS).delete().eq("id", concept_id).execute()
 ```
 
-These exceptions provide:
+This allows for:
 
-- Specific error types for different failure scenarios
-- Detailed error messages for troubleshooting
-- Clean integration with the API error handling system
+1. Separation of concerns between service logic and database operations
+2. Centralized database access patterns
+3. Consistent error handling across different database operations
 
-## Security Considerations
+## Example Usage
 
-The service implements several security measures:
+```python
+from app.services.persistence.concept_persistence_service import ConceptPersistenceService
+from app.core.supabase.client import get_supabase_client
 
-1. **User Access Control**: Each operation validates the requesting user
-2. **PII Masking**: Sensitive IDs and paths are masked in logs
-3. **Least Privilege**: Uses standard permissions for normal operations
-4. **Elevated Privileges**: Uses service roles only when absolutely required
-5. **Security Logging**: Records all access attempts
+# Create an instance of the service
+supabase_client = get_supabase_client()
+persistence_service = ConceptPersistenceService(supabase_client)
+
+# Store a concept
+concept_id = await persistence_service.store_concept({
+    "user_id": "user-123",
+    "logo_description": "Modern tech logo with geometric shapes",
+    "theme_description": "Blue and gray professional theme",
+    "image_path": "concepts/user-123/image.png",
+    "color_palettes": [
+        {
+            "name": "Cool Blues",
+            "colors": ["#003366", "#336699", "#66CCFF"],
+            "description": "Professional blue palette",
+            "image_path": "palettes/user-123/palette1.png"
+        }
+    ]
+})
+
+# Retrieve concept details
+concept = await persistence_service.get_concept_detail(concept_id, "user-123")
+
+# Get recent concepts
+recent_concepts = await persistence_service.get_recent_concepts("user-123", 5)
+```
 
 ## Related Documentation
 
-- [Persistence Interface](interface.md): Interface definition for this service
-- [ConceptStorage](../../core/supabase/concept_storage.md): Underlying storage used by this service
-- [Supabase Client](../../core/supabase/client.md): Database client used for persistence
-- [Database Exceptions](../../core/exceptions.md): Exceptions used for error handling
-- [Security Masking](../../utils/security/mask.md): PII masking utilities
+- [Persistence Interface](interface.md): Interface implemented by this service
+- [Image Persistence Service](image_persistence_service.md): Complementary service for storing images
+- [Supabase Client](../../core/supabase/client.md): Client for interacting with Supabase
+- [Concept Storage](../../core/supabase/concept_storage.md): Direct database operations

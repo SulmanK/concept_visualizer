@@ -3,34 +3,29 @@
 This module provides endpoints for generating visual concepts.
 """
 
+import json
 import logging
 import traceback
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from google.cloud import pubsub_v1
 
 from app.api.dependencies import CommonDependencies
 
 # Import specific API errors
-from app.api.errors import InternalServerError, ResourceNotFoundError, ServiceUnavailableError, TaskNotFoundError, ValidationError
+from app.api.errors import InternalServerError, ResourceNotFoundError, ServiceUnavailableError, TaskNotFoundError
 from app.core.config import settings
-from app.core.constants import TASK_STATUS_PENDING, TASK_STATUS_PROCESSING, TASK_TYPE_GENERATION
+from app.core.constants import TASK_STATUS_FAILED, TASK_STATUS_PENDING, TASK_STATUS_PROCESSING, TASK_TYPE_GENERATION
 
 # Import domain/application error types for catching
 from app.core.exceptions import ApplicationError, AuthenticationError, ConceptCreationError, ImageProcessingError, JigsawStackError, RateLimitError
 from app.core.exceptions import ValidationError as AppValidationError
-from app.core.supabase.client import SupabaseClient
 from app.models.concept.request import PromptRequest
 from app.models.concept.response import GenerationResponse
 from app.models.task.response import TaskResponse
-from app.services.concept.interface import ConceptServiceInterface
-from app.services.image.interface import ImageServiceInterface
-from app.services.persistence.image_persistence_service import ImagePersistenceService
-from app.services.persistence.interface import StorageServiceInterface
-from app.services.task.interface import TaskServiceInterface
 from app.services.task.service import TaskError
-from app.utils.api_limits import apply_multiple_rate_limits
 from app.utils.security.mask import mask_id, mask_path
 
 # Configure logging
@@ -68,16 +63,7 @@ async def generate_concept(
     commons.process_request(req)
 
     try:
-        # Apply both generation and storage rate limits
-        await apply_multiple_rate_limits(
-            req,
-            [
-                {"endpoint": "/concepts/generate", "rate_limit": "10/month"},
-                {"endpoint": "/concepts/store", "rate_limit": "10/month"},
-            ],
-        )
-
-        # Store rate limit info after the actual rate limiting
+        # Store rate limit info for headers
         try:
             user_id = None
             if hasattr(req, "state") and hasattr(req.state, "user") and req.state.user:
@@ -300,33 +286,49 @@ async def generate_concept(
 @router.post("/generate-with-palettes", response_model=TaskResponse)
 async def generate_concept_with_palettes(
     request: PromptRequest,
-    background_tasks: BackgroundTasks,
     response: Response,
     req: Request,
     num_palettes: int = 7,
     commons: CommonDependencies = Depends(),
 ) -> TaskResponse:
-    """Generate a concept with multiple color palettes in a background task.
+    """Generate a new visual concept with multiple color palettes.
 
     Args:
-        request: The prompt request with logo and theme descriptions
-        background_tasks: FastAPI background tasks handler
+        request: The prompt request containing logo and theme descriptions
         response: FastAPI response object
         req: The FastAPI request object
-        num_palettes: Number of palette variations to generate
+        num_palettes: Number of color palettes to generate
         commons: Common dependencies including services
 
     Returns:
-        TaskResponse: The task information for tracking progress
-    """
-    # Process the request to extract user information
-    commons.process_request(req)
+        TaskResponse: The task data for async processing
 
+    Raises:
+        ValidationError: If the request validation fails
+        UnauthorizedError: If user is not authenticated
+        ServiceUnavailableError: If there was an error generating the concept
+    """
     try:
-        # Get dependencies from commons
+        # Get user ID from commons
         user_id = commons.user_id
-        if user_id is None:
-            raise AuthenticationError(message="Authentication required")
+
+        if not user_id:
+            raise AuthenticationError(message="Authentication required for generating concept with palettes")
+
+        # Initialize a Publisher client
+        publisher = pubsub_v1.PublisherClient()
+
+        # Get the topic path
+        topic_path = publisher.topic_path(settings.PUB_SUB_PROJECT_ID, settings.PUB_SUB_TOPIC_ID)
+
+        logger.debug(f"Publishing to topic: {topic_path}")
+
+        # Create task metadata with details needed for processing
+        task_metadata = {
+            "logo_description": request.logo_description,
+            "theme_description": request.theme_description,
+            "num_palettes": num_palettes,
+        }
 
         # Check for existing active tasks for this user
         try:
@@ -353,46 +355,48 @@ async def generate_concept_with_palettes(
                     message="A concept generation task is already in progress",
                     type=TASK_TYPE_GENERATION,
                     created_at=existing_task.get("created_at"),
-                    updated_at=existing_task.get("updated_at"),
-                    completed_at=existing_task.get("completed_at"),
-                    result_id=existing_task.get("result_id"),
-                    image_url=existing_task.get("image_url"),
-                    error_message=existing_task.get("error_message"),
-                    metadata=existing_task.get("metadata", {}),
+                    updated_at=existing_task.get("updated_at", None),
+                    completed_at=existing_task.get("completed_at", None),
+                    metadata=existing_task.get("metadata", task_metadata),
+                    result_id=existing_task.get("result_id", None),
+                    image_url=existing_task.get("image_url", None),
+                    error_message=existing_task.get("error_message", None),
                 )
         except Exception as e:
             # Log the error but continue with creating a new task
             logger.warning(f"Error checking for existing tasks: {str(e)}")
 
-        # Create metadata for the task
-        task_metadata = {
-            "logo_description": request.logo_description,
-            "theme_description": request.theme_description,
-            "num_palettes": num_palettes,
-        }
-
+        # Create a new task in the database
         try:
             task = await commons.task_service.create_task(user_id=user_id, task_type=TASK_TYPE_GENERATION, metadata=task_metadata)
 
             task_id = task["id"]
-            logger.info(f"Created task {mask_id(task_id)} for concept generation")
+            logger.info(f"Created task {mask_id(task_id)} for concept generation with palettes")
 
-            # Add the generation task to background tasks
-            # Cast concept_persistence_service to StorageServiceInterface
-            from typing import cast
+            # Create Pub/Sub message payload
+            message_data = {
+                "task_id": task_id,
+                "user_id": user_id,
+                "logo_description": request.logo_description,
+                "theme_description": request.theme_description,
+                "num_palettes": num_palettes,
+                "task_type": TASK_TYPE_GENERATION,
+            }
 
-            background_tasks.add_task(
-                generate_concept_background_task,
-                task_id=task_id,
-                logo_description=request.logo_description,
-                theme_description=request.theme_description,
-                user_id=user_id,
-                num_palettes=num_palettes,
-                image_service=commons.image_service,
-                concept_service=commons.concept_service,
-                concept_persistence_service=cast(StorageServiceInterface, commons.concept_persistence_service),
-                task_service=commons.task_service,
-            )
+            # Convert the message to JSON and then to bytes
+            message_json = json.dumps(message_data)
+            message_bytes = message_json.encode("utf-8")
+
+            # Publish the message
+            try:
+                publish_future = publisher.publish(topic_path, data=message_bytes)
+                publish_result = publish_future.result()  # Wait for the publish to complete
+                logger.info(f"Message published with ID: {publish_result}")
+            except Exception as e:
+                logger.error(f"Error publishing message to Pub/Sub: {str(e)}")
+                # Update task status to failed
+                await commons.task_service.update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=f"Failed to queue task: {str(e)}")
+                raise ServiceUnavailableError(detail="Failed to queue concept generation task: pubsub_error")
 
             # Set response status to 202 Accepted
             response.status_code = status.HTTP_202_ACCEPTED
@@ -404,234 +408,26 @@ async def generate_concept_with_palettes(
                 message="Concept generation task created and queued for processing",
                 type=TASK_TYPE_GENERATION,
                 created_at=task.get("created_at"),
-                updated_at=task.get("updated_at"),
+                updated_at=task.get("updated_at", None),
                 completed_at=None,
+                metadata=task_metadata,
                 result_id=None,
                 image_url=None,
                 error_message=None,
-                metadata=task_metadata,
             )
 
         except TaskError as e:
             logger.error(f"Error creating task: {str(e)}")
             raise ServiceUnavailableError(detail=f"Error creating task: {str(e)}")
 
-    except (ValidationError, ServiceUnavailableError):
-        # Re-raise our custom errors directly
+    except (AuthenticationError, AppValidationError):
+        # Let the middleware handle these familiar error types
         raise
     except Exception as e:
-        logger.error(f"Error generating concept: {str(e)}")
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
-        raise ServiceUnavailableError(detail=f"Error generating concept: {str(e)}")
-
-
-async def generate_concept_background_task(
-    task_id: str,
-    logo_description: str,
-    theme_description: str,
-    user_id: str,
-    num_palettes: int,
-    image_service: ImageServiceInterface,
-    concept_service: ConceptServiceInterface,
-    concept_persistence_service: StorageServiceInterface,
-    task_service: TaskServiceInterface,
-) -> None:
-    """Background task for generating a concept with multiple color palettes.
-
-    Args:
-        task_id: The ID of the task
-        logo_description: Description for the logo generation
-        theme_description: Description for the theme generation
-        user_id: The ID of the user
-        num_palettes: Number of palette variations to generate
-        image_service: Service for image processing
-        concept_service: Service for concept generation
-        concept_persistence_service: Service for concept storage
-        task_service: Service for task management
-    """
-    import traceback  # for detailed error reporting
-
-    logger = logging.getLogger("concept_generation_bg")
-    logger.info(f"Starting background concept generation task {mask_id(task_id)}")
-
-    try:
-        # Update task status to processing
-        await task_service.update_task_status(task_id=task_id, status="processing")
-
-        logger.debug(f"Generating concept for task {mask_id(task_id)}")
-
-        # Generate base concept with an image
-        concept_response = await concept_service.generate_concept(
-            logo_description=logo_description,
-            theme_description=theme_description,
-            user_id=user_id,
-            skip_persistence=True,  # Skip persistence in the service, we'll handle it here
-        )
-
-        # Log the response keys for debugging
-        if concept_response:
-            logger.debug(f"Concept response keys: {list(concept_response.keys())}")
-        else:
-            raise ServiceUnavailableError(detail="Failed to generate base concept: empty response")
-
-        # Extract the image URL and image data
-        image_url = concept_response.get("image_url")
-        image_data = concept_response.get("image_data")
-
-        # Check for valid image_url
-        if not image_url:
-            logger.error(f"Failed to get image_url from concept_response: {concept_response}")
-            raise ServiceUnavailableError(detail="Failed to generate base concept: missing image_url in response")
-
-        logger.debug(f"Generated base concept with image URL: {mask_id(image_url)}")
-
-        # Check if we have image_data directly from the concept service
-        if not image_data:
-            # If not, we need to download it - this is a fallback for backward compatibility
-            logger.debug("Image data not provided in concept response, downloading from URL")
-            try:
-                # Check if the image_url is a file path
-                if image_url.startswith("file://"):
-                    import os
-
-                    # Extract the file path from the URL
-                    file_path = image_url[7:]  # Remove the "file://" prefix
-
-                    # Check if the file exists
-                    if not os.path.exists(file_path):
-                        logger.error(f"Local file not found: {mask_id(file_path)}")
-                        raise ServiceUnavailableError(detail="Image file not found")
-
-                    # Read the file
-                    with open(file_path, "rb") as f:
-                        image_data = f.read()
-
-                    logger.debug(f"Read image data from local file: {mask_id(file_path)}")
-                else:
-                    # For remote URLs, use httpx to download
-                    import httpx
-
-                    async with httpx.AsyncClient() as client:
-                        httpx_response = await client.get(image_url)
-                        httpx_response.raise_for_status()
-                        image_data = httpx_response.content
-
-                    logger.debug(f"Downloaded image data from remote URL: {mask_id(image_url)}")
-
-                if not image_data:
-                    logger.error(f"No image data obtained from: {mask_id(image_url)}")
-                    raise ServiceUnavailableError(detail="Failed to get image data for palette variations")
-            except Exception as e:
-                error_msg = f"Error getting image data: {str(e)}"
-                logger.error(error_msg)
-                raise ServiceUnavailableError(detail=error_msg)
-        else:
-            logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
-
-        # First, store the image in Supabase
-        # Create a direct instance of the image persistence service
-        supabase_client = SupabaseClient(url=settings.SUPABASE_URL, key=settings.SUPABASE_KEY)
-        image_persistence_service = ImagePersistenceService(client=supabase_client)
-
-        result = await image_persistence_service.store_image(
-            image_data=image_data,
-            user_id=user_id,
-            metadata={
-                "logo_description": logo_description,
-                "theme_description": theme_description,
-            },
-        )
-
-        image_path = result[0]
-        stored_image_url = result[1]
-
-        logger.info(f"Stored image at path: {mask_path(image_path)}")
-
-        # Generate color palettes
-        try:
-            raw_palettes = await concept_service.generate_color_palettes(
-                theme_description=theme_description,
-                logo_description=logo_description,
-                num_palettes=num_palettes,
-            )
-
-            if not raw_palettes:
-                logger.error("No palettes generated from generate_color_palettes")
-                raise ServiceUnavailableError(detail="Failed to generate color palettes")
-
-            logger.info(f"Generated {len(raw_palettes)} color palettes")
-        except Exception as palette_error:
-            logger.error(f"Error generating color palettes: {str(palette_error)}")
-            raise ServiceUnavailableError(detail=f"Failed to generate color palettes: {str(palette_error)}")
-
-        # Create palette variations using direct service instances
-        from app.services.image.processing_service import ImageProcessingService
-        from app.services.image.service import ImageService
-
-        # Create all needed services directly
-        image_processing_service = ImageProcessingService()
-
-        # Create the image service with our services
-        image_svc = ImageService(
-            persistence_service=image_persistence_service,
-            processing_service=image_processing_service,
-        )
-
-        # Create palette variations
-        try:
-            palette_variations = await image_svc.create_palette_variations(
-                base_image_data=image_data,
-                palettes=raw_palettes,
-                user_id=user_id,
-                blend_strength=0.75,
-            )
-
-            if not palette_variations:
-                logger.error("No palette variations created")
-                raise ServiceUnavailableError(detail="Failed to create palette variations")
-
-            logger.info(f"Created {len(palette_variations)} palette variations")
-        except Exception as variation_error:
-            logger.error(f"Error creating palette variations: {str(variation_error)}")
-            raise ServiceUnavailableError(detail=f"Failed to create palette variations: {str(variation_error)}")
-
-        # Store concept in database with the correct image_path
-        stored_concept = await concept_persistence_service.store_concept(
-            {
-                "user_id": user_id,
-                "logo_description": logo_description,
-                "theme_description": theme_description,
-                "image_path": image_path,  # Use the path from the stored image
-                "image_url": stored_image_url,
-                "color_palettes": palette_variations,
-                "is_anonymous": True,
-            }
-        )
-
-        if not stored_concept:
-            raise ServiceUnavailableError(detail="Failed to store concept")
-
-        concept_id = stored_concept
-        if isinstance(stored_concept, dict):
-            concept_id = stored_concept.get("id", stored_concept)
-
-        logger.info(f"Stored concept with ID: {mask_id(concept_id)}")
-
-        # Update task status to completed
-        await task_service.update_task_status(task_id=task_id, status="completed", result_id=concept_id)
-
-        logger.info(f"Completed background task {mask_id(task_id)} successfully")
-
-    except Exception as e:
-        error_msg = f"Error in background task: {str(e)}"
-        logger.error(error_msg)
-        logger.debug(f"Exception traceback: {traceback.format_exc()}")
-
-        # Update task status to failed
-        try:
-            await task_service.update_task_status(task_id=task_id, status="failed", error_message=error_msg)
-        except Exception as update_err:
-            logger.error(f"Error updating task status: {str(update_err)}")
+        # Log unexpected errors and wrap them in our API error format
+        logger.error(f"Error in generate_concept_with_palettes: {str(e)}")
+        logger.debug(traceback.format_exc())
+        raise ServiceUnavailableError(detail=f"Error queueing concept generation: {str(e)}")
 
 
 @router.get("/task/{task_id}", response_model=TaskResponse)

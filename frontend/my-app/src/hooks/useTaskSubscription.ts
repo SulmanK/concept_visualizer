@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../services/supabaseClient";
 import { TaskResponse } from "../types/api.types";
@@ -26,6 +26,7 @@ export function useTaskSubscription(taskId: string | null) {
   );
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [shouldReconnect, setShouldReconnect] = useState(false);
+  const [wasTabHidden, setWasTabHidden] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const queryClient = useQueryClient();
 
@@ -37,10 +38,32 @@ export function useTaskSubscription(taskId: string | null) {
     data: initialData,
     isError,
     error,
+    refetch,
   } = useTaskStatusQuery(taskId, {
     // Only fetch on initial mount or when taskId changes, then disable
     enabled: !!taskId && !taskData,
   });
+
+  // Refetch latest task data from API
+  const refreshTaskData = useCallback(async () => {
+    if (!taskId) return;
+
+    console.log(
+      `[TaskSubscription] Refreshing task data for ${taskId} after visibility change`,
+    );
+    const result = await refetch();
+
+    if (result.data) {
+      console.log(
+        `[TaskSubscription] Updated task data after visibility change:`,
+        result.data,
+      );
+      setTaskData(result.data);
+
+      // Also update the query cache
+      queryClient.setQueryData(queryKeys.tasks.detail(taskId), result.data);
+    }
+  }, [taskId, refetch, queryClient]);
 
   // Set initial data when it's available
   useEffect(() => {
@@ -49,6 +72,32 @@ export function useTaskSubscription(taskId: string | null) {
       setTaskData(initialData);
     }
   }, [initialData, taskData, taskId]);
+
+  // Handle visibility change events
+  useEffect(() => {
+    if (!taskId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && wasTabHidden) {
+        console.log(
+          `[TaskSubscription] Tab became visible again, refreshing task data`,
+        );
+        refreshTaskData();
+        setWasTabHidden(false);
+      } else if (document.visibilityState === "hidden") {
+        console.log(
+          `[TaskSubscription] Tab hidden, marking for refresh on return`,
+        );
+        setWasTabHidden(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [taskId, wasTabHidden, refreshTaskData]);
 
   // Set up Supabase Realtime subscription
   useEffect(() => {
@@ -255,5 +304,6 @@ export function useTaskSubscription(taskId: string | null) {
     status: subscriptionStatus,
     reconnectAttempts,
     maxReconnectAttemptsReached: reconnectAttempts >= MAX_RECONNECT_ATTEMPTS,
+    refreshTaskData,
   };
 }
