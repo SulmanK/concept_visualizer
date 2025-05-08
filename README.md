@@ -5,8 +5,7 @@
 
 A web application for generating and refining visual concepts like logos and color palettes using AI assistance. Describe your ideas, and let the AI bring them to life!
 
-<!-- Optional: Add a GIF or Screenshot Here -->
-<!-- ![Concept Visualizer Demo](./docs/assets/demo.gif) -->
+[Concept Visualizer Demo](./docs/assets/demo.mp4)
 
 ## Table of Contents
 
@@ -23,9 +22,9 @@ A web application for generating and refining visual concepts like logos and col
     - [JigsawStack API Key](#jigsawstack-api-key)
     - [Redis Setup](#redis-setup)
   - [Running Locally](#running-locally)
+  - [Running Cloud](#running-Cloud)
 - [Testing](#testing)
   - [Unit Tests](#unit-tests)
-  - [End-to-End Tests](#end-to-end-tests)
 - [Deployment](#deployment)
   - [Backend (GCP)](#backend-gcp)
   - [Frontend (Vercel)](#frontend-vercel)
@@ -37,7 +36,7 @@ A web application for generating and refining visual concepts like logos and col
 ## Features
 
 - **Concept Generation**: Create logos and color palettes from text descriptions.
-- **Concept Refinement**: Iteratively improve existing designs by specifying modifications.
+- **Concept Refinement**: Iteratively improve existing designs by specifying modifications. [IN PROGRESS]
 - **Color Palette Management**: Generate, view, and apply harmonious color palettes.
 - **Concept Storage**: Save, organize, and revisit your generated concepts.
 - **Asynchronous Processing**: Handles potentially long-running AI tasks in the background.
@@ -160,6 +159,28 @@ Follow these steps to set up the project for local development.
 
 For detailed configuration instructions, please refer to our [Setup Guide](Design/Setup.md).
 
+#### Running Locally
+
+1.  **Backend:**
+    ```bash
+    cd backend
+    # Ensure .env is linked to .env.develop via post-checkout hook
+    # (or manually copy: cp .env.develop .env)
+    uvicorn app.main:app --reload --port 8000
+    ```
+2.  **Frontend:**
+    ```bash
+    cd frontend/my-app
+    # Ensure .env is linked to .env.develop via post-checkout hook
+    # (or manually copy: cp .env.develop .env)
+    npm run dev
+    ```
+    Access the app at `http://localhost:5173` (or the port Vite uses).
+
+#### Running Cloud
+
+After successful deployment of both the backend to GCP and the frontend to Vercel, you can access the application at the URL provided by Vercel in your project dashboard. This URL will route API requests to your GCP backend automatically through the configured rewrites in `vercel.json`.
+
 ## Testing
 
 ### Backend
@@ -173,7 +194,7 @@ uv run pytest tests/
 
 ```bash
 cd frontend/my-app
-npm test          # Run unit tests (Vitest)
+npm test
 ```
 
 The frontend uses a mock API service (`src/services/mocks`) for isolated testing.
