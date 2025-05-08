@@ -297,10 +297,10 @@ echo -e "\nCI/CD Service Account Email for $ENVIRONMENT environment (DEV_CICD_SE
 terraform output -raw cicd_service_account_email
 
 echo -e "\nWorkload Identity Provider for $ENVIRONMENT environment (DEV_WORKLOAD_IDENTITY_PROVIDER or PROD_WORKLOAD_IDENTITY_PROVIDER):"
-terraform output -raw workload_identity_provider
+terraform output -raw workload_identity_full_provider_name
 
-echo -e "\nArtifact Registry Repository URL for $ENVIRONMENT environment (DEV_ARTIFACT_REGISTRY_REPO_NAME or PROD_ARTIFACT_REGISTRY_REPO_NAME):"
-terraform output -raw artifact_registry_repository_url
+echo -e "\nArtifact Registry Repository Name for $ENVIRONMENT environment (DEV_ARTIFACT_REGISTRY_REPO_NAME or PROD_ARTIFACT_REGISTRY_REPO_NAME):"
+echo "${NAMING_PREFIX}-docker-repo"
 
 echo -e "\nExternal IP for API VM for $ENVIRONMENT environment:"
 terraform output -raw api_vm_external_ip
