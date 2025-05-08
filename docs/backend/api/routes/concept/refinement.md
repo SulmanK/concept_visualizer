@@ -4,7 +4,7 @@ This documentation covers the concept refinement endpoints in the Concept Visual
 
 ## Overview
 
-The `refinement.py` module provides endpoints for refining existing visual concepts based on additional instructions or prompts. Refinement allows users to make targeted improvements to generated concepts rather than starting over.
+The `refinement.py` module provides endpoints for refining existing visual concepts based on additional instructions or prompts. Refinement allows users to make targeted improvements to generated concepts rather than starting over. It uses a background task approach through Google Pub/Sub for processing.
 
 ## Models
 
@@ -33,10 +33,13 @@ class TaskResponse(BaseModel):
     status: str
     message: Optional[str] = None
     type: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
-    result: Optional[Dict[str, Any]] = None
+    result_id: Optional[str] = None
+    image_url: Optional[str] = None
+    error_message: Optional[str] = None
 ```
 
 ## Available Endpoints
@@ -47,15 +50,14 @@ class TaskResponse(BaseModel):
 @router.post("/refine", response_model=TaskResponse)
 async def refine_concept(
     request: RefinementRequest,
-    background_tasks: BackgroundTasks,
     response: Response,
     req: Request,
     commons: CommonDependencies = Depends(),
-):
+) -> TaskResponse:
     """Refine a concept based on refinement prompt."""
 ```
 
-This endpoint creates a background task to refine an existing concept based on specific instructions. It returns immediately with a task ID that can be used to check the status.
+This endpoint creates a background task to refine an existing concept based on specific instructions. It publishes a message to Google Pub/Sub to trigger the processing and returns immediately with a task ID that can be used to check the status.
 
 #### Request
 
@@ -80,14 +82,25 @@ Content-Type: application/json
   "message": "Concept refinement task created and queued for processing",
   "type": "concept_refinement",
   "created_at": "2023-01-01T12:00:00.123456",
+  "updated_at": null,
+  "completed_at": null,
   "metadata": {
     "original_image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
     "refinement_prompt": "Make the logo more minimalist and use lighter shades of brown",
     "logo_description": "A modern coffee shop logo with coffee beans",
     "theme_description": "Warm brown tones, natural feeling"
-  }
+  },
+  "result_id": null,
+  "image_url": null,
+  "error_message": null
 }
 ```
+
+The endpoint performs the following steps:
+
+1. Creates a task record in the database
+2. Publishes a message to Pub/Sub with task details
+3. Returns task information in the response
 
 #### Response (409 Conflict)
 
@@ -101,43 +114,29 @@ If a refinement task is already in progress for the user, the endpoint returns a
   "type": "concept_refinement",
   "created_at": "2023-01-01T11:50:00.123456",
   "updated_at": "2023-01-01T11:50:05.123456",
+  "completed_at": null,
   "metadata": {
     "original_image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
     "refinement_prompt": "Make the logo more minimalist",
     "logo_description": "A modern coffee shop logo with coffee beans",
     "theme_description": "Warm brown tones, natural feeling"
-  }
+  },
+  "result_id": null,
+  "image_url": null,
+  "error_message": null
 }
 ```
 
-## Background Task Implementation
+## Background Task Processing
 
-The module implements a background task processor for refining concepts:
+The refinement task is processed by a Cloud Function triggered by the Pub/Sub message. The function performs the following steps:
 
-```python
-async def refine_concept_background_task(
-    task_id: str,
-    refinement_prompt: str,
-    original_image_url: str,
-    logo_description: str,
-    theme_description: str,
-    user_id: str,
-    image_service: ImageServiceInterface,
-    concept_service: ConceptServiceInterface,
-    concept_persistence_service: ConceptPersistenceServiceInterface,
-    image_persistence_service: ImagePersistenceServiceInterface,
-    task_service: TaskServiceInterface
-):
-    """Background task function to refine a concept."""
-```
-
-This function:
-
-1. Updates the task status to "processing"
-2. Downloads the original image
-3. Sends the image and refinement prompt to the concept service
-4. Stores the refined image in Supabase Storage
-5. Updates the task with the final result or error information
+1. Retrieves the task from the database
+2. Updates the task status to "processing"
+3. Downloads the original image
+4. Sends the image and refinement prompt to the concept service
+5. Stores the refined image in Supabase Storage
+6. Updates the task with the final result or error information
 
 ## Task Lifecycle
 
@@ -175,12 +174,10 @@ async function refineConceptWithPrompt(
   themeDesc,
 ) {
   try {
-    // Submit the refinement request
     const response = await fetch("/api/concepts/refine", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify({
         original_image_url: originalImageUrl,
@@ -198,54 +195,55 @@ async function refineConceptWithPrompt(
     }
 
     if (!response.ok) {
-      throw new Error("Concept refinement failed");
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Concept refinement failed");
     }
 
     const taskData = await response.json();
-
-    // Start polling for task status
-    return pollTaskStatus(taskData.task_id);
+    return taskData; // Contains task_id to track progress
   } catch (error) {
-    console.error("Failed to start concept refinement:", error);
-    return null;
+    console.error("Error starting concept refinement:", error);
+    throw error;
   }
 }
 
-// Poll for task status until complete
-async function pollTaskStatus(taskId, maxAttempts = 30, interval = 2000) {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const response = await fetch(`/api/concepts/task/${taskId}`, {
-        headers: {
-          Authorization: `Bearer ${getAuthToken()}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to check task status");
-      }
-
-      const taskData = await response.json();
-
-      // If task is complete or failed, return the result
-      if (taskData.status === "completed" || taskData.status === "failed") {
-        return taskData;
-      }
-
-      // Update UI with current status
-      updateRefinementStatus(taskData.status, taskData.message);
-
-      // Wait before polling again
-      await new Promise((resolve) => setTimeout(resolve, interval));
-    } catch (error) {
-      console.error("Error polling task status:", error);
-      // Continue polling despite errors
-    }
+// Check task status
+async function checkTaskStatus(taskId) {
+  try {
+    const response = await fetch(`/api/concepts/task/${taskId}`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error checking task status:", error);
+    throw error;
   }
+}
 
-  throw new Error("Task polling timed out");
+// Poll task status until complete
+async function pollTaskUntilComplete(taskId, onProgress) {
+  const poll = async () => {
+    const status = await checkTaskStatus(taskId);
+    onProgress(status);
+
+    if (status.status === "completed" || status.status === "failed") {
+      return status;
+    }
+
+    // Wait 2 seconds before checking again
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return poll();
+  };
+
+  return poll();
 }
 ```
+
+## Security Considerations
+
+- All endpoints require authentication
+- Tasks are user-scoped to prevent unauthorized access
+- Rate limiting protects against abuse
+- Error messages are sanitized to prevent information disclosure
 
 ## Related Files
 
