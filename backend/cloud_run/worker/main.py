@@ -9,6 +9,7 @@ import base64
 import json
 import logging
 import os
+import time
 import traceback
 from typing import Any, Dict
 
@@ -126,23 +127,31 @@ async def process_generation_task(
     concept_service = services["concept_service"]
     concept_persistence_service = services["concept_persistence_service"]
     task_service = services["task_service"]
+    image_persistence_service = services["image_persistence_service"]
 
     logger = logging.getLogger("concept_generation_worker")
+
+    task_start_time = time.time()
+    logger.info(f"[WORKER_TIMING] Task {task_id}: Starting at {task_start_time:.2f}")
     logger.info(f"Starting concept generation task {task_id}")
 
     try:
         # Update task status to processing
         await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
 
         logger.debug(f"Generating concept for task {task_id}")
 
         # Generate base concept with an image
+        gen_start = time.time()
         concept_response = await concept_service.generate_concept(
             logo_description=logo_description,
             theme_description=theme_description,
             user_id=user_id,
             skip_persistence=True,  # Skip persistence in the service, we'll handle it here
         )
+        gen_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Base concept generated at {gen_end:.2f} (Duration: {(gen_end - gen_start):.2f}s)")
 
         # Log the response keys for debugging
         if concept_response:
@@ -202,8 +211,11 @@ async def process_generation_task(
         else:
             logger.info(f"Using image data from concept service response, size: {len(image_data)} bytes")
 
+        img_proc_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Image downloaded/prepared at {img_proc_end:.2f} (Duration: {(img_proc_end - gen_end):.2f}s)")
+
         # Store the image in Supabase
-        image_persistence_service = services["image_persistence_service"]
+        store_img_start = time.time()
         result = await image_persistence_service.store_image(
             image_data=image_data,
             user_id=user_id,
@@ -212,6 +224,8 @@ async def process_generation_task(
                 "theme_description": theme_description,
             },
         )
+        store_img_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Base image stored at {store_img_end:.2f} (Duration: {(store_img_end - store_img_start):.2f}s)")
 
         image_path = result[0]
         stored_image_url = result[1]
@@ -219,6 +233,7 @@ async def process_generation_task(
         logger.info(f"Stored image at path: {image_path}")
 
         # Generate color palettes
+        palette_gen_start = time.time()
         try:
             raw_palettes = await concept_service.generate_color_palettes(
                 theme_description=theme_description,
@@ -234,8 +249,11 @@ async def process_generation_task(
         except Exception as palette_error:
             logger.error(f"Error generating color palettes: {str(palette_error)}")
             raise Exception(f"Failed to generate color palettes: {str(palette_error)}")
+        palette_gen_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Palettes generated at {palette_gen_end:.2f} (Duration: {(palette_gen_end - palette_gen_start):.2f}s)")
 
         # Create palette variations
+        variation_start = time.time()
         try:
             palette_variations = await image_service.create_palette_variations(
                 base_image_data=image_data,
@@ -252,8 +270,11 @@ async def process_generation_task(
         except Exception as variation_error:
             logger.error(f"Error creating palette variations: {str(variation_error)}")
             raise Exception(f"Failed to create palette variations: {str(variation_error)}")
+        variation_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Variations created at {variation_end:.2f} (Duration: {(variation_end - variation_start):.2f}s)")
 
         # Store concept in database with the correct image_path
+        store_concept_start = time.time()
         stored_concept = await concept_persistence_service.store_concept(
             {
                 "user_id": user_id,
@@ -265,6 +286,8 @@ async def process_generation_task(
                 "is_anonymous": True,
             }
         )
+        store_concept_end = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Concept stored at {store_concept_end:.2f} (Duration: {(store_concept_end - store_concept_start):.2f}s)")
 
         if not stored_concept:
             raise Exception("Failed to store concept")
@@ -278,12 +301,16 @@ async def process_generation_task(
         # Update task status to completed
         await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_COMPLETED, result_id=concept_id)
 
+        task_end_time = time.time()
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Completed successfully at {task_end_time:.2f} (Total Duration: {(task_end_time - task_start_time):.2f}s)")
         logger.info(f"Completed task {task_id} successfully")
 
     except Exception as e:
+        task_fail_time = time.time()
         error_msg = f"Error in generation task: {str(e)}"
         logger.error(error_msg)
         logger.debug(f"Exception traceback: {traceback.format_exc()}")
+        logger.error(f"[WORKER_TIMING] Task {task_id}: FAILED at {task_fail_time:.2f} (Total Duration: {(task_fail_time - task_start_time):.2f}s)")
 
         # Update task status to failed
         try:
