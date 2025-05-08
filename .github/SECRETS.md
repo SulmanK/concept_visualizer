@@ -17,6 +17,8 @@ DEV_ARTIFACT_REGISTRY_REPO_NAME
 DEV_NAMING_PREFIX
 DEV_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output: workload_identity_provider
 DEV_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output: cicd_service_account_email
+DEV_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
+DEV_API_SERVICE_ACCOUNT_EMAIL   # From Terraform output
 DEV_SUPABASE_URL
 DEV_SUPABASE_ANON_KEY
 DEV_SUPABASE_SERVICE_ROLE
@@ -30,6 +32,8 @@ PROD_ARTIFACT_REGISTRY_REPO_NAME
 PROD_NAMING_PREFIX
 PROD_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output: workload_identity_provider
 PROD_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output: cicd_service_account_email
+PROD_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
+PROD_API_SERVICE_ACCOUNT_EMAIL  # From Terraform output
 PROD_SUPABASE_URL
 PROD_SUPABASE_ANON_KEY
 PROD_SUPABASE_SERVICE_ROLE
@@ -47,6 +51,8 @@ Several secrets are automatically created and managed by Terraform. After applyi
    # After applying Terraform to the dev environment (terraform workspace select dev && terraform apply)
    export DEV_WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw workload_identity_provider)
    export DEV_CICD_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw cicd_service_account_email)
+   export DEV_WORKER_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw worker_service_account_email)
+   export DEV_API_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw api_service_account_email)
 
    # You can then add these as GitHub secrets
    # (either manually or using the GitHub CLI)
@@ -58,6 +64,8 @@ Several secrets are automatically created and managed by Terraform. After applyi
    # After applying Terraform to the prod environment (terraform workspace select prod && terraform apply)
    export PROD_WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw workload_identity_provider)
    export PROD_CICD_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw cicd_service_account_email)
+   export PROD_WORKER_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw worker_service_account_email)
+   export PROD_API_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw api_service_account_email)
 
    # You can then add these as GitHub secrets
    # (either manually or using the GitHub CLI)
@@ -76,6 +84,8 @@ Several secrets are automatically created and managed by Terraform. After applyi
 - `DEV_NAMING_PREFIX`: The naming prefix for development resources (e.g., concept-viz-dev)
 - `DEV_WORKLOAD_IDENTITY_PROVIDER`: The full path of the Workload Identity Federation provider for the development environment. Get this from Terraform output.
 - `DEV_CICD_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for CI/CD in the development environment. Get this from Terraform output.
+- `DEV_WORKER_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for the worker (Cloud Function) in the development environment. Get this from Terraform output.
+- `DEV_API_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for the API VM in the development environment. Get this from Terraform output.
 
 ### Supabase Development
 
@@ -99,6 +109,8 @@ Several secrets are automatically created and managed by Terraform. After applyi
 - `PROD_NAMING_PREFIX`: The naming prefix for production resources (e.g., concept-viz-prod)
 - `PROD_WORKLOAD_IDENTITY_PROVIDER`: The full path of the Workload Identity Federation provider for the production environment. Get this from Terraform output.
 - `PROD_CICD_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for CI/CD in the production environment. Get this from Terraform output.
+- `PROD_WORKER_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for the worker (Cloud Function) in the production environment. Get this from Terraform output.
+- `PROD_API_SERVICE_ACCOUNT_EMAIL`: Email address of the service account used for the API VM in the production environment. Get this from Terraform output.
 
 ### Supabase Production
 
