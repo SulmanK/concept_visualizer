@@ -175,6 +175,8 @@ DEV_SUPABASE_ANON_KEY            # From your .env.develop (Supabase anon key)
 DEV_SUPABASE_SERVICE_ROLE        # From your .env.develop
 DEV_SUPABASE_JWT_SECRET          # From your .env.develop
 DEV_JIGSAWSTACK_API_KEY          # From your .env.develop
+DEV_WORKER_MIN_INSTANCES
+DEV_WORKER_MAX_INSTANCES
 
 # Production Environment
 PROD_GCP_PROJECT_ID
@@ -190,6 +192,7 @@ PROD_SUPABASE_ANON_KEY           # From your .env.main (Supabase anon key)
 PROD_SUPABASE_SERVICE_ROLE       # From your .env.main
 PROD_SUPABASE_JWT_SECRET         # From your .env.main
 PROD_JIGSAWSTACK_API_KEY         # From your .env.main
+PROD_WORKER_MAX_INSTANCES
 
 ```
 
