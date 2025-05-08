@@ -2,20 +2,20 @@
 
 resource "google_service_account" "api_service_account" {
   project      = var.project_id
-  account_id   = "${var.naming_prefix}-api-sa-${var.environment}"
+  account_id   = "${var.naming_prefix}-api-${var.environment}"
   display_name = "SA for Concept Viz API (${var.environment})"
 }
 
 resource "google_service_account" "worker_service_account" {
   project      = var.project_id
-  account_id   = "${var.naming_prefix}-worker-sa-${var.environment}"
+  account_id   = "${var.naming_prefix}-worker-${var.environment}"
   display_name = "SA for Concept Viz Worker (${var.environment})"
 }
 
 # Create dedicated CI/CD service account
 resource "google_service_account" "cicd_service_account" {
   project      = var.project_id
-  account_id   = "${var.naming_prefix}-cicd-sa-${var.environment}"
+  account_id   = "${var.naming_prefix}-cicd-${var.environment}"
   display_name = "CI/CD Service Account for Concept Visualizer (${var.environment})"
   description  = "Used by GitHub Actions for CI/CD operations"
 }
