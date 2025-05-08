@@ -139,7 +139,7 @@ jobs:
     name: Build & Push Docker Images
     needs: [backend-lint, frontend-lint]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     permissions:
       contents: read
       id-token: write
@@ -151,22 +151,28 @@ jobs:
       - name: Set Environment Variables
         id: set_env
         run: |
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+          # For workflow_dispatch we use github.ref_name, for push we have github.ref
+          BRANCH="${{ github.ref_name }}"
+
+          if [[ "$BRANCH" == "develop" ]]; then
             echo "ENVIRONMENT=dev" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.DEV_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.DEV_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
             echo "CICD_SERVICE_ACCOUNT=${{ secrets.DEV_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.DEV_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
-          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          elif [[ "$BRANCH" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
             echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
             echo "CICD_SERVICE_ACCOUNT=${{ secrets.PROD_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
           else
-            echo "Unknown branch for image tagging: ${{ github.ref_name }}"
+            echo "Unknown branch for image tagging: $BRANCH"
             exit 1
           fi
+
+          echo "Current branch: $BRANCH"
+          echo "Environment: $ENVIRONMENT"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
