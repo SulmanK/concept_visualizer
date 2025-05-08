@@ -1,274 +1,230 @@
 # Concept Visualizer
 
-A web application for generating and refining visual concepts with AI assistance.
+[![Build Status](https://img.shields.io/github/actions/workflow/status/SulmanK/concept-visualizer/.github%2Fworkflows%2Fci-tests.yml?branch=main)](https://github.com/SulmanK/concept-visualizer/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A web application for generating and refining visual concepts like logos and color palettes using AI assistance. Describe your ideas, and let the AI bring them to life!
+
+![Concept Visualizer Demo](./docs/assets/demo.gif)
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+    - [Environment Files (.env)](#environment-files-env)
+    - [Supabase Setup](#supabase-setup)
+    - [GCP Setup](#gcp-setup)
+    - [JigsawStack API Key](#jigsawstack-api-key)
+    - [Redis Setup](#redis-setup)
+  - [Running Locally](#running-locally)
+  - [Running Cloud](#running-Cloud)
+- [Testing](#testing)
+  - [Unit Tests](#unit-tests)
+- [Deployment](#deployment)
+  - [Backend (GCP)](#backend-gcp)
+  - [Frontend (Vercel)](#frontend-vercel)
+- [Infrastructure](#infrastructure)
+- [Security](#security)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-- **Concept Generation**: Create logos and color palettes from text descriptions
-- **Concept Refinement**: Refine existing designs by specifying modifications
-- **Color Palette Generation**: Get harmonious color palettes for your brand
-- **Concept Storage**: Save and view your generated concepts
+- **Concept Generation**: Create logos and color palettes from text descriptions.
+- **Concept Refinement**: Iteratively improve existing designs by specifying modifications. [IN PROGRESS]
+- **Color Palette Management**: Generate, view, and apply harmonious color palettes.
+- **Concept Storage**: Save, organize, and revisit your generated concepts.
+- **Asynchronous Processing**: Handles potentially long-running AI tasks in the background.
+- **API Rate Limiting**: Protects backend resources from overuse.
 
 ## Tech Stack
 
-### Backend
-
-- Python 3.11
-- FastAPI
-- Pydantic
-- JigsawStack API integration
-- Supabase for storage and database
-
-### Frontend
-
-- React 19
-- TypeScript
-- Tailwind CSS
-- React Router
-- Supabase JS client
+- **Backend:**
+  - Python 3.11+
+  - FastAPI
+  - Uvicorn
+  - Pydantic
+  - Supabase (Database, Auth, Storage)
+  - Redis (via Upstash for Rate Limiting)
+  - JigsawStack API (AI Generation)
+  - Google Cloud Functions (Gen 2) / Pub/Sub (Background Tasks)
+  - Docker
+- **Frontend:**
+  - React 19
+  - TypeScript
+  - Vite
+  - Tailwind CSS
+  - React Router
+  - TanStack Query (React Query)
+  - Supabase JS Client
+  - Axios
+- **Infrastructure & DevOps:**
+  - Google Cloud Platform (GCP)
+    - Compute Engine (API VM)
+    - Cloud Functions (Worker)
+    - Pub/Sub (Task Queue)
+    * Artifact Registry (Docker Images)
+    * Secret Manager
+    * Cloud Storage (Terraform State, Assets)
+  - Terraform (IaC)
+  - Vercel (Frontend Deployment)
+  - GitHub Actions (CI/CD, Scheduled Tasks)
+  - Pre-commit Hooks (Code Quality)
 
 ## Project Structure
 
-This project follows a clean, modular structure with clear separation between frontend and backend:
-
 ```
-concept_visualizer/
-├── .github/             # GitHub workflows and CI/CD configuration
-├── backend/             # Python FastAPI backend
-│   ├── .venv/           # Backend virtual environment (not tracked in git)
-│   ├── app/             # Application code
-│   ├── docs/            # Backend documentation
-│   ├── tests/           # Test suite
-│   ├── .env             # Environment variables (not tracked in git)
-│   ├── .env.example     # Example environment file
-│   └── pyproject.toml   # Backend dependencies and configuration
-├── frontend/            # React frontend
-│   ├── my-app/          # Main React application
-│   │   ├── node_modules/ # Frontend dependencies (not tracked in git)
-│   │   ├── src/         # Source code
-│   │   ├── .env         # Environment variables (not tracked in git)
-│   │   └── .env.example # Example environment file
-├── Design/              # Design documentation
-└── docs/                # Project-wide documentation
-```
-
-## Development Setup
-
-### Backend
-
-To set up the backend:
-
-```bash
-# Navigate to the backend directory
-cd backend
-
-# Create a virtual environment
-uv venv
-
-# Install dependencies
-uv pip install -e .
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your specific configuration
-
-# Run the development server
-cd backend && uv run uvicorn app.main:app --reload
-```
-
-### Frontend
-
-To set up the frontend:
-
-```bash
-# Navigate to the frontend directory
-cd frontend/my-app
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your specific configuration
-
-# Run the development server
-npm run dev
-```
-
-### Pre-commit Hooks
-
-The project uses pre-commit hooks to ensure code quality and maintain architectural standards. To set up pre-commit hooks:
-
-```bash
-# Install pre-commit
-pip install pre-commit
-
-# Install the git hooks
-pre-commit install
-```
-
-These hooks will automatically run when you attempt to commit changes and will prevent commits that don't meet the project's standards. The hooks include:
-
-- Code formatting with Black and Prettier
-- Import sorting with isort
-- Linting with flake8 and ESLint
-- Type checking with mypy and TypeScript
-- Custom architectural checks to enforce project structure
-
-To manually run all pre-commit hooks on all files:
-
-```bash
-pre-commit run --all-files
+concept-visualizer/
+├── .github/             # GitHub Actions workflows
+├── backend/             # Python FastAPI backend service
+│   ├── app/             # Core application code
+│   ├── cloud_run/       # Code specific to the worker (Cloud Function)
+│   ├── scripts/         # Helper scripts (DB migrations, admin tasks)
+│   ├── supabase/         # Supabase edge function
+│   ├── tests/           # Backend tests
+│   ├── .env.develop     # Development environment variables (template, managed by hook)
+│   ├── .env.main        # Production environment variables (template, managed by hook)
+│   ├── Dockerfile       # Dockerfile for API service
+│   ├── Dockerfile.worker # Dockerfile for Worker (if different)
+│   └── pyproject.toml   # Backend dependencies and project metadata
+├── frontend/            # React frontend application
+│   ├── my-app/          # Main application source
+│   │   ├── public/      # Static assets
+│   │   ├── src/         # Frontend source code
+│   │   ├── tests/       # Frontend tests (unit & e2e)
+│   │   ├── .env.develop # Development environment variables (template, managed by hook)
+│   │   ├── .env.main    # Production environment variables (template, managed by hook)
+│   │   ├── package.json # Frontend dependencies
+│   │   └── vercel.json  # Vercel deployment configuration
+├── scripts/             # Root-level helper scripts (GCP setup, env files)
+├── terraform/           # Infrastructure as Code (IaC) for GCP
+│   ├── environments/    # Environment-specific Terraform variables (*.tfvars)
+│   └── scripts/         # Startup scripts for VMs
+├── docs/                # Project documentation
+└── README.md            # This file
 ```
 
 ## Getting Started
 
+Follow these steps to set up the project for local development.
+
 ### Prerequisites
 
-- Python 3.11
-- Node.js 18+
-- npm or yarn
-- JigsawStack API key
-- Supabase account and project
+- [Git](https://git-scm.com/)
+- [Node.js](https://nodejs.org/) (v18 or later) & npm
+- [Python](https://www.python.org/) (v3.11 recommended)
+- [`uv`](https://github.com/astral-sh/uv) (Python package manager): `pip install uv`
+- [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install) (`gcloud auth login`, `gcloud auth application-default login`)
+- [Terraform CLI](https://developer.hashicorp.com/terraform/downloads) (v1.3 or later)
+- [Supabase CLI](https://supabase.com/docs/guides/cli) (`supabase login`)
+- Accounts for: Supabase, GCP, Vercel, GitHub, JigsawStack
 
-### Supabase Setup
+### Installation
 
-1. Create a new Supabase project
+1.  **Clone the repository:**
 
-2. Set up the database tables:
+    ```bash
+    git clone https://github.com/SulmanK/concept-visualizer.git
+    cd concept-visualizer
+    ```
 
-   - `sessions`: Stores user sessions
-   - `concepts`: Stores generated concepts
-   - `color_variations`: Stores color variations for concepts
+2.  **Setup Backend:**
 
-3. Set up storage buckets:
-   - `concept-images`: For storing base concept images
-   - `palette-images`: For storing color variation images
+    ```bash
+    cd backend
+    uv venv  # Create virtual environment
+    uv pip install -e .[dev] # Install dependencies
+    cd ..
+    ```
 
-See `design/supabase_setup_guide.md` for detailed instructions.
+3.  **Setup Frontend:**
+
+    ```bash
+    cd frontend/my-app
+    npm install
+    cd ../..
+    ```
+
+4.  **Setup Pre-commit Hooks:**
+    ```bash
+    pre-commit install
+    ```
+
+### Configuration
+
+For detailed configuration instructions, please refer to our [Setup Guide](Design/Setup.md).
+
+#### Running Locally
+
+1.  **Backend:**
+    ```bash
+    cd backend
+    # Ensure .env is linked to .env.develop via post-checkout hook
+    # (or manually copy: cp .env.develop .env)
+    uvicorn app.main:app --reload --port 8000
+    ```
+2.  **Frontend:**
+    ```bash
+    cd frontend/my-app
+    # Ensure .env is linked to .env.develop via post-checkout hook
+    # (or manually copy: cp .env.develop .env)
+    npm run dev
+    ```
+    Access the app at `http://localhost:5173` (or the port Vite uses).
+
+#### Running Cloud
+
+After successful deployment of both the backend to GCP and the frontend to Vercel, you can access the application at the URL provided by Vercel in your project dashboard. This URL will route API requests to your GCP backend automatically through the configured rewrites in `vercel.json`.
 
 ## Testing
 
-The project uses Vitest for unit and integration testing.
+### Backend
 
-### Running Tests
-
+```bash
+cd backend
+uv run pytest tests/
 ```
+
+### Frontend
+
+```bash
 cd frontend/my-app
-npm test          # Run all tests
-npm run test:watch # Run tests in watch mode
+npm test
 ```
 
-### Mock API Service
+The frontend uses a mock API service (`src/services/mocks`) for isolated testing.
 
-For testing API integrations without making actual network calls, the project includes a mock API service:
+## Deployment
 
-```typescript
-import { mockApiService, setupMockApi, resetMockApi } from "../services/mocks";
+- **Backend:** Deployed to GCP Compute Engine (API) and Cloud Functions (Worker) via Terraform and GitHub Actions (`.github/workflows/deploy_backend.yml`). Requires secrets configured in GitHub Actions.
+- **Frontend:** Deployed to Vercel. Requires Vercel project configured to point to the `frontend/my-app` directory and environment variables set for backend API URL and Supabase keys.
+- **Important:** After deploying/recreating GCP infrastructure, the backend VM's external IP address **will change**. You **must update** the `destination` IP in `frontend/my-app/vercel.json` and redeploy the frontend on Vercel.
 
-// Configure mock API behavior
-setupMockApi({
-  shouldFail: false,
-  responseDelay: 10,
-  customResponses: {
-    generateConcept: {
-      imageUrl: "https://example.com/test-image.png",
-      // other properties...
-    },
-  },
-});
+## Infrastructure
 
-// Reset mock API to default state
-resetMockApi();
-```
-
-The mock service simulates the behavior of the backend API and can be configured to return custom responses or simulate errors for testing edge cases.
+- **GCP:** Compute Engine (API VM), Cloud Functions (Worker), Pub/Sub (Task Queue), Artifact Registry (Docker Images), Secret Manager, Cloud Storage (State, Assets).
+- **Supabase:** PostgreSQL Database, Authentication, Storage.
+- **Vercel:** Frontend hosting and serverless functions (for rewrites).
+- **Upstash:** Managed Redis for rate limiting.
 
 ## Security
 
-### Credentials Management
+- Credentials managed via environment variables and GCP Secret Manager. **Never commit secrets.**
+- Row Level Security (RLS) enforced in Supabase for data access.
+- API rate limiting implemented on the backend.
+- Secure JWT handling for authentication.
+- GitHub Actions workflows include security scanning (CodeQL, Gitleaks).
+- Sensitive data is masked in logs.
 
-The application uses environment variables for managing all sensitive credentials. These include:
+## Contributing
 
-- **CONCEPT_JIGSAWSTACK_API_KEY**: API key for JigsawStack services
-- **CONCEPT_SUPABASE_KEY**: Supabase API key for database and storage access
-- **CONCEPT_UPSTASH_REDIS_PASSWORD**: Password for Upstash Redis service
-
-Never commit actual credentials to the repository. The repository contains example files (`.env.example`) with placeholder values that should be used as templates.
-
-### Branch-Based Environment Switching
-
-This project implements automatic environment switching based on Git branches. When you check out different branches, the system automatically copies the appropriate environment configuration files for that branch.
-
-#### How it works
-
-1. The project uses a Git `post-checkout` hook that runs after switching branches
-2. When you switch to `develop` or `main`, the hook copies the corresponding `.env.develop` or `.env.main` to `.env` in both backend and frontend
-3. The application then uses these environment-specific configurations
-
-#### Setup
-
-Run the setup script to create the necessary environment files:
-
-```bash
-# Make the setup script executable (if not already)
-chmod +x scripts/setup_env_files.sh
-
-# Run the setup script
-./scripts/setup_env_files.sh
-```
-
-This will create:
-
-- `.env.develop` - Contains development environment settings
-- `.env.main` - Contains production environment settings with placeholders
-- `.env.example` - Template showing all required variables
-
-After running the script, make sure the Git hook is executable:
-
-```bash
-chmod +x .git/hooks/post-checkout
-```
-
-Now, when you switch branches with `git checkout develop` or `git checkout main`, the appropriate environment files will be automatically applied.
-
-#### Notes
-
-- The `.env` files themselves are not tracked in Git (they're in `.gitignore`)
-- Only the branch-specific templates (`.env.develop`, `.env.main`) may be committed, with placeholders for sensitive values
-- After switching branches, review your `.env` files to ensure they have the correct values
-
-### Setting Up Credentials
-
-1. Copy the example environment files to create your own:
-
-   ```bash
-   # Backend
-   cp backend/.env.example backend/.env
-
-   # Frontend
-   cp frontend/my-app/.env.example frontend/my-app/.env
-   ```
-
-2. Fill in your actual credentials in the `.env` files
-
-3. Make sure `.env` files are listed in the `.gitignore` to prevent accidental commits
-
-### Security Workflows
-
-This project includes GitHub workflows for security scanning:
-
-- **Security Scan**: Uses CodeQL to scan for security vulnerabilities in the code
-- **Environment Security Check**: Checks for hardcoded credentials and verifies proper environment file structure
-
-### Logging Security
-
-The application implements secure logging practices:
-
-- Sensitive information is masked in logs (only first few characters are shown)
-- User session IDs are never logged in full form
-- API keys and credentials are not logged
+Please read `CONTRIBUTING.md` (if available) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.

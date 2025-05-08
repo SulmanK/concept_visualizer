@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Define rate limit rules for different endpoints
 RATE_LIMIT_RULES = {
+    "/concepts/generate": "10/month",
     "/concepts/generate-with-palettes": "10/month",
     "/concepts/refine": "10/month",
     "/concepts/store": "10/month",

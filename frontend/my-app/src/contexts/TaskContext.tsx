@@ -213,8 +213,11 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   }, []);
 
   // Use the new useTaskSubscription hook to get real-time updates
-  const { taskData: activeTaskData, error: subscriptionError } =
-    useTaskSubscription(activeTaskId);
+  const {
+    taskData: activeTaskData,
+    error: subscriptionError,
+    refreshTaskData,
+  } = useTaskSubscription(activeTaskId);
 
   // Set up derived state based on the task data
   const isTaskPending = activeTaskData?.status === TASK_STATUS.PENDING;
@@ -314,11 +317,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       console.log(
         `[TaskContext] Manually refreshing task status for ${activeTaskId}`,
       );
-      queryClient.invalidateQueries({
-        queryKey: ["tasks", "detail", activeTaskId],
-      });
+
+      // Use the refreshTaskData function from useTaskSubscription hook first
+      if (refreshTaskData) {
+        refreshTaskData();
+      } else {
+        // Fallback to invalidating the query if for some reason refreshTaskData is unavailable
+        queryClient.invalidateQueries({
+          queryKey: ["tasks", "detail", activeTaskId],
+        });
+      }
     }
-  }, [activeTaskId, queryClient]);
+  }, [activeTaskId, queryClient, refreshTaskData]);
 
   // Create the context value object
   const contextValue: TaskContextType = {

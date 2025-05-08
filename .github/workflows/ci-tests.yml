@@ -1,4 +1,4 @@
-name: CI Tests (Backend & Frontend)
+name: CI Tests & Deployment
 
 on:
   push:
@@ -74,9 +74,9 @@ jobs:
       - name: Install dev dependencies
         run: uv pip install -e ".[dev]"
       - name: Run mypy
-        run: uv run mypy app
+        run: uv run mypy app cloud_run/worker
       - name: Run flake8
-        run: uv run flake8 app
+        run: uv run flake8 app cloud_run/worker
 
   frontend-tests:
     name: Run Frontend Tests (Node.js)
@@ -133,3 +133,67 @@ jobs:
         run: npx tsc --noEmit
       - name: Run ESLint
         run: npx eslint --config eslint.config.js .
+
+  # New job from ci.yml for building and pushing Docker images
+  build-push-images:
+    name: Build & Push Docker Images
+    needs: [backend-lint, frontend-lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Determine Environment (dev/prod) based on branch
+      - name: Set Environment Variables
+        id: set_env
+        run: |
+          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.DEV_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.DEV_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.DEV_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.DEV_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+            echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
+            echo "WORKLOAD_IDENTITY_PROVIDER=${{ secrets.PROD_WORKLOAD_IDENTITY_PROVIDER }}" >> $GITHUB_ENV
+            echo "CICD_SERVICE_ACCOUNT=${{ secrets.PROD_CICD_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
+            echo "ARTIFACT_REGISTRY_REPO_NAME=${{ secrets.PROD_ARTIFACT_REGISTRY_REPO_NAME }}" >> $GITHUB_ENV
+          else
+            echo "Unknown branch for image tagging: ${{ github.ref_name }}"
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Debug tags
+        run: |
+          echo "TAG (sha):    ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
+          echo "TAG (latest): ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:latest"
+
+        # Build and Push API Image
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}
+            ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

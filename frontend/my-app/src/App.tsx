@@ -17,6 +17,7 @@ import TaskStatusBar from "./components/TaskStatusBar";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
 import { useErrorHandling } from "./hooks/useErrorHandling";
 import { DebugInfo, ErrorCategory } from "./types";
+import { useTaskContext } from "./hooks/useTask";
 
 // Lazy load pages instead of importing them directly
 const LandingPage = lazy(() =>
@@ -146,6 +147,36 @@ const AppRoutes = () => {
       </AnimatePresence>
     </LazyMotion>
   );
+};
+
+/**
+ * Component to handle app-wide visibility change events
+ */
+const VisibilityHandler = () => {
+  const { refreshTaskStatus, activeTaskId } = useTaskContext();
+
+  useEffect(() => {
+    // Handler for visibility change events
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("[App] Tab became visible, checking for task updates");
+        if (activeTaskId) {
+          console.log(
+            `[App] Active task detected (${activeTaskId}), refreshing status`,
+          );
+          refreshTaskStatus();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refreshTaskStatus, activeTaskId]);
+
+  return null; // This component doesn't render anything
 };
 
 /**
@@ -280,6 +311,7 @@ const AppContent = () => {
               <TaskProvider>
                 <AppRoutes />
                 <TaskStatusBar />
+                <VisibilityHandler />
               </TaskProvider>
             </Router>
           </RateLimitProvider>
