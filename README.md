@@ -68,9 +68,9 @@ A web application for generating and refining visual concepts like logos and col
     - Compute Engine (API VM)
     - Cloud Functions (Worker)
     - Pub/Sub (Task Queue)
-    * Artifact Registry (Docker Images)
-    * Secret Manager
-    * Cloud Storage (Terraform State, Assets)
+    - Artifact Registry (Docker Images)
+    - Secret Manager
+    - Cloud Storage (Terraform State, Assets)
   - Terraform (IaC)
   - Vercel (Frontend Deployment)
   - GitHub Actions (CI/CD, Scheduled Tasks)
