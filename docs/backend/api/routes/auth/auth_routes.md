@@ -4,7 +4,7 @@ This documentation covers the authentication endpoints in the Concept Visualizer
 
 ## Overview
 
-The `auth_routes.py` module provides endpoints for authentication with Supabase, including anonymous sign-in, token refresh, and sign-out functionality.
+The `auth_routes.py` module provides endpoints for authentication with Supabase, including session checking, login, and logout functionality.
 
 ## Models
 
@@ -26,205 +26,204 @@ This Pydantic model defines the structure of authentication response data:
 
 ## Available Endpoints
 
-### Anonymous Sign-In
+### Check Session
 
 ```python
-@router.post("/signin-anonymous", response_model=AuthResponse)
-async def signin_anonymous(req: Request, commons: CommonDependencies = Depends()):
-    """Sign in anonymously using Supabase."""
+@router.get("/session")
+async def get_session(request: Request) -> Dict[str, object]:
+    """Check if the user is authenticated."""
 ```
 
-This endpoint creates an anonymous user in Supabase and returns a JWT token for authenticating API requests.
+This endpoint checks if the user has an active authenticated session.
 
 #### Request
 
 ```
-POST /api/auth/signin-anonymous
+GET /api/auth/session
 ```
 
 No request body is required.
 
 #### Response
 
+If authenticated:
+
 ```json
 {
-  "user_id": "1234-5678-9012-3456",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_at": 1672531200
+  "authenticated": true,
+  "user": {
+    // User object from Supabase
+  }
 }
 ```
 
-- `user_id`: Unique identifier for the anonymous user
-- `token`: JWT token to use in the Authorization header for future requests
-- `expires_at`: Unix timestamp when the token will expire
+If not authenticated:
 
-### Token Refresh
-
-```python
-@router.post("/refresh", response_model=AuthResponse)
-async def refresh_token(req: Request, commons: CommonDependencies = Depends()):
-    """Refresh an existing authentication token."""
+```json
+{
+  "authenticated": false,
+  "message": "No active session"
+}
 ```
 
-This endpoint refreshes an existing JWT token, extending its validity period.
+### Login
+
+```python
+@router.post("/login")
+async def login(request: Request, commons: CommonDependencies = Depends()) -> JSONResponse:
+    """Log in a user with email and password."""
+```
+
+This endpoint authenticates a user with email and password using Supabase.
 
 #### Request
 
 ```
-POST /api/auth/refresh
-Authorization: Bearer {refresh_token}
-```
+POST /api/auth/login
+Content-Type: application/json
 
-The endpoint requires the current refresh token in the Authorization header.
-
-#### Response
-
-```json
 {
-  "user_id": "1234-5678-9012-3456",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_at": 1672617600
+  "email": "user@example.com",
+  "password": "securepassword"
 }
 ```
 
-- `user_id`: Unique identifier for the user
-- `token`: New JWT token to use for future requests
-- `expires_at`: Updated expiration timestamp
+The endpoint requires email and password fields in the request body.
 
-### Sign Out
+#### Response
 
-```python
-@router.post("/signout", status_code=status.HTTP_204_NO_CONTENT)
-async def signout(req: Request, commons: CommonDependencies = Depends()):
-    """Sign out a user, invalidating their session."""
+If successful:
+
+```json
+{
+  "authenticated": true,
+  "user": {
+    // User object from Supabase
+  }
+}
 ```
 
-This endpoint invalidates the user's session, effectively logging them out.
+If failed:
+
+```json
+{
+  "message": "Authentication failed: [error details]"
+}
+```
+
+### Logout
+
+```python
+@router.post("/logout")
+async def logout(request: Request) -> JSONResponse:
+    """Log out the current user by clearing their session."""
+```
+
+This endpoint logs out the user by clearing their session data.
 
 #### Request
 
 ```
-POST /api/auth/signout
-Authorization: Bearer {access_token}
+POST /api/auth/logout
 ```
 
-The endpoint requires a valid access token in the Authorization header.
+No request body is required.
 
 #### Response
 
-- Status Code: 204 No Content
-- No response body is returned on success
+If successful:
+
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+If no active session:
+
+```json
+{
+  "message": "No active session to log out"
+}
+```
 
 ## Error Handling
 
 The authentication endpoints can return the following error responses:
 
-- `401 Unauthorized`: Missing or invalid authentication credentials
+- `400 Bad Request`: Missing required fields in login request
+- `401 Unauthorized`: Invalid credentials
 - `500 Internal Server Error`: Server-side authentication issues with Supabase
-- `503 Service Unavailable`: Authentication service is currently unavailable
 
 ## Security Considerations
 
-- User IDs are masked in logs for privacy
-- Token expiration is enforced through the `expires_at` field
-- Anonymous users have limited access to API functionality
+- Session-based authentication is used
+- User data is stored in the session
+- Passwords are never logged or exposed in responses
 
 ## Usage Examples
 
 ### Client-Side Authentication Flow
 
 ```javascript
-// Authenticate anonymously
-async function signInAnonymously() {
+// Check if user is logged in
+async function checkSession() {
   try {
-    const response = await fetch("/api/auth/signin-anonymous", {
+    const response = await fetch("/api/auth/session", {
+      method: "GET",
+    });
+
+    const data = await response.json();
+
+    return {
+      isAuthenticated: data.authenticated,
+      user: data.user || null,
+    };
+  } catch (error) {
+    console.error("Session check failed:", error);
+    return { isAuthenticated: false, user: null };
+  }
+}
+
+// Login with email and password
+async function login(email, password) {
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Login failed");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Login failed:", error);
+    throw error;
+  }
+}
+
+// Logout
+async function logout() {
+  try {
+    const response = await fetch("/api/auth/logout", {
       method: "POST",
     });
 
     if (!response.ok) {
-      throw new Error("Authentication failed");
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Logout failed");
     }
 
-    const auth = await response.json();
-
-    // Store authentication data
-    localStorage.setItem(
-      "auth",
-      JSON.stringify({
-        userId: auth.user_id,
-        token: auth.token,
-        expiresAt: auth.expires_at,
-      }),
-    );
-
-    return auth;
+    return true;
   } catch (error) {
-    console.error("Sign-in failed:", error);
-    return null;
-  }
-}
-
-// Refresh token when needed
-async function refreshToken() {
-  try {
-    const auth = JSON.parse(localStorage.getItem("auth"));
-
-    if (!auth || !auth.token) {
-      throw new Error("No authentication data found");
-    }
-
-    const response = await fetch("/api/auth/refresh", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Token refresh failed");
-    }
-
-    const newAuth = await response.json();
-
-    // Update stored authentication data
-    localStorage.setItem(
-      "auth",
-      JSON.stringify({
-        userId: newAuth.user_id,
-        token: newAuth.token,
-        expiresAt: newAuth.expires_at,
-      }),
-    );
-
-    return newAuth;
-  } catch (error) {
-    console.error("Token refresh failed:", error);
-    return null;
-  }
-}
-
-// Sign out
-async function signOut() {
-  try {
-    const auth = JSON.parse(localStorage.getItem("auth"));
-
-    if (!auth || !auth.token) {
-      return true; // Already signed out
-    }
-
-    const response = await fetch("/api/auth/signout", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${auth.token}`,
-      },
-    });
-
-    // Clear local auth data regardless of response
-    localStorage.removeItem("auth");
-
-    return response.ok;
-  } catch (error) {
-    console.error("Sign-out failed:", error);
+    console.error("Logout failed:", error);
     return false;
   }
 }
@@ -234,4 +233,3 @@ async function signOut() {
 
 - [Auth Middleware](../../middleware/auth_middleware.md): Middleware for authenticating requests
 - [Supabase Client](../../../core/supabase/client.md): Client for interacting with Supabase
-- [Security](../../../utils/security/mask.md): Utility for masking sensitive information

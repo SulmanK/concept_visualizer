@@ -9,31 +9,52 @@ The concept service interface provides a well-defined contract for handling visu
 ## Interface Definition
 
 ```python
-class ConceptServiceInterface(Protocol):
-    """Interface for concept service operations."""
+class ConceptServiceInterface(abc.ABC):
+    """Interface for concept generation and refinement services."""
 
+    @abc.abstractmethod
     async def generate_concept(
-        self, logo_description: str, theme_description: str
-    ) -> GenerationResponse:
-        """Generate a new concept based on the provided descriptions."""
+        self,
+        logo_description: str,
+        theme_description: str,
+        user_id: Optional[str] = None,
+        skip_persistence: bool = False,
+    ) -> Dict[str, Any]:
+        """Generate a new visual concept based on provided descriptions."""
         ...
 
+    @abc.abstractmethod
+    async def generate_concept_with_palettes(
+        self,
+        logo_description: str,
+        theme_description: str,
+        num_palettes: int = 3
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Generate a concept with multiple palette variations."""
+        ...
+
+    @abc.abstractmethod
     async def refine_concept(
-        self, concept_id: str, refinement_prompt: str
-    ) -> RefinementResponse:
-        """Refine an existing concept with additional prompt guidance."""
+        self,
+        original_image_url: str,
+        refinement_prompt: str,
+        logo_description: Optional[str] = None,
+        theme_description: Optional[str] = None,
+        user_id: Optional[str] = None,
+        skip_persistence: bool = False,
+        strength: float = 0.7,
+    ) -> Dict[str, Any]:
+        """Refine an existing concept based on provided instructions."""
         ...
 
+    @abc.abstractmethod
     async def generate_color_palettes(
-        self, theme_description: str, count: int = 3
-    ) -> List[Palette]:
-        """Generate color palettes based on the theme description."""
-        ...
-
-    async def apply_color_palette(
-        self, concept_id: str, palette_id: str
-    ) -> PaletteApplicationResponse:
-        """Apply a color palette to an existing concept."""
+        self,
+        theme_description: str,
+        logo_description: Optional[str] = None,
+        num_palettes: int = 7,
+    ) -> List[Dict[str, Any]]:
+        """Generate multiple color palettes based on a theme description."""
         ...
 ```
 
@@ -47,16 +68,46 @@ The `generate_concept` method creates a new visual concept based on textual desc
 
 - `logo_description`: Text description of the logo to generate
 - `theme_description`: Text description of the theme/color scheme for the concept
+- `user_id`: Optional user ID for storing the concept
+- `skip_persistence`: If True, don't store the concept in the database
 
 **Returns:**
 
-- `GenerationResponse`: Contains the generated image URL, color palettes, and metadata
+- Dictionary containing the generated concept with keys like:
+  - `image_url`: URL to the generated image
+  - `image_path`: Storage path if saved
+  - `concept_id`: ID if stored in database
+  - `image_data`: Optional binary image data
 
 **Expected Behavior:**
 
-- Should process input descriptions to create an optimized prompt
-- Should generate both a base image and color palettes
-- Should handle errors gracefully with appropriate exceptions
+- Should generate an image based on the logo description
+- Should optionally download the generated image
+- Should optionally store the image and concept metadata if user_id is provided and skip_persistence is False
+- Should return both the image URL and potentially binary image data for further processing
+
+### Generate Concept with Palettes
+
+The `generate_concept_with_palettes` method creates a concept with multiple palette variations.
+
+**Parameters:**
+
+- `logo_description`: Text description of the logo to generate
+- `theme_description`: Text description of the theme/color scheme
+- `num_palettes`: Number of palette variations to generate (default: 3)
+
+**Returns:**
+
+- Tuple containing:
+  - List of palette dictionaries with name, colors, description
+  - List of dictionaries with palette variation images
+
+**Expected Behavior:**
+
+- Should generate a base image first
+- Should generate multiple color palette options
+- Should recolor the base image with each palette
+- Should return both the palettes and the variation images
 
 ### Refine Concept
 
@@ -64,18 +115,24 @@ The `refine_concept` method modifies an existing concept based on user feedback.
 
 **Parameters:**
 
-- `concept_id`: Identifier of the concept to refine
-- `refinement_prompt`: Text instructions for how to refine the concept
+- `original_image_url`: URL of the original image to refine
+- `refinement_prompt`: Specific instructions for refinement
+- `logo_description`: Updated description of the logo (optional)
+- `theme_description`: Updated description of the theme (optional)
+- `user_id`: Optional user ID for storing the refined concept
+- `skip_persistence`: If True, don't store the refined concept
+- `strength`: Control how much to preserve of the original (0.0-1.0)
 
 **Returns:**
 
-- `RefinementResponse`: Contains the refined image URL and comparison information
+- Dictionary containing the refined concept with keys similar to generate_concept
 
 **Expected Behavior:**
 
-- Should retrieve the original concept using the ID
-- Should apply the refinement prompt to create an improved version
-- Should maintain a reference to the original for comparison
+- Should download the original image
+- Should apply the refinement instructions
+- Should optionally store the refined image and metadata
+- Should return both the image URL and potentially binary image data
 
 ### Generate Color Palettes
 
@@ -83,56 +140,29 @@ The `generate_color_palettes` method creates color schemes based on textual desc
 
 **Parameters:**
 
-- `theme_description`: Text description of the desired color theme
-- `count`: Number of palettes to generate (default: 3)
+- `theme_description`: Description of the theme/color scheme
+- `logo_description`: Optional description of the logo to help contextualize
+- `num_palettes`: Number of palettes to generate (default: 7)
 
 **Returns:**
 
-- List of `Palette` objects containing colors and metadata
+- List of palette dictionaries, each containing name, colors, and description
 
 **Expected Behavior:**
 
 - Should create cohesive and aesthetically pleasing color combinations
 - Should ensure palette diversity if multiple palettes are requested
-- Should return consistent number of colors per palette
-
-### Apply Color Palette
-
-The `apply_color_palette` method recolors an existing concept with a new color scheme.
-
-**Parameters:**
-
-- `concept_id`: Identifier of the concept to recolor
-- `palette_id`: Identifier of the palette to apply
-
-**Returns:**
-
-- `PaletteApplicationResponse`: Contains the recolored image URL and palette details
-
-**Expected Behavior:**
-
-- Should retrieve both the concept and palette using their IDs
-- Should apply the palette colors to the concept image
-- Should preserve the original concept structure while changing colors
-
-## Service Lifecycle
-
-Implementations of the concept service interface should:
-
-1. Initialize with necessary dependencies (API clients, configuration)
-2. Manage connection states to external services
-3. Handle cleanup of resources when no longer needed
-4. Provide proper error handling and logging
+- Should use the theme description as the primary guide
+- Should consider the logo description for context if provided
 
 ## Error Handling
 
-Service implementations should use the following exception hierarchy:
+Service implementations should handle and raise the following exception types:
 
-- `ConceptServiceError`: Base error for all concept service errors
-  - `GenerationError`: For errors during concept generation
-  - `RefinementError`: For errors during concept refinement
-  - `PaletteError`: For errors related to palettes
-  - `ResourceNotFoundError`: For when requested resources don't exist
+- `ConceptError`: Base error for all concept service errors
+- `JigsawStackConnectionError`: When connection to the API fails
+- `JigsawStackAuthenticationError`: When authentication fails
+- `JigsawStackGenerationError`: When generation fails due to API errors
 
 ## Dependency Injection
 
@@ -141,9 +171,17 @@ The interface supports dependency injection through FastAPI's dependency system:
 ```python
 def get_concept_service(
     jigsawstack_client: JigsawStackClient = Depends(get_jigsawstack_client),
+    image_service: ImageServiceInterface = Depends(get_image_service),
+    concept_persistence_service: ConceptPersistenceServiceInterface = Depends(get_concept_persistence_service),
+    image_persistence_service: ImagePersistenceServiceInterface = Depends(get_image_persistence_service),
 ) -> ConceptServiceInterface:
     """Dependency for getting a concept service instance."""
-    return ConceptService(client=jigsawstack_client)
+    return ConceptService(
+        client=jigsawstack_client,
+        image_service=image_service,
+        concept_persistence_service=concept_persistence_service,
+        image_persistence_service=image_persistence_service,
+    )
 ```
 
 ## Using the Service
@@ -154,10 +192,15 @@ Code that needs concept functionality should depend on the interface rather than
 async def process_concept(
     service: ConceptServiceInterface,
     logo_description: str,
-    theme_description: str
+    theme_description: str,
+    user_id: str
 ):
     """Process a concept using any service that implements the interface."""
-    result = await service.generate_concept(logo_description, theme_description)
+    result = await service.generate_concept(
+        logo_description=logo_description,
+        theme_description=theme_description,
+        user_id=user_id
+    )
     # Further processing...
     return result
 ```

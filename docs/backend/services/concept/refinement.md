@@ -8,8 +8,8 @@ The concept refinement service enables:
 
 1. Iterative improvement of previously generated visual concepts
 2. Processing of user feedback to enhance designs
-3. Generation of multiple design variations based on an original concept
-4. Comparison between original and refined concepts
+3. Integration with the task-based processing system
+4. Asynchronous refinement via Google Cloud Pub/Sub
 
 This service is crucial for implementing an iterative design workflow, allowing users to progressively refine their concepts until they achieve the desired result.
 
@@ -21,77 +21,55 @@ This service is crucial for implementing an iterative design workflow, allowing 
 class ConceptRefiner:
     """Service for refining existing visual concepts."""
 
-    def __init__(
-        self,
-        client: JigsawStackClient,
-        persistence_service: ConceptPersistenceServiceInterface
-    ):
+    def __init__(self, client: JigsawStackClient):
         """Initialize the concept refiner with required dependencies."""
         self.client = client
-        self.persistence_service = persistence_service
-        self.logger = logging.getLogger("concept_service.refiner")
+        self.logger = get_logger("concept_service.refiner")
 ```
 
-The ConceptRefiner is responsible for improving existing concepts by applying refinement prompts and generating variations.
+The ConceptRefiner is responsible for improving existing concepts by applying refinement prompts to generate improved versions.
 
 ## Core Functionality
 
-### Refine Concept
+### Refine Image
 
 ```python
-async def refine_concept(
-    self, concept_id: str, refinement_prompt: str
-) -> RefinementResponse:
-    """Refine an existing concept based on refinement instructions."""
+async def refine_image(
+    self,
+    original_image_data: bytes,
+    refinement_prompt: str,
+    strength: float = 0.7,
+) -> Dict[str, Any]:
+    """Refine an existing image based on refinement instructions."""
 ```
 
-This method applies refinement instructions to an existing concept to create an improved version.
+This method sends an image and refinement instructions to the JigsawStack API to create an improved version.
 
 **Parameters:**
 
-- `concept_id`: ID of the concept to refine
-- `refinement_prompt`: Textual instructions for refining the concept
+- `original_image_data`: Binary data of the image to refine
+- `refinement_prompt`: Textual instructions for refining the image
+- `strength`: Control how much to preserve of the original (0.0-1.0)
 
 **Returns:**
 
-- `RefinementResponse`: Contains the refined image URL, original image URL, and metadata
+- Dictionary containing the refined image information
 
 **Raises:**
 
-- `ResourceNotFoundError`: If the concept with the given ID doesn't exist
-- `RefinementError`: If the refinement process fails
-- `ServiceUnavailableError`: If external services are unavailable
-
-### Generate Variations
-
-```python
-async def generate_variations(
-    self, concept_id: str, variation_count: int = 3
-) -> List[ConceptVariation]:
-    """Generate multiple variations of an existing concept."""
-```
-
-This method creates multiple alternative versions of an existing concept.
-
-**Parameters:**
-
-- `concept_id`: ID of the base concept to create variations from
-- `variation_count`: Number of variations to generate (default: 3)
-
-**Returns:**
-
-- List of `ConceptVariation` objects, each containing a variation image and metadata
-
-**Raises:**
-
-- `ResourceNotFoundError`: If the base concept doesn't exist
-- `VariationGenerationError`: If the variation generation fails
+- `JigsawStackConnectionError`: If connection to the API fails
+- `JigsawStackAuthenticationError`: If authentication fails
+- `JigsawStackGenerationError`: If refinement fails
+- `ConceptError`: For other refinement-related errors
 
 ### Process Refinement Prompt
 
 ```python
 def process_refinement_prompt(
-    self, original_concept: Concept, refinement_prompt: str
+    self,
+    refinement_prompt: str,
+    logo_description: Optional[str] = None,
+    theme_description: Optional[str] = None,
 ) -> str:
     """Process a refinement prompt to optimize the refinement outcome."""
 ```
@@ -100,94 +78,154 @@ This method enhances raw refinement instructions to improve the refinement resul
 
 **Parameters:**
 
-- `original_concept`: The base concept being refined
 - `refinement_prompt`: Original refinement instructions from the user
+- `logo_description`: Original or updated logo description (optional)
+- `theme_description`: Original or updated theme description (optional)
 
 **Returns:**
 
 - Enhanced refinement prompt optimized for the AI service
 
+## Integration with Task-Based Processing
+
+The refinement service integrates with the task-based processing system:
+
+```python
+@router.post("/refine", response_model=TaskResponse)
+async def refine_concept(
+    request: RefinementRequest,
+    response: Response,
+    req: Request,
+    commons: CommonDependencies = Depends(),
+) -> TaskResponse:
+    """Refine a concept based on refinement prompt."""
+```
+
+This endpoint:
+
+1. Creates a task record in the database
+2. Publishes a message to Google Pub/Sub with task details
+3. Returns the task information for the client to poll
+
 ## Refinement Flow
 
 The refinement process follows these steps:
 
-1. **Concept Retrieval**: Fetch the original concept from the persistence service
-2. **Prompt Enhancement**: Process and enhance the refinement instructions
-3. **Refinement Request**: Send the original image and enhanced prompt to the AI service
-4. **Result Processing**: Process the refinement result and create response objects
-5. **Optional Persistence**: Store the refined concept if requested
-
-## Integration with Other Services
-
-The refinement service integrates with:
-
-1. **JigsawStack API**: For AI-powered refinement processing
-2. **Concept Persistence Service**: For retrieving and storing concepts
-3. **Image Processing Service**: For image manipulation and comparison
+1. **Task Creation**: Create a task record and publish a message to Pub/Sub
+2. **Background Processing**:
+   - A Cloud Function processes the Pub/Sub message
+   - It downloads the original image from the provided URL
+   - It uses the ConceptRefiner to refine the image
+   - It stores the refined image and updates the task status
+3. **Client Polling**: The client polls the task status endpoint until completion
+4. **Result Delivery**: The final result includes the URL of the refined image
 
 ## Usage Examples
 
-### Refining a Concept
+### Refining a Concept (API Client)
+
+```javascript
+// Start concept refinement
+async function refineConceptWithPrompt(
+  originalImageUrl,
+  refinementPrompt,
+  logoDesc,
+  themeDesc,
+) {
+  try {
+    const response = await fetch("/api/concepts/refine", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        original_image_url: originalImageUrl,
+        refinement_prompt: refinementPrompt,
+        logo_description: logoDesc,
+        theme_description: themeDesc,
+      }),
+    });
+
+    // Check for conflict (existing task)
+    if (response.status === 409) {
+      const existingTask = await response.json();
+      console.log("A refinement task is already in progress:", existingTask);
+      return existingTask;
+    }
+
+    const taskData = await response.json();
+    return taskData; // Contains task_id to track progress
+  } catch (error) {
+    console.error("Error starting concept refinement:", error);
+    throw error;
+  }
+}
+
+// Poll task status until complete
+async function pollTaskUntilComplete(taskId, onProgress) {
+  const poll = async () => {
+    const status = await checkTaskStatus(taskId);
+    onProgress(status);
+
+    if (status.status === "completed" || status.status === "failed") {
+      return status;
+    }
+
+    // Wait 2 seconds before checking again
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    return poll();
+  };
+
+  return poll();
+}
+```
+
+### Direct Usage in Service Code
 
 ```python
 from app.services.concept.refinement import ConceptRefiner
 from app.services.jigsawstack.client import JigsawStackClient
-from app.services.persistence.concept_persistence_service import ConceptPersistenceService
 
 # Create dependencies
 client = JigsawStackClient(api_key="your_api_key")
-persistence_service = ConceptPersistenceService(...)
 
 # Initialize the refiner
-refiner = ConceptRefiner(client, persistence_service)
+refiner = ConceptRefiner(client)
 
-# Refine a concept
-result = await refiner.refine_concept(
-    concept_id="abc123",
-    refinement_prompt="Make the logo more minimalist and use a brighter blue color"
+# Load image data
+with open("original_image.png", "rb") as f:
+    image_data = f.read()
+
+# Refine an image
+result = await refiner.refine_image(
+    original_image_data=image_data,
+    refinement_prompt="Make the logo more minimalist and use a brighter blue color",
+    strength=0.8
 )
 
 # Access the refinement result
-original_url = result.original_image_url
-refined_url = result.refined_image_url
-refinement_id = result.refinement_id
-```
-
-### Generating Variations
-
-```python
-# Generate variations of a concept
-variations = await refiner.generate_variations(
-    concept_id="abc123",
-    variation_count=5
-)
-
-# Process the variations
-for i, variation in enumerate(variations):
-    print(f"Variation {i+1}: {variation.image_url}")
-    print(f"Difference score: {variation.difference_score}")
+refined_image_data = result.get("binary_data")
 ```
 
 ## Error Handling
 
 The refinement service implements comprehensive error handling:
 
-1. **Resource Errors**: When requested concepts don't exist
-2. **Service Errors**: When external services fail or are unavailable
-3. **Validation Errors**: When inputs don't meet requirements
-4. **Processing Errors**: When refinement processing fails
+1. **API Connection Errors**: When the JigsawStack API is unavailable
+2. **Authentication Errors**: When API credentials are invalid
+3. **Generation Errors**: When the refinement process fails
+4. **Task Handling Errors**: When task creation or processing fails
 
 ## Performance Considerations
 
-- Refinement operations are performed asynchronously
-- Image data is efficiently managed to minimize memory usage
-- Requests to external services are optimized for performance
-- Caching is used where appropriate to avoid redundant operations
+- Refinement operations are performed asynchronously via background tasks
+- Task status provides visibility into processing progress
+- Cloud Functions scale automatically to handle load
+- Concurrent tasks are managed with a "one active task per user" policy
 
 ## Related Documentation
 
 - [Concept Service](service.md): Main concept service that uses the refiner
-- [Concept Generation](generation.md): Details on initial concept generation
-- [Persistence Service](../persistence/concept_persistence_service.md): Storage service for concepts
+- [Task Service](../task/service.md): Service for managing background tasks
 - [JigsawStack Client](../jigsawstack/client.md): Client for the external AI service
 - [Refinement API Routes](../../api/routes/concept/refinement.md): API routes that use this service
