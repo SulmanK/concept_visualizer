@@ -4,12 +4,13 @@ This module provides the implementation of the ImageServiceInterface
 which coordinates image processing and conversion.
 """
 
+import asyncio
 import json
 import logging
 import uuid
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import httpx
 from fastapi import UploadFile
@@ -102,7 +103,6 @@ class ImageService(ImageServiceInterface):
         try:
             # Use the persistence service to store the image but handle the awaiting
             # inside this method to maintain a synchronous interface
-            import asyncio
 
             # Get running event loop or create one
             try:
@@ -228,6 +228,7 @@ class ImageService(ImageServiceInterface):
 
         try:
             self.logger.info("Creating {} palette variations for user: {}".format(len(palettes), masked_user_id))
+            start_time = datetime.now()
 
             # Preprocess the base image to ensure it's valid
             try:
@@ -248,82 +249,120 @@ class ImageService(ImageServiceInterface):
             # Prepare the metadata prefix with timestamp for unique filenames
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-            # Process each palette
+            # Create async tasks for parallel processing
+            tasks = []
             for idx, palette in enumerate(palettes):
-                try:
-                    # Extract palette data
-                    palette_name = palette.get("name", "Palette {}".format(idx + 1))
-                    palette_colors = palette.get("colors", [])
-                    palette_description = palette.get("description", "")
+                tasks.append(self._process_single_palette_variation(validated_image_data, palette, user_id, timestamp, idx, blend_strength))
 
-                    if not palette_colors:
-                        self.logger.warning("Empty color palette: {}, skipping".format(palette_name))
-                        continue
+            # Execute all tasks concurrently
+            self.logger.info("Starting parallel processing of {} palette variations".format(len(tasks)))
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                    # Apply the palette to the base image using the processing service
-                    colorized_image = await self.processing.process_image(
-                        validated_image_data,
-                        operations=[
-                            {
-                                "type": "apply_palette",
-                                "palette": palette_colors,
-                                "blend_strength": blend_strength,
-                            }
-                        ],
-                    )
+            # Process results
+            for result in results:
+                if isinstance(result, Exception):
+                    self.logger.error("Error processing a palette variation: {}".format(str(result)))
+                    # Skip failed variations
+                    continue
+                if result is not None:
+                    # Type checking: only append results that are dictionaries, not exceptions or None
+                    result_dict = cast(Dict[str, Any], result)
+                    result_palettes.append(result_dict)
 
-                    if not colorized_image:
-                        self.logger.error("Failed to apply palette: {}".format(palette_name))
-                        continue
-
-                    # Generate a unique filename
-                    unique_id = str(uuid.uuid4())
-                    filename = "palette_{}_{}.png".format(timestamp, unique_id)
-
-                    # Store with metadata
-                    metadata = {
-                        "palette_name": palette_name,
-                        "description": palette_description,
-                        "colors": json.dumps(palette_colors),
-                    }
-
-                    palette_path, palette_url = await self.persistence.store_image(
-                        image_data=colorized_image,
-                        user_id=user_id,
-                        file_name=filename,
-                        metadata=metadata,
-                        is_palette=True,
-                    )
-
-                    # Annotate the variables to fix type errors
-                    palette_path_str: str = palette_path
-                    palette_url_str: str = palette_url
-
-                    if not palette_path_str or not palette_url_str:
-                        self.logger.error("Failed to store palette variation: {}".format(palette_name))
-                        continue
-
-                    # Add to result
-                    result_palettes.append(
-                        {
-                            "name": palette_name,
-                            "colors": palette_colors,
-                            "description": palette_description,
-                            "image_path": palette_path_str,
-                            "image_url": palette_url_str,
-                        }
-                    )
-
-                except Exception as e:
-                    self.logger.error("Error processing palette {}: {}".format(palette_name, str(e)))
-                    # Continue with other palettes
-
-            self.logger.info("Successfully created {} palette variations".format(len(result_palettes)))
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds()
+            self.logger.info(
+                "Successfully created {} palette variations in {:.2f} seconds (avg {:.2f} seconds per variation)".format(len(result_palettes), processing_time, processing_time / max(len(palettes), 1))
+            )
             return result_palettes
 
         except Exception as e:
             self.logger.error("Error in create_palette_variations: {}".format(str(e)))
             raise ImageError("Error creating palette variations: {}".format(str(e)))
+
+    async def _process_single_palette_variation(
+        self, base_image_data: bytes, palette: Dict[str, Any], user_id: str, timestamp: str, idx: int, blend_strength: float = 0.75
+    ) -> Optional[Dict[str, Any]]:
+        """Process a single palette variation.
+
+        Args:
+            base_image_data: Binary image data of the base image
+            palette: Dictionary containing palette information
+            user_id: User ID for storage
+            timestamp: Timestamp string for unique filenames
+            idx: Index of the palette in the original list
+            blend_strength: Strength of the palette application
+
+        Returns:
+            Dictionary with palette information and image URLs, or None if processing fails
+
+        Raises:
+            Exception: If any step of the processing fails
+        """
+        try:
+            # Extract palette data
+            palette_name = palette.get("name", "Palette {}".format(idx + 1))
+            palette_colors = palette.get("colors", [])
+            palette_description = palette.get("description", "")
+
+            if not palette_colors:
+                self.logger.warning("Empty color palette: {}, skipping".format(palette_name))
+                return None
+
+            # Apply the palette to the base image using the processing service
+            colorized_image = await self.processing.process_image(
+                base_image_data,
+                operations=[
+                    {
+                        "type": "apply_palette",
+                        "palette": palette_colors,
+                        "blend_strength": blend_strength,
+                    }
+                ],
+            )
+
+            if not colorized_image:
+                self.logger.error("Failed to apply palette: {}".format(palette_name))
+                return None
+
+            # Generate a unique filename
+            unique_id = str(uuid.uuid4())
+            filename = "palette_{}_{}.png".format(timestamp, unique_id)
+
+            # Store with metadata
+            metadata = {
+                "palette_name": palette_name,
+                "description": palette_description,
+                "colors": json.dumps(palette_colors),
+            }
+
+            palette_path, palette_url = await self.persistence.store_image(
+                image_data=colorized_image,
+                user_id=user_id,
+                file_name=filename,
+                metadata=metadata,
+                is_palette=True,
+            )
+
+            # Annotate the variables to fix type errors
+            palette_path_str: str = palette_path
+            palette_url_str: str = palette_url
+
+            if not palette_path_str or not palette_url_str:
+                self.logger.error("Failed to store palette variation: {}".format(palette_name))
+                return None
+
+            # Return result
+            return {
+                "name": palette_name,
+                "colors": palette_colors,
+                "description": palette_description,
+                "image_path": palette_path_str,
+                "image_url": palette_url_str,
+            }
+        except Exception as e:
+            self.logger.error("Error processing palette {}: {}".format(palette.get("name", f"Palette {idx + 1}"), str(e)))
+            raise e  # Re-raise to be caught by asyncio.gather
 
     async def apply_palette_to_image(self, image_data: bytes, palette_colors: list, blend_strength: float = 0.75) -> bytes:
         """Apply a color palette to an image.

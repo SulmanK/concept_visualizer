@@ -88,6 +88,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
     - **Link Project:** Link your local directory to the correct Supabase project:
       ```bash
       # Run from project root
+      cd backend
       supabase link --project-ref <your-dev-project-id>
       # or
       supabase link --project-ref <your-prod-project-id>
@@ -95,6 +96,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
     - **Set Secrets:** Set the required secrets for the function (replace placeholders):
       ```bash
       # Run from project root (adjust values for dev/prod)
+      cd backend
       supabase secrets set MY_SUPABASE_URL=<your-supabase-url>
       supabase secrets set MY_SERVICE_ROLE_KEY=<your-service-role-key>
       supabase secrets set STORAGE_BUCKET_CONCEPT=<your-concept-bucket>
