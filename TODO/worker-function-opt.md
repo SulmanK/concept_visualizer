@@ -125,21 +125,6 @@ Here are the key observations and recommendations for `backend/cloud_run/worker/
 
   - **Note on Supabase Client for Worker:** The worker typically performs privileged operations (updating any task status, storing data for any user based on the task payload). It should ideally use the `CONCEPT_SUPABASE_SERVICE_ROLE` key for its Supabase client initialization. Make sure this environment variable is correctly set and accessible in your Cloud Function environment. Your `cloud_function.tf` already sets this from secrets, which is good.
 
-**2. Async All The Way Down (If possible for `functions_framework`)**
-
-- **Observation:** `handle_pubsub` is synchronous and uses `asyncio.run(process_pubsub_message(...))`.
-- **Impact:** While `asyncio.run` works, it creates a new event loop for each call. If `functions_framework.cloud_event` can directly handle an `async def handle_pubsub`, it's often cleaner and integrates better with the framework's own event loop management (if any).
-- **Recommendation:** Check if `functions_framework` supports `async def` for `cloud_event` handlers directly. Most modern Python frameworks for serverless functions do.
-  - If yes:
-    ```python
-    @functions_framework.cloud_event
-    async def handle_pubsub(cloud_event: CloudEvent) -> None: # Make it async
-        # ...
-        await process_pubsub_message(message, SERVICES_GLOBAL) # use await
-        # ...
-    ```
-  - _Self-correction:_ Looking at your `Dockerfile.worker` which uses `CMD ["functions-framework", ...]`, it implies you are using the standard Python Functions Framework. This framework **does support** `async def` handlers for `cloud_event`. So, making `handle_pubsub` async is recommended. I've updated the code block in point 1 to reflect this.
-
 **3. Image Data Flow from `concept_service.generate_concept`**
 
 - **Observation:** In `process_generation_task`, there's logic:
@@ -229,7 +214,6 @@ Here are the key observations and recommendations for `backend/cloud_run/worker/
 **Summary of Impact on `worker/main.py`:**
 
 - **Global Service Initialization:** Reduces per-request overhead, potentially reusing connections and resources, leading to faster individual task processing after the initial instance warm-up.
-- **Async Handler:** Better integration with the Functions Framework event loop.
 - **Clarified Image Data Flow:** Can save an unnecessary HTTP download of the base image.
 - **Granular Error Reporting:** Improves debuggability but doesn't directly speed up execution (might slightly slow it due to more try-excepts, but negligibly).
 
