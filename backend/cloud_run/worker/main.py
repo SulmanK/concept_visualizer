@@ -11,7 +11,7 @@ import logging
 import os
 import time
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import functions_framework
 import httpx
@@ -28,12 +28,72 @@ from app.services.persistence.concept_persistence_service import ConceptPersiste
 from app.services.persistence.image_persistence_service import ImagePersistenceService
 from app.services.task.service import TaskService
 
-# Configure logging
+# Configure logging with dynamic log level from environment
+log_level_str = os.environ.get("CONCEPT_LOG_LEVEL", "INFO").upper()
+log_level = getattr(logging, log_level_str, logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger("concept-worker")
+logger = logging.getLogger("concept-worker-main")
+
+# --- BEGIN GLOBAL INITIALIZATION ---
+# Declare SERVICES_GLOBAL variable once with a type that can be either Dict or None
+SERVICES_GLOBAL: Optional[Dict[str, Any]] = None
+
+# Initialize services ONCE when the instance starts
+logger.info("Initializing services globally for worker instance...")
+try:
+    # Create Supabase client (use service role directly for worker)
+    _supabase_client_global = SupabaseClient(
+        url=os.environ.get("CONCEPT_SUPABASE_URL", settings.SUPABASE_URL),
+        key=os.environ.get("CONCEPT_SUPABASE_SERVICE_ROLE", settings.SUPABASE_SERVICE_ROLE),
+    )
+
+    # Initialize persistence services
+    _image_persistence_service_global = ImagePersistenceService(client=_supabase_client_global)
+    _concept_persistence_service_global = ConceptPersistenceService(client=_supabase_client_global)
+
+    # Initialize image services
+    _image_processing_service_global = ImageProcessingService()
+    _image_service_global = ImageService(
+        persistence_service=_image_persistence_service_global,
+        processing_service=_image_processing_service_global,
+    )
+
+    # Initialize JigsawStack client
+    _jigsawstack_client_global = JigsawStackClient(
+        api_key=os.environ.get("CONCEPT_JIGSAWSTACK_API_KEY", settings.JIGSAWSTACK_API_KEY),
+        api_url=os.environ.get("CONCEPT_JIGSAWSTACK_API_URL", settings.JIGSAWSTACK_API_URL),
+    )
+
+    # Initialize concept service
+    _concept_service_global = ConceptService(
+        client=_jigsawstack_client_global,
+        image_service=_image_service_global,
+        concept_persistence_service=_concept_persistence_service_global,
+        image_persistence_service=_image_persistence_service_global,
+    )
+
+    # Initialize task service
+    _task_service_global = TaskService(client=_supabase_client_global)
+
+    # Assign to SERVICES_GLOBAL without redeclaring its type
+    SERVICES_GLOBAL = {
+        "image_service": _image_service_global,
+        "concept_service": _concept_service_global,
+        "concept_persistence_service": _concept_persistence_service_global,
+        "image_persistence_service": _image_persistence_service_global,
+        "task_service": _task_service_global,
+        # Add JigsawStack client if needed directly by tasks
+        "jigsawstack_client": _jigsawstack_client_global,
+    }
+    logger.info("Global services initialized successfully.")
+except Exception as e:
+    logger.critical(f"FATAL: Failed to initialize global services: {e}", exc_info=True)
+    # Set to None without redeclaring type
+    SERVICES_GLOBAL = None
+# --- END GLOBAL INITIALIZATION ---
 
 
 # Add HTTP handler for health checks
@@ -51,57 +111,6 @@ def http_endpoint(request: Any) -> Dict[str, str]:
     """
     logger.info("Received health check request")
     return {"status": "healthy", "message": "Concept worker is ready to process tasks"}
-
-
-def initialize_services() -> Dict[str, Any]:
-    """Initialize all required services for task processing.
-
-    Returns:
-        Dict: Dictionary containing all initialized services
-    """
-    # Create Supabase client
-    supabase_client = SupabaseClient(
-        url=os.environ.get("CONCEPT_SUPABASE_URL", settings.SUPABASE_URL),
-        key=os.environ.get("CONCEPT_SUPABASE_SERVICE_ROLE", settings.SUPABASE_SERVICE_ROLE),
-    )
-
-    # Initialize persistence services
-    image_persistence_service = ImagePersistenceService(client=supabase_client)
-    concept_persistence_service = ConceptPersistenceService(client=supabase_client)
-
-    # Initialize image services
-    image_processing_service = ImageProcessingService()
-    image_service = ImageService(
-        persistence_service=image_persistence_service,
-        processing_service=image_processing_service,
-    )
-
-    # Initialize JigsawStack client
-    jigsawstack_client = JigsawStackClient(
-        api_key=os.environ.get("CONCEPT_JIGSAWSTACK_API_KEY", settings.JIGSAWSTACK_API_KEY),
-        api_url=os.environ.get("CONCEPT_JIGSAWSTACK_API_URL", settings.JIGSAWSTACK_API_URL),
-    )
-
-    # Initialize concept service with the correct parameters
-    concept_service = ConceptService(
-        client=jigsawstack_client,
-        image_service=image_service,
-        concept_persistence_service=concept_persistence_service,
-        image_persistence_service=image_persistence_service,
-    )
-
-    # Initialize task service
-    task_service = TaskService(
-        client=supabase_client,
-    )
-
-    return {
-        "image_service": image_service,
-        "concept_service": concept_service,
-        "concept_persistence_service": concept_persistence_service,
-        "image_persistence_service": image_persistence_service,
-        "task_service": task_service,
-    }
 
 
 async def process_generation_task(
@@ -137,27 +146,33 @@ async def process_generation_task(
 
     try:
         # Update task status to processing
-        await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
+        try:
+            await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
+        except Exception as status_e:
+            raise Exception(f"Failed to update task status to PROCESSING: {status_e}")
 
         logger.debug(f"Generating concept for task {task_id}")
 
         # Generate base concept with an image
-        gen_start = time.time()
-        concept_response = await concept_service.generate_concept(
-            logo_description=logo_description,
-            theme_description=theme_description,
-            user_id=user_id,
-            skip_persistence=True,  # Skip persistence in the service, we'll handle it here
-        )
-        gen_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Base concept generated at {gen_end:.2f} (Duration: {(gen_end - gen_start):.2f}s)")
+        try:
+            gen_start = time.time()
+            concept_response = await concept_service.generate_concept(
+                logo_description=logo_description,
+                theme_description=theme_description,
+                user_id=user_id,
+                skip_persistence=True,  # Skip persistence in the service, we'll handle it here
+            )
+            gen_end = time.time()
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Base concept generated at {gen_end:.2f} (Duration: {(gen_end - gen_start):.2f}s)")
 
-        # Log the response keys for debugging
-        if concept_response:
-            logger.debug(f"Concept response keys: {list(concept_response.keys())}")
-        else:
-            raise Exception("Failed to generate base concept: empty response")
+            # Log the response keys for debugging
+            if concept_response:
+                logger.debug(f"Concept response keys: {list(concept_response.keys())}")
+            else:
+                raise Exception("Failed to generate base concept: empty response")
+        except Exception as gen_e:
+            raise Exception(f"Base concept generation failed: {gen_e}")
 
         # Extract the image URL and image data
         image_url = concept_response.get("image_url")
@@ -215,26 +230,29 @@ async def process_generation_task(
         logger.info(f"[WORKER_TIMING] Task {task_id}: Image downloaded/prepared at {img_proc_end:.2f} (Duration: {(img_proc_end - gen_end):.2f}s)")
 
         # Store the image in Supabase
-        store_img_start = time.time()
-        result = await image_persistence_service.store_image(
-            image_data=image_data,
-            user_id=user_id,
-            metadata={
-                "logo_description": logo_description,
-                "theme_description": theme_description,
-            },
-        )
-        store_img_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Base image stored at {store_img_end:.2f} (Duration: {(store_img_end - store_img_start):.2f}s)")
+        try:
+            store_img_start = time.time()
+            result = await image_persistence_service.store_image(
+                image_data=image_data,
+                user_id=user_id,
+                metadata={
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
+                },
+            )
+            store_img_end = time.time()
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Base image stored at {store_img_end:.2f} (Duration: {(store_img_end - store_img_start):.2f}s)")
 
-        image_path = result[0]
-        stored_image_url = result[1]
+            image_path = result[0]
+            stored_image_url = result[1]
 
-        logger.info(f"Stored image at path: {image_path}")
+            logger.info(f"Stored image at path: {image_path}")
+        except Exception as store_base_e:
+            raise Exception(f"Storing base image failed: {store_base_e}")
 
         # Generate color palettes
-        palette_gen_start = time.time()
         try:
+            palette_gen_start = time.time()
             raw_palettes = await concept_service.generate_color_palettes(
                 theme_description=theme_description,
                 logo_description=logo_description,
@@ -246,15 +264,15 @@ async def process_generation_task(
                 raise Exception("Failed to generate color palettes")
 
             logger.info(f"Generated {len(raw_palettes)} color palettes")
-        except Exception as palette_error:
-            logger.error(f"Error generating color palettes: {str(palette_error)}")
-            raise Exception(f"Failed to generate color palettes: {str(palette_error)}")
-        palette_gen_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Palettes generated at {palette_gen_end:.2f} (Duration: {(palette_gen_end - palette_gen_start):.2f}s)")
+
+            palette_gen_end = time.time()
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Palettes generated at {palette_gen_end:.2f} (Duration: {(palette_gen_end - palette_gen_start):.2f}s)")
+        except Exception as palette_e:
+            raise Exception(f"Palette generation failed: {palette_e}")
 
         # Create palette variations
-        variation_start = time.time()
         try:
+            variation_start = time.time()
             palette_variations = await image_service.create_palette_variations(
                 base_image_data=image_data,
                 palettes=raw_palettes,
@@ -267,36 +285,39 @@ async def process_generation_task(
                 raise Exception("Failed to create palette variations")
 
             logger.info(f"Created {len(palette_variations)} palette variations")
-        except Exception as variation_error:
-            logger.error(f"Error creating palette variations: {str(variation_error)}")
-            raise Exception(f"Failed to create palette variations: {str(variation_error)}")
-        variation_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Variations created at {variation_end:.2f} (Duration: {(variation_end - variation_start):.2f}s)")
+
+            variation_end = time.time()
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Variations created at {variation_end:.2f} (Duration: {(variation_end - variation_start):.2f}s)")
+        except Exception as variation_e:
+            raise Exception(f"Creating/storing variations failed: {variation_e}")
 
         # Store concept in database with the correct image_path
-        store_concept_start = time.time()
-        stored_concept = await concept_persistence_service.store_concept(
-            {
-                "user_id": user_id,
-                "logo_description": logo_description,
-                "theme_description": theme_description,
-                "image_path": image_path,  # Use the path from the stored image
-                "image_url": stored_image_url,
-                "color_palettes": palette_variations,
-                "is_anonymous": True,
-            }
-        )
-        store_concept_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Concept stored at {store_concept_end:.2f} (Duration: {(store_concept_end - store_concept_start):.2f}s)")
+        try:
+            store_concept_start = time.time()
+            stored_concept = await concept_persistence_service.store_concept(
+                {
+                    "user_id": user_id,
+                    "logo_description": logo_description,
+                    "theme_description": theme_description,
+                    "image_path": image_path,  # Use the path from the stored image
+                    "image_url": stored_image_url,
+                    "color_palettes": palette_variations,
+                    "is_anonymous": True,
+                }
+            )
+            store_concept_end = time.time()
+            logger.info(f"[WORKER_TIMING] Task {task_id}: Concept stored at {store_concept_end:.2f} (Duration: {(store_concept_end - store_concept_start):.2f}s)")
 
-        if not stored_concept:
-            raise Exception("Failed to store concept")
+            if not stored_concept:
+                raise Exception("Failed to store concept")
 
-        concept_id = stored_concept
-        if isinstance(stored_concept, dict):
-            concept_id = stored_concept.get("id", stored_concept)
+            concept_id = stored_concept
+            if isinstance(stored_concept, dict):
+                concept_id = stored_concept.get("id", stored_concept)
 
-        logger.info(f"Stored concept with ID: {concept_id}")
+            logger.info(f"Stored concept with ID: {concept_id}")
+        except Exception as store_concept_e:
+            raise Exception(f"Storing final concept failed: {store_concept_e}")
 
         # Update task status to completed
         await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_COMPLETED, result_id=concept_id)
@@ -351,19 +372,23 @@ async def process_refinement_task(
 
     try:
         # Update task status to processing and update the timestamp
-        await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
-
-        logger.info(f"Starting refinement task {task_id} for user {user_id}")
-
-        # Refine and store the image
         try:
-            # First, download the original image
+            await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+            logger.info(f"Starting refinement task {task_id} for user {user_id}")
+        except Exception as status_e:
+            raise Exception(f"Failed to update task status to PROCESSING: {status_e}")
+
+        # First, download the original image
+        try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(original_image_url)
                 response.raise_for_status()
                 # No need to store image_data here as it's not used
+        except Exception as download_e:
+            raise Exception(f"Failed to download original image: {download_e}")
 
-            # Use concept service to refine the image
+        # Use concept service to refine the image
+        try:
             refinement_result = await concept_service.refine_concept(
                 original_image_url=original_image_url,
                 refinement_prompt=refinement_prompt,
@@ -373,15 +398,14 @@ async def process_refinement_task(
             )
 
             if not refinement_result or "image_data" not in refinement_result:
-                logger.error(f"Task {task_id}: Failed to refine image")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TASK_STATUS_FAILED,
-                    error_message="Failed to refine image: No image data returned from service",
-                )
-                return
+                raise Exception("No image data returned from refinement service")
 
             refined_image_data = refinement_result["image_data"]
+        except Exception as refine_e:
+            raise Exception(f"Image refinement failed: {refine_e}")
+
+        # Store the refined image
+        try:
             result = await image_persistence_service.store_image(
                 image_data=refined_image_data,
                 user_id=user_id,
@@ -396,108 +420,82 @@ async def process_refinement_task(
             refined_image_url = result[1]
 
             if not refined_image_path or not refined_image_url:
-                logger.error(f"Task {task_id}: Failed to store refined image")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TASK_STATUS_FAILED,
-                    error_message="Failed to store refined image",
-                )
-                return
+                raise Exception("Storage returned invalid image path or URL")
+        except Exception as store_e:
+            raise Exception(f"Storing refined image failed: {store_e}")
 
-            # Generate color palettes
-            try:
-                raw_palettes = await concept_service.generate_color_palettes(
-                    theme_description=f"{theme_description} {refinement_prompt}",
-                    logo_description=logo_description,
-                )
-            except Exception as e:
-                error_message = f"Failed to generate color palettes: {str(e)}"
-                logger.error(f"Task {task_id}: {error_message}")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TASK_STATUS_FAILED,
-                    error_message=error_message,
-                )
-                return
+        # Generate color palettes
+        try:
+            raw_palettes = await concept_service.generate_color_palettes(
+                theme_description=f"{theme_description} {refinement_prompt}",
+                logo_description=logo_description,
+            )
 
-            # Apply color palettes to create variations
-            try:
-                # Use our created service to process the variations
-                palette_variations = await image_service.create_palette_variations(
-                    base_image_data=refined_image_data,
-                    palettes=raw_palettes,
-                    user_id=user_id,
-                )  # Use the already downloaded image data
-            except Exception as e:
-                error_message = f"Failed to create palette variations: {str(e)}"
-                logger.error(f"Task {task_id}: {error_message}")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TASK_STATUS_FAILED,
-                    error_message=error_message,
-                )
-                return
+            if not raw_palettes:
+                raise Exception("No palettes generated")
+        except Exception as palette_e:
+            raise Exception(f"Palette generation failed: {palette_e}")
 
-            # Store the refined concept
-            try:
-                stored_concept = await concept_persistence_service.store_concept(
-                    {
-                        "user_id": user_id,
-                        "logo_description": logo_description,
-                        "theme_description": f"{theme_description} {refinement_prompt}",
-                        "image_path": refined_image_path,
-                        "image_url": refined_image_url,
-                        "color_palettes": palette_variations,
-                        "is_anonymous": True,
-                        "refinement_prompt": refinement_prompt,
-                        "original_image_url": original_image_url,
-                        "task_id": task_id,
-                    }
-                )
+        # Apply color palettes to create variations
+        try:
+            palette_variations = await image_service.create_palette_variations(
+                base_image_data=refined_image_data,
+                palettes=raw_palettes,
+                user_id=user_id,
+            )
 
-                # Get concept ID from the result
-                concept_id = stored_concept
-                if isinstance(stored_concept, dict):
-                    concept_id = stored_concept.get("id", stored_concept)
+            if not palette_variations:
+                raise Exception("No variations created")
+        except Exception as variation_e:
+            raise Exception(f"Creating palette variations failed: {variation_e}")
 
-                if not concept_id:
-                    raise ValueError("No concept ID returned from storage service")
+        # Store the refined concept
+        try:
+            stored_concept = await concept_persistence_service.store_concept(
+                {
+                    "user_id": user_id,
+                    "logo_description": logo_description,
+                    "theme_description": f"{theme_description} {refinement_prompt}",
+                    "image_path": refined_image_path,
+                    "image_url": refined_image_url,
+                    "color_palettes": palette_variations,
+                    "is_anonymous": True,
+                    "refinement_prompt": refinement_prompt,
+                    "original_image_url": original_image_url,
+                    "task_id": task_id,
+                }
+            )
 
-                logger.info(f"Task {task_id}: Successfully stored refined concept {concept_id}")
+            # Get concept ID from the result
+            concept_id = stored_concept
+            if isinstance(stored_concept, dict):
+                concept_id = stored_concept.get("id", stored_concept)
 
-                # Update task status to completed
-                await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_COMPLETED, result_id=concept_id)
+            if not concept_id:
+                raise ValueError("No concept ID returned from storage service")
 
-                logger.info(f"Task {task_id}: Completed successfully with result {concept_id}")
+            logger.info(f"Task {task_id}: Successfully stored refined concept {concept_id}")
+        except Exception as store_concept_e:
+            raise Exception(f"Storing refined concept failed: {store_concept_e}")
 
-            except Exception as e:
-                error_message = f"Failed to store refined concept: {str(e)}"
-                logger.error(f"Task {task_id}: {error_message}")
-                await task_service.update_task_status(
-                    task_id=task_id,
-                    status=TASK_STATUS_FAILED,
-                    error_message=error_message,
-                )
-                return
+        # Update task status to completed
+        await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_COMPLETED, result_id=concept_id)
+        logger.info(f"Task {task_id}: Completed successfully with result {concept_id}")
 
-        except Exception as e:
-            # Handle any exceptions
+    except Exception as e:
+        error_msg = f"Error in refinement task: {str(e)}"
+        logger.error(error_msg)
+        logger.debug(f"Exception traceback: {traceback.format_exc()}")
+
+        # Update task status to failed
+        try:
             await task_service.update_task_status(
                 task_id=task_id,
                 status=TASK_STATUS_FAILED,
-                error_message=f"Failed to refine image: {str(e)}",
+                error_message=error_msg,
             )
-            logger.error(f"Error in refinement process: {str(e)}")
-            return
-
-    except Exception as e:
-        # Top-level exception handling
-        logger.error(f"Error in refinement task: {str(e)}")
-        await task_service.update_task_status(
-            task_id=task_id,
-            status=TASK_STATUS_FAILED,
-            error_message=f"Error in refinement task: {str(e)}",
-        )
+        except Exception as update_err:
+            logger.error(f"Error updating task status: {str(update_err)}")
 
 
 async def process_pubsub_message(message: Dict[str, Any], services: Dict[str, Any]) -> None:
@@ -576,32 +574,33 @@ def handle_pubsub(cloud_event: CloudEvent) -> None:
     Args:
         cloud_event: The CloudEvent object containing the Pub/Sub message
     """
-    logger = logging.getLogger("concept-worker-function")
+    entry_logger = logging.getLogger("concept-worker-entry")
+    task_id_for_log = "UNKNOWN_TASK_ID"
+
     try:
+        if SERVICES_GLOBAL is None:
+            entry_logger.critical("Global services not initialized. Cannot process event.")
+            raise Exception("Worker services failed to initialize globally.")
+
         # Extract and decode the Pub/Sub message data
         if "message" not in cloud_event.data or "data" not in cloud_event.data["message"]:
-            logger.error("Invalid CloudEvent format: Missing message data.")
+            entry_logger.error("Invalid CloudEvent format: Missing message data.")
             # Acknowledge implicitly by returning, or raise to potentially trigger retry
             return
 
         message_data_base64 = cloud_event.data["message"]["data"]
         message_data_bytes = base64.b64decode(message_data_base64)
         message = json.loads(message_data_bytes.decode("utf-8"))
-        task_id = message.get("task_id", "UNKNOWN")
-        logger.info(f"Processing Pub/Sub message for task ID: {task_id}")
+        task_id_for_log = message.get("task_id", "UNKNOWN_TASK_ID_IN_PAYLOAD")
+        entry_logger.info(f"Processing Pub/Sub message for task ID: {task_id_for_log}")
 
-        # Initialize services *per invocation*
-        services = initialize_services()
+        # Process the message using the globally initialized services
+        # Run the async processing logic with asyncio.run()
+        asyncio.run(process_pubsub_message(message, SERVICES_GLOBAL))
 
-        # Run the async processing logic
-        # Using asyncio.run is suitable for Cloud Functions entry points
-        asyncio.run(process_pubsub_message(message, services))
-
-        logger.info(f"Successfully processed task ID: {task_id}")
-        # Function completes, execution environment terminates
+        entry_logger.info(f"Successfully processed task ID: {task_id_for_log}")
 
     except Exception as e:
-        task_id = message.get("task_id", "UNKNOWN") if "message" in locals() else "UNKNOWN"
-        logger.error(f"FATAL error processing task {task_id}: {e}", exc_info=True)
+        entry_logger.error(f"FATAL error processing task {task_id_for_log}: {e}", exc_info=True)
         # Re-raising signals failure to the platform for potential retries
         raise
