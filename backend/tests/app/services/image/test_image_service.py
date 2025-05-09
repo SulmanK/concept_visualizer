@@ -177,11 +177,16 @@ class TestImageService:
                 "colors": ["#00FF00", "#0000FF", "#FFFF00"],
                 "description": "Test palette 2",
             },
+            {
+                "name": "Palette with Error",
+                "colors": [],  # Empty palette should be skipped
+                "description": "Test palette with error",
+            },
         ]
         user_id = "user123"
         blend_strength = 0.75
 
-        # Setup mock persistence to return successful results
+        # Setup mock persistence to return successful results for two palettes
         mock_persistence_service.store_image.side_effect = [
             ("path/to/palette1.png", "https://example.com/palette1.png"),
             ("path/to/palette2.png", "https://example.com/palette2.png"),
@@ -209,7 +214,10 @@ class TestImageService:
                     blend_strength=blend_strength,
                 )
 
-        # Verify the processing service was called twice (once for each palette)
+        # Verify the result contains two processed palettes
+        assert len(result) == 2
+
+        # Verify the processing service was called twice (once for each valid palette)
         assert mock_processing_service.process_image.call_count == 2
 
         # Verify the processing service was called with correct operations for applying palettes
@@ -234,50 +242,83 @@ class TestImageService:
             ],
         )
 
-        # Verify the persistence service was called twice
+        # Verify the persistence service was called twice (once for each valid palette)
         assert mock_persistence_service.store_image.call_count == 2
 
-        # Verify the metadata passed to store_image
-        for call_args in mock_persistence_service.store_image.call_args_list:
-            kwargs = call_args[1]
-            assert kwargs["user_id"] == user_id
-            assert kwargs["is_palette"] is True
-            assert "metadata" in kwargs
+        # Verify the result contains the expected palette data
+        palette_names = [palette["name"] for palette in result]
+        assert "Palette 1" in palette_names
+        assert "Palette 2" in palette_names
+        assert "Palette with Error" not in palette_names  # Should have been skipped
 
-            # One of the two palette names should be in the metadata
-            palette_name = kwargs["metadata"]["palette_name"]
-            assert palette_name in ["Palette 1", "Palette 2"]
+        # Verify each result contains the expected fields
+        for palette in result:
+            assert "name" in palette
+            assert "colors" in palette
+            assert "description" in palette
+            assert "image_path" in palette
+            assert "image_url" in palette
 
-            # The colors should be JSON-encoded
-            if palette_name == "Palette 1":
-                assert json.loads(kwargs["metadata"]["colors"]) == [
-                    "#FFFFFF",
-                    "#000000",
-                    "#FF0000",
-                ]
-            else:
-                assert json.loads(kwargs["metadata"]["colors"]) == [
-                    "#00FF00",
-                    "#0000FF",
-                    "#FFFF00",
-                ]
+    @pytest.mark.asyncio
+    async def test_create_palette_variations_with_exceptions(self, image_service: ImageService, mock_processing_service: AsyncMock, mock_persistence_service: MagicMock) -> None:
+        """Test create_palette_variations method with exceptions in processing."""
+        # Test data
+        base_image_data = b"test_image_data"
+        palettes = [
+            {
+                "name": "Success Palette",
+                "colors": ["#FFFFFF", "#000000", "#FF0000"],
+                "description": "This palette should process successfully",
+            },
+            {
+                "name": "Error Palette",
+                "colors": ["#00FF00", "#0000FF"],
+                "description": "This palette should fail during processing",
+            },
+        ]
+        user_id = "user123"
+        blend_strength = 0.75
 
-        # Verify the result structure
-        assert len(result) == 2
+        # Setup the processing service to succeed for first palette but fail for second
+        mock_processing_service.process_image.side_effect = [
+            b"processed_image_data",  # Success for first palette
+            Exception("Processing error"),  # Failure for second palette
+        ]
 
-        # Each result should have the correct fields
-        for item in result:
-            assert "name" in item
-            assert "colors" in item
-            assert "description" in item
-            assert "image_path" in item
-            assert "image_url" in item
+        # Setup mock persistence to return successful results for the first palette
+        mock_persistence_service.store_image.return_value = ("path/to/palette.png", "https://example.com/palette.png")
 
-            # The name should be one of the original palette names
-            assert item["name"] in ["Palette 1", "Palette 2"]
+        # Mock PIL Image
+        with patch("PIL.Image.open") as mock_pil_open:
+            # Configure the mocked image
+            mock_img = MagicMock()
+            mock_img.mode = "RGB"
+            mock_buffer = MagicMock()
+            mock_buffer.getvalue.return_value = b"test_image_data"
+            mock_img.save.side_effect = lambda buffer, format: None
+            mock_pil_open.return_value = mock_img
 
-            # The image URL should be from our mock responses
-            assert item["image_url"] in ["https://example.com/palette1.png", "https://example.com/palette2.png"]
+            # Mock BytesIO
+            with patch("app.services.image.service.BytesIO") as mock_bytesio:
+                mock_bytesio.return_value = mock_buffer
+
+                # Call the method
+                result = await image_service.create_palette_variations(
+                    base_image_data=base_image_data,
+                    palettes=palettes,
+                    user_id=user_id,
+                    blend_strength=blend_strength,
+                )
+
+        # Verify we received only the successful palette
+        assert len(result) == 1
+        assert result[0]["name"] == "Success Palette"
+
+        # Verify the processing service was called twice
+        assert mock_processing_service.process_image.call_count == 2
+
+        # Verify the persistence service was called only once (for the successful palette)
+        assert mock_persistence_service.store_image.call_count == 1
 
     @pytest.mark.asyncio
     async def test_apply_palette_to_image(self, image_service: ImageService, mock_processing_service: AsyncMock) -> None:

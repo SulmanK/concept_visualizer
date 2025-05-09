@@ -173,7 +173,7 @@ For detailed configuration instructions, please refer to our [Setup Guide](Desig
     cd backend
     # Ensure .env is linked to .env.develop via post-checkout hook
     # (or manually copy: cp .env.develop .env)
-    uvicorn app.main:app --reload --port 8000
+    uv uvicorn app.main:app --reload --port 8000
     ```
 2.  **Frontend:**
     ```bash
