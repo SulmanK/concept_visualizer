@@ -4,6 +4,7 @@ This middleware adds standard rate limit headers to API responses.
 """
 
 import logging
+import time
 from typing import Callable
 
 from fastapi import Request, Response
@@ -51,15 +52,33 @@ class RateLimitHeadersMiddleware(BaseHTTPMiddleware):
             limit = info.get("limit", "")
             remaining = info.get("remaining", "")
             reset = info.get("reset", "")
+            period = info.get("period", "")
+
+            # Fix reset timestamp for per-minute rate limits to show the correct reset time
+            # This makes the reset timestamp more user-friendly for frequently resetting limits
+            if period == "minute" and isinstance(reset, (int, float)):
+                # For minute-based rate limits, just show seconds until reset (max 60)
+                # This is more intuitive for clients than a full epoch timestamp
+                now = int(time.time())
+
+                # Calculate seconds until next minute boundary
+                seconds_to_next_minute = 60 - (now % 60)
+
+                # Use the seconds value directly instead of an epoch timestamp
+                reset = seconds_to_next_minute
+
+                # Add a header to indicate this is seconds-remaining format
+                response.headers["X-RateLimit-Reset-Format"] = "seconds-remaining"
 
             # Add headers only if we have valid data
             if limit and remaining and reset:
                 response.headers["X-RateLimit-Limit"] = str(limit)
                 response.headers["X-RateLimit-Remaining"] = str(remaining)
                 response.headers["X-RateLimit-Reset"] = str(reset)
+                response.headers["X-RateLimit-Period"] = str(period) if period else "unknown"
 
                 # Log the headers (debug level)
                 path = request.url.path
-                self.logger.debug(f"Added rate limit headers to {path}: " f"limit={limit}, remaining={remaining}, reset={reset}")
+                self.logger.debug(f"Added rate limit headers to {path}: " + f"limit={limit}, remaining={remaining}, reset={reset}, " + f"period={period}")
 
         return response

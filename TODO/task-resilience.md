@@ -2,35 +2,7 @@ That's a very valid and common concern with distributed, asynchronous task proce
 
 Here's a robust, multi-layered approach to handle this:
 
-1.  **In-Function Robustness (First Line of Defense):**
-
-    - **Immediate Status Update:** The very first thing your Cloud Function should do after parsing the Pub/Sub message is to update the task status in Postgres to "processing" and set an `updated_at` timestamp. This at least distinguishes tasks that were picked up from those that never even started.
-    - **Aggressive `try...except...finally`:**
-      ```python
-      # Inside your Cloud Function's main handler
-      task_id = message.get("task_id")
-      task_service = services["task_service"] # Assuming you have this
-      try:
-          await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
-          # ... your main image generation logic ...
-          await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_COMPLETED, result_id=concept_id)
-      except Exception as e:
-          error_msg = f"Worker failed: {str(e)}"
-          logger.error(f"Task {task_id} failed: {error_msg}", exc_info=True)
-          try:
-              await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
-          except Exception as db_update_err:
-              logger.error(f"CRITICAL: Failed to update task {task_id} to FAILED status: {db_update_err}")
-          # Important: Re-raise the exception if you want Pub/Sub to retry (if configured)
-          # or handle it so Pub/Sub acks the message if it's a non-retryable error.
-          raise
-      # No `finally` needed here for status update if the goal is to let Pub/Sub retry on error.
-      # If you want to ACK the message even on failure (to send to DLQ or stop retries),
-      # then a `finally` block that ensures the function exits cleanly (without re-raising) is needed.
-      ```
-    - **Idempotency:** Design your task processing to be idempotent if Pub/Sub retries. If a task marked "failed" gets retried, it shouldn't cause duplicate data or actions.
-
-2.  **Stale Task Detection and Cleanup (Scheduled Job - Most Robust for Stuck Tasks):**
+1.  **Stale Task Detection and Cleanup (Scheduled Job - Most Robust for Stuck Tasks):**
 
     - This is the most reliable way to catch tasks that got truly stuck.
     - You already have a Supabase Edge Function (`cleanup-old-data/index.ts`) scheduled to run daily. This is the _perfect_ place to add logic for detecting and handling stuck tasks.
@@ -153,26 +125,55 @@ Here's a robust, multi-layered approach to handle this:
       - Ensure your `getTableName` utility is available or replicate its logic for `tasks_dev` / `tasks_prod`.
       - Add the `TASK_STATUS` constants to this Edge Function as well.
 
-3.  **Pub/Sub Configuration:**
+2.  Monitoring and Alerting
 
-    - **Retry Policy:** Configure Pub/Sub topic subscriptions with a retry policy. If your Cloud Function explicitly errors out (e.g., you `raise` an exception), Pub/Sub will attempt to redeliver the message. This handles transient errors within the function.
-    - **Dead-Letter Queue (DLQ):** Configure a DLQ for your Pub/Sub subscription. If a message fails delivery repeatedly (after configured retries), it will be sent to the DLQ. You can then inspect these messages to understand why they are failing. This is more for messages that _cannot_ be processed, rather than tasks that get stuck mid-process.
+    Problem: You need to know when functions are failing or performing poorly.
 
-4.  **Cloud Function Configuration:**
+    Solution:
 
-    - **Timeout:** Set an appropriate timeout for your Cloud Function. It should be generous enough to complete most tasks but not so long that it masks actual issues. For Gen 2 functions, the max is 60 minutes for event-driven functions. If your image generation truly takes longer than that, you might need to rethink the architecture (e.g., break it into smaller steps or use a different compute service like Cloud Run jobs or GCE VMs).
-    - **Memory:** Ensure your function has enough memory. OOM errors are silent killers that won't trigger your `except` blocks.
-    - **Concurrency:** Configure concurrency appropriately. If it's too high, you might hit resource limits.
+        Utilize Google Cloud Monitoring and Logging.
 
-5.  **Client-Side UX:**
-    - **Polling Timeout:** On the frontend, if a task remains "pending" or "processing" for an unusually long time (e.g., > 10-15 minutes for image generation), you can inform the user that something might be wrong and they could try again later or contact support.
-    - **Allow Manual Cancellation (if feasible):** If a user sees a task stuck, allow them to request cancellation. This would set the task status to "cancelling" or "failed*cancelled" in the DB. Your worker logic would need to periodically check for this, but it's complex for serverless functions. More practically, the stale task detector could also check for tasks that users \_tried* to cancel.
+        Set up alerts for:
 
-**Recommended Combination:**
+            High error rates in your Cloud Function.
 
-- **Primary:** Robust `try...except...finally` in the Cloud Function.
-- **Secondary (Catch-all):** The scheduled "Stale Task Detection" job (integrated into your existing Supabase Edge Function) is crucial for tasks that die silently.
-- **Tertiary:** Pub/Sub retry policies and DLQs for message-level issues.
-- **Quaternary:** Proper Cloud Function configuration (timeout, memory).
 
-By implementing the stale task detection within your existing `cleanup-old-data` Supabase function, you leverage an existing scheduled mechanism and keep related cleanup logic together. This is a very good and practical approach. Remember to adjust the timeout thresholds based on your expected maximum processing time for image generation tasks.
+
+            Failed tasks in Task table?
+
+    Benefit: Proactive issue detection and faster response to problems.
+
+3.  Enhanced Error Handling & Idempotency
+
+    Problem: Broad exception handling; potential re-execution of completed steps on retry.
+
+    Solution:
+
+        Idempotency Check: Before starting any significant work, check if the task is already in a terminal state (COMPLETED or FAILED). If so, log and exit.
+
+        Specific Exception Handling: Catch specific exceptions (e.g., JigsawStackError, DatabaseError, httpx.TimeoutException) to log more detailed information or implement different retry/failure logic.
+
+        Checkpointing (Advanced): For very long tasks, you could save progress checkpoints (e.g., "base_image_generated") in the task's metadata. On retry, resume from the last successful checkpoint. This is more complex to implement.
+
+    Code Example (Conceptual for process_generation_task):
+
+    # At the beginning of process_generation_task
+
+    task_service = services["task_service"]
+    initial_task_data = await task_service.get_task(task_id=task_id, user_id=user_id) # Assuming user_id is implicitly trusted here or handled by RLS
+    if initial_task_data.get("status") in [TASK_STATUS_COMPLETED, TASK_STATUS_FAILED]:
+    logger.info(f"Task {task_id} already in terminal state '{initial_task_data.get('status')}' Skipping processing.")
+    return
+
+    await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+
+    try: # ... your generation logic ... # Example of more specific error handling within the logic:
+    try:
+    concept_response = await concept_service.generate_concept(...)
+    except JigsawStackConnectionError as jce: # Assuming you have such custom exceptions
+    logger.error(f"Task {task_id}: JigsawStack connection error: {jce}") # Potentially retry this specific step if appropriate, or fail the task
+    raise # Re-raise to be caught by the outer try-except
+    except JigsawStackGenerationError as jge:
+    logger.error(f"Task {task_id}: JigsawStack generation error: {jge}")
+    raise # Re-raise # ...
+    except Exception as e: # ... existing failure logic ...

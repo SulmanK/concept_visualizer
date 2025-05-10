@@ -35,7 +35,7 @@ Then edit `.env` with your specific configuration.
 
 ```bash
 # Start the development server
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 ```
 
 ### Running Tests

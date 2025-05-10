@@ -97,10 +97,11 @@ You need two Supabase projects: one for development (`dev`) and one for producti
       ```bash
       # Run from project root (adjust values for dev/prod)
       cd backend
-      supabase secrets set MY_SUPABASE_URL=<your-supabase-url>
-      supabase secrets set MY_SERVICE_ROLE_KEY=<your-service-role-key>
+      supabase secrets set SUPABASE_URL=<your-supabase-url>
+      supabase secrets set SERVICE_ROLE_KEY=<your-service-role-key>
       supabase secrets set STORAGE_BUCKET_CONCEPT=<your-concept-bucket>
       supabase secrets set STORAGE_BUCKET_PALETTE=<your-palette-bucket>
+      supabase secrets set APP_ENVIRONMENT=<your-palette-bucket>
       ```
     - **Deploy:** Deploy the function:
       ```bash

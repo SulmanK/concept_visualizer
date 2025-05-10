@@ -4,7 +4,7 @@ import { TextArea } from "../ui/TextArea";
 import { Card } from "../ui/Card";
 import { LoadingIndicator } from "../ui/LoadingIndicator";
 import { ErrorMessage, RateLimitErrorMessage } from "../ui/ErrorMessage";
-import { ErrorWithCategory, ErrorCategory } from "../../types";
+import { ErrorWithCategory, ErrorCategory } from "../../hooks/useErrorHandling";
 import { FormStatus } from "../../types/ui.types";
 import { useTaskContext, useOnTaskCleared } from "../../hooks/useTask";
 
@@ -247,8 +247,9 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
             <LoadingIndicator size="large" className="mb-4" />
             <p className="text-indigo-700 font-medium">{processingMessage}</p>
             <p className="text-sm text-indigo-500 mt-2">
-              This might take a minute. Please wait while we process your
-              request.
+              Tasks typically take less than 10 minutes to complete. If your
+              task takes longer than 30 minutes, our system will mark it as
+              failed, and you'll be able to try again.
             </p>
           </div>
         ) : (
@@ -334,6 +335,28 @@ export const ConceptForm: React.FC<ConceptFormProps> = ({
             </div>
           </form>
         )}
+
+        <div className="flex justify-center mt-4">
+          <div className="inline-flex items-center bg-indigo-50 px-4 py-2 rounded-full border border-indigo-100">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4 mr-2 text-indigo-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="text-sm font-medium text-indigo-600">
+              Generated concepts are stored for 30 days
+            </span>
+          </div>
+        </div>
       </Card>
     </div>
   );
