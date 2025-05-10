@@ -1,12 +1,26 @@
+**Feedback on Your Existing Design Plan (the TypeScript snippet):**
+
+1.  **Correct Logic:** The core logic for identifying stuck "processing" tasks (based on `updated_at`) and stuck "pending" tasks (based on `created_at`) is sound. Using different time fields for these statuses is appropriate.
+2.  **Clear Error Messages:** The `error_message` you're setting for failed tasks is informative.
+3.  **Supabase Client:** The plan to use an admin client (`supabaseAdminClient`) is correct, as this function needs to operate across user data and bypass RLS for administrative cleanup. The existing Edge Function already initializes `supabase` using the service role key, which is what you need.
+4.  **`getTableName("tasks")`:** This is a crucial part. Your Python backend uses `settings.DB_TABLE_TASKS` which resolves to `tasks_dev` or `tasks_prod`. Your Edge Function will need similar logic.
+5.  **`TASK_STATUS` Constants:** You'll need to define these constants (e.g., `PENDING`, `PROCESSING`, `FAILED`) within your Edge Function, similar to how they are in your Python backend.
+6.  **Timeout Parameters:** Passing `processingTimeoutMinutes` and `pendingTimeoutMinutes` makes the function flexible.
+
+**Integration into `backend/supabase/functions/cleanup-old-data/index.ts`:**
+
+Here's how you can integrate your new `cleanupStuckTasks` logic into the existing Edge Function, along with necessary additions:
+
+**Consolidated `backend/supabase/functions/cleanup-old-data/index.ts`:**
+
+```typescript
+// @deno-types="npm:@supabase/supabase-js@2.39.8"
+import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.39.8";
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import {
-  createClient,
-  SupabaseClient,
-} from "https://esm.sh/@supabase/supabase-js@2.39.8";
 
 // --- Environment Variables & Configuration ---
-const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""; // Standard Supabase env var
+const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""; // Standard Supabase env var
 const appEnvironment = Deno.env.get("APP_ENVIRONMENT") ?? "dev"; // Custom: 'dev' or 'prod'
 
 // Create Supabase admin client
@@ -15,7 +29,7 @@ const supabaseAdmin: SupabaseClient = createClient(
   supabaseServiceRoleKey,
 );
 
-// Storage bucket names
+// Storage bucket names (keep your existing logic for these)
 const STORAGE_BUCKET_CONCEPT =
   Deno.env.get("STORAGE_BUCKET_CONCEPT") || `concept-images-${appEnvironment}`;
 const STORAGE_BUCKET_PALETTE =
@@ -42,7 +56,7 @@ function getTableName(
   throw new Error(`Invalid base table name: ${baseName}`);
 }
 
-// --- Function to delete a file from storage ---
+// --- Existing `deleteFromStorage` function (keep as is) ---
 async function deleteFromStorage(
   bucketName: string,
   path: string,
@@ -66,8 +80,9 @@ async function deleteFromStorage(
   }
 }
 
-// --- Enhanced cleanupStuckTasks Function ---
+// --- Your Enhanced `cleanupStuckTasks` Function ---
 async function cleanupStuckTasks(
+  // supabaseAdminClient is already defined globally as supabaseAdmin
   processingTimeoutMinutes: number,
   pendingTimeoutMinutes: number,
 ): Promise<number> {
@@ -165,7 +180,7 @@ async function cleanupStuckTasks(
   return stuckTasksUpdated;
 }
 
-// --- Main serve Function ---
+// --- Main `serve` Function ---
 serve(async (req: Request) => {
   // Ensure this is a POST request if you have security policies or specific triggers
   if (req.method !== "POST") {
@@ -191,16 +206,16 @@ serve(async (req: Request) => {
     );
     console.log(`Processed stuck tasks. Count updated: ${stuckTasksCount}`);
 
-    // 2. Get concepts older than 30 days
-    console.log("Fetching concepts older than 30 days...");
+    // 2. Get concepts older than 3 days (your existing logic, adapted for dynamic table names)
+    console.log("Fetching concepts older than 3 days...");
     const conceptsTable = getTableName("concepts");
     const { data: oldConcepts, error: conceptsError } = await supabaseAdmin
       .from(conceptsTable)
-      .select("id, image_path")
+      .select("id, image_path") // Select only necessary fields
       .lt(
         "created_at",
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      ); // Older than 30 days
+        new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      ); // Older than 3 days
 
     if (conceptsError) {
       throw new Error(`Error fetching old concepts: ${conceptsError.message}`);
@@ -210,7 +225,6 @@ serve(async (req: Request) => {
     let deletedVariationsCount = 0;
     let deletedConceptFilesCount = 0;
     let deletedVariationFilesCount = 0;
-    let deletedTasksCount = 0;
 
     if (!oldConcepts || oldConcepts.length === 0) {
       console.log("No old concepts found to delete.");
@@ -273,45 +287,6 @@ serve(async (req: Request) => {
         );
       }
 
-      // 5.5 Delete associated tasks
-      console.log("Deleting tasks associated with old concepts...");
-      const tasksTable = getTableName("tasks");
-
-      // First, retrieve the task IDs associated with these concepts
-      const { data: associatedTasks, error: tasksQueryError } =
-        await supabaseAdmin
-          .from(tasksTable)
-          .select("id")
-          .in("result_id", conceptIds); // Using result_id instead of concept_id
-
-      if (tasksQueryError) {
-        console.error(
-          `Error fetching tasks for old concepts: ${tasksQueryError.message}`,
-        );
-      } else if (associatedTasks && associatedTasks.length > 0) {
-        const taskIds = associatedTasks.map((t) => t.id);
-        console.log(`Found ${taskIds.length} tasks to delete for old concepts`);
-
-        // Delete the tasks
-        const { error: deleteTasksError } = await supabaseAdmin
-          .from(tasksTable)
-          .delete()
-          .in("id", taskIds);
-
-        if (deleteTasksError) {
-          console.error(
-            `Error deleting tasks for old concepts: ${deleteTasksError.message}`,
-          );
-        } else {
-          deletedTasksCount = taskIds.length;
-          console.log(
-            `Successfully deleted ${deletedTasksCount} tasks for old concepts`,
-          );
-        }
-      } else {
-        console.log("No tasks found for old concepts");
-      }
-
       // 6. Delete files from storage
       console.log("Deleting files from storage...");
       for (const path of conceptPaths) {
@@ -341,7 +316,6 @@ serve(async (req: Request) => {
         old_variations_deleted: deletedVariationsCount,
         old_concept_files_deleted: deletedConceptFilesCount,
         old_variation_files_deleted: deletedVariationFilesCount,
-        old_tasks_deleted: deletedTasksCount || 0,
       }),
       {
         status: 200,
@@ -361,3 +335,69 @@ serve(async (req: Request) => {
     );
   }
 });
+```
+
+**Key Changes and Explanations:**
+
+1.  **Environment Variable for Environment (`APP_ENVIRONMENT`):**
+
+    - I've added `const appEnvironment = Deno.env.get("APP_ENVIRONMENT") ?? "dev";`.
+    - You **MUST** set this environment variable in your Supabase Edge Function settings (via the Supabase Dashboard).
+      - For your dev Supabase project, set `APP_ENVIRONMENT` to `dev`.
+      - For your prod Supabase project, set `APP_ENVIRONMENT` to `prod`.
+    - This is crucial for `getTableName` to work correctly.
+
+2.  **`getTableName` Utility:**
+
+    - This function now dynamically constructs table names like `tasks_dev`, `concepts_prod`, etc., based on `appEnvironment`.
+
+3.  **`TASK_STATUS` Constants:**
+
+    - Defined at the top to mirror your Python backend constants.
+
+4.  **Supabase Admin Client:**
+
+    - The existing `supabase` client is renamed to `supabaseAdmin` for clarity and is used by your `cleanupStuckTasks` function. It's already initialized with the service role key.
+
+5.  **Timeout Values:**
+
+    - `PROCESSING_TIMEOUT_MINUTES` and `PENDING_TIMEOUT_MINUTES` are now defined within the `serve` function. You might want to make these configurable via environment variables in the Supabase dashboard too if you need to adjust them without code changes.
+
+6.  **Logging:**
+
+    - The function includes `console.log` and `console.error` statements. Review these and adjust the verbosity as needed. Supabase Edge Function logs can be viewed in your project's dashboard.
+
+7.  **Error Handling in `cleanupStuckTasks`:**
+
+    - The snippet correctly logs errors from Supabase calls but continues processing other tasks/categories. This is generally good for a cleanup job.
+
+8.  **Main `serve` Function Integration:**
+    - The `cleanupStuckTasks` function is now called within the main `try...catch` block of the `serve` handler.
+    - The count of updated stuck tasks is included in the final JSON response.
+    - The existing logic for cleaning old concepts and variations now also uses `getTableName`.
+
+**To Deploy This:**
+
+1.  **Update Environment Variables in Supabase Dashboard:**
+
+    - Go to your Supabase project > Edge Functions > Select your `cleanup-old-data` function.
+    - Go to Settings (or similar tab for environment variables).
+    - Ensure `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are correctly set (they usually are by default).
+    - **Add a new environment variable `APP_ENVIRONMENT`**:
+      - Set its value to `dev` for your development Supabase project.
+      - Set its value to `prod` for your production Supabase project.
+    - Optionally, add `STORAGE_BUCKET_CONCEPT` and `STORAGE_BUCKET_PALETTE` if they are not already set or if you want to override the defaults derived from `appEnvironment`.
+    - Optionally, add `PROCESSING_TIMEOUT_MINUTES` and `PENDING_TIMEOUT_MINUTES` if you made them configurable.
+
+2.  **Deploy the Edge Function:**
+    - Use the Supabase CLI: `supabase functions deploy cleanup-old-data --project-ref <your-project-ref>`
+    - Make sure you're deploying to the correct project (dev or prod).
+
+**Additional Considerations:**
+
+- **Idempotency:** The `update` operations are generally idempotent for setting a task to `failed`. If the function runs multiple times on the same stuck task, it won't cause issues.
+- **Performance:** For a very large number of tasks, fetching and updating in loops might be slow. Supabase is generally efficient, but if you hit performance bottlenecks, you might explore batch updates or more complex SQL queries via RPC if needed (though the current approach is clear and should be fine for moderate loads).
+- **Testing:** Thoroughly test this in your `dev` environment first by manually creating tasks that would be considered "stuck" (e.g., by setting their `created_at` or `updated_at` far in the past).
+- **RPC vs. Direct Table Access:** Your existing function uses RPC calls (e.g., `get_old_concepts`). The new task cleanup logic uses direct table access (`.from(tableName)`). Both are fine. RPCs can encapsulate more complex SQL, while direct access is simpler for basic CRUD. They can coexist. The provided solution modifies your existing RPC calls to use `getTableName`.
+
+This updated Edge Function should significantly improve the resiliency of your task processing system by automatically handling tasks that get stuck for various reasons. Remember to set the `APP_ENVIRONMENT` variable in your Supabase function settings!

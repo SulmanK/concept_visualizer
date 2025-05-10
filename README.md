@@ -173,7 +173,7 @@ For detailed configuration instructions, please refer to our [Setup Guide](Desig
     cd backend
     # Ensure .env is linked to .env.develop via post-checkout hook
     # (or manually copy: cp .env.develop .env)
-    uv uvicorn app.main:app --reload --port 8000
+    uv run uvicorn app.main:app --reload --port 8000
     ```
     The image generation and refinement is tied up with the cloud run function - you will have to deploy the worker to GCP for it to work.
 2.  **Frontend:**

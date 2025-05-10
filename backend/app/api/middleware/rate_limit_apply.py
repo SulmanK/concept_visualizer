@@ -24,7 +24,7 @@ RATE_LIMIT_RULES = {
     "/concepts/refine": "10/month",
     "/concepts/store": "10/month",
     "/storage/store": "10/month",
-    "/storage/recent": "30/minute",
+    "/storage/recent": "60/minute",
     "/storage/concept": "30/minute",
     "/export/process": "50/hour",
 }
@@ -171,6 +171,7 @@ class RateLimitApplyMiddleware(BaseHTTPMiddleware):
                         "limit": most_restrictive_info.get("limit", 0),
                         "remaining": most_restrictive_info.get("remaining", 0),
                         "reset": most_restrictive_info.get("reset_at", 0),
+                        "period": most_restrictive_info.get("period", "unknown"),
                     }
 
                 rate_limit_applied = True
@@ -198,6 +199,7 @@ class RateLimitApplyMiddleware(BaseHTTPMiddleware):
                         "limit": limit_info.get("limit", 0),
                         "remaining": limit_info.get("remaining", 0),
                         "reset": limit_info.get("reset_at", 0),
+                        "period": limit_info.get("period", "unknown"),
                     }
 
                     # If rate limited, raise an exception

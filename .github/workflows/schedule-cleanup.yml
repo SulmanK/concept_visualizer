@@ -2,8 +2,8 @@ name: Schedule Data Cleanup
 
 on:
   schedule:
-    # Run at midnight every day (UTC)
-    - cron: '0 0 * * *'
+    # Run every hour
+    - cron: '0 * * * *'
 
   # Allow manual triggering for testing
   workflow_dispatch:
