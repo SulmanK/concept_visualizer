@@ -381,6 +381,7 @@ class TaskService(TaskServiceInterface):
             # Use service role client to bypass RLS if available
             try:
                 service_client = self.client.get_service_role_client()
+                # Explicitly request to return all columns after update
                 result = (
                     service_client.table(self.tasks_table).update(update_data).eq("id", task_id).eq("user_id", user_id).eq("status", TASK_STATUS_PENDING).execute()  # Only update if status is pending
                 )
@@ -410,18 +411,12 @@ class TaskService(TaskServiceInterface):
                     return cast(Dict[str, Any], result.data[0])
 
                 # If we don't have the task data from the update, fetch it
+                # This should rarely happen with proper returning clause
                 return await self.get_task(task_id, user_id)
             else:
-                # Task couldn't be claimed, fetch current status for logging
-                try:
-                    current_task = await self.get_task(task_id, user_id)
-                    current_status = current_task.get("status", "unknown")
-                    self.logger.info(f"Could not claim task {masked_task_id}. Current status: {current_status}")
-                except TaskNotFoundError:
-                    self.logger.warning(f"Task {masked_task_id} not found when trying to claim")
-                except Exception as e:
-                    self.logger.warning(f"Error checking status of task {masked_task_id}: {str(e)}")
-
+                # Task couldn't be claimed - log the failure but don't query for status
+                # This avoids an unnecessary database read that's only for logging
+                self.logger.info(f"Could not claim task {masked_task_id}. Task is not in PENDING state or does not exist.")
                 return None
 
         except Exception as e:
