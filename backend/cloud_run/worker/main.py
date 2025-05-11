@@ -684,32 +684,28 @@ async def process_generation_task(
     """Process a concept generation task.
 
     Args:
-        task_id: The ID of the task
-        user_id: User ID for storage
-        logo_description: Description for the logo generation
-        theme_description: Description for the theme generation
-        num_palettes: Number of palette variations to generate
+        task_id: The ID of the task to process
+        user_id: The ID of the user who created the task
+        logo_description: Description of the logo to generate
+        theme_description: Description of the theme to generate
+        num_palettes: Number of color palettes to generate
         services: Dictionary of initialized services
+
+    Returns:
+        None
     """
-    # Get services from the dictionary
-    image_service = services["image_service"]
     concept_service = services["concept_service"]
-    concept_persistence_service = services["concept_persistence_service"]
     task_service = services["task_service"]
+    image_service = services["image_service"]
     image_persistence_service = services["image_persistence_service"]
+    concept_persistence_service = services["concept_persistence_service"]
 
     logger = logging.getLogger("concept_generation_worker")
-
     task_start_time = time.time()
     logger.info(f"[WORKER_TIMING] Task {task_id}: Starting at {task_start_time:.2f}")
     logger.info(f"Starting concept generation task {task_id}")
 
     try:
-        # IDEMPOTENCY CHECK: Check if task is already in a terminal state
-        should_continue = await validate_task_state(task_id, user_id, task_service)
-        if not should_continue:
-            return
-
         # Update task status to processing
         await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
         logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
@@ -797,33 +793,29 @@ async def process_refinement_task(
     """Process a concept refinement task.
 
     Args:
-        task_id: The ID of the task
-        user_id: User ID for storage
-        refinement_prompt: The prompt for refinement
+        task_id: The ID of the task to process
+        user_id: The ID of the user who created the task
+        refinement_prompt: Instructions for refining the concept
         original_image_url: URL of the original image to refine
-        logo_description: Original logo description
-        theme_description: Original theme description
+        logo_description: Description of the logo
+        theme_description: Description of the theme
         services: Dictionary of initialized services
+
+    Returns:
+        None
     """
-    # Get services from the dictionary
-    image_service = services["image_service"]
     concept_service = services["concept_service"]
-    concept_persistence_service = services["concept_persistence_service"]
     task_service = services["task_service"]
+    image_service = services["image_service"]
     image_persistence_service = services["image_persistence_service"]
+    concept_persistence_service = services["concept_persistence_service"]
 
     logger = logging.getLogger("concept_refinement_worker")
-
     task_start_time = time.time()
     logger.info(f"[WORKER_TIMING] Task {task_id}: Starting at {task_start_time:.2f}")
-    logger.info(f"Starting concept refinement task {task_id}")
+    logger.info(f"Starting refinement task {task_id}")
 
     try:
-        # IDEMPOTENCY CHECK: Check if task is already in a terminal state
-        should_continue = await validate_task_state(task_id, user_id, task_service)
-        if not should_continue:
-            return
-
         # Update task status to processing
         await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
         logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
