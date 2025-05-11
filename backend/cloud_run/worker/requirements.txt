@@ -8,6 +8,7 @@ flask>=2.0.0
 google-cloud-pubsub>=2.21.0
 google-cloud-storage>=2.10.0
 functions-framework>=3.0.0  # For Cloud Function (2nd Gen)
+cloudevents>=1.9.0  # For Cloud Functions Pub/Sub events
 
 # Image processing
 pillow>=10.0.0
