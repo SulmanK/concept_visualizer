@@ -4,9 +4,9 @@ This directory contains Terraform configurations for setting up the Google Cloud
 
 ## Environment Structure
 
-- **Development Environment**: Project ID: `concept-visualizer-dev-1`
-- **Production Environment**: Project ID: `concept-visualizer-prod-1`
-- **Terraform State Storage**: Project ID: `concept-visualizer-managed-1`, Bucket: `concept-visualizer-tfstate-1`
+- **Development Environment**: Project ID: `proj-dev`
+- **Production Environment**: Project ID: `proj-prod`
+- **Terraform State Storage**: Project ID: `proj-managed`, Bucket: `proj-tfstate`
 
 ## Prerequisites
 
@@ -15,23 +15,34 @@ Before using these Terraform configurations, ensure you have:
 1. **Terraform CLI** (>= v1.3) installed on your local machine
 2. **Google Cloud SDK** installed and configured
 3. **GCP Projects** created in the GCP Console:
-   - Development project: `concept-visualizer-dev-1`
-   - Production project: `concept-visualizer-prod-1`
+   - Development project: `proj-dev`
+   - Production project: `proj-prod`
 4. **GCP APIs Enabled** in both projects:
    ```
-   compute.googleapis.com run.googleapis.com secretmanager.googleapis.com
-   artifactregistry.googleapis.com pubsub.googleapis.com cloudresourcemanager.googleapis.com
-   iam.googleapis.com logging.googleapis.com monitoring.googleapis.com cloudbuild.googleapis.com
+      gcloud services enable \
+      compute.googleapis.com \
+      run.googleapis.com \
+      secretmanager.googleapis.com \
+      artifactregistry.googleapis.com \
+      pubsub.googleapis.com \
+      cloudresourcemanager.googleapis.com \
+      iam.googleapis.com \
+      logging.googleapis.com \
+      monitoring.googleapis.com \
+      cloudbuild.googleapis.com \
+      cloudresourcemanager.googleapis.com \
+      eventarc.googleapis.com \
+      cloudfunctions.googleapis.com
    ```
 5. **GCS Bucket for Terraform State** created manually with versioning enabled:
-   - Bucket name: `concept-visualizer-tfstate-1`
-   - Created in project: `concept-visualizer-managed-1`
+   - Bucket name: `proj-tfstate`
+   - Created in project: `proj-managed`
 6. **Initial IAM Permissions** granted on the state bucket:
    ```bash
    gcloud storage buckets add-iam-policy-binding gs://concept-visualizer-tfstate-1 \
-     --member="user:skhanconcept1@gmail.com" \
+     --member="user:username@email.com" \
      --role="roles/storage.admin" \
-     --project="concept-visualizer-managed-1"
+     --project="proj-managed"
    ```
 
 ## Configuration Files
