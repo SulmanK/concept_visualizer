@@ -114,7 +114,7 @@ class GenerationTaskProcessor(BaseTaskProcessor):
             image_persistence_service=self.image_persistence_service,
         )
 
-    async def _generate_palettes_from_api(self) -> List[dict]:
+    async def _generate_palettes_from_api(self) -> List[Dict[str, Any]]:
         """Generate color palettes for the concept.
 
         Returns:
@@ -127,7 +127,7 @@ class GenerationTaskProcessor(BaseTaskProcessor):
             task_id=self.task_id, theme_desc=self.theme_description, logo_desc=self.logo_description, num=self.num_palettes, concept_service=self.concept_service
         )
 
-    async def _create_variations(self, image_data: bytes, palettes: List[dict]) -> List[dict]:
+    async def _create_variations(self, image_data: bytes, palettes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Create palette variations for the concept.
 
         Args:
@@ -142,7 +142,7 @@ class GenerationTaskProcessor(BaseTaskProcessor):
         """
         return await create_palette_variations(task_id=self.task_id, image_data=image_data, palettes=palettes, user_id=self.user_id, image_service=self.image_service)
 
-    async def _store_final_concept(self, image_path: str, image_url: str, variations: List[dict]) -> str:
+    async def _store_final_concept(self, image_path: str, image_url: str, variations: List[Dict[str, Any]]) -> str:
         """Store the final concept in the database.
 
         Args:

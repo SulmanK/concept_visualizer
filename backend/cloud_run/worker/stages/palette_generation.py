@@ -82,35 +82,29 @@ async def create_palette_variations(
     logger.info(f"Task {task_id}: Creating {len(palettes)} palette variations")
 
     try:
-        # Apply each palette to the image to create variations
-        variations_with_urls: List[Dict[str, Any]] = []
+        # Use the create_palette_variations method from ImageService
+        palette_variations = await image_service.create_palette_variations(
+            base_image_data=image_data,
+            palettes=palettes,
+            user_id=user_id,
+            blend_strength=0.75,
+        )
 
-        for i, palette in enumerate(palettes):
-            variation_id = f"{task_id}_variation_{i}"
-
-            # For each palette, apply it to the original image
-            recolored_image_data = await image_service.recolor_image_with_palette(image_data=image_data, palette=palette, user_id=user_id)
-
-            # Now store this recolored image
-            result = await image_service.store_recolored_image(image_data=recolored_image_data, user_id=user_id, variation_id=variation_id, palette=palette)
-
-            variation_url = result.get("url")
-            if not variation_url:
-                logger.warning(f"Task {task_id}: No URL returned for variation {i}")
-                continue
-
-            # Add URL to the palette data
-            palette_with_url = {**palette, "variation_url": variation_url}
-            variations_with_urls.append(palette_with_url)
-
-        if not variations_with_urls:
-            raise Exception("Failed to create any palette variations with URLs")
+        if not palette_variations:
+            raise Exception("Failed to create any palette variations")
 
         variation_end = time.time()
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Created {len(variations_with_urls)} palette variations at {variation_end:.2f} (Duration: {(variation_end - variation_start):.2f}s)")
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Created {len(palette_variations)} palette variations at {variation_end:.2f} (Duration: {(variation_end - variation_start):.2f}s)")
 
-        return variations_with_urls
+        return cast(List[Dict[str, Any]], palette_variations)
 
     except Exception as e:
         logger.error(f"Task {task_id}: Error creating palette variations: {e}")
-        raise Exception(f"Creating palette variations failed: {e}")
+        # Check for specific error types in the error message
+        if "memory" in str(e).lower():
+            logger.error(f"Task {task_id}: Memory error during variation creation: {e}")
+            raise Exception(f"Failed to create palette variations: Memory error: {str(e)}")
+        elif "timeout" in str(e).lower():
+            logger.error(f"Task {task_id}: Timeout during variation creation: {e}")
+            raise Exception(f"Failed to create palette variations: Operation timed out: {str(e)}")
+        raise Exception(f"Creating palette variations failed: {str(e)}")

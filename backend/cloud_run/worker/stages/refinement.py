@@ -78,9 +78,10 @@ async def refine_concept_image(
         refined_concept = await concept_service.refine_concept(
             original_image_url=original_image_url,
             refinement_prompt=refinement_prompt,
-            original_logo_description=logo_description,
-            original_theme_description=theme_description,
-            skip_persistence=True,  # Skip persistence in the service, we'll handle it here
+            logo_description=logo_description,
+            theme_description=theme_description,
+            skip_persistence=True,  # We'll handle persistence separately
+            strength=0.7,  # Control how much to preserve original image
         )
     except JigsawStackError as jse:
         logger.error(f"Task {task_id}: JigsawStack API error in refinement: {jse}")
@@ -208,21 +209,23 @@ async def store_refined_concept(
     logger.info(f"Task {task_id}: Storing refined concept data")
 
     try:
-        stored_concept_data = await concept_persistence_service.store_refined_concept(
+        stored_concept_data = await concept_persistence_service.store_concept(
             {
                 "user_id": user_id,
-                "original_logo_description": logo_description,
-                "original_theme_description": theme_description,
+                "logo_description": logo_description,
+                "theme_description": f"{theme_description} {refinement_prompt}",
+                "image_path": refined_image_path,
+                "image_url": refined_image_url,
+                "color_palettes": [],  # Empty list since we're not generating variations
+                "is_anonymous": True,
                 "refinement_prompt": refinement_prompt,
-                "refined_image_path": refined_image_path,
-                "refined_image_url": refined_image_url,
                 "original_image_url": original_image_url,
                 "task_id": task_id,  # Link concept to task
             }
         )
 
         if not stored_concept_data:
-            raise Exception("ConceptPersistenceService.store_refined_concept returned None/empty")
+            raise Exception("ConceptPersistenceService.store_concept returned None/empty")
 
         concept_id = cast(str, stored_concept_data)  # Explicitly cast to str
         logger.info(f"Task {task_id}: Stored refined concept with ID: {concept_id}")
@@ -234,4 +237,7 @@ async def store_refined_concept(
 
     except Exception as e:
         logger.error(f"Task {task_id}: Error storing refined concept data: {e}")
+        if "database" in str(e).lower() or "supabase" in str(e).lower():
+            logger.error(f"Task {task_id}: Database error during refined concept storage: {e}")
+            raise Exception(f"Database error during refined concept storage: {e}")
         raise Exception(f"Storing refined concept data failed: {e}")
