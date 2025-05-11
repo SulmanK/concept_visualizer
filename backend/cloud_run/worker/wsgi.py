@@ -34,6 +34,17 @@ def health_check() -> tuple[dict[str, str], int]:
 def warmup() -> tuple[dict[str, str], int]:
     """Warmup endpoint for Cloud Run."""
     logger.info("Warmup request received")
+
+    # Importing here within the warmup request to initiate the global services
+    try:
+        # Import and access main to trigger initialization of global services
+        from . import main
+
+        # Access an attribute to prevent unused import warning
+        logger.info(f"Successfully imported main module during warmup (version: {getattr(main, '__doc__', 'unknown')})")
+    except Exception as e:
+        logger.error(f"Error importing main module during warmup: {e}")
+
     return {"status": "warmed_up"}, 200
 
 

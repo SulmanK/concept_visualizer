@@ -18,3 +18,4 @@ per-file-ignores =
     app/services/*/service.py: F821
     app/services/*/__init__.py: F821
     backend/main.py: F821, W291, W292
+    backend/cloud_run/worker/main.py: D202
