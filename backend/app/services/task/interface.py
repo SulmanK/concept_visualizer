@@ -25,30 +25,6 @@ class TaskServiceInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def claim_task(
-        self,
-        task_id: str,
-        user_id: str,
-        from_status: str,
-        to_status: str,
-    ) -> bool:
-        """Atomically claim a task by changing its status if it matches the expected status.
-
-        Args:
-            task_id: ID of the task to claim
-            user_id: ID of the user who owns the task
-            from_status: Current expected status (only claim if status matches this)
-            to_status: New status to set if claim succeeds
-
-        Returns:
-            True if the task was successfully claimed, False otherwise
-
-        Raises:
-            TaskError: If claim operation fails
-        """
-        pass
-
-    @abc.abstractmethod
     async def update_task_status(
         self,
         task_id: str,
