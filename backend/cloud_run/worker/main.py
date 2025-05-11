@@ -19,7 +19,7 @@ import httpx
 from cloudevents.http import CloudEvent
 
 from app.core.config import settings
-from app.core.constants import TASK_STATUS_COMPLETED, TASK_STATUS_FAILED, TASK_STATUS_PENDING, TASK_STATUS_PROCESSING, TASK_TYPE_GENERATION, TASK_TYPE_REFINEMENT
+from app.core.constants import TASK_STATUS_COMPLETED, TASK_STATUS_FAILED, TASK_STATUS_PROCESSING, TASK_TYPE_GENERATION, TASK_TYPE_REFINEMENT
 from app.core.exceptions import JigsawStackError
 from app.core.supabase.client import SupabaseClient
 from app.services.concept.service import ConceptService
@@ -125,40 +125,42 @@ async def validate_task_state(task_id: str, user_id: str, task_service: Any) -> 
     Returns:
         bool: True if processing should continue, False if task should be skipped
     """
-    logger = logging.getLogger("task_validator")
+    # Commented out for performance testing
+    # logger = logging.getLogger("task_validator")
 
-    # Check if task is already in a terminal state
-    initial_task_data = await task_service.get_task(task_id=task_id, user_id=user_id)
-    if initial_task_data.get("status") in [TASK_STATUS_COMPLETED, TASK_STATUS_FAILED]:
-        logger.info(f"Task {task_id} already in terminal state '{initial_task_data.get('status')}'. Skipping processing.")
-        return False
+    # # Check if task is already in a terminal state
+    # initial_task_data = await task_service.get_task(task_id=task_id, user_id=user_id)
+    # if initial_task_data.get("status") in [TASK_STATUS_COMPLETED, TASK_STATUS_FAILED]:
+    #     logger.info(f"Task {task_id} already in terminal state '{initial_task_data.get('status')}'. Skipping processing.")
+    #     return False
 
-    # Check for stalled processing tasks
-    if initial_task_data.get("status") == TASK_STATUS_PROCESSING:
-        # Parse the updated_at timestamp
-        updated_at = initial_task_data.get("updated_at")
-        if updated_at:
-            try:
-                # Parse the ISO format timestamp
-                if "." in updated_at:  # Format with microseconds
-                    updated_time = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
-                else:  # Format without microseconds
-                    updated_time = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    # # Check for stalled processing tasks
+    # if initial_task_data.get("status") == TASK_STATUS_PROCESSING:
+    #     # Parse the updated_at timestamp
+    #     updated_at = initial_task_data.get("updated_at")
+    #     if updated_at:
+    #         try:
+    #             # Parse the ISO format timestamp
+    #             if "." in updated_at:  # Format with microseconds
+    #                 updated_time = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    #             else:  # Format without microseconds
+    #                 updated_time = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
 
-                # Calculate time difference in minutes
-                current_time = datetime.now(timezone.utc)
-                time_diff_minutes = (current_time - updated_time).total_seconds() / 60
+    #             # Calculate time difference in minutes
+    #             current_time = datetime.now(timezone.utc)
+    #             time_diff_minutes = (current_time - updated_time).total_seconds() / 60
 
-                # If task has been processing for more than 30 minutes, consider it stalled
-                if time_diff_minutes > 30:
-                    logger.warning(f"Task {task_id} has been in PROCESSING state for {time_diff_minutes:.1f} minutes. Restarting processing.")
-                    # Continue processing
-                else:
-                    logger.info(f"Task {task_id} is currently being processed (for {time_diff_minutes:.1f} minutes). Skipping duplicate processing.")
-                    return False
-            except (ValueError, TypeError) as e:
-                logger.warning(f"Error parsing task timestamp for {task_id}: {e}. Will continue processing.")
+    #             # If task has been processing for more than 30 minutes, consider it stalled
+    #             if time_diff_minutes > 30:
+    #                 logger.warning(f"Task {task_id} has been in PROCESSING state for {time_diff_minutes:.1f} minutes. Restarting processing.")
+    #                 # Continue processing
+    #             else:
+    #                 logger.info(f"Task {task_id} is currently being processed (for {time_diff_minutes:.1f} minutes). Skipping duplicate processing.")
+    #                 return False
+    #         except (ValueError, TypeError) as e:
+    #             logger.warning(f"Error parsing task timestamp for {task_id}: {e}. Will continue processing.")
 
+    # Function is temporarily disabled - always return True to continue processing
     return True
 
 
@@ -706,8 +708,9 @@ async def process_generation_task(
     logger.info(f"Starting concept generation task {task_id}")
 
     try:
-        # Note: Task is already in PROCESSING state as it was claimed in process_pubsub_message
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Processing concept generation")
+        # Update task status to processing
+        await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
 
         logger.debug(f"Generating concept for task {task_id}")
 
@@ -815,8 +818,9 @@ async def process_refinement_task(
     logger.info(f"Starting refinement task {task_id}")
 
     try:
-        # Note: Task is already in PROCESSING state as it was claimed in process_pubsub_message
-        logger.info(f"[WORKER_TIMING] Task {task_id}: Processing concept refinement")
+        # Update task status to processing
+        await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_PROCESSING)
+        logger.info(f"[WORKER_TIMING] Task {task_id}: Marked as PROCESSING at {time.time():.2f} ({(time.time() - task_start_time):.2f}s elapsed)")
 
         logger.info(f"Starting refinement task {task_id} for user {user_id}")
 
@@ -896,25 +900,15 @@ async def process_pubsub_message(message: Dict[str, Any], services: ServicesDict
         logger.error("Message missing required task_id field")
         return
 
-    # Get the task service
+    # Global idempotency check - get the task_service from services
     task_service = services["task_service"]
     user_id = message.get("user_id")
 
-    if not task_id or not user_id:
-        logger.error("Task ID or User ID missing in message")
-        return
-
-    # Try to claim the task by updating its status to PROCESSING
-    # This is an atomic operation that will only succeed if the task is in PENDING state
-    try:
-        # Attempt to claim the task with a conditional update
-        claim_success = await task_service.claim_task(task_id=task_id, user_id=user_id, from_status=TASK_STATUS_PENDING, to_status=TASK_STATUS_PROCESSING)
-
-        if not claim_success:
-            # If claim failed, check why (task might be in terminal state or already processing)
+    if task_id and user_id:
+        try:
+            # Check if task is already in a terminal state
             task_data = await task_service.get_task(task_id=task_id, user_id=user_id)
 
-            # Skip if task is already completed or failed
             if task_data.get("status") in [TASK_STATUS_COMPLETED, TASK_STATUS_FAILED]:
                 logger.info(f"Task {task_id} already in terminal state '{task_data.get('status')}'. Skipping processing.")
                 return
@@ -940,30 +934,18 @@ async def process_pubsub_message(message: Dict[str, Any], services: ServicesDict
                         if time_diff_minutes > 30:
                             logger.warning(f"Task {task_id} has been in PROCESSING state for {time_diff_minutes:.1f} minutes. Marking as failed and reprocessing.")
                             await task_service.update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message="Task processing exceeded time limit of 30 minutes")
-                            # Attempt to reclaim the task
-                            claim_success = await task_service.claim_task(task_id=task_id, user_id=user_id, from_status=TASK_STATUS_FAILED, to_status=TASK_STATUS_PROCESSING)
-                            if not claim_success:
-                                logger.info(f"Failed to reclaim stalled task {task_id} after marking as failed. Another worker may have claimed it.")
-                                return
+                            # Continue processing as if the task was new
                         else:
                             logger.info(f"Task {task_id} is already being processed (for {time_diff_minutes:.1f} minutes). Skipping.")
                             return
                     except (ValueError, TypeError) as e:
                         logger.warning(f"Error parsing task timestamp for {task_id}: {e}. Will continue processing.")
-                        return
                 else:
-                    logger.warning(f"Task {task_id} is in PROCESSING state but has no updated_at timestamp. Skipping.")
-                    return
-            else:
-                logger.info(f"Task {task_id} is in state '{task_data.get('status')}', not PENDING. Skipping.")
-                return
-    except Exception as e:
-        # Log but continue - this is just a pre-check
-        logger.warning(f"Error checking/claiming task state for {task_id}: {e}")
-        return
+                    logger.warning(f"Task {task_id} is in PROCESSING state but has no updated_at timestamp. Will continue processing.")
+        except Exception as e:
+            # Log but continue - this is just a pre-check
+            logger.warning(f"Error checking task state for {task_id}: {e}")
 
-    # At this point, we have successfully claimed the task or reclaimed a stalled task
-    # Process based on task type
     if task_type == TASK_TYPE_GENERATION:
         user_id = message.get("user_id")
         logo_description = message.get("logo_description")
