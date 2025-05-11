@@ -353,3 +353,52 @@ class TaskService(TaskServiceInterface):
         except Exception as e:
             self.logger.error(f"Error getting task for result {masked_result_id}: {str(e)}")
             raise TaskError(f"Failed to retrieve task by result: {str(e)}")
+
+    async def claim_task(
+        self,
+        task_id: str,
+        user_id: str,
+        from_status: str,
+        to_status: str,
+    ) -> bool:
+        """Atomically claim a task by changing its status if it matches the expected status.
+
+        Args:
+            task_id: ID of the task to claim
+            user_id: ID of the user who owns the task
+            from_status: Current expected status (only claim if status matches this)
+            to_status: New status to set if claim succeeds
+
+        Returns:
+            True if the task was successfully claimed, False otherwise
+
+        Raises:
+            TaskError: If claim operation fails
+        """
+        try:
+            # Mask IDs for logging
+            masked_task_id = mask_id(task_id)
+            masked_user_id = mask_id(user_id)
+            self.logger.debug(f"Attempting to claim task {masked_task_id} for user {masked_user_id} from status '{from_status}' to '{to_status}'")
+
+            now = datetime.utcnow().isoformat()
+
+            # Use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = service_client.table(self.tasks_table).update({"status": to_status, "updated_at": now}).eq("id", task_id).eq("user_id", user_id).eq("status", from_status).execute()
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                result = self.client.client.table(self.tasks_table).update({"status": to_status, "updated_at": now}).eq("id", task_id).eq("user_id", user_id).eq("status", from_status).execute()
+
+            # Check the result
+            if not result.data or len(result.data) == 0:
+                self.logger.info(f"Task {masked_task_id} was not in expected status '{from_status}' or does not exist")
+                return False
+
+            self.logger.info(f"Successfully claimed task {masked_task_id}, status updated to '{to_status}'")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error claiming task {masked_task_id}: {str(e)}")
+            raise TaskError(f"Failed to claim task: {str(e)}")
