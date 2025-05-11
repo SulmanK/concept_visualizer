@@ -50,6 +50,22 @@ class TaskServiceInterface(abc.ABC):
         pass
 
     @abc.abstractmethod
+    async def claim_task_if_pending(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Atomically claim a task by updating its status from pending to processing.
+
+        Args:
+            task_id: ID of the task to claim
+            user_id: ID of the user who owns the task
+
+        Returns:
+            Task data if successfully claimed, None otherwise
+
+        Raises:
+            TaskError: If claim operation fails
+        """
+        pass
+
+    @abc.abstractmethod
     async def get_task(self, task_id: str, user_id: str) -> Dict[str, Any]:
         """Get a task by ID.
 

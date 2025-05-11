@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, cast
 
 from app.core.config import settings
+from app.core.constants import TASK_STATUS_PENDING, TASK_STATUS_PROCESSING  # Import the constants
 from app.core.supabase.client import SupabaseClient
 from app.services.task.interface import TaskServiceInterface
 from app.utils.security.mask import mask_id
@@ -353,3 +354,76 @@ class TaskService(TaskServiceInterface):
         except Exception as e:
             self.logger.error(f"Error getting task for result {masked_result_id}: {str(e)}")
             raise TaskError(f"Failed to retrieve task by result: {str(e)}")
+
+    async def claim_task_if_pending(self, task_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """Atomically claim a task by updating its status from pending to processing.
+
+        Args:
+            task_id: ID of the task to claim
+            user_id: ID of the user who owns the task
+
+        Returns:
+            Task data if successfully claimed, None otherwise
+
+        Raises:
+            TaskError: If claim operation fails
+        """
+        try:
+            # Mask IDs for logging
+            masked_task_id = mask_id(task_id)
+            masked_user_id = mask_id(user_id)
+            self.logger.debug(f"Attempting to claim task {masked_task_id} for user {masked_user_id}")
+
+            # Prepare update data
+            now = datetime.utcnow().isoformat()
+            update_data = {"status": TASK_STATUS_PROCESSING, "updated_at": now}
+
+            # Use service role client to bypass RLS if available
+            try:
+                service_client = self.client.get_service_role_client()
+                result = (
+                    service_client.table(self.tasks_table).update(update_data).eq("id", task_id).eq("user_id", user_id).eq("status", TASK_STATUS_PENDING).execute()  # Only update if status is pending
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to use service role client: {str(e)}, falling back to regular client")
+                # Fallback to regular client if service role client not available
+                result = (
+                    self.client.client.table(self.tasks_table)
+                    .update(update_data)
+                    .eq("id", task_id)
+                    .eq("user_id", user_id)
+                    .eq("status", TASK_STATUS_PENDING)  # Only update if status is pending
+                    .execute()
+                )
+
+            # Check if any rows were affected by the update
+            rows_affected = 0
+            if hasattr(result, "count") and result.count is not None:
+                rows_affected = result.count
+            elif result.data:
+                rows_affected = len(result.data)
+
+            if rows_affected > 0:
+                self.logger.info(f"Successfully claimed task {masked_task_id}")
+                # Return the updated task data
+                if result.data and len(result.data) > 0:
+                    return cast(Dict[str, Any], result.data[0])
+
+                # If we don't have the task data from the update, fetch it
+                return await self.get_task(task_id, user_id)
+            else:
+                # Task couldn't be claimed, fetch current status for logging
+                try:
+                    current_task = await self.get_task(task_id, user_id)
+                    current_status = current_task.get("status", "unknown")
+                    self.logger.info(f"Could not claim task {masked_task_id}. Current status: {current_status}")
+                except TaskNotFoundError:
+                    self.logger.warning(f"Task {masked_task_id} not found when trying to claim")
+                except Exception as e:
+                    self.logger.warning(f"Error checking status of task {masked_task_id}: {str(e)}")
+
+                return None
+
+        except Exception as e:
+            self.logger.error(f"Error claiming task {masked_task_id}: {str(e)}")
+            raise TaskError(f"Failed to claim task: {str(e)}")
