@@ -353,10 +353,20 @@ async def generate_concept_with_palettes(
                 if applied_limits_to_refund:
                     logger.info(f"Attempting to refund rate limits for user {mask_id(user_id)} due to 409 conflict")
 
-                    # Get the Redis store instance from app state limiter
+                    # Get Redis store instance - try different ways to access it
                     redis_store_instance = None
-                    if hasattr(req.app.state, "limiter") and hasattr(req.app.state.limiter, "_storage"):
+
+                    # First, check if there's a RedisStore in _storage
+                    if hasattr(req.app.state, "limiter") and hasattr(req.app.state.limiter, "_storage") and hasattr(req.app.state.limiter._storage, "decrement_specific_limit"):
                         redis_store_instance = req.app.state.limiter._storage
+                        logger.debug("Using limiter._storage for rate limit refund")
+                    # Second, check for _redis_client attribute (how it's actually configured)
+                    elif hasattr(req.app.state, "limiter") and hasattr(req.app.state.limiter, "_redis_client"):
+                        from app.core.limiter.redis_store import RedisStore
+
+                        redis_client = req.app.state.limiter._redis_client
+                        redis_store_instance = RedisStore(redis_client)
+                        logger.debug("Created RedisStore from limiter._redis_client for rate limit refund")
 
                     if redis_store_instance:
                         for limit_to_refund in applied_limits_to_refund:
