@@ -90,6 +90,42 @@ async def refine_concept(
                 existing_task = active_refinement_tasks[0]
                 logger.info(f"Found existing active task {mask_id(existing_task['id'])} for user {mask_id(user_id)}")
 
+                # --- REFUND LOGIC for 409 Conflict ---
+                # Check if there are applied rate limits that need to be refunded
+                applied_limits_to_refund = getattr(req.state, "applied_rate_limits_for_refund", [])
+                if applied_limits_to_refund:
+                    logger.info(f"Attempting to refund rate limits for user {mask_id(user_id)} due to 409 conflict")
+
+                    # Get the Redis store instance from app state limiter
+                    redis_store_instance = None
+                    if hasattr(req.app.state, "limiter") and hasattr(req.app.state.limiter, "_storage"):
+                        redis_store_instance = req.app.state.limiter._storage
+
+                    if redis_store_instance:
+                        for limit_to_refund in applied_limits_to_refund:
+                            try:
+                                # Call the decrement method on the RedisStore
+                                logger.info(f"Refunding: endpoint={limit_to_refund['endpoint_rule']}, limit={limit_to_refund['limit_string_rule']}")
+
+                                refund_success = redis_store_instance.decrement_specific_limit(
+                                    user_id=limit_to_refund["user_id"],
+                                    endpoint_rule=limit_to_refund["endpoint_rule"],
+                                    limit_string_rule=limit_to_refund["limit_string_rule"],
+                                    amount=limit_to_refund["amount"],
+                                )
+
+                                if refund_success:
+                                    logger.info(f"Successfully refunded rate limit for {limit_to_refund['endpoint_rule']} for user {mask_id(user_id)}")
+                                else:
+                                    logger.warning(f"Failed to refund rate limit for {limit_to_refund['endpoint_rule']} for user {mask_id(user_id)}")
+                            except Exception as e:
+                                logger.error(f"Error refunding rate limit for {limit_to_refund['endpoint_rule']} (user: {mask_id(user_id)}): {e}")
+                    else:
+                        logger.error(f"Could not obtain RedisStore instance to refund rate limit for 409 conflict for user {mask_id(user_id)}")
+                else:
+                    logger.debug(f"No applied rate limits found for user {mask_id(user_id)} during 409 conflict. No refund attempted.")
+                # --- END REFUND LOGIC ---
+
                 # Return HTTP 409 Conflict with details of the existing task
                 response.status_code = status.HTTP_409_CONFLICT
                 return TaskResponse(

@@ -4,7 +4,7 @@ This middleware applies rate limits to API endpoints.
 """
 
 import logging
-from typing import Callable
+from typing import Any, Callable, Dict, List
 
 from fastapi import HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -129,6 +129,9 @@ class RateLimitApplyMiddleware(BaseHTTPMiddleware):
         # Get user ID for rate limiting
         user_id = get_user_id(request)
 
+        # Initialize list to store applied rate limits for potential refund
+        applied_limits_for_this_request: List[Dict[str, Any]] = []
+
         # Handle multiple rate limits case first
         for prefix, limits in MULTIPLE_RATE_LIMITS.items():
             if relative_path.startswith(prefix):
@@ -160,6 +163,9 @@ class RateLimitApplyMiddleware(BaseHTTPMiddleware):
                         self.logger.warning(f"Rate limit exceeded for {user_id} on {endpoint}")
 
                         raise HTTPException(status_code=429, detail=error_message, headers=headers)
+
+                    # Store info about this successfully applied limit for potential refund
+                    applied_limits_for_this_request.append({"user_id": user_id, "endpoint_rule": endpoint, "limit_string_rule": rate_limit, "amount": 1})
 
                     # Store the limit info for the most restrictive limit (lowest remaining)
                     if most_restrictive_info is None or limit_info.get("remaining", 0) < most_restrictive_info.get("remaining", 0):
@@ -212,8 +218,16 @@ class RateLimitApplyMiddleware(BaseHTTPMiddleware):
 
                         raise HTTPException(status_code=429, detail=error_message, headers=headers)
 
+                    # Store info about this successfully applied limit for potential refund
+                    applied_limits_for_this_request.append({"user_id": user_id, "endpoint_rule": endpoint, "limit_string_rule": rate_limit, "amount": 1})
+
                     rate_limit_applied = True
                     break
+
+        # Store the list of successfully applied limits on request.state
+        if applied_limits_for_this_request:
+            request.state.applied_rate_limits_for_refund = applied_limits_for_this_request
+            self.logger.debug(f"Stored {len(applied_limits_for_this_request)} applied limits on request state for potential refund.")
 
         # Process the request normally
         return await call_next(request)  # type: ignore[no-any-return]
