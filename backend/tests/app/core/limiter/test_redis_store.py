@@ -473,3 +473,69 @@ def test_get_redis_client_connection_error() -> None:
             # The implementation returns None on error
             client = get_redis_client()
             assert client is None
+
+
+def test_decrement_specific_limit(redis_store: RedisStore, mock_redis_client: MagicMock):
+    """Test decrementing a specific rate limit."""
+    # Setup
+    user_id = "test_user_123"
+    endpoint_rule = "/concepts/generate"
+    limit_string_rule = "10/month"
+
+    # Mock the normalize_endpoint function since we're importing it inside the method
+    with patch("app.core.limiter.normalize_endpoint", return_value=endpoint_rule) as mock_normalize:
+        # Test case 1: Key exists and has a positive value
+        # Set up the redis.get to return a count of 5
+        mock_redis_client.get.return_value = "5"
+
+        # Call the method
+        result = redis_store.decrement_specific_limit(user_id=user_id, endpoint_rule=endpoint_rule, limit_string_rule=limit_string_rule, amount=1)
+
+        # Assertions
+        assert result is True  # Method should return True
+        mock_normalize.assert_called_once_with(endpoint_rule)
+        expected_key = f"test:{user_id}:{endpoint_rule}"
+        mock_redis_client.get.assert_called_once_with(expected_key)
+        mock_redis_client.decrby.assert_called_once_with(expected_key, 1)
+
+        # Reset mocks for next test
+        mock_redis_client.reset_mock()
+        mock_normalize.reset_mock()
+
+        # Test case 2: Key exists but has a value of 0
+        mock_redis_client.get.return_value = "0"
+
+        result = redis_store.decrement_specific_limit(user_id=user_id, endpoint_rule=endpoint_rule, limit_string_rule=limit_string_rule)
+
+        # Assertions for case 2
+        assert result is True  # Should still return True even if no decrement needed
+        mock_redis_client.get.assert_called_once()
+        mock_redis_client.decrby.assert_not_called()  # Should not call decrby
+
+        # Reset mocks for next test
+        mock_redis_client.reset_mock()
+        mock_normalize.reset_mock()
+
+        # Test case 3: Key doesn't exist
+        mock_redis_client.get.return_value = None
+
+        result = redis_store.decrement_specific_limit(user_id=user_id, endpoint_rule=endpoint_rule, limit_string_rule=limit_string_rule)
+
+        # Assertions for case 3
+        assert result is False  # Should return False if key doesn't exist
+        mock_redis_client.get.assert_called_once()
+        mock_redis_client.decrby.assert_not_called()
+
+        # Reset mocks for next test
+        mock_redis_client.reset_mock()
+        mock_normalize.reset_mock()
+
+        # Test case 4: Redis error
+        mock_redis_client.get.side_effect = Exception("Redis error")
+
+        result = redis_store.decrement_specific_limit(user_id=user_id, endpoint_rule=endpoint_rule, limit_string_rule=limit_string_rule)
+
+        # Assertions for case 4
+        assert result is False  # Should return False on error
+        mock_redis_client.get.assert_called_once()
+        mock_redis_client.decrby.assert_not_called()

@@ -373,3 +373,63 @@ class RedisStore:
         except Exception as e:
             self.logger.error(f"Redis clear_all failed: {e}")
             return False
+
+    def decrement_specific_limit(self, user_id: str, endpoint_rule: str, limit_string_rule: str, amount: int = 1) -> bool:
+        """Decrement a specific rate limit for a user and endpoint rule.
+
+        This method is used to refund rate limits when a request is rejected due to
+        business rules (e.g., a 409 Conflict when a user has an active task).
+
+        Args:
+            user_id: The user identifier
+            endpoint_rule: The endpoint rule (e.g., "/concepts/generate")
+            limit_string_rule: The limit string (e.g., "10/month")
+            amount: Amount to decrement, defaults to 1
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            from app.core.limiter import normalize_endpoint
+            from app.core.limiter.redis_store import mask_key
+
+            # Normalize the endpoint for consistent key generation
+            normalized_endpoint = normalize_endpoint(endpoint_rule)
+
+            # Construct the Redis key - same format as used in check_rate_limit
+            base_key = f"{user_id}:{normalized_endpoint}"
+            redis_key = self._make_key(base_key)
+
+            # Log the operation with masked key
+            self.logger.info(f"Attempting to decrement rate limit: user='{mask_key(user_id)}', endpoint='{endpoint_rule}', limit='{limit_string_rule}', amount={amount}")
+
+            # Check if the key exists and get its current value
+            current_value_str = self.redis.get(redis_key)
+            if current_value_str is None:
+                self.logger.warning(f"Rate limit key {mask_key(redis_key)} not found or expired. Cannot decrement.")
+                return False
+
+            # Convert to integer
+            if not isinstance(current_value_str, (str, int, bytes)):
+                self.logger.warning(f"Unexpected type for rate limit value: {type(current_value_str)}. Cannot decrement.")
+                return False
+
+            current_value = int(current_value_str)
+
+            # Only decrement if value is positive
+            if current_value <= 0:
+                self.logger.info(f"Rate limit key {mask_key(redis_key)} is already at or below 0 ({current_value}). No decrement needed.")
+                return True
+
+            # Calculate amount to decrement (don't go below 0)
+            to_decrement = min(amount, current_value)
+
+            # Decrement the counter
+            new_value = self.redis.decrby(redis_key, to_decrement)
+
+            self.logger.info(f"Successfully decremented key {mask_key(redis_key)} from {current_value} to {new_value}.")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to decrement specific rate limit for user {mask_key(user_id)} on {endpoint_rule}: {e}")
+            return False
