@@ -65,7 +65,7 @@ Create a new file, for example, `terraform/monitoring.tf`:
 # 1. Log-Based Metric for Task Failures
 resource "google_logging_metric" "concept_task_failures" {
   project     = var.project_id
-  name        = "${var.naming_prefix}-concept-task-failures-${var.environment}"
+  name        = "${var.naming_prefix}-task-fails-${var.environment}"
   description = "Counts errors logged by the Concept Visualizer worker function for specific task types."
   filter      = <<EOT
 resource.type="cloud_function"
@@ -132,7 +132,7 @@ resource "google_monitoring_notification_channel" "email_alert_channel" {
 # 3. Alerting Policy for Task Failures
 resource "google_monitoring_alert_policy" "concept_task_failure_alert" {
   project      = var.project_id
-  display_name = "${var.naming_prefix}-concept-task-failure-alert-${var.environment}"
+  display_name = "${var.naming_prefix}-task-fails-al-${var.environment}"
   combiner     = "OR" # How conditions are combined (OR for single condition)
 
   conditions {
