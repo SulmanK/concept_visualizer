@@ -288,3 +288,4 @@ Regular deployments via CI/CD (pushing code changes) will typically _not_ requir
 - Populate the secrets in Github
 - Poulate the secrets in vercel
 - Update the vercel.json (with the new ip)
+- Commit the changes for CI/CD
