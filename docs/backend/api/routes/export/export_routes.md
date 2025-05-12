@@ -32,7 +32,7 @@ async def export_action(
     current_user: Dict = Depends(get_current_user),
     export_service = Depends(get_export_service),
     image_persistence_service: ImagePersistenceServiceInterface = Depends(get_image_persistence_service),
-):
+) -> StreamingResponse:
     """Process an export request and return the file."""
 ```
 
@@ -45,14 +45,14 @@ This endpoint handles processing an export request, converting the image to the 
 - `image_identifier`: Path to the image to export
 - `storage_bucket`: Storage bucket where the image is stored (e.g., "concept-images", "palette-images")
 - `target_format`: Desired output format (e.g., "png", "jpg", "svg")
-- `target_size`: Optional desired dimensions (width, height)
+- `target_size`: Optional desired dimensions (width, height) or preset size ("small", "medium", "large", "original")
 - `svg_params`: Optional parameters for SVG export
 
 **Response:**
 
-- A streaming response containing the processed file with appropriate headers for download
-- Content-Type header set according to the target format
-- Content-Disposition header with appropriate filename
+- A `StreamingResponse` containing the processed file with appropriate headers for download
+- Content-Type header set according to the target format (e.g., "image/png")
+- Content-Disposition header with appropriate filename for attachment download
 
 ## Processing Flow
 
@@ -96,10 +96,7 @@ Authorization: Bearer {token}
   "image_identifier": "user123/concepts/logo_abc123.png",
   "storage_bucket": "concept-images",
   "target_format": "svg",
-  "target_size": {
-    "width": 512,
-    "height": 512
-  },
+  "target_size": "large",
   "svg_params": {
     "color_mode": "color",
     "path_precision": 1

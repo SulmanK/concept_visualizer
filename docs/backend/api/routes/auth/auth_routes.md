@@ -6,24 +6,6 @@ This documentation covers the authentication endpoints in the Concept Visualizer
 
 The `auth_routes.py` module provides endpoints for authentication with Supabase, including session checking, login, and logout functionality.
 
-## Models
-
-### AuthResponse
-
-```python
-class AuthResponse(BaseModel):
-    """Response model for authentication endpoints."""
-    user_id: str
-    token: str
-    expires_at: int
-```
-
-This Pydantic model defines the structure of authentication response data:
-
-- `user_id`: The unique identifier for the authenticated user
-- `token`: The JWT access token for API requests
-- `expires_at`: Timestamp (in seconds) when the token expires
-
 ## Available Endpoints
 
 ### Check Session

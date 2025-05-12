@@ -1,36 +1,36 @@
 # useConceptMutations Hooks
 
-The `useConceptMutations` module provides a collection of React Query mutation hooks for creating, updating, and managing concepts.
+The `useConceptMutations` module provides a collection of React Query mutation hooks for creating and refining concepts.
 
 ## Overview
 
-These hooks handle state management and API interactions for mutations that modify concept data. They provide a standardized way to create and update concepts, with built-in loading, error, and success states.
+These hooks handle state management and API interactions for mutations that modify concept data. They initiate asynchronous tasks for concept generation and refinement, with built-in loading, error handling, and integration with the task tracking system.
 
 ## Available Hooks
 
-### `useCreateConcept`
+### `useGenerateConceptMutation`
 
-Creates a new concept based on user input.
+Creates a new concept based on user input by initiating a backend task.
 
 #### Usage
 
 ```tsx
-import { useConceptMutations } from "hooks/useConceptMutations";
+import { useGenerateConceptMutation } from "hooks/useConceptMutations";
 
 function ConceptForm() {
   const [formData, setFormData] = useState({
-    logoDescription: "",
-    themeDescription: "",
+    logo_description: "",
+    theme_description: "",
   });
 
-  const { mutate, isPending, error } = useConceptMutations.useCreateConcept();
+  const { mutate, isPending, error } = useGenerateConceptMutation();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     mutate(formData, {
       onSuccess: (data) => {
-        // Navigate to the new concept detail page
-        router.push(`/concepts/${data.conceptId}`);
+        // data contains the task information
+        console.log(`Task initiated with ID: ${data.task_id || data.id}`);
       },
     });
   };
@@ -51,17 +51,15 @@ function ConceptForm() {
 
 The `mutate` function accepts:
 
-| Parameter | Type                   | Required | Description                  |
-| --------- | ---------------------- | -------- | ---------------------------- |
-| `data`    | `CreateConceptRequest` | Yes      | Concept creation data        |
-| `options` | `MutateOptions`        | No       | React Query mutation options |
+| Parameter | Type            | Required | Description                  |
+| --------- | --------------- | -------- | ---------------------------- |
+| `data`    | `PromptRequest` | Yes      | Concept creation data        |
+| `options` | `MutateOptions` | No       | React Query mutation options |
 
 ```tsx
-interface CreateConceptRequest {
-  logoDescription: string; // Description of the logo
-  themeDescription: string; // Description of the brand theme
-  name?: string; // Optional concept name (auto-generated if not provided)
-  tags?: string[]; // Optional tags for the concept
+interface PromptRequest {
+  logo_description: string; // Description of the logo
+  theme_description: string; // Description of the brand theme
 }
 ```
 
@@ -69,46 +67,50 @@ interface CreateConceptRequest {
 
 The hook returns a React Query mutation result with the following properties:
 
-| Property      | Type                                                                                      | Description                              |
-| ------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `mutate`      | `(data: CreateConceptRequest, options?: MutateOptions) => void`                           | Function to trigger the mutation         |
-| `mutateAsync` | `(data: CreateConceptRequest, options?: MutateOptions) => Promise<CreateConceptResponse>` | Async version of mutate                  |
-| `isPending`   | `boolean`                                                                                 | `true` while the mutation is in progress |
-| `isSuccess`   | `boolean`                                                                                 | `true` if the mutation succeeded         |
-| `isError`     | `boolean`                                                                                 | `true` if the mutation failed            |
-| `error`       | `Error \| null`                                                                           | Error object if the mutation failed      |
-| `data`        | `CreateConceptResponse \| undefined`                                                      | Response data if successful              |
+| Property      | Type                                                                      | Description                              |
+| ------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
+| `mutate`      | `(data: PromptRequest, options?: MutateOptions) => void`                  | Function to trigger the mutation         |
+| `mutateAsync` | `(data: PromptRequest, options?: MutateOptions) => Promise<TaskResponse>` | Async version of mutate                  |
+| `isPending`   | `boolean`                                                                 | `true` while the mutation is in progress |
+| `isSuccess`   | `boolean`                                                                 | `true` if the mutation succeeded         |
+| `isError`     | `boolean`                                                                 | `true` if the mutation failed            |
+| `error`       | `Error \| null`                                                           | Error object if the mutation failed      |
+| `data`        | `TaskResponse \| undefined`                                               | Response data if successful              |
 
 ```tsx
-interface CreateConceptResponse {
-  conceptId: string; // ID of the created concept
-  status: "pending" | "processing" | "complete"; // Status of the creation process
-  taskId?: string; // ID of the associated background task, if applicable
+interface TaskResponse {
+  id: string; // Task ID
+  task_id?: string; // Alternative task ID field (depends on API)
+  status: "pending" | "processing" | "completed" | "failed"; // Status of the task
+  type: "generate_concept" | "refine_concept"; // Type of task
+  result_id?: string; // ID of the result once completed
+  error_message?: string; // Error message if task failed
+  created_at: string; // Creation timestamp
+  updated_at: string; // Last update timestamp
 }
 ```
 
-### `useRefineConcept`
+### `useRefineConceptMutation`
 
-Refines an existing concept based on additional feedback.
+Refines an existing concept based on additional feedback by initiating a backend task.
 
 #### Usage
 
 ```tsx
-import { useConceptMutations } from "hooks/useConceptMutations";
+import { useRefineConceptMutation } from "hooks/useConceptMutations";
 
-function RefinementForm({ conceptId }) {
+function RefinementForm({ originalImageUrl }) {
   const [refinementData, setRefinementData] = useState({
-    additionalFeedback: "",
-    preserveElements: [],
-    changeRequests: [],
+    refinement_prompt: "",
+    preserve_aspects: [],
   });
 
-  const { mutate, isPending } = useConceptMutations.useRefineConcept();
+  const { mutate, isPending } = useRefineConceptMutation();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     mutate({
-      conceptId,
+      original_image_url: originalImageUrl,
       ...refinementData,
     });
   };
@@ -128,154 +130,37 @@ function RefinementForm({ conceptId }) {
 
 The `mutate` function accepts:
 
-| Parameter | Type                   | Required | Description                  |
-| --------- | ---------------------- | -------- | ---------------------------- |
-| `data`    | `RefineConceptRequest` | Yes      | Refinement data              |
-| `options` | `MutateOptions`        | No       | React Query mutation options |
+| Parameter | Type                | Required | Description                  |
+| --------- | ------------------- | -------- | ---------------------------- |
+| `data`    | `RefinementRequest` | Yes      | Refinement data              |
+| `options` | `MutateOptions`     | No       | React Query mutation options |
 
 ```tsx
-interface RefineConceptRequest {
-  conceptId: string; // ID of the concept to refine
-  additionalFeedback: string; // Additional feedback/instructions for refinement
-  preserveElements: string[]; // Elements to preserve in the refinement
-  changeRequests: string[]; // Specific change requests
+interface RefinementRequest {
+  original_image_url: string; // URL of the original image to refine
+  logo_description?: string; // Optional updated logo description
+  theme_description?: string; // Optional updated theme description
+  refinement_prompt: string; // Specific refinement instructions
+  preserve_aspects: string[]; // Elements to preserve in the refinement
 }
 ```
 
 #### Return Value
 
-Similar to `useCreateConcept`, but with a slightly different response type:
-
-```tsx
-interface RefineConceptResponse {
-  conceptId: string; // ID of the refined concept (same as input)
-  newVersionId: string; // ID of the new version created
-  status: "pending" | "processing" | "complete"; // Status of the refinement process
-  taskId?: string; // ID of the associated background task, if applicable
-}
-```
-
-### `useDeleteConcept`
-
-Deletes a concept.
-
-#### Usage
-
-```tsx
-import { useConceptMutations } from "hooks/useConceptMutations";
-
-function DeleteConceptButton({ conceptId }) {
-  const { mutate, isPending } = useConceptMutations.useDeleteConcept();
-
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this concept?")) {
-      mutate(conceptId, {
-        onSuccess: () => {
-          // Navigate back to concepts list
-          router.push("/concepts");
-        },
-      });
-    }
-  };
-
-  return (
-    <button
-      onClick={handleDelete}
-      disabled={isPending}
-      className="delete-button"
-    >
-      {isPending ? "Deleting..." : "Delete Concept"}
-    </button>
-  );
-}
-```
-
-#### Parameters
-
-The `mutate` function accepts:
-
-| Parameter   | Type            | Required | Description                  |
-| ----------- | --------------- | -------- | ---------------------------- |
-| `conceptId` | `string`        | Yes      | ID of the concept to delete  |
-| `options`   | `MutateOptions` | No       | React Query mutation options |
-
-#### Return Value
-
-Standard React Query mutation result with a simple success response:
-
-```tsx
-interface DeleteConceptResponse {
-  success: boolean; // Whether the deletion was successful
-  message?: string; // Optional message about the deletion
-}
-```
-
-### `useUpdateConcept`
-
-Updates concept metadata such as name, tags, or description.
-
-#### Usage
-
-```tsx
-import { useConceptMutations } from "hooks/useConceptMutations";
-
-function EditConceptForm({ concept }) {
-  const [formData, setFormData] = useState({
-    name: concept.name,
-    tags: concept.tags,
-  });
-
-  const { mutate, isPending } = useConceptMutations.useUpdateConcept();
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    mutate({
-      conceptId: concept.id,
-      ...formData,
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {/* Form fields */}
-      <button type="submit" disabled={isPending}>
-        {isPending ? "Saving..." : "Save Changes"}
-      </button>
-    </form>
-  );
-}
-```
-
-#### Parameters
-
-The `mutate` function accepts:
-
-| Parameter | Type                   | Required | Description                  |
-| --------- | ---------------------- | -------- | ---------------------------- |
-| `data`    | `UpdateConceptRequest` | Yes      | Update data                  |
-| `options` | `MutateOptions`        | No       | React Query mutation options |
-
-```tsx
-interface UpdateConceptRequest {
-  conceptId: string; // ID of the concept to update
-  name?: string; // New name for the concept
-  tags?: string[]; // New tags for the concept
-  description?: string; // New description for the concept
-  favorite?: boolean; // Whether the concept is favorited
-}
-```
+Similar to `useGenerateConceptMutation`, this hook returns a standard React Query mutation result with a `TaskResponse` as the success data type.
 
 ## Implementation Details
 
-These hooks are built with React Query for data mutations. Key aspects include:
+These hooks are built with React Query for data mutations and integrate with several system components:
 
-- **Optimistic Updates**: Some mutations use optimistic updates to provide immediate UI feedback
-- **Cache Invalidation**: Successful mutations invalidate related queries to ensure data consistency
-- **Error Handling**: Mutations capture and expose errors for UI handling
-- **Loading States**: Mutations track loading state with `isPending`
-- **Retry Logic**: Failed mutations can be automatically retried
+- **Task Context**: Both hooks update the task context to track the background processing
+- **Rate Limit Management**: Mutations decrement rate limits via `useRateLimitsDecrement`
+- **Error Handling**: Specialized error handling for network and rate limit issues
+- **Network Status**: Checks online status before initiating API calls
+- **Query Cache Management**: Cleans up the mutation cache after completion
 
 ## Related Hooks
 
 - [useConceptQueries](./useConceptQueries.md) - For fetching concept data
-- [useExportImageMutation](./useExportImageMutation.md) - For exporting concept images
+- [useTask](./useTask.md) - For tracking and updating task status
+- [useRateLimits](./useRateLimits.md) - For managing API rate limits

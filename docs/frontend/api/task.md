@@ -6,208 +6,208 @@ The Task API module provides functions for interacting with task-related endpoin
 
 The Task API allows clients to:
 
-- Retrieve task information
-- Subscribe to task updates
-- Check task status
+- Retrieve task status
 - Cancel ongoing tasks
+
+> ⚠️ **Note**: The direct API functions in `api/task.ts` are now deprecated and new code should use the React Query hooks in `hooks/useTaskQueries.ts` instead.
 
 ## Types
 
 ```tsx
-// Task status enumeration
-export enum TaskStatus {
-  PENDING = "pending",
-  PROCESSING = "processing",
-  COMPLETED = "completed",
-  FAILED = "failed",
-  CANCELLED = "cancelled",
-}
+/**
+ * Task status type
+ */
+export type TaskStatus = "pending" | "processing" | "completed" | "failed";
 
-// Task object interface
-export interface Task {
+/**
+ * Task response model
+ */
+export interface TaskResponse {
   id: string;
+  task_id?: string;
   status: TaskStatus;
-  type: string;
-  progress: number;
-  result?: Record<string, any>;
-  error?: string;
-  createdAt: string;
-  updatedAt: string;
-  estimatedCompletionTime?: string;
-}
-
-// Error response
-export interface ErrorResponse {
-  message: string;
-  code: string;
+  type: "generate_concept" | "refine_concept";
+  result_id?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
 }
 ```
 
 ## API Functions
 
-### Get Task
+### Fetch Task Status
 
 ```tsx
 /**
- * Retrieves a task by its ID
- * @param taskId - The unique identifier of the task
- * @returns The task object
- * @throws ApiError if the request fails
+ * @deprecated Use useTaskStatusQuery from src/hooks/useTaskQueries.ts instead
+ * Fetches the status of a task from the API
+ * @param taskId The ID of the task to fetch
+ * @returns The task response object
  */
-export const getTask = async (taskId: string): Promise<Task> => {
-  try {
-    return await apiClient.get<Task>(`/api/tasks/${taskId}`);
-  } catch (error) {
-    throw handleApiError(error, "Failed to retrieve task");
+export async function fetchTaskStatus(taskId: string): Promise<TaskResponse> {
+  if (!taskId) {
+    throw new Error("No task ID provided for status check");
   }
-};
-```
 
-### Get Task Status
+  console.log(`[API] Fetching status for task ${taskId}`);
+  const response = await apiClient.get<TaskResponse>(
+    API_ENDPOINTS.TASK_STATUS_BY_ID(taskId),
+  );
 
-```tsx
-/**
- * Retrieves the current status of a task
- * @param taskId - The unique identifier of the task
- * @returns The task status
- * @throws ApiError if the request fails
- */
-export const getTaskStatus = async (taskId: string): Promise<TaskStatus> => {
-  try {
-    const task = await apiClient.get<Task>(`/api/tasks/${taskId}/status`);
-    return task.status;
-  } catch (error) {
-    throw handleApiError(error, "Failed to retrieve task status");
+  // Normalize the response by ensuring the id field is set properly
+  if (response.data.task_id && !response.data.id) {
+    response.data.id = response.data.task_id;
   }
-};
+
+  console.log(
+    `[API] Received status for task ${taskId}: ${response.data.status}`,
+  );
+  return response.data;
+}
 ```
 
 ### Cancel Task
 
 ```tsx
 /**
- * Cancels an ongoing task
- * @param taskId - The unique identifier of the task to cancel
- * @returns The updated task with cancelled status
- * @throws ApiError if the request fails
+ * @deprecated Use useTaskCancelMutation from src/hooks/useTaskQueries.ts instead
+ * Cancels a running task
+ * @param taskId The ID of the task to cancel
+ * @returns The updated task response
  */
-export const cancelTask = async (taskId: string): Promise<Task> => {
-  try {
-    return await apiClient.post<Task>(`/api/tasks/${taskId}/cancel`);
-  } catch (error) {
-    throw handleApiError(error, "Failed to cancel task");
+export async function cancelTask(taskId: string): Promise<TaskResponse> {
+  if (!taskId) {
+    throw new Error("No task ID provided for cancellation");
   }
-};
+
+  console.log(`[API] Cancelling task ${taskId}`);
+  const response = await apiClient.post<TaskResponse>(
+    API_ENDPOINTS.TASK_CANCEL(taskId),
+    {},
+  );
+  return response.data;
+}
 ```
 
-### Get Task Result
+## React Query Hooks
+
+For new code, use the React Query hooks in `hooks/useTaskQueries.ts` instead of the direct API functions.
+
+### useTaskStatusQuery
 
 ```tsx
 /**
- * Retrieves the result of a completed task
- * @param taskId - The unique identifier of the task
- * @returns The task result data
- * @throws ApiError if the task is not completed or the request fails
+ * Hook to fetch and subscribe to task status updates
+ *
+ * @param taskId The ID of the task to fetch
+ * @param options Additional React Query options
+ * @returns Query result with task status data
  */
-export const getTaskResult = async (
-  taskId: string,
-): Promise<Record<string, any>> => {
-  try {
-    const task = await apiClient.get<Task>(`/api/tasks/${taskId}/result`);
-    if (task.status !== TaskStatus.COMPLETED) {
-      throw new Error("Task is not completed");
-    }
-    return task.result || {};
-  } catch (error) {
-    throw handleApiError(error, "Failed to retrieve task result");
-  }
-};
+export function useTaskStatusQuery(
+  taskId: string | undefined,
+  options: UseTaskStatusOptions = {},
+): UseQueryResult<TaskResponse, Error> {
+  // Query implementation...
+}
+```
+
+### useTaskCancelMutation
+
+```tsx
+/**
+ * Hook to cancel a task
+ *
+ * @returns Mutation result for task cancellation
+ */
+export function useTaskCancelMutation(): UseMutationResult<
+  TaskResponse,
+  Error,
+  string,
+  unknown
+> {
+  // Mutation implementation...
+}
 ```
 
 ## Usage Examples
 
-### Retrieving and Monitoring a Task
+### Using Task Hooks with React Query
 
 ```tsx
-import { getTask, getTaskStatus, TaskStatus } from "api/task";
+import {
+  useTaskStatusQuery,
+  useTaskCancelMutation,
+} from "hooks/useTaskQueries";
 
-// Fetch a task
-const fetchAndMonitorTask = async (taskId: string) => {
-  try {
-    // Get initial task data
-    const task = await getTask(taskId);
-    console.log("Task retrieved:", task);
+function TaskMonitor({ taskId }) {
+  // Subscribe to task status updates
+  const {
+    data: task,
+    isLoading,
+    error,
+  } = useTaskStatusQuery(taskId, {
+    // Poll every 2 seconds while in pending or processing state
+    refetchInterval: (data) =>
+      data?.status === "pending" || data?.status === "processing"
+        ? 2000
+        : false,
+  });
 
-    // Set up polling if task is not complete
-    if (
-      task.status === TaskStatus.PENDING ||
-      task.status === TaskStatus.PROCESSING
-    ) {
-      const interval = setInterval(async () => {
-        const status = await getTaskStatus(taskId);
-        console.log("Task status:", status);
+  // Set up cancellation mutation
+  const { mutate: cancelTask, isPending: isCancelling } =
+    useTaskCancelMutation();
 
-        if (
-          status === TaskStatus.COMPLETED ||
-          status === TaskStatus.FAILED ||
-          status === TaskStatus.CANCELLED
-        ) {
-          clearInterval(interval);
-
-          // Get final task data if completed
-          if (status === TaskStatus.COMPLETED) {
-            const updatedTask = await getTask(taskId);
-            console.log("Completed task:", updatedTask);
-          }
-        }
-      }, 2000); // Poll every 2 seconds
+  // Handle cancel click
+  const handleCancel = () => {
+    if (taskId) {
+      cancelTask(taskId);
     }
-  } catch (error) {
-    console.error("Error monitoring task:", error);
-  }
-};
+  };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!task) return <div>No task found</div>;
+
+  return (
+    <div>
+      <h2>Task Status: {task.status}</h2>
+      <p>Type: {task.type}</p>
+      <p>Created: {new Date(task.created_at).toLocaleString()}</p>
+      {task.error_message && <p>Error: {task.error_message}</p>}
+
+      {(task.status === "pending" || task.status === "processing") && (
+        <button onClick={handleCancel} disabled={isCancelling}>
+          {isCancelling ? "Cancelling..." : "Cancel Task"}
+        </button>
+      )}
+
+      {task.status === "completed" && task.result_id && (
+        <div>
+          <p>Result ID: {task.result_id}</p>
+          {/* Display completed task result */}
+        </div>
+      )}
+    </div>
+  );
+}
 ```
 
-### Cancelling a Task
+## API Endpoints
+
+Task-related API endpoints are defined in `config/apiEndpoints.ts`:
 
 ```tsx
-import { cancelTask } from "api/task";
-
-const handleCancelTask = async (taskId: string) => {
-  try {
-    const cancelledTask = await cancelTask(taskId);
-    console.log("Task cancelled:", cancelledTask);
-    return cancelledTask;
-  } catch (error) {
-    console.error("Failed to cancel task:", error);
-    throw error;
-  }
+export const API_ENDPOINTS = {
+  // Task endpoints
+  TASK_STATUS_BY_ID: (taskId: string) => `/tasks/${taskId}`,
+  TASK_CANCEL: (taskId: string) => `/tasks/${taskId}/cancel`,
+  // ... other endpoints
 };
 ```
 
-## Error Handling
+## Related
 
-The Task API handles errors consistently by:
-
-1. Catching any errors from the API client
-2. Transforming them into standardized ApiError objects with meaningful messages
-3. Preserving the original error information where possible
-
-```tsx
-const handleApiError = (error: any, defaultMessage: string): never => {
-  if (error instanceof ApiError) {
-    throw error;
-  }
-
-  if (error.response) {
-    const errorData = error.response.data as ErrorResponse;
-    throw new ApiError(
-      errorData.message || defaultMessage,
-      error.response.status,
-      errorData.code,
-    );
-  }
-
-  throw new ApiError(defaultMessage, 500);
-};
-```
+- [useTask](../hooks/useTask.md) - Task context and hooks
+- [useTaskQueries](../hooks/useTaskQueries.md) - React Query hooks for tasks
+- [useConceptMutations](../hooks/useConceptMutations.md) - Mutation hooks that initiate tasks

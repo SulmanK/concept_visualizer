@@ -53,8 +53,8 @@ Before using these Terraform configurations, ensure you have:
 - `iam.tf`: IAM roles and permissions
 - `secrets.tf`: Secret Manager configuration (container setup only, no values)
 - `artifact_registry.tf`: Artifact Registry setup
-- `pubsub_lite.tf`: Pub/Sub Lite topics and subscriptions
-- `cloud_run.tf`: Cloud Run worker service
+- `pubsub.tf`: Pub/Sub topics and subscriptions
+- `cloud_function.tf`: Cloud Functions (2nd Gen) worker configuration
 - `compute.tf`: Compute Engine VM for API service
 - `outputs.tf`: Output values after deployment
 - `environments/dev.tfvars`: Development environment variables (not committed)

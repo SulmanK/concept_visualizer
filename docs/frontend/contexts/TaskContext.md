@@ -67,7 +67,7 @@ interface TaskContextType {
 
 ## Usage
 
-The context provides specialized selector hooks for optimal performance:
+The context provides specialized selector hooks from `hooks/useTask.ts` for optimal performance:
 
 ```tsx
 import {
@@ -81,18 +81,11 @@ import {
   useTaskInitiating,
   useActiveTaskId,
   useOnTaskCleared,
-} from "../contexts/TaskContext";
+} from "../hooks/useTask";
 
 // Component that starts a task
 function ConceptGenerator() {
-  const setActiveTask = useContextSelector(
-    TaskContext,
-    (state) => state?.setActiveTask,
-  );
-  const setIsTaskInitiating = useContextSelector(
-    TaskContext,
-    (state) => state?.setIsTaskInitiating,
-  );
+  const { setActiveTask, setIsTaskInitiating } = useTaskContext();
 
   const handleGenerate = async () => {
     // Mark that we're initiating a task before we have the ID
@@ -156,11 +149,11 @@ function ResultDisplay() {
 
 ### Real-time Updates
 
-The `TaskContext` uses Supabase Realtime for WebSocket-based task updates:
+The `TaskContext` uses polling with React Query for task updates:
 
-- Establishes a subscription to the task when a task ID is set
-- Listens for PostgreSQL changes to the task record
-- Updates the local state and React Query cache when changes occur
+- Establishes a React Query subscription to the task when a task ID is set
+- Polls the server for changes to the task status
+- Updates the local state when changes occur
 - Manages cleanup of subscriptions when tasks change
 
 ### Task Lifecycle Management
@@ -196,6 +189,8 @@ unsubscribe();
 
 ## Exposed Hooks
 
+The following hooks are available in `hooks/useTask.ts`:
+
 | Hook                    | Returns                                | Description                     |
 | ----------------------- | -------------------------------------- | ------------------------------- |
 | `useTaskContext()`      | `TaskContextType`                      | Complete task context           |
@@ -208,6 +203,7 @@ unsubscribe();
 | `useTaskInitiating()`   | `boolean`                              | Whether a task is initiating    |
 | `useActiveTaskId()`     | `string \| null`                       | Current active task ID          |
 | `useOnTaskCleared()`    | `(listener: () => void) => () => void` | Task cleared event subscription |
+| `useActiveTaskData()`   | `TaskResponse \| null`                 | Current active task data        |
 
 ## Task Response Structure
 
@@ -216,12 +212,11 @@ The `TaskResponse` object contains:
 ```typescript
 interface TaskResponse {
   id: string; // Task ID
-  status: string; // Task status (pending, processing, completed, failed)
-  progress?: number; // Optional progress percentage (0-100)
-  message?: string; // Optional status message
+  task_id?: string; // Alternative task ID field (depends on API)
+  status: "pending" | "processing" | "completed" | "failed"; // Task status
+  type: "generate_concept" | "refine_concept"; // Type of task
   result_id?: string; // Optional result ID for completed tasks
-  result?: any; // Optional result data
-  error?: string; // Optional error message
+  error_message?: string; // Optional error message
   created_at: string; // Creation timestamp
   updated_at: string; // Last update timestamp
 }
@@ -229,6 +224,6 @@ interface TaskResponse {
 
 ## Related
 
-- [useTaskSubscription](../hooks/useTaskSubscription.md) - Hook used for real-time task updates
+- [useTask](../hooks/useTask.md) - Hooks for accessing task context data
 - [useTaskQueries](../hooks/useTaskQueries.md) - Hooks for task API interactions
-- [TaskStatusBar](../components/TaskStatusBar.md) - UI component for displaying task status
+- [useConceptMutations](../hooks/useConceptMutations.md) - Mutation hooks that initiate tasks

@@ -209,6 +209,41 @@ def clear_all(self) -> bool:
 
 These methods provide maintenance capabilities for resetting counters.
 
+#### Rate Limit Refunds
+
+```python
+def decrement_specific_limit(
+    self,
+    user_id: str,
+    endpoint_rule: str,
+    limit_string_rule: str,
+    amount: int = 1
+) -> bool:
+    """
+    Decrement a specific rate limit for a user and endpoint rule.
+
+    This method is used to refund rate limits when a request is rejected due to
+    business rules (e.g., a 409 Conflict when a user has an active task).
+
+    Args:
+        user_id: The user identifier
+        endpoint_rule: The endpoint rule (e.g., "/concepts/generate")
+        limit_string_rule: The limit string (e.g., "10/month")
+        amount: Amount to decrement, defaults to 1
+
+    Returns:
+        True if successful, False otherwise
+    """
+    # Implementation...
+```
+
+This method provides the ability to refund rate limits in specific scenarios:
+
+- Used when a request fails due to business logic constraints (e.g., 409 Conflict)
+- Decrements the counter by the specified amount (default 1)
+- Prevents users from losing rate-limited attempts unfairly
+- Ensures the counter never goes below zero
+
 ## Usage Examples
 
 ### Creating a Redis Store
@@ -244,6 +279,23 @@ else:
         "error": "Rate limit exceeded",
         "quota": quota
     }
+```
+
+### Refunding Rate Limits for Business Logic Conflicts
+
+```python
+# When a 409 Conflict (or similar business rule rejection) occurs
+user_id = "user:123"
+endpoint = "/concepts/generate"
+limit_rule = "10/month"
+
+# Refund the rate limit
+success = store.decrement_specific_limit(user_id, endpoint, limit_rule)
+
+if success:
+    logger.info(f"Rate limit refunded for user {user_id} on {endpoint}")
+else:
+    logger.warning(f"Failed to refund rate limit for user {user_id} on {endpoint}")
 ```
 
 ### Setting Rate Limit Headers
