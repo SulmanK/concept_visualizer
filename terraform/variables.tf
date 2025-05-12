@@ -108,3 +108,20 @@ variable "github_repo" {
   type        = string
   default     = ""
 }
+
+variable "alert_email_address" {
+  description = "The email address to send monitoring alerts to."
+  type        = string
+}
+
+variable "alert_alignment_period" {
+  description = "The alignment period for the task failure alert (e.g., '300s' for 5 minutes)."
+  type        = string
+  default     = "300s" # 5 minutes
+}
+
+variable "alert_duration" {
+  description = "How long the failure condition must persist before an alert is sent (e.g., '60s'). Use '0s' to alert on the first instance within an alignment period."
+  type        = string
+  default     = "0s" # Alert immediately on first failure in an alignment period
+}

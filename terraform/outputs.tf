@@ -84,3 +84,24 @@ output "project_id" {
   description = "GCP Project ID."
   value       = var.project_id
 }
+
+# Monitoring outputs
+output "log_metric_name" {
+  description = "The name of the log-based metric for task failures"
+  value       = google_logging_metric.concept_task_failures.name
+}
+
+output "alert_policy_name" {
+  description = "The name of the alert policy for task failures"
+  value       = google_monitoring_alert_policy.concept_task_failure_alert.display_name
+}
+
+output "notification_channel_name" {
+  description = "The name of the notification channel for alerts"
+  value       = google_monitoring_notification_channel.email_alert_channel.display_name
+}
+
+output "notification_channel_verification_note" {
+  description = "Important note about verifying the notification channel"
+  value       = "IMPORTANT: Check your email (${var.alert_email_address}) for a verification link from Google Cloud Monitoring. You must click this link to activate the notification channel!"
+}

@@ -12,3 +12,6 @@ worker_min_instances            = 0
 worker_max_instances            = 3
 github_repo                     = "your-github-username/concept_visualizer" # <-- REPLACE with your GitHub repository name
 # Add other dev vars from variables.tf if needed
+alert_email_address         = "your-main-dev-alert-email@example.com" # <-- REPLACE
+alert_alignment_period      = "300s" # 5 minutes
+alert_duration              = "60s"  # Alert if condition met for 1 minute
