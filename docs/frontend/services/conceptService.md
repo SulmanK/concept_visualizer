@@ -1,6 +1,6 @@
 # conceptService
 
-The `conceptService` provides a specialized API interface for interacting with concept-related endpoints. It encapsulates the logic for creating, fetching, and managing visual concepts within the application.
+The `conceptService` provides a specialized API interface for interacting with concept-related endpoints. It encapsulates the logic for fetching and retrieving visual concepts within the application.
 
 ## Overview
 
@@ -8,7 +8,6 @@ This service acts as a facade over the general `apiClient`, providing concept-sp
 
 - Fetching recent concepts for the current user
 - Retrieving detailed concept information
-- Facilitating the concept generation workflow
 - Logging and error handling specific to concept operations
 
 ## API Methods
@@ -99,31 +98,25 @@ The service operates with the following data structures:
 interface ConceptData {
   id: string;
   user_id: string;
-  prompt_text: string;
-  theme_text?: string;
+  logo_description: string;
+  theme_description: string;
+  image_path: string;
+  image_url: string;
   created_at: string;
-  updated_at: string;
-
-  // Main concept image
-  image_url?: string;
-
-  // Color variations of the concept
-  color_variations?: ColorVariation[];
-
-  // Additional metadata
-  metadata?: {
-    generation_params?: any;
-    tags?: string[];
-    [key: string]: any;
-  };
+  color_variations?: ColorVariationData[];
+  storage_path?: string;
 }
 
-interface ColorVariation {
+interface ColorVariationData {
   id: string;
   concept_id: string;
+  palette_name: string;
   colors: string[];
-  image_url?: string;
+  description?: string;
+  image_path: string;
+  image_url: string;
   created_at: string;
+  storage_path?: string;
 }
 ```
 
@@ -147,20 +140,61 @@ The service includes detailed logging for debugging purposes:
 
 ## Usage with React Hooks
 
-This service is typically used with custom hooks for data fetching:
+This service is used by the React Query hooks in `useConceptQueries.ts`:
 
 ```typescript
-// In a custom hook
+// In useConceptQueries.ts
 import { useQuery } from "@tanstack/react-query";
-import { fetchRecentConceptsFromApi } from "../services/conceptService";
+import {
+  fetchRecentConceptsFromApi,
+  fetchConceptDetailFromApi,
+} from "../services/conceptService";
 
-export function useRecentConcepts(userId: string, limit: number = 10) {
-  return useQuery({
+export function useRecentConcepts(
+  userId: string | undefined,
+  limit: number = 10,
+): UseQueryResult<ConceptData[], Error> {
+  return useQuery<ConceptData[], Error>({
     queryKey: ["concepts", "recent", userId, limit],
-    queryFn: () => fetchRecentConceptsFromApi(userId, limit),
-    staleTime: 60000, // 1 minute
+    queryFn: async () => {
+      if (!userId) {
+        return [];
+      }
+      return fetchRecentConceptsFromApi(userId, limit);
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000, // 1 minute
   });
 }
+
+export function useConceptDetail(
+  conceptId: string | undefined,
+  userId: string | undefined,
+): UseQueryResult<ConceptData | null, Error> {
+  return useQuery<ConceptData | null, Error>({
+    queryKey: ["concepts", "detail", conceptId, userId],
+    queryFn: async () => {
+      if (!conceptId || !userId) {
+        return null;
+      }
+      return fetchConceptDetailFromApi(conceptId);
+    },
+    enabled: !!conceptId && !!userId,
+  });
+}
+```
+
+## API Endpoints
+
+The service uses the following API endpoints defined in `config/apiEndpoints.ts`:
+
+```typescript
+export const API_ENDPOINTS = {
+  // Concept endpoints
+  RECENT_CONCEPTS: "/storage/recent",
+  CONCEPT_DETAIL: (conceptId: string) => `/storage/concept/${conceptId}`,
+  // ...other endpoints
+};
 ```
 
 ## Related

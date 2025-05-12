@@ -20,11 +20,12 @@ The module defines several configuration constants:
 
 ```python
 RATE_LIMIT_RULES = {
+    "/concepts/generate": "10/month",
     "/concepts/generate-with-palettes": "10/month",
     "/concepts/refine": "10/month",
     "/concepts/store": "10/month",
     "/storage/store": "10/month",
-    "/storage/recent": "30/minute",
+    "/storage/recent": "60/minute",
     "/storage/concept": "30/minute",
     "/export/process": "50/hour",
 }
@@ -146,6 +147,54 @@ Retry-After: 1672531200
 ```
 
 The response includes a `Retry-After` header indicating when the client can retry the request.
+
+## Rate Limit Refund for 409 Conflicts
+
+The middleware now supports refunding rate limits when a request is rejected due to business logic constraints, such as a 409 Conflict when a user already has an active task.
+
+### How Rate Limit Refund Works
+
+1. The middleware stores information about applied rate limits in the request state:
+
+```python
+# Store applied rate limit details for potential refund
+request.state.applied_rate_limits_for_refund = applied_limits
+```
+
+2. When business logic detects a conflict, it refunds the rate limit:
+
+```python
+# In a route handler when a 409 Conflict occurs
+applied_limits_to_refund = getattr(request.state, "applied_rate_limits_for_refund", [])
+if applied_limits_to_refund:
+    # Get Redis store instance
+    redis_store_instance = get_redis_store_from_app(request.app)
+
+    # Refund each applied limit
+    for limit_to_refund in applied_limits_to_refund:
+        success = redis_store_instance.decrement_specific_limit(
+            user_id=user_id,
+            endpoint_rule=limit_to_refund["endpoint_rule"],
+            limit_string_rule=limit_to_refund["limit_string_rule"],
+            amount=limit_to_refund["amount"],
+        )
+```
+
+### Benefits
+
+- Prevents users from losing rate-limited attempts unfairly
+- Improves user experience during concurrent operations
+- Maintains the integrity of the rate limiting system
+- Provides accurate rate limit information in response headers
+
+### Implementation Details
+
+The feature has been implemented in endpoints that check for active tasks, such as:
+
+- Concept generation endpoints
+- Concept refinement endpoints
+
+These endpoints now check for a 409 Conflict condition (user already has an active task) before consuming a rate limit, and refund the rate limit if this condition is met.
 
 ## Integration with Headers Middleware
 

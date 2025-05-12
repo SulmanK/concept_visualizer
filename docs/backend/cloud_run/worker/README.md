@@ -2,7 +2,11 @@
 
 ## Overview
 
-The Worker module is the core component of the Cloud Run infrastructure. It processes tasks from a Pub/Sub queue, dispatches them to the appropriate task processor, and manages their lifecycle.
+The Worker module is the core component of the Cloud Function infrastructure. It processes tasks from a Pub/Sub queue, dispatches them to the appropriate task processor, and manages their lifecycle.
+
+## Deployment
+
+This worker is deployed as a **Google Cloud Function (2nd Gen)** triggered by Pub/Sub messages. The deployment uses the source-based deployment method with the `./backend` directory as the source and `handle_pubsub` as the entry point.
 
 ## Key Components
 
@@ -38,7 +42,7 @@ Error handling occurs at multiple levels:
 
 ## Health Checks
 
-The worker exposes an HTTP endpoint at `/` that returns a simple health status response, used by Cloud Run to verify instance health.
+The worker exposes an HTTP endpoint at `/` that returns a simple health status response, used by Cloud Functions to verify instance health.
 
 ## Configuration
 

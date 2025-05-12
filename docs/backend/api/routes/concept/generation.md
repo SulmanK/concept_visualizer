@@ -23,17 +23,37 @@ class PromptRequest(BaseModel):
 ### Response Models
 
 ```python
-class GenerationResponse(BaseModel):
+class ColorPalette(APIBaseModel):
+    """Color palette model containing hex color codes."""
+    primary: str
+    secondary: str
+    accent: str
+    background: str
+    text: str
+    additional_colors: List[str] = []
+```
+
+```python
+class PaletteVariation(APIBaseModel):
+    """Model for a color palette variation with its own image."""
+    name: str
+    colors: List[str]
+    description: Optional[str] = None
+    image_url: HttpUrl
+```
+
+```python
+class GenerationResponse(APIBaseModel):
     """Response model for concept generation."""
     prompt_id: str
-    image_url: str
+    image_url: HttpUrl
     logo_description: str
     theme_description: str
     created_at: str
-    color_palette: Optional[Dict[str, Any]] = None
-    original_image_url: Optional[str] = None
+    color_palette: Optional[ColorPalette] = None  # Deprecated format, kept for backward compatibility
+    original_image_url: Optional[HttpUrl] = None
     refinement_prompt: Optional[str] = None
-    variations: List[Dict[str, Any]] = []
+    variations: List[PaletteVariation] = []  # List of palette variations with distinct images
 ```
 
 ```python
@@ -42,7 +62,7 @@ class TaskResponse(BaseModel):
     task_id: str
     status: str
     message: Optional[str] = None
-    type: Optional[str] = None
+    type: str
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -90,10 +110,24 @@ Content-Type: application/json
   "logo_description": "A modern coffee shop logo with coffee beans",
   "theme_description": "Warm brown tones, natural feeling",
   "created_at": "2023-01-01T12:00:00.123456",
-  "color_palette": null,
+  "color_palette": {
+    "primary": "#4A2C2A",
+    "secondary": "#6B4226",
+    "accent": "#D4A762",
+    "background": "#F5EFE7",
+    "text": "#2D2424",
+    "additional_colors": []
+  },
   "original_image_url": null,
   "refinement_prompt": null,
-  "variations": []
+  "variations": [
+    {
+      "palette_name": "Primary",
+      "colors": ["#4A2C2A", "#6B4226", "#D4A762", "#F5EFE7", "#2D2424"],
+      "description": "Warm coffee tones",
+      "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456-v1.png"
+    }
+  ]
 }
 ```
 

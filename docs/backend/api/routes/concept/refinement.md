@@ -11,20 +11,22 @@ The `refinement.py` module provides endpoints for refining existing visual conce
 ### Request Model
 
 ```python
-class RefinementRequest(BaseModel):
+class RefinementRequest(APIBaseModel):
     """Request model for concept refinement."""
-    original_image_url: str
+    original_image_url: HttpUrl
     refinement_prompt: str
     logo_description: Optional[str] = None
     theme_description: Optional[str] = None
+    preserve_aspects: List[str] = []  # Valid values: "colors", "layout", "style", "shapes"
 ```
 
 - `original_image_url`: URL of the concept image to refine
 - `refinement_prompt`: Instructions for how to refine the concept
-- `logo_description`: Original logo description (optional)
-- `theme_description`: Original theme description (optional)
+- `logo_description`: Updated logo description (optional)
+- `theme_description`: Updated theme description (optional)
+- `preserve_aspects`: List of aspects to preserve from the original design
 
-### Response Model
+### Response Models
 
 ```python
 class TaskResponse(BaseModel):
@@ -32,7 +34,7 @@ class TaskResponse(BaseModel):
     task_id: str
     status: str
     message: Optional[str] = None
-    type: Optional[str] = None
+    type: str
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     completed_at: Optional[str] = None
@@ -40,6 +42,25 @@ class TaskResponse(BaseModel):
     result_id: Optional[str] = None
     image_url: Optional[str] = None
     error_message: Optional[str] = None
+```
+
+When the refinement task is completed, the task result will be of type `RefinementResponse`:
+
+```python
+class RefinementResponse(GenerationResponse):
+    """Response model specifically for concept refinement."""
+    original_image_url: HttpUrl  # URL of the original image that was refined
+    refinement_prompt: str  # Prompt used for refinement
+    original_concept_id: Optional[str] = None  # ID of the original concept
+
+    # Inherits from GenerationResponse
+    prompt_id: str
+    image_url: HttpUrl
+    logo_description: str
+    theme_description: str
+    created_at: str
+    color_palette: Optional[ColorPalette] = None
+    variations: List[PaletteVariation] = []
 ```
 
 ## Available Endpoints
@@ -69,7 +90,8 @@ Content-Type: application/json
   "original_image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
   "refinement_prompt": "Make the logo more minimalist and use lighter shades of brown",
   "logo_description": "A modern coffee shop logo with coffee beans",
-  "theme_description": "Warm brown tones, natural feeling"
+  "theme_description": "Warm brown tones, natural feeling",
+  "preserve_aspects": ["colors", "style"]
 }
 ```
 
@@ -88,7 +110,8 @@ Content-Type: application/json
     "original_image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
     "refinement_prompt": "Make the logo more minimalist and use lighter shades of brown",
     "logo_description": "A modern coffee shop logo with coffee beans",
-    "theme_description": "Warm brown tones, natural feeling"
+    "theme_description": "Warm brown tones, natural feeling",
+    "preserve_aspects": ["colors", "style"]
   },
   "result_id": null,
   "image_url": null,
@@ -119,7 +142,8 @@ If a refinement task is already in progress for the user, the endpoint returns a
     "original_image_url": "https://storage.example.com/concepts/1234-5678-9012-3456.png",
     "refinement_prompt": "Make the logo more minimalist",
     "logo_description": "A modern coffee shop logo with coffee beans",
-    "theme_description": "Warm brown tones, natural feeling"
+    "theme_description": "Warm brown tones, natural feeling",
+    "preserve_aspects": ["colors", "style"]
   },
   "result_id": null,
   "image_url": null,
@@ -172,6 +196,7 @@ async function refineConceptWithPrompt(
   refinementPrompt,
   logoDesc,
   themeDesc,
+  preserveAspects = [],
 ) {
   try {
     const response = await fetch("/api/concepts/refine", {
@@ -184,6 +209,7 @@ async function refineConceptWithPrompt(
         refinement_prompt: refinementPrompt,
         logo_description: logoDesc,
         theme_description: themeDesc,
+        preserve_aspects: preserveAspects,
       }),
     });
 

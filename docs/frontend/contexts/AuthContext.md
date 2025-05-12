@@ -43,7 +43,7 @@ interface AuthContextType {
 
 ## Usage
 
-The context is accessed through various custom hooks that expose specific parts of the auth state:
+The context is accessed through various custom hooks from `hooks/useAuth.ts` that expose specific parts of the auth state:
 
 ```tsx
 import {
@@ -52,7 +52,7 @@ import {
   useUserId,
   useIsAnonymous,
   useAuthIsLoading,
-} from "../contexts/AuthContext";
+} from "../hooks/useAuth";
 
 function ProfileSection() {
   // Get all auth state
@@ -151,6 +151,8 @@ The context uses several techniques to optimize performance:
 
 ## Exposed Hooks
 
+The following hooks are available in `hooks/useAuth.ts`:
+
 | Hook                 | Returns           | Description                                       |
 | -------------------- | ----------------- | ------------------------------------------------- |
 | `useAuth()`          | `AuthContextType` | Full auth context with all properties and methods |
@@ -170,4 +172,4 @@ The context includes centralized error handling:
 
 - [supabaseClient](../services/supabaseClient.md) - Authentication service used by the context
 - [RateLimitContext](./RateLimitContext.md) - Often used alongside auth for user-specific rate limits
-- [useSessionQuery](../hooks/useSessionQuery.md) - Hook for syncing sessions with the backend
+- [useAuth.ts](../hooks/useAuth.md) - Hooks for accessing auth context data

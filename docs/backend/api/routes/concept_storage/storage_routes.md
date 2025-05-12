@@ -63,9 +63,30 @@ This endpoint provides a comprehensive workflow that:
   "logo_description": "A modern coffee shop logo with coffee beans",
   "theme_description": "Warm brown tones, natural feeling",
   "created_at": "2023-01-01T12:00:00.123456",
-  "color_palette": null,
+  "color_palette": {
+    "primary": "#4A2C2A",
+    "secondary": "#6B4226",
+    "accent": "#D4A762",
+    "background": "#F5EFE7",
+    "text": "#2D2424",
+    "additional_colors": []
+  },
   "original_image_url": null,
-  "refinement_prompt": null
+  "refinement_prompt": null,
+  "variations": [
+    {
+      "palette_name": "Earthy Tones",
+      "colors": ["#4A2C2A", "#6B4226", "#D4A762", "#F5EFE7", "#2D2424"],
+      "description": "Warm coffee-inspired palette with earthy browns",
+      "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456-v1.png"
+    },
+    {
+      "palette_name": "Cool Beans",
+      "colors": ["#362F2D", "#594D45", "#8C7A6B", "#BFB1A3", "#E8DFD5"],
+      "description": "Monochromatic brown scheme with subtle contrast",
+      "image_url": "https://storage.example.com/concepts/1234-5678-9012-3456-v2.png"
+    }
+  ]
 }
 ```
 
@@ -101,6 +122,10 @@ Array of concept summaries with:
 - `logo_description`: Original text description of the logo
 - `theme_description`: Original text description of the theme
 - `image_url`: URL to the generated base image
+- `has_variations`: Whether the concept has color variations
+- `variations_count`: Number of available color variations
+- `is_refinement`: Whether this is a refinement of another concept
+- `original_concept_id`: ID of the original concept if this is a refinement
 - `color_variations`: Array of color palette variations with images
 
 **URL Generation:** If a stored concept or color variation doesn't have a pre-generated URL, this endpoint will generate a signed URL on-the-fly.

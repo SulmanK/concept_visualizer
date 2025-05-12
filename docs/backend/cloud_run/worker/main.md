@@ -1,6 +1,10 @@
 # Worker Main Module
 
-The Worker Main module is the entry point for the Cloud Run worker. It handles Pub/Sub message processing, global service initialization, and task dispatching.
+The Worker Main module is the entry point for the Google Cloud Function (2nd Gen) worker. It handles Pub/Sub message processing, global service initialization, and task dispatching.
+
+## Deployment
+
+This worker is deployed as a Google Cloud Function (2nd Gen) triggered by Pub/Sub messages. The deployment uses the source-based deployment method with the `./backend` directory as the source and `handle_pubsub` as the entry point function.
 
 ## Main Components
 
@@ -58,7 +62,7 @@ The module provides an HTTP endpoint for health checks:
 def http_endpoint(request: Any) -> Dict[str, str]:
     """HTTP handler for health checks.
 
-    Cloud Run will use this endpoint to verify that the instance is healthy.
+    Cloud Functions will use this endpoint to verify that the instance is healthy.
 
     Args:
         request: HTTP request object

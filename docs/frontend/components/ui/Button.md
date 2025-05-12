@@ -4,7 +4,7 @@ The `Button` component provides a standardized button element for user interacti
 
 ## Overview
 
-This component wraps Material-UI's Button component with consistent styling, variants, and accessibility features. It simplifies implementing buttons with a consistent look and feel across the application.
+This component is a custom Tailwind CSS-based button with consistent styling, variants, and accessibility features. It simplifies implementing buttons with a consistent look and feel across the application, including hover animations and reduced motion support.
 
 ## Usage
 
@@ -16,142 +16,192 @@ import { Button } from 'components/ui/Button';
   Click Me
 </Button>
 
-// Primary variant with icon
-<Button
-  variant="primary"
-  startIcon={<SaveIcon />}
-  onClick={handleSave}
->
-  Save Changes
+// Primary variant
+<Button variant="primary" onClick={handleClick}>
+  Primary Action
 </Button>
 
-// Outlined secondary button with loading state
-<Button
-  variant="secondary"
-  color="error"
-  loading={isSubmitting}
-  onClick={handleDelete}
->
-  Delete Item
+// Secondary variant
+<Button variant="secondary" onClick={handleCancel}>
+  Secondary Action
+</Button>
+
+// Outline variant
+<Button variant="outline" onClick={handleCancel}>
+  Outlined Button
+</Button>
+
+// Pill-shaped button (fully rounded)
+<Button pill onClick={handleAction}>
+  Pill Button
 </Button>
 ```
 
 ## Props
 
-| Prop        | Type                                                                      | Default     | Description                           |
-| ----------- | ------------------------------------------------------------------------- | ----------- | ------------------------------------- |
-| `children`  | `React.ReactNode`                                                         | -           | Button content                        |
-| `variant`   | `'primary' \| 'secondary' \| 'text'`                                      | `'primary'` | Button style variant                  |
-| `color`     | `'primary' \| 'secondary' \| 'success' \| 'error' \| 'info' \| 'warning'` | `'primary'` | Button color                          |
-| `size`      | `'small' \| 'medium' \| 'large'`                                          | `'medium'`  | Button size                           |
-| `fullWidth` | `boolean`                                                                 | `false`     | Whether button should take full width |
-| `disabled`  | `boolean`                                                                 | `false`     | Whether button is disabled            |
-| `loading`   | `boolean`                                                                 | `false`     | Shows loading spinner when true       |
-| `startIcon` | `React.ReactNode`                                                         | -           | Icon to display before text           |
-| `endIcon`   | `React.ReactNode`                                                         | -           | Icon to display after text            |
-| `onClick`   | `(e: React.MouseEvent<HTMLButtonElement>) => void`                        | -           | Click handler                         |
-| `type`      | `'button' \| 'submit' \| 'reset'`                                         | `'button'`  | HTML button type                      |
-| `className` | `string`                                                                  | `''`        | Additional CSS class to apply         |
-| `sx`        | `SxProps<Theme>`                                                          | `{}`        | MUI system props for styling          |
+| Prop        | Type                                               | Default     | Description                           |
+| ----------- | -------------------------------------------------- | ----------- | ------------------------------------- |
+| `children`  | `React.ReactNode`                                  | -           | Button content                        |
+| `variant`   | `'primary' \| 'secondary' \| 'outline' \| 'ghost'` | `'primary'` | Button style variant                  |
+| `size`      | `'sm' \| 'md' \| 'lg'`                             | `'md'`      | Button size                           |
+| `pill`      | `boolean`                                          | `false`     | Whether to use fully rounded corners  |
+| `animated`  | `boolean`                                          | `true`      | Whether to use hover/press animations |
+| `className` | `string`                                           | `''`        | Additional CSS class to apply         |
+| `type`      | `'button' \| 'submit' \| 'reset'`                  | `'button'`  | HTML button type                      |
+| `disabled`  | `boolean`                                          | `false`     | Whether button is disabled            |
+| `onClick`   | `(e: React.MouseEvent<HTMLButtonElement>) => void` | -           | Click handler                         |
 
 ## Implementation Details
 
 ```tsx
-import React from "react";
-import {
-  Button as MuiButton,
-  ButtonProps as MuiButtonProps,
-  CircularProgress,
-} from "@mui/material";
-import { SxProps, Theme } from "@mui/material/styles";
+import React, { useState } from "react";
+import { usePrefersReducedMotion } from "../../hooks";
 
-export interface ButtonProps extends Omit<MuiButtonProps, "variant" | "color"> {
-  variant?: "primary" | "secondary" | "text";
-  color?: "primary" | "secondary" | "success" | "error" | "info" | "warning";
-  loading?: boolean;
-  startIcon?: React.ReactNode;
-  endIcon?: React.ReactNode;
-  fullWidth?: boolean;
-  size?: "small" | "medium" | "large";
-  className?: string;
-  sx?: SxProps<Theme>;
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  /**
+   * Button variant
+   */
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+
+  /**
+   * Button size
+   */
+  size?: "sm" | "md" | "lg";
+
+  /**
+   * Whether to use a pill shape (fully rounded)
+   */
+  pill?: boolean;
+
+  /**
+   * Button type attribute
+   */
   type?: "button" | "submit" | "reset";
+
+  /**
+   * Additional class names
+   */
+  className?: string;
+
+  /**
+   * Button children
+   */
+  children: React.ReactNode;
+
+  /**
+   * Whether to add subtle hover animation
+   * @default true
+   */
+  animated?: boolean;
 }
 
-export function Button({
-  children,
+/**
+ * Button component with different variants and sizes
+ */
+export const Button: React.FC<ButtonProps> = ({
   variant = "primary",
-  color = "primary",
-  loading = false,
-  disabled = false,
-  startIcon,
-  endIcon,
-  fullWidth = false,
-  size = "medium",
-  className = "",
-  sx = {},
-  onClick,
+  size = "md",
+  pill = false,
   type = "button",
-  ...rest
-}: ButtonProps) {
-  // Map our custom variants to MUI variants
-  const muiVariant =
-    variant === "primary"
-      ? "contained"
-      : variant === "secondary"
-      ? "outlined"
-      : "text";
+  className = "",
+  children,
+  animated = true,
+  onClick,
+  ...props
+}) => {
+  const [isPressed, setIsPressed] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Base classes for all buttons
+  const baseClasses =
+    "inline-flex items-center justify-center font-medium focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed";
+
+  // Transition classes (skip if reduced motion is preferred)
+  const transitionClasses = prefersReducedMotion
+    ? ""
+    : "transition-all duration-200";
+
+  // Define variant-specific classes
+  const variantClasses = {
+    primary:
+      "bg-gradient-to-r from-primary to-primary-dark text-white shadow-modern hover:shadow-modern-hover hover:brightness-105",
+    secondary:
+      "bg-gradient-to-r from-secondary to-secondary-dark text-white shadow-modern hover:shadow-modern-hover hover:brightness-105",
+    outline:
+      "border border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 hover:text-primary-dark",
+    ghost: "text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50",
+  };
+
+  // Size classes
+  const sizeClasses = {
+    sm: "text-xs px-2.5 py-1",
+    md: "text-sm px-4 py-2",
+    lg: "text-base px-6 py-3",
+  };
+
+  // Border radius based on pill prop
+  const roundedClasses = pill ? "rounded-full" : "rounded-lg";
+
+  // Animation classes for pressed state
+  const animationClasses =
+    animated && !prefersReducedMotion
+      ? isPressed
+        ? "transform scale-95"
+        : "transform scale-100 hover:scale-[1.02]"
+      : "";
+
+  // Combine all classes
+  const buttonClasses = `${baseClasses} ${transitionClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${roundedClasses} ${animationClasses} ${className}`;
+
+  // Handle click with animation
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (animated && !prefersReducedMotion && !props.disabled) {
+      setIsPressed(true);
+
+      // Reset the pressed state after animation
+      setTimeout(() => {
+        setIsPressed(false);
+      }, 150);
+    }
+
+    // Call the original onClick handler
+    if (onClick) {
+      onClick(e);
+    }
+  };
 
   return (
-    <MuiButton
-      variant={muiVariant}
-      color={color}
-      disabled={disabled || loading}
-      startIcon={loading ? undefined : startIcon}
-      endIcon={loading ? undefined : endIcon}
-      fullWidth={fullWidth}
-      size={size}
-      className={className}
-      sx={sx}
-      onClick={onClick}
+    <button
       type={type}
-      {...rest}
+      className={buttonClasses}
+      onClick={handleClick}
+      {...props}
     >
-      {loading ? (
-        <>
-          <CircularProgress
-            size={size === "small" ? 16 : size === "large" ? 24 : 20}
-            color="inherit"
-            sx={{ mr: children ? 1 : 0 }}
-          />
-          {children}
-        </>
-      ) : (
-        children
-      )}
-    </MuiButton>
+      {children}
+    </button>
   );
-}
+};
 ```
 
 ## Features
 
-- **Consistent Styling**: Follows the application's design system
-- **Multiple Variants**: Primary (filled), secondary (outlined), and text variants
-- **Color Options**: Supports all Material-UI theme colors
-- **Loading State**: Built-in loading indicator
-- **Icon Support**: Options for icons before or after text
-- **Responsive Width**: Can take full width of container
+- **Tailwind CSS Styling**: Uses Tailwind utility classes for consistent styling
+- **Multiple Variants**: Primary, secondary, outline, and ghost variants
+- **Motion Sensitivity**: Respects user motion preferences
+- **Animations**: Subtle scale animations on hover and click
+- **Gradient Backgrounds**: Primary and secondary variants use gradient backgrounds
 - **Size Options**: Small, medium, and large sizes
-- **Accessible**: Follows accessibility best practices
+- **Shape Options**: Standard rounded or pill shape
+- **Accessible**: Includes focus rings and respects disabled state
+- **Modern Shadow**: Custom shadow effects for depth
 
 ## Usage Patterns
 
 ### Primary Action Button
 
 ```tsx
-<Button variant="primary" color="primary" onClick={handleSubmit} type="submit">
+<Button variant="primary" onClick={handleSubmit} type="submit">
   Submit Form
 </Button>
 ```
@@ -159,50 +209,56 @@ export function Button({
 ### Secondary Action Button
 
 ```tsx
-<Button variant="secondary" color="primary" onClick={handleCancel}>
+<Button variant="secondary" onClick={handleCancel}>
   Cancel
 </Button>
 ```
 
-### Dangerous Action Button
+### Outline Button
 
 ```tsx
-<Button
-  variant="primary"
-  color="error"
-  onClick={handleDelete}
-  startIcon={<DeleteIcon />}
->
-  Delete Permanently
+<Button variant="outline" onClick={handleReset}>
+  Reset Form
 </Button>
 ```
 
-### Loading Button
+### Ghost Button
 
 ```tsx
-<Button
-  variant="primary"
-  loading={isSubmitting}
-  onClick={handleSubmit}
-  disabled={!isValid}
->
-  {isSubmitting ? "Saving..." : "Save Changes"}
+<Button variant="ghost" onClick={handleSkip}>
+  Skip this step
 </Button>
 ```
 
-### Icon Button
+### Pill-Shaped Button
 
 ```tsx
-<Button variant="text" startIcon={<AddIcon />} onClick={handleAddItem}>
-  Add Item
+<Button variant="primary" pill onClick={handleAction}>
+  Action Button
 </Button>
 ```
 
-### Full Width Button
+### Different Sizes
 
 ```tsx
-<Button variant="primary" fullWidth onClick={handleContinue} size="large">
-  Continue to Checkout
+<>
+  <Button variant="primary" size="sm">
+    Small
+  </Button>
+  <Button variant="primary" size="md">
+    Medium
+  </Button>
+  <Button variant="primary" size="lg">
+    Large
+  </Button>
+</>
+```
+
+### Disabled Button
+
+```tsx
+<Button variant="primary" disabled>
+  Can't Click Me
 </Button>
 ```
 
@@ -210,11 +266,11 @@ export function Button({
 
 1. Use primary variant for the main action in a form or view
 2. Use secondary variant for secondary actions
-3. Use text variant for less prominent actions
-4. Add loading state for operations that take time to complete
-5. Use color appropriately - error for destructive actions, success for positive outcomes
-6. Keep button text concise and action-oriented (e.g., "Save" rather than "Save the form")
-7. Include icons when they add clarity to the action
+3. Use outline or ghost variants for less prominent actions
+4. Consider using pill shape for action buttons that should stand out
+5. Use appropriate button sizes based on importance and context
+6. Keep button text concise and action-oriented
+7. Ensure sufficient contrast between button color and text for accessibility
 8. Group related buttons together with consistent styling
-9. Ensure sufficient contrast between button color and text for accessibility
-10. Use appropriate button sizes based on importance and context
+9. Leverage the className prop to add custom styles when needed
+10. Set the animated prop to false for utility buttons that don't need animation

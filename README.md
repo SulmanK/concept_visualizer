@@ -59,7 +59,8 @@ A web application for generating and refining visual concepts like logos and col
   - Supabase (Database, Auth, Storage)
   - Redis (via Upstash for Rate Limiting)
   - JigsawStack API (AI Generation)
-  - Google Cloud Functions (Gen 2) / Pub/Sub (Background Tasks)
+  - Google Cloud Functions (Gen 2) (Background Tasks)
+  - Google Cloud Pub/Sub (Task Queue)
   - Docker
 - **Frontend:**
   - React 19
@@ -97,7 +98,7 @@ concept-visualizer/
 │   ├── .env.develop     # Development environment variables (template, managed by hook)
 │   ├── .env.main        # Production environment variables (template, managed by hook)
 │   ├── Dockerfile       # Dockerfile for API service
-│   ├── Dockerfile.worker # Dockerfile for Worker (if different)
+│   ├── Dockerfile.worker# Dockerfile for API service
 │   └── pyproject.toml   # Backend dependencies and project metadata
 ├── frontend/            # React frontend application
 │   ├── my-app/          # Main application source
@@ -175,7 +176,7 @@ For detailed configuration instructions, please refer to our [Setup Guide](Desig
     # (or manually copy: cp .env.develop .env)
     uv run uvicorn app.main:app --reload --port 8000
     ```
-    The image generation and refinement is tied up with the cloud run function - you will have to deploy the worker to GCP for it to work.
+    The image generation and refinement is tied up with the cloud function - you will have to deploy the worker to GCP for it to work.
 2.  **Frontend:**
     ```bash
     cd frontend/my-app
@@ -215,7 +216,7 @@ The frontend uses a mock API service (`src/services/mocks`) for isolated testing
 
 ## Infrastructure
 
-- **GCP:** Compute Engine (API VM), Cloud Functions (Worker), Pub/Sub (Task Queue), Artifact Registry (Docker Images), Secret Manager, Cloud Storage (State, Assets).
+- **GCP:** Compute Engine (API VM), Cloud Functions (Gen 2) (Worker), Pub/Sub (Task Queue), Artifact Registry (Docker Images), Secret Manager, Cloud Storage (State, Assets).
 - **Supabase:** PostgreSQL Database, Authentication, Storage.
 - **Vercel:** Frontend hosting and serverless functions (for rewrites).
 - **Upstash:** Managed Redis for rate limiting.
