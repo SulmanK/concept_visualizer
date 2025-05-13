@@ -184,28 +184,25 @@ resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
     condition_threshold {
       filter = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\""
 
-      # Aggregation defines how data points are processed
+      # Change to count failures rather than calculate a percentage
       aggregations {
-        # Group data points into these windows for evaluation.
+        # Group data points into these windows for evaluation
         alignment_period   = var.alert_alignment_period # e.g., "300s" (5 minutes)
-        # Within each alignment_period, calculate the fraction of successful checks.
-        # 'check_passed' is 1 if passed, 0 if failed. ALIGN_FRACTION_TRUE gives success rate (0.0 to 1.0).
-        per_series_aligner = "ALIGN_FRACTION_TRUE"
+        # Count failures instead of calculating a percentage
+        per_series_aligner = "ALIGN_COUNT_FALSE"
       }
 
       # Condition for triggering an alert
-      comparison      = "COMPARISON_LT" # Alert if success rate is LESS THAN...
-      threshold_value = 0.9             # ...0.9 (i.e., less than 90% success rate).
-                                        # This means if >10% of pings fail in an alignment_period, condition is true.
-                                        # For a 60s ping period and 300s alignment, 1 failed ping out of 5 makes it 0.8.
+      comparison      = "COMPARISON_GT" # Alert if failure count is GREATER THAN...
+      threshold_value = 1               # ...1 failure in the alignment period
+                                        # This means if we get at least 2 failures in the alignment period, trigger the alert
 
       # This is the "grace period" for startup
       duration = var.api_startup_alert_delay # e.g., "600s" (10 minutes).
-                                             # The "unhealthy" condition (pass rate < 90%)
-                                             # must persist for this entire duration before an alert fires.
+                                             # The failures must persist for this entire duration before an alert fires.
 
       trigger {
-        count = 1 # Trigger if the condition (failing for 'duration') occurs once
+        count = 1 # Trigger if the condition is met once
       }
     }
   }
@@ -226,7 +223,7 @@ resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
 has been failing or responding too slowly for a sustained period of **${var.api_startup_alert_delay}**.
 
 **Uptime Check ID:** `${google_monitoring_uptime_check_config.api_health_ping.uptime_check_id}`
-**Condition:** Success rate less than 90% over a ${var.alert_alignment_period} window, persisting for ${var.api_startup_alert_delay}.
+**Condition:** At least 2 failed checks within a ${var.alert_alignment_period} window, persisting for ${var.api_startup_alert_delay}.
 
 **Possible Causes:**
 *   The API VM instance is down, unresponsive, or still initializing after a deployment/restart.
