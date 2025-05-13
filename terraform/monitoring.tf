@@ -186,8 +186,8 @@ resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
 
       # Change to count failures rather than calculate a percentage
       aggregations {
-        # Group data points into these windows for evaluation
-        alignment_period   = var.alert_alignment_period # e.g., "300s" (5 minutes)
+        # Extended window to allow more potential failures to accumulate
+        alignment_period   = "900s" # 15 minutes instead of 5 minutes
         # Count failures instead of calculating a percentage
         per_series_aligner = "ALIGN_COUNT_FALSE"
       }
