@@ -105,3 +105,13 @@ output "notification_channel_verification_note" {
   description = "Important note about verifying the notification channel"
   value       = "IMPORTANT: Check your email (${var.alert_email_address}) for a verification link from Google Cloud Monitoring. You must click this link to activate the notification channel!"
 }
+
+output "api_health_uptime_check_id" {
+  description = "The ID of the Uptime Check configuration for the API health."
+  value       = google_monitoring_uptime_check_config.api_health_ping.uptime_check_id
+}
+
+output "api_health_alert_policy_name" {
+  description = "The display name of the Alert Policy for API health failures."
+  value       = google_monitoring_alert_policy.api_health_ping_failure_alert.display_name
+}

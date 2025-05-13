@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/healthz",
-      "destination": "http://104.196.65.197/api/health/ping"
+      "destination": "http://35.196.147.143/api/health/ping"
     },
     {
       "source": "/api/:path*",
-      "destination": "http://104.196.65.197/api/:path*"
+      "destination": "http://35.196.147.143/api/:path*"
     },
     {
       "source": "/((?!_next/static|static|favicon.ico|vite.svg|assets/).*)",
