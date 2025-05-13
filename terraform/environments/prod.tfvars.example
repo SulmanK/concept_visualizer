@@ -15,3 +15,4 @@ github_repo                     = "your-github-username/concept_visualizer" # <-
 alert_email_address         = "your-main-prod-alert-email@example.com" # <-- REPLACE
 alert_alignment_period      = "300s" # 5 minutes
 alert_duration              = "0s"   # Alert immediately on first failure in an alignment period
+api_startup_alert_delay         = "900s" # 15 minutes grace period for API startup (longer for prod)

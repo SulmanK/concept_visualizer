@@ -137,3 +137,128 @@ EOT
     google_cloudfunctions2_function.worker_function # Ensure function exists
   ]
 }
+
+# 4. API Health Uptime Check
+resource "google_monitoring_uptime_check_config" "api_health_ping" {
+  project      = var.project_id
+  display_name = "${var.naming_prefix}-api-health-ping-${var.environment}"
+  timeout      = "10s" # How long each ping waits for a response
+
+  http_check {
+    path           = "/api/health/ping" # Or your specific health endpoint path
+    port           = "80"               # Port your API listens on (e.g., 80 for HTTP, 443 for HTTPS)
+    use_ssl        = false              # Set to true if your API VM serves HTTPS and terminates SSL itself
+    request_method = "GET"
+    # Optional: Validate response content for more robust checks
+    # content_matchers {
+    #   content = "{\"status\":\"ok\"}" # Ensure this matches your /api/health/ping response
+    #   matcher = "MATCHES_JSON_PATH"
+    #   json_path_matcher {
+    #     json_path    = "$.status"
+    #     json_matcher = "EXACT_MATCH"
+    #   }
+    # }
+  }
+
+  # Target the static IP address of your API VM
+  monitored_resource {
+    type = "uptime_url"
+    labels = {
+      # This references the static IP resource defined in your compute.tf
+      host = google_compute_address.api_static_ip[0].address
+    }
+  }
+
+  period = "60s" # How often GCP pings your API (e.g., every 60 seconds)
+  # Consider adding 'selected_regions' if you want checks from specific locations
+}
+
+# 5. Alert Policy for API Health Ping Failures
+resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
+  project      = var.project_id
+  display_name = "${var.naming_prefix}-api-ping-fails-al-${var.environment}"
+  combiner     = "OR" # For a single condition
+
+  conditions {
+    display_name = "API Health Ping Unsuccessful (Sustained)"
+    condition_threshold {
+      filter = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\""
+
+      # Aggregation defines how data points are processed
+      aggregations {
+        # Group data points into these windows for evaluation.
+        alignment_period   = var.alert_alignment_period # e.g., "300s" (5 minutes)
+        # Within each alignment_period, calculate the fraction of successful checks.
+        # 'check_passed' is 1 if passed, 0 if failed. ALIGN_FRACTION_TRUE gives success rate (0.0 to 1.0).
+        per_series_aligner = "ALIGN_FRACTION_TRUE"
+      }
+
+      # Condition for triggering an alert
+      comparison      = "COMPARISON_LT" # Alert if success rate is LESS THAN...
+      threshold_value = 0.9             # ...0.9 (i.e., less than 90% success rate).
+                                        # This means if >10% of pings fail in an alignment_period, condition is true.
+                                        # For a 60s ping period and 300s alignment, 1 failed ping out of 5 makes it 0.8.
+
+      # This is the "grace period" for startup
+      duration = var.api_startup_alert_delay # e.g., "600s" (10 minutes).
+                                             # The "unhealthy" condition (pass rate < 90%)
+                                             # must persist for this entire duration before an alert fires.
+
+      trigger {
+        count = 1 # Trigger if the condition (failing for 'duration') occurs once
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "86400s" # Auto-close incidents after 1 day if the issue is resolved
+  }
+
+  notification_channels = [
+    google_monitoring_notification_channel.email_alert_channel.id, # Reference your existing channel
+  ]
+
+  documentation {
+    content = <<-EOT
+### API Health Ping Failure Alert (${var.environment})
+
+**Summary:** The API health ping endpoint (`http://${google_compute_address.api_static_ip[0].address}:80/api/health/ping`)
+has been failing or responding too slowly for a sustained period of **${var.api_startup_alert_delay}**.
+
+**Uptime Check ID:** `${google_monitoring_uptime_check_config.api_health_ping.uptime_check_id}`
+**Condition:** Success rate less than 90% over a ${var.alert_alignment_period} window, persisting for ${var.api_startup_alert_delay}.
+
+**Possible Causes:**
+*   The API VM instance is down, unresponsive, or still initializing after a deployment/restart.
+*   The API application (FastAPI container) is not running, has crashed, or is taking too long to start.
+*   Network issues preventing access to the VM.
+*   Firewall rules blocking GCP Uptime Checkers.
+*   Errors in the API's startup script (`startup-api.sh`).
+*   Resource exhaustion on the VM (CPU, Memory, Disk).
+
+**Recommended Actions:**
+1.  **Verify VM Status:** Check the API VM instance status in the GCP Compute Engine console.
+2.  **Check API Application Logs:**
+    *   SSH into the VM and check Docker logs: `sudo docker logs concept-api`
+    *   Review logs in Cloud Logging, filtering by `resource.type="gce_instance"` and your instance name/ID.
+3.  **Check Startup Script Logs:** On the VM, check `/var/log/startup-script.log` (or similar, depending on OS) for errors during startup.
+4.  **Review Firewall Rules:** Ensure GCP firewall rules allow ingress from Google Cloud health checker IP ranges to port 80 (or 443 if using HTTPS) on your API VM.
+5.  **Check Uptime Check Details:** In Google Cloud Monitoring, review the specific uptime check configuration and its recent check results for more detailed error information.
+6.  **Test Manually:** Try accessing `http://${google_compute_address.api_static_ip[0].address}:80/api/health/ping` from your own machine or another GCP VM.
+EOT
+    mime_type = "text/markdown"
+  }
+
+  user_labels = {
+    environment = var.environment
+    service     = "${var.naming_prefix}-api"
+    tier        = "backend"
+  }
+
+  # Ensure dependencies are created in the correct order
+  depends_on = [
+    google_monitoring_uptime_check_config.api_health_ping,
+    google_monitoring_notification_channel.email_alert_channel,
+    google_compute_address.api_static_ip, # Depends on the static IP resource
+  ]
+}

@@ -125,3 +125,9 @@ variable "alert_duration" {
   type        = string
   default     = "0s" # Alert immediately on first failure in an alignment period
 }
+
+variable "api_startup_alert_delay" {
+  description = "The duration (e.g., '600s') a failing health check condition must persist before an alert is triggered. Acts as an initial grace period after VM/API setup."
+  type        = string
+  default     = "600s" # Default to 10 minutes, adjust as needed
+}
