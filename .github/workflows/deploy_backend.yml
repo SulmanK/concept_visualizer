@@ -225,7 +225,8 @@ jobs:
           # Instead of using vercel CLI commands with json output, use the Vercel REST API
           echo "Fetching deployments from Vercel API..."
 
-          # Create temporary API token file
+          # Create Vercel config directory and credentials file
+          mkdir -p ~/.vercel
           echo "{\"token\":\"$VERCEL_TOKEN\"}" > ~/.vercel/credentials.json
 
           # Use vercel CLI to get the project name
