@@ -348,7 +348,7 @@ jobs:
 
           # First get the current configuration
           mkdir -p /tmp/monitor
-          gcloud monitoring uptime-check-configs describe $UPTIME_CHECK_ID_FOR_MONITOR \
+          gcloud monitoring uptime describe $UPTIME_CHECK_ID_FOR_MONITOR \
             --project=$GCP_PROJECT_ID_FOR_MONITOR \
             --format=json > /tmp/monitor/uptime.json
 
@@ -357,14 +357,14 @@ jobs:
 
           # Validate the change first
           echo "Validating the uptime check configuration update..."
-          if gcloud monitoring uptime-check-configs update $UPTIME_CHECK_ID_FOR_MONITOR \
+          if gcloud monitoring uptime update $UPTIME_CHECK_ID_FOR_MONITOR \
               --project=$GCP_PROJECT_ID_FOR_MONITOR \
               --config-from-file=/tmp/monitor/updated_uptime.json \
               --validate-only 2>/tmp/validate_error; then
 
             echo "Validation successful. Applying the update..."
             # Apply the update if validation was successful
-            gcloud monitoring uptime-check-configs update $UPTIME_CHECK_ID_FOR_MONITOR \
+            gcloud monitoring uptime update $UPTIME_CHECK_ID_FOR_MONITOR \
               --project=$GCP_PROJECT_ID_FOR_MONITOR \
               --config-from-file=/tmp/monitor/updated_uptime.json \
               --quiet
