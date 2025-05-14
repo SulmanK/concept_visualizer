@@ -363,9 +363,9 @@ jobs:
 
           # Import the existing uptime check resource
           resource "google_monitoring_uptime_check_config" "frontend_uptime_check" {
-            display_name = "${{ env.NAMING_PREFIX }}-frontend-uptime-${{ env.ENVIRONMENT }}"
+            display_name = "${{ env.NAMING_PREFIX }}-frontend-availability-${{ env.ENVIRONMENT }}"
             timeout      = "10s"
-            period       = "60s"
+            period       = "300s"
 
             http_check {
               path         = "/"
@@ -373,6 +373,11 @@ jobs:
               use_ssl      = true
               validate_ssl = true
               host         = "$HOSTNAME"
+            }
+
+            content_matchers {
+              content = "<title>Concept Visualizer</title>"
+              matcher = "CONTAINS_STRING"
             }
 
             monitored_resource {
