@@ -160,6 +160,13 @@ resource "google_project_iam_member" "cicd_sa_logging_admin" {
   member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
 }
 
+# Add Monitoring Admin role to CI/CD service account
+resource "google_project_iam_member" "cicd_sa_monitoring_admin" {
+  project = var.project_id
+  role    = "roles/monitoring.admin"
+  member  = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
 # Add Cloud Functions Admin role to CI/CD service account
 resource "google_project_iam_member" "cicd_sa_cloudfunctions_admin" {
   project = var.project_id
