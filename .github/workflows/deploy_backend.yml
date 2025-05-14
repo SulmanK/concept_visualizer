@@ -40,6 +40,10 @@ jobs:
             echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
             echo "FRONTEND_UPTIME_CHECK_ID=${{ secrets.DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID }}" >> $GITHUB_ENV
             echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID_DEV }}" >> $GITHUB_ENV
+            echo "FRONTEND_ALERT_POLICY_ID=${{ secrets.DEV_FRONTEND_ALERT_POLICY_ID }}" >> $GITHUB_ENV
+            echo "ALERT_NOTIFICATION_CHANNEL_FULL_ID=${{ secrets.DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID }}" >> $GITHUB_ENV
+            echo "FRONTEND_STARTUP_ALERT_DELAY=${{ secrets.DEV_FRONTEND_STARTUP_ALERT_DELAY || '300s' }}" >> $GITHUB_ENV
+            echo "ALERT_ALIGNMENT_PERIOD=${{ secrets.DEV_ALERT_ALIGNMENT_PERIOD || '300s' }}" >> $GITHUB_ENV
           elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
@@ -54,6 +58,10 @@ jobs:
             echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
             echo "FRONTEND_UPTIME_CHECK_ID=${{ secrets.PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID }}" >> $GITHUB_ENV
             echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID_PROD }}" >> $GITHUB_ENV
+            echo "FRONTEND_ALERT_POLICY_ID=${{ secrets.PROD_FRONTEND_ALERT_POLICY_ID }}" >> $GITHUB_ENV
+            echo "ALERT_NOTIFICATION_CHANNEL_FULL_ID=${{ secrets.PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID }}" >> $GITHUB_ENV
+            echo "FRONTEND_STARTUP_ALERT_DELAY=${{ secrets.PROD_FRONTEND_STARTUP_ALERT_DELAY || '300s' }}" >> $GITHUB_ENV
+            echo "ALERT_ALIGNMENT_PERIOD=${{ secrets.PROD_ALERT_ALIGNMENT_PERIOD || '300s' }}" >> $GITHUB_ENV
           else
             echo "Branch is not develop or main, skipping deployment."
             exit 0
