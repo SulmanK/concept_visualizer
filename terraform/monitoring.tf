@@ -198,7 +198,7 @@ resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
                                         # This means if we get at least 5 failures in the alignment period, trigger the alert
 
       # This is the "grace period" for startup
-      duration = "2100s" # 35 minutes.
+      duration = "2700s" # 45 minutes.
                          # The failures must persist for this entire duration before an alert fires.
 
       trigger {
