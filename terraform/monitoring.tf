@@ -352,3 +352,18 @@ resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" 
     google_monitoring_notification_channel.email_alert_channel,
   ]
 }
+
+output "frontend_alert_policy_id" {
+  description = "The ID of the frontend availability failure alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.id
+}
+
+output "frontend_alert_policy_name" {
+  description = "The full name of the frontend availability failure alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name # Often the same as ID or more descriptive
+}
+
+output "frontend_notification_channel_id" {
+  description = "The ID of the notification channel used for alerts."
+  value       = google_monitoring_notification_channel.email_alert_channel.id # Assuming this is the one used
+}

@@ -307,3 +307,12 @@ terraform output -raw api_vm_external_ip
 
 echo -e "\nFrontend Uptime Check ID for $ENVIRONMENT environment (DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID or PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID):"
 terraform output -raw frontend_uptime_check_id
+
+echo -e "\nFrontend Alert Policy ID for $ENVIRONMENT environment (e.g., PROD_FRONTEND_ALERT_POLICY_ID):"
+terraform output -raw frontend_alert_policy_id
+
+echo -e "\nFrontend Alert Policy Name for $ENVIRONMENT environment:"
+terraform output -raw frontend_alert_policy_name
+
+echo -e "\nAlert Notification Channel ID for $ENVIRONMENT environment (e.g., PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID):"
+terraform output -raw frontend_notification_channel_id
