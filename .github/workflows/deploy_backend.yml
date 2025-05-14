@@ -389,6 +389,14 @@ jobs:
 
             lifecycle {
               create_before_destroy = true
+              ignore_changes = [
+                checker_type,
+                log_check_failures,
+                selected_regions,
+                user_labels,
+                http_check.0.mask_headers,
+                http_check.0.headers
+              ]
             }
           }
           EOF
@@ -435,37 +443,68 @@ jobs:
           else
             echo "Warning: Terraform approach failed. Falling back to direct gcloud update..."
 
-            # Fallback approach: Create new uptime check with gcloud
-            DISPLAY_NAME="${{ env.NAMING_PREFIX }}-frontend-uptime-${{ env.ENVIRONMENT }}"
-            NEW_CHECK_ID="${{ env.NAMING_PREFIX }}-frontend-check-${{ env.ENVIRONMENT }}-$(date +%s)"
+            # Check for alert policies that reference this uptime check
+            echo "Checking for alert policies that reference this uptime check..."
+            ALERT_POLICIES=$(gcloud alpha monitoring policies list \
+              --project=$GCP_PROJECT_ID_FOR_MONITOR \
+              --filter="conditions.conditionThreshold.filter:\"metric.label.check_id=$UPTIME_CHECK_ID_FOR_MONITOR\"" \
+              --format="value(name)")
 
-            echo "Creating new uptime check with ID: $NEW_CHECK_ID"
-            gcloud monitoring uptime-check-configs create $NEW_CHECK_ID \
-              --display-name="$DISPLAY_NAME" \
-              --http-check-path="/" \
-              --http-check-port=443 \
-              --http-check-use-ssl \
-              --http-check-validate-ssl \
-              --monitored-resource=uptime_url \
-              --monitored-resource-labels="host=$HOSTNAME,project_id=$GCP_PROJECT_ID_FOR_MONITOR" \
-              --period=60s \
-              --timeout=10s \
-              --project=$GCP_PROJECT_ID_FOR_MONITOR
+            if [ -n "$ALERT_POLICIES" ]; then
+              echo "Found alert policies referencing this uptime check. Instead of replacing the check, we'll update it in-place."
 
-            if [ $? -eq 0 ]; then
-              echo "Successfully created new uptime check via gcloud"
+              # Update the existing uptime check without changing its ID
+              echo "Updating existing uptime check in-place: $UPTIME_CHECK_ID_FOR_MONITOR"
+              gcloud monitoring uptime-check-configs update $UPTIME_CHECK_ID_FOR_MONITOR \
+                --display-name="${{ env.NAMING_PREFIX }}-frontend-availability-${{ env.ENVIRONMENT }}" \
+                --http-check-path="/" \
+                --http-check-port=443 \
+                --http-check-use-ssl \
+                --http-check-validate-ssl \
+                --monitored-resource=uptime_url \
+                --monitored-resource-labels="host=$HOSTNAME,project_id=$GCP_PROJECT_ID_FOR_MONITOR" \
+                --timeout=10s \
+                --project=$GCP_PROJECT_ID_FOR_MONITOR
 
-              # Now delete the old check if different
-              if [ "$UPTIME_CHECK_ID_FOR_MONITOR" != "$NEW_CHECK_ID" ]; then
-                echo "Deleting old uptime check: $UPTIME_CHECK_ID_FOR_MONITOR"
-                gcloud monitoring uptime-check-configs delete $UPTIME_CHECK_ID_FOR_MONITOR \
-                  --project=$GCP_PROJECT_ID_FOR_MONITOR --quiet || \
-                  echo "Warning: Could not delete old uptime check, it may have been deleted already"
+              if [ $? -eq 0 ]; then
+                echo "Successfully updated existing uptime check"
+                NEW_CHECK_ID=$UPTIME_CHECK_ID_FOR_MONITOR
+              else
+                echo "Warning: Failed to update existing uptime check."
               fi
-
-              # We need to update the GitHub secret for next time
-              echo "IMPORTANT: Update your GitHub secret with the new uptime check ID: $NEW_CHECK_ID"
             else
-              echo "Warning: Failed to create new uptime check via gcloud"
+              # No alert policies found, proceed with create/delete approach
+              DISPLAY_NAME="${{ env.NAMING_PREFIX }}-frontend-availability-${{ env.ENVIRONMENT }}"
+              NEW_CHECK_ID="${{ env.NAMING_PREFIX }}-frontend-check-${{ env.ENVIRONMENT }}-$(date +%s)"
+
+              echo "Creating new uptime check with ID: $NEW_CHECK_ID"
+              gcloud monitoring uptime-check-configs create $NEW_CHECK_ID \
+                --display-name="$DISPLAY_NAME" \
+                --http-check-path="/" \
+                --http-check-port=443 \
+                --http-check-use-ssl \
+                --http-check-validate-ssl \
+                --monitored-resource=uptime_url \
+                --monitored-resource-labels="host=$HOSTNAME,project_id=$GCP_PROJECT_ID_FOR_MONITOR" \
+                --period=60s \
+                --timeout=10s \
+                --project=$GCP_PROJECT_ID_FOR_MONITOR
+
+              if [ $? -eq 0 ]; then
+                echo "Successfully created new uptime check via gcloud"
+
+                # Now delete the old check if different
+                if [ "$UPTIME_CHECK_ID_FOR_MONITOR" != "$NEW_CHECK_ID" ]; then
+                  echo "Deleting old uptime check: $UPTIME_CHECK_ID_FOR_MONITOR"
+                  gcloud monitoring uptime-check-configs delete $UPTIME_CHECK_ID_FOR_MONITOR \
+                    --project=$GCP_PROJECT_ID_FOR_MONITOR --quiet || \
+                    echo "Warning: Could not delete old uptime check, it may have been deleted already or it has alert policies associated with it."
+                fi
+
+                # We need to update the GitHub secret for next time
+                echo "IMPORTANT: Update your GitHub secret with the new uptime check ID: $NEW_CHECK_ID"
+              else
+                echo "Warning: Failed to create new uptime check via gcloud"
+              fi
             fi
           fi
