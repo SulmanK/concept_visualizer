@@ -67,15 +67,16 @@ jobs:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
 
-      - name: Set up Node.js for Vercel CLI
-        if: env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
 
-      - name: Install Vercel CLI
-        if: env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
-        run: npm install -g vercel
+      - name: Install dependencies
+        run: |
+          npm install -g vercel
+          sudo apt-get update
+          sudo apt-get install -y jq
 
       - name: Deploy Cloud Function Worker
         run: |
@@ -221,33 +222,50 @@ jobs:
             SCOPE_ARG="--scope $VERCEL_ORG_ID"
           fi
 
-          # Get the latest deployment for the commit SHA on the specific branch
-          # Vercel ls output can be tricky. `inspect` is more reliable for a specific deployment.
-          # First, find the deployment ID for the commit
-          LATEST_DEPLOYMENT_ID=$(vercel ls $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --meta githubCommitSha=$COMMIT_SHA_FROM_PARENT_WORKFLOW --meta githubCommitRef=$BRANCH_NAME_FROM_PARENT_WORKFLOW --state READY --yes | awk 'NR==2{print $1}') # NR==2 skips header
+          # Get deployments using Vercel CLI
+          # First try to get deployment by meta.githubCommitSha
+          echo "Looking for deployments by commit SHA..."
+          DEPLOYMENTS_OUTPUT=$(vercel list deployments $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --json)
+
+          # Parse the JSON to find the deployment with our commit SHA
+          LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r --arg sha "$COMMIT_SHA_FROM_PARENT_WORKFLOW" '.deployments[] | select(.meta.githubCommitSha==$sha) | .uid' | head -n 1)
 
           if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
-            echo "Error: Could not find a READY Vercel deployment ID for commit $COMMIT_SHA_FROM_PARENT_WORKFLOW on branch $BRANCH_NAME_FROM_PARENT_WORKFLOW."
-            # Fallback: try to get the latest ready deployment for the branch if commit-specific one fails
-            echo "Attempting fallback: latest READY deployment for branch $BRANCH_NAME_FROM_PARENT_WORKFLOW"
-            LATEST_DEPLOYMENT_ID=$(vercel ls $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --meta githubCommitRef=$BRANCH_NAME_FROM_PARENT_WORKFLOW --state READY --yes | awk 'NR==2{print $1}')
+            echo "No deployment found for commit SHA $COMMIT_SHA_FROM_PARENT_WORKFLOW."
+            echo "Attempting fallback: looking for latest production deployment..."
+
+            # For main branch, find the production deployment
+            if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
+              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[] | select(.target=="production") | .uid' | head -n 1)
+            else
+              # For other branches, find the preview deployment matching the branch
+              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r --arg branch "$BRANCH_NAME_FROM_PARENT_WORKFLOW" '.deployments[] | select(.meta.githubCommitRef==$branch) | .uid' | head -n 1)
+            fi
+
             if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
-                echo "Fallback failed. Could not determine deployment ID."
+              echo "Fallback failed. Could not determine deployment ID."
+              echo "Getting most recent deployment as last resort..."
+              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[0].uid')
+
+              if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
+                echo "Cannot find any deployments for project $PROJECT_ID_VERCEL."
                 exit 1
+              fi
             fi
           fi
+
           echo "Found Vercel Deployment ID: $LATEST_DEPLOYMENT_ID"
 
           # Inspect that deployment to get its URL
-          DEPLOYMENT_JSON_OUTPUT=$(vercel inspect $LATEST_DEPLOYMENT_ID --token $VERCEL_TOKEN $SCOPE_ARG --yes)
+          DEPLOYMENT_JSON_OUTPUT=$(vercel inspect $LATEST_DEPLOYMENT_ID --token $VERCEL_TOKEN $SCOPE_ARG --json)
           echo "Vercel Inspect Output: $DEPLOYMENT_JSON_OUTPUT"
           DEPLOY_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.url') # The unique deployment URL
 
           # For production (main branch), prefer the aliased production domain if available
           if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
-            PROD_TARGET_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.targets.production.url // empty')
+            PROD_TARGET_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.alias[0] // empty')
             if [[ -n "$PROD_TARGET_URL" && "$PROD_TARGET_URL" != "null" ]]; then
-              DEPLOY_URL="https://$PROD_TARGET_URL" # Ensure https
+              DEPLOY_URL="$PROD_TARGET_URL" # Production alias already has https
               echo "Using production alias for main branch: $DEPLOY_URL"
             else
               DEPLOY_URL="https://$DEPLOY_URL" # Default to unique URL with https
@@ -275,7 +293,9 @@ jobs:
         run: |
           echo "Updating Frontend Uptime Check for environment: ${{ env.ENVIRONMENT }}"
           echo "Monitoring URL: $VERCEL_URL_TO_MONITOR"
-          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed 's|https://||' | cut -d/ -f1)
+
+          # Extract hostname from URL, handling both http:// and https:// prefixes
+          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
 
           echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
