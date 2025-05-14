@@ -286,6 +286,8 @@ Regular deployments via CI/CD (pushing code changes) will typically _not_ requir
 # Everytime we recreate our terraform resources
 
 - Populate the secrets in Github
+  - workflow
+  - frontend monitoring config
 - Poulate the secrets in vercel
 - Update the vercel.json (with the new ip)
 - Commit the changes for CI/CD
