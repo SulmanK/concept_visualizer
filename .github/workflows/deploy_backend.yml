@@ -222,62 +222,108 @@ jobs:
             SCOPE_ARG="--scope $VERCEL_ORG_ID"
           fi
 
-          # Get deployments using Vercel CLI
-          # First try to get deployment by meta.githubCommitSha
-          echo "Looking for deployments by commit SHA..."
-          DEPLOYMENTS_OUTPUT=$(vercel list deployments $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --json)
+          # Instead of using vercel CLI commands with json output, use the Vercel REST API
+          echo "Fetching deployments from Vercel API..."
 
-          # Parse the JSON to find the deployment with our commit SHA
-          LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r --arg sha "$COMMIT_SHA_FROM_PARENT_WORKFLOW" '.deployments[] | select(.meta.githubCommitSha==$sha) | .uid' | head -n 1)
+          # Create temporary API token file
+          echo "{\"token\":\"$VERCEL_TOKEN\"}" > ~/.vercel/credentials.json
 
-          if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
-            echo "No deployment found for commit SHA $COMMIT_SHA_FROM_PARENT_WORKFLOW."
-            echo "Attempting fallback: looking for latest production deployment..."
+          # Use vercel CLI to get the project name
+          PROJECT_NAME=$(vercel project ls $SCOPE_ARG | grep "$PROJECT_ID_VERCEL" | awk '{print $1}')
+          echo "Project name: $PROJECT_NAME"
 
-            # For main branch, find the production deployment
-            if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
-              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[] | select(.target=="production") | .uid' | head -n 1)
-            else
-              # For other branches, find the preview deployment matching the branch
-              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r --arg branch "$BRANCH_NAME_FROM_PARENT_WORKFLOW" '.deployments[] | select(.meta.githubCommitRef==$branch) | .uid' | head -n 1)
+          if [[ -z "$PROJECT_NAME" ]]; then
+            echo "Could not determine project name from project ID. Using direct API calls."
+
+            # Use curl with Vercel API to get deployment information
+            API_URL="https://api.vercel.com/v6/deployments"
+            if [[ -n "$VERCEL_ORG_ID" ]]; then
+              API_URL="${API_URL}?teamId=${VERCEL_ORG_ID}"
             fi
 
-            if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
-              echo "Fallback failed. Could not determine deployment ID."
-              echo "Getting most recent deployment as last resort..."
-              LATEST_DEPLOYMENT_ID=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[0].uid')
+            DEPLOYMENTS_OUTPUT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" "$API_URL")
+            LATEST_DEPLOYMENT_URL=""
 
-              if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
-                echo "Cannot find any deployments for project $PROJECT_ID_VERCEL."
-                exit 1
+            # If this is the main branch, look for production deployments
+            if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
+              echo "Looking for production deployments for main branch..."
+              LATEST_DEPLOYMENT_URL=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[] | select(.target == "production") | .url' | head -n 1)
+
+              # If we found a production URL, it might be an alias
+              if [[ -n "$LATEST_DEPLOYMENT_URL" && "$LATEST_DEPLOYMENT_URL" != "null" ]]; then
+                # Check if this is an alias domain
+                DOMAINS_OUTPUT=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" "https://api.vercel.com/v9/projects/$PROJECT_ID_VERCEL/domains")
+                PROD_DOMAIN=$(echo "$DOMAINS_OUTPUT" | jq -r '.domains[] | select(.apexName != null) | .name' | head -n 1)
+
+                if [[ -n "$PROD_DOMAIN" && "$PROD_DOMAIN" != "null" ]]; then
+                  LATEST_DEPLOYMENT_URL="https://$PROD_DOMAIN"
+                  echo "Found production domain: $LATEST_DEPLOYMENT_URL"
+                else
+                  LATEST_DEPLOYMENT_URL="https://$LATEST_DEPLOYMENT_URL"
+                  echo "Using deployment URL: $LATEST_DEPLOYMENT_URL"
+                fi
+              fi
+            fi
+
+            # If we still don't have a URL, try to get the most recent deployment
+            if [[ -z "$LATEST_DEPLOYMENT_URL" || "$LATEST_DEPLOYMENT_URL" == "null" ]]; then
+              echo "Falling back to most recent deployment..."
+              LATEST_DEPLOYMENT_URL=$(echo "$DEPLOYMENTS_OUTPUT" | jq -r '.deployments[0].url' | head -n 1)
+
+              if [[ -n "$LATEST_DEPLOYMENT_URL" && "$LATEST_DEPLOYMENT_URL" != "null" ]]; then
+                LATEST_DEPLOYMENT_URL="https://$LATEST_DEPLOYMENT_URL"
+              fi
+            fi
+
+            DEPLOY_URL="$LATEST_DEPLOYMENT_URL"
+          else
+            # Use the vercel inspect command on the project name to get the URL
+            echo "Using vercel inspect to get deployment URL..."
+
+            # For production/main branch
+            if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
+              # Try to get info about the current production deployment
+              INSPECT_OUTPUT=$(vercel inspect "$PROJECT_NAME" $SCOPE_ARG)
+
+              # Extract URL from the output using grep and awk
+              DEPLOY_URL=$(echo "$INSPECT_OUTPUT" | grep -A 1 "Production URL" | tail -n 1 | awk '{print $NF}')
+
+              # If no production URL is found, try getting the latest deployment
+              if [[ -z "$DEPLOY_URL" || "$DEPLOY_URL" == "null" ]]; then
+                echo "No production URL found, getting latest deployment..."
+                LATEST_OUTPUT=$(vercel ls "$PROJECT_NAME" $SCOPE_ARG | grep -v 'Production\|Name\|To deploy\|Deployments' | head -n 1)
+                LATEST_ID=$(echo "$LATEST_OUTPUT" | awk '{print $1}')
+
+                if [[ -n "$LATEST_ID" && "$LATEST_ID" != "null" ]]; then
+                  DEPLOY_INSPECT=$(vercel inspect "$LATEST_ID" $SCOPE_ARG)
+                  DEPLOY_URL=$(echo "$DEPLOY_INSPECT" | grep "URL:" | head -n 1 | awk '{print $NF}')
+                  DEPLOY_URL="https://$DEPLOY_URL"
+                fi
+              fi
+            else
+              # For non-production branches, get the most recent deployment
+              LATEST_OUTPUT=$(vercel ls "$PROJECT_NAME" $SCOPE_ARG | grep -v 'Production\|Name\|To deploy\|Deployments' | head -n 1)
+              LATEST_ID=$(echo "$LATEST_OUTPUT" | awk '{print $1}')
+
+              if [[ -n "$LATEST_ID" && "$LATEST_ID" != "null" ]]; then
+                DEPLOY_INSPECT=$(vercel inspect "$LATEST_ID" $SCOPE_ARG)
+                DEPLOY_URL=$(echo "$DEPLOY_INSPECT" | grep "URL:" | head -n 1 | awk '{print $NF}')
+                DEPLOY_URL="https://$DEPLOY_URL"
               fi
             fi
           fi
 
-          echo "Found Vercel Deployment ID: $LATEST_DEPLOYMENT_ID"
+          # Validate the URL
+          if [[ -z "$DEPLOY_URL" || "$DEPLOY_URL" == "null" ]]; then
+            echo "Error: Could not determine a valid deployment URL."
 
-          # Inspect that deployment to get its URL
-          DEPLOYMENT_JSON_OUTPUT=$(vercel inspect $LATEST_DEPLOYMENT_ID --token $VERCEL_TOKEN $SCOPE_ARG --json)
-          echo "Vercel Inspect Output: $DEPLOYMENT_JSON_OUTPUT"
-          DEPLOY_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.url') # The unique deployment URL
-
-          # For production (main branch), prefer the aliased production domain if available
-          if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
-            PROD_TARGET_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.alias[0] // empty')
-            if [[ -n "$PROD_TARGET_URL" && "$PROD_TARGET_URL" != "null" ]]; then
-              DEPLOY_URL="$PROD_TARGET_URL" # Production alias already has https
-              echo "Using production alias for main branch: $DEPLOY_URL"
+            # Final fallback - hardcode the URL based on project name pattern
+            if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" && -n "$PROJECT_NAME" ]]; then
+              DEPLOY_URL="https://$PROJECT_NAME.vercel.app"
+              echo "Using fallback URL based on project name: $DEPLOY_URL"
             else
-              DEPLOY_URL="https://$DEPLOY_URL" # Default to unique URL with https
-              echo "Production alias not found, using unique deployment URL for main branch: $DEPLOY_URL"
+              exit 1
             fi
-          else
-            DEPLOY_URL="https://$DEPLOY_URL" # For develop/preview, use the unique URL with https
-          fi
-
-          if [[ -z "$DEPLOY_URL" || "$DEPLOY_URL" == "null" || "$DEPLOY_URL" == "https://null" ]]; then
-            echo "Error: Could not parse deployment URL from Vercel CLI output for deployment ID $LATEST_DEPLOYMENT_ID."
-            exit 1
           fi
 
           echo "Final Vercel Deployment URL for Monitoring: $DEPLOY_URL"
