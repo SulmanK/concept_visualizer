@@ -344,44 +344,36 @@ jobs:
           # Extract hostname from URL, handling both http:// and https:// prefixes
           HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
-          echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
+          echo "Updating Uptime Check ID: $UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
 
-          # Get an access token for the API
-          ACCESS_TOKEN=$(gcloud auth print-access-token)
+          # First get the current configuration
+          mkdir -p /tmp/monitor
+          gcloud monitoring uptime-check-configs describe $UPTIME_CHECK_ID_FOR_MONITOR \
+            --project=$GCP_PROJECT_ID_FOR_MONITOR \
+            --format=json > /tmp/monitor/uptime.json
 
-          # Create a new config file with the correct field names
-          cat > /tmp/update_request.json << EOF
-          {
-            "httpCheck": {
-              "path": "/",
-              "port": 443,
-              "useSsl": true,
-              "validateSsl": true
-            },
-            "monitoredResource": {
-              "type": "uptime_url",
-              "labels": {
-                "host": "$HOSTNAME"
-              }
-            }
-          }
-          EOF
+          # Update the host field with the new hostname
+          jq --arg host "$HOSTNAME" '.monitoredResource.labels.host = $host' /tmp/monitor/uptime.json > /tmp/monitor/updated_uptime.json
 
-          # Update the uptime check with the new configuration
-          OUTPUT=$(curl -X PATCH -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/update_request.json \
-            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR?updateMask=httpCheck,monitoredResource" 2>&1)
+          # Validate the change first
+          echo "Validating the uptime check configuration update..."
+          if gcloud monitoring uptime-check-configs update $UPTIME_CHECK_ID_FOR_MONITOR \
+              --project=$GCP_PROJECT_ID_FOR_MONITOR \
+              --config-from-file=/tmp/monitor/updated_uptime.json \
+              --validate-only 2>/tmp/validate_error; then
 
-          CURL_EXIT_CODE=$?
-          echo "Curl output: $OUTPUT"
-          echo "Curl exit code: $CURL_EXIT_CODE"
+            echo "Validation successful. Applying the update..."
+            # Apply the update if validation was successful
+            gcloud monitoring uptime-check-configs update $UPTIME_CHECK_ID_FOR_MONITOR \
+              --project=$GCP_PROJECT_ID_FOR_MONITOR \
+              --config-from-file=/tmp/monitor/updated_uptime.json \
+              --quiet
 
-          if [ $CURL_EXIT_CODE -ne 0 ] || echo "$OUTPUT" | grep -q '"error":'; then
-            echo "Warning: Failed to update GCP Frontend Uptime Check. API response: $OUTPUT"
-            echo "This could be due to IAM permissions. The monitoring.admin role may need to be added to the CI/CD service account."
-            echo "You can add this role in the GCP Console or by applying the terraform changes to iam.tf"
-            # Continue workflow even if this fails - don't exit with error
-          else
             echo "Uptime check configuration updated successfully"
+          else
+            # Validation failed
+            cat /tmp/validate_error
+            echo "Warning: Failed to validate the uptime check configuration update"
+            echo "This could be due to IAM permissions. The monitoring.admin role may need to be added to the CI/CD service account."
+            # Continue workflow even if this fails - don't exit with error
           fi
