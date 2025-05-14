@@ -347,12 +347,22 @@ jobs:
 
           echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
 
-          gcloud beta monitoring uptime update "projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR" \
+          # Create a temporary file with the updated uptime check configuration
+          cat > /tmp/uptime_config.json << EOF
+          {
+            "monitoredResource": {
+              "type": "uptime_url",
+              "labels": {
+                "host": "$HOSTNAME",
+                "project_id": "$GCP_PROJECT_ID_FOR_MONITOR"
+              }
+            }
+          }
+          EOF
+
+          # Update the uptime check using the correct command
+          gcloud monitoring uptime-check-configs update "projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR" \
             --project="$GCP_PROJECT_ID_FOR_MONITOR" \
-            --hostname="$HOSTNAME" \
-            --path="/" \
-            --port="443" \
-            --use-ssl \
-            --format="value(name)"
+            --from-file=/tmp/uptime_config.json
 
           echo "GCP Frontend Uptime Check updated successfully."
