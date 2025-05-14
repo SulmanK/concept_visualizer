@@ -346,21 +346,32 @@ jobs:
           echo "Extracted hostname: $HOSTNAME"
           echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
 
-          # First, get the current uptime check configuration
+          # Get an access token for the API
           ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-          # Get the current configuration
-          CURRENT_CONFIG=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR")
+          # Create a new config file with the correct field names
+          cat > /tmp/update_request.json << EOF
+          {
+            "httpCheck": {
+              "path": "/",
+              "port": 443,
+              "useSsl": true,
+              "validateSsl": true
+            },
+            "monitoredResource": {
+              "type": "uptime_url",
+              "labels": {
+                "host": "$HOSTNAME",
+                "project_id": "$GCP_PROJECT_ID_FOR_MONITOR"
+              }
+            }
+          }
+          EOF
 
-          # Create a temporary file with updated configuration
-          # Update the monitored resource with the new hostname while keeping other parameters the same
-          echo "$CURRENT_CONFIG" | jq --arg hostname "$HOSTNAME" '.httpCheck.host = $hostname' > /tmp/updated_config.json
-
-          # Update the uptime check using the REST API
+          # Update the uptime check with the new configuration
           curl -X PATCH -H "Authorization: Bearer $ACCESS_TOKEN" \
             -H "Content-Type: application/json" \
-            -d @/tmp/updated_config.json \
-            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR?updateMask=httpCheck.host"
+            -d @/tmp/update_request.json \
+            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR?updateMask=httpCheck,monitoredResource"
 
           echo "Uptime check configuration updated successfully"
