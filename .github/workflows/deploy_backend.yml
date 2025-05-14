@@ -372,7 +372,6 @@ jobs:
               port         = "443"
               use_ssl      = true
               validate_ssl = true
-              host         = "$HOSTNAME"
             }
 
             content_matchers {
@@ -447,7 +446,8 @@ jobs:
               --http-check-port=443 \
               --http-check-use-ssl \
               --http-check-validate-ssl \
-              --http-check-host="$HOSTNAME" \
+              --monitored-resource=uptime_url \
+              --monitored-resource-labels="host=$HOSTNAME,project_id=$GCP_PROJECT_ID_FOR_MONITOR" \
               --period=60s \
               --timeout=10s \
               --project=$GCP_PROJECT_ID_FOR_MONITOR
