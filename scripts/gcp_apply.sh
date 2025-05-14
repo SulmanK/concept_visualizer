@@ -304,3 +304,6 @@ echo "${NAMING_PREFIX}-docker-repo"
 
 echo -e "\nExternal IP for API VM for $ENVIRONMENT environment:"
 terraform output -raw api_vm_external_ip
+
+echo -e "\nFrontend Uptime Check ID for $ENVIRONMENT environment (DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID or PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID):"
+terraform output -raw frontend_uptime_check_id

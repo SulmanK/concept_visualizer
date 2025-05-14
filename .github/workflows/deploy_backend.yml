@@ -1,4 +1,4 @@
-name: Deploy Backend
+name: Deploy Backend and Update Frontend Monitor
 
 on:
   workflow_run:
@@ -38,6 +38,8 @@ jobs:
             echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.DEV_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "WORKER_MIN_INSTANCES=${{ secrets.DEV_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
             echo "WORKER_MAX_INSTANCES=${{ secrets.DEV_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
+            echo "FRONTEND_UPTIME_CHECK_ID=${{ secrets.DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID }}" >> $GITHUB_ENV
+            echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID_DEV }}" >> $GITHUB_ENV
           elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
@@ -50,6 +52,8 @@ jobs:
             echo "API_SERVICE_ACCOUNT_EMAIL=${{ secrets.PROD_API_SERVICE_ACCOUNT_EMAIL }}" >> $GITHUB_ENV
             echo "WORKER_MIN_INSTANCES=${{ secrets.PROD_WORKER_MIN_INSTANCES || 0 }}" >> $GITHUB_ENV
             echo "WORKER_MAX_INSTANCES=${{ secrets.PROD_WORKER_MAX_INSTANCES || 5 }}" >> $GITHUB_ENV
+            echo "FRONTEND_UPTIME_CHECK_ID=${{ secrets.PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID }}" >> $GITHUB_ENV
+            echo "VERCEL_PROJECT_ID=${{ secrets.VERCEL_PROJECT_ID_PROD }}" >> $GITHUB_ENV
           else
             echo "Branch is not develop or main, skipping deployment."
             exit 0
@@ -62,6 +66,16 @@ jobs:
         with:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ env.CICD_SERVICE_ACCOUNT }}
+
+      - name: Set up Node.js for Vercel CLI
+        if: env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        if: env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
+        run: npm install -g vercel
 
       - name: Deploy Cloud Function Worker
         run: |
@@ -187,3 +201,91 @@ jobs:
             --project="${{ env.GCP_PROJECT_ID }}" \
             --timeout=300 \
             "$MIG_NAME"
+
+      - name: Get Latest Vercel Deployment URL
+        id: get_vercel_url
+        if: env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PROJECT_ID_VERCEL: ${{ env.VERCEL_PROJECT_ID }}
+          # Pass the commit SHA from the parent workflow that triggered this one
+          COMMIT_SHA_FROM_PARENT_WORKFLOW: ${{ github.event.workflow_run.head_sha }}
+          BRANCH_NAME_FROM_PARENT_WORKFLOW: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          echo "Fetching deployment URL for Vercel Project ID: $PROJECT_ID_VERCEL"
+          echo "Branch: $BRANCH_NAME_FROM_PARENT_WORKFLOW, Commit: $COMMIT_SHA_FROM_PARENT_WORKFLOW"
+
+          SCOPE_ARG=""
+          if [[ -n "$VERCEL_ORG_ID" ]]; then
+            SCOPE_ARG="--scope $VERCEL_ORG_ID"
+          fi
+
+          # Get the latest deployment for the commit SHA on the specific branch
+          # Vercel ls output can be tricky. `inspect` is more reliable for a specific deployment.
+          # First, find the deployment ID for the commit
+          LATEST_DEPLOYMENT_ID=$(vercel ls $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --meta githubCommitSha=$COMMIT_SHA_FROM_PARENT_WORKFLOW --meta githubCommitRef=$BRANCH_NAME_FROM_PARENT_WORKFLOW --state READY --yes | awk 'NR==2{print $1}') # NR==2 skips header
+
+          if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
+            echo "Error: Could not find a READY Vercel deployment ID for commit $COMMIT_SHA_FROM_PARENT_WORKFLOW on branch $BRANCH_NAME_FROM_PARENT_WORKFLOW."
+            # Fallback: try to get the latest ready deployment for the branch if commit-specific one fails
+            echo "Attempting fallback: latest READY deployment for branch $BRANCH_NAME_FROM_PARENT_WORKFLOW"
+            LATEST_DEPLOYMENT_ID=$(vercel ls $PROJECT_ID_VERCEL --token $VERCEL_TOKEN $SCOPE_ARG --meta githubCommitRef=$BRANCH_NAME_FROM_PARENT_WORKFLOW --state READY --yes | awk 'NR==2{print $1}')
+            if [[ -z "$LATEST_DEPLOYMENT_ID" ]]; then
+                echo "Fallback failed. Could not determine deployment ID."
+                exit 1
+            fi
+          fi
+          echo "Found Vercel Deployment ID: $LATEST_DEPLOYMENT_ID"
+
+          # Inspect that deployment to get its URL
+          DEPLOYMENT_JSON_OUTPUT=$(vercel inspect $LATEST_DEPLOYMENT_ID --token $VERCEL_TOKEN $SCOPE_ARG --yes)
+          echo "Vercel Inspect Output: $DEPLOYMENT_JSON_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.url') # The unique deployment URL
+
+          # For production (main branch), prefer the aliased production domain if available
+          if [[ "$BRANCH_NAME_FROM_PARENT_WORKFLOW" == "main" ]]; then
+            PROD_TARGET_URL=$(echo "$DEPLOYMENT_JSON_OUTPUT" | jq -r '.targets.production.url // empty')
+            if [[ -n "$PROD_TARGET_URL" && "$PROD_TARGET_URL" != "null" ]]; then
+              DEPLOY_URL="https://$PROD_TARGET_URL" # Ensure https
+              echo "Using production alias for main branch: $DEPLOY_URL"
+            else
+              DEPLOY_URL="https://$DEPLOY_URL" # Default to unique URL with https
+              echo "Production alias not found, using unique deployment URL for main branch: $DEPLOY_URL"
+            fi
+          else
+            DEPLOY_URL="https://$DEPLOY_URL" # For develop/preview, use the unique URL with https
+          fi
+
+          if [[ -z "$DEPLOY_URL" || "$DEPLOY_URL" == "null" || "$DEPLOY_URL" == "https://null" ]]; then
+            echo "Error: Could not parse deployment URL from Vercel CLI output for deployment ID $LATEST_DEPLOYMENT_ID."
+            exit 1
+          fi
+
+          echo "Final Vercel Deployment URL for Monitoring: $DEPLOY_URL"
+          echo "VERCEL_DEPLOYMENT_URL_FOR_MONITORING=$DEPLOY_URL" >> $GITHUB_ENV
+          echo "::set-output name=url::$DEPLOY_URL"
+
+      - name: Update GCP Frontend Uptime Check
+        if: env.FRONTEND_UPTIME_CHECK_ID != '' && env.VERCEL_DEPLOYMENT_URL_FOR_MONITORING != ''
+        env:
+          GCP_PROJECT_ID_FOR_MONITOR: ${{ env.GCP_PROJECT_ID }}
+          UPTIME_CHECK_ID_FOR_MONITOR: ${{ env.FRONTEND_UPTIME_CHECK_ID }}
+          VERCEL_URL_TO_MONITOR: ${{ env.VERCEL_DEPLOYMENT_URL_FOR_MONITORING }}
+        run: |
+          echo "Updating Frontend Uptime Check for environment: ${{ env.ENVIRONMENT }}"
+          echo "Monitoring URL: $VERCEL_URL_TO_MONITOR"
+          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed 's|https://||' | cut -d/ -f1)
+          echo "Extracted hostname: $HOSTNAME"
+
+          echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
+
+          gcloud beta monitoring uptime update "projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR" \
+            --project="$GCP_PROJECT_ID_FOR_MONITOR" \
+            --hostname="$HOSTNAME" \
+            --path="/" \
+            --port="443" \
+            --use-ssl \
+            --format="value(name)"
+
+          echo "GCP Frontend Uptime Check updated successfully."

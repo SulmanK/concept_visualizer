@@ -115,3 +115,13 @@ output "api_health_alert_policy_name" {
   description = "The display name of the Alert Policy for API health failures."
   value       = google_monitoring_alert_policy.api_health_ping_failure_alert.display_name
 }
+
+output "frontend_uptime_check_id" {
+  description = "The ID (not full name) of the Uptime Check configuration for the frontend."
+  value       = google_monitoring_uptime_check_config.frontend_availability.uptime_check_id
+}
+
+output "frontend_uptime_check_name_full" {
+  description = "The full name/path of the frontend uptime check. Useful for `gcloud` commands."
+  value       = google_monitoring_uptime_check_config.frontend_availability.name
+}

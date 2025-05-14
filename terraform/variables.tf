@@ -131,3 +131,15 @@ variable "api_startup_alert_delay" {
   type        = string
   default     = "600s" # Default to 10 minutes, adjust as needed
 }
+
+variable "initial_frontend_hostname_placeholder" {
+  description = "A placeholder hostname for the frontend uptime check. This will be updated by CI/CD. Can be an empty string or a generic domain if Terraform requires a value."
+  type        = string
+  default     = "placeholder.vercel.app" # Or your main custom domain if relatively stable
+}
+
+variable "frontend_startup_alert_delay" {
+  description = "The duration a failing frontend health check must persist before alerting."
+  type        = string
+  default     = "300s" # 5 minutes, Vercel deployments are usually fast
+}

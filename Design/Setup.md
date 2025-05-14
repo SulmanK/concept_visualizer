@@ -154,52 +154,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
 
 7.  Run `scripts/gcp_apply.sh`.
 
-## 6. GitHub Secrets Setup
-
-Configure secrets in your GitHub repository settings ("Settings" > "Secrets and variables" > "Actions") to allow CI/CD workflows to authenticate with GCP.
-
-Required Secrets: (Get values from Terraform outputs and your .env files)
-
-```
-# GCP Authentication (Common)
-GCP_REGION
-
-# Development Environment
-DEV_GCP_PROJECT_ID
-DEV_GCP_ZONE
-DEV_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-dev-docker-repo)
-DEV_NAMING_PREFIX
-DEV_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
-DEV_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
-DEV_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-DEV_API_SERVICE_ACCOUNT_EMAIL    # From Terraform output
-DEV_SUPABASE_URL                 # From your .env.develop
-DEV_SUPABASE_ANON_KEY            # From your .env.develop (Supabase anon key)
-DEV_SUPABASE_SERVICE_ROLE        # From your .env.develop
-DEV_SUPABASE_JWT_SECRET          # From your .env.develop
-DEV_JIGSAWSTACK_API_KEY          # From your .env.develop
-DEV_WORKER_MIN_INSTANCES
-DEV_WORKER_MAX_INSTANCES
-
-# Production Environment
-PROD_GCP_PROJECT_ID
-PROD_GCP_ZONE
-PROD_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-prod-docker-repo)
-PROD_NAMING_PREFIX
-PROD_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
-PROD_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
-PROD_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-PROD_API_SERVICE_ACCOUNT_EMAIL   # From Terraform output
-PROD_SUPABASE_URL                # From your .env.main
-PROD_SUPABASE_ANON_KEY           # From your .env.main (Supabase anon key)
-PROD_SUPABASE_SERVICE_ROLE       # From your .env.main
-PROD_SUPABASE_JWT_SECRET         # From your .env.main
-PROD_JIGSAWSTACK_API_KEY         # From your .env.main
-PROD_WORKER_MAX_INSTANCES
-
-```
-
-### 7. Vercel Frontend Setup
+### 6. Vercel Frontend Setup
 
 Deploy the frontend application using Vercel.
 
@@ -249,6 +204,51 @@ Deploy the frontend application using Vercel.
 
 ---
 
+## 7. GitHub Secrets Setup
+
+Configure secrets in your GitHub repository settings ("Settings" > "Secrets and variables" > "Actions") to allow CI/CD workflows to authenticate with GCP.
+
+Required Secrets: (Get values from Terraform outputs and your .env files), Vercel, Supabase
+
+```
+# GCP Authentication (Common)
+GCP_REGION
+
+# Development Environment
+DEV_GCP_PROJECT_ID
+DEV_GCP_ZONE
+DEV_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-dev-docker-repo)
+DEV_NAMING_PREFIX
+DEV_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
+DEV_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
+DEV_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
+DEV_API_SERVICE_ACCOUNT_EMAIL    # From Terraform output
+DEV_SUPABASE_URL                 # From your .env.develop
+DEV_SUPABASE_ANON_KEY            # From your .env.develop (Supabase anon key)
+DEV_SUPABASE_SERVICE_ROLE        # From your .env.develop
+DEV_SUPABASE_JWT_SECRET          # From your .env.develop
+DEV_JIGSAWSTACK_API_KEY          # From your .env.develop
+DEV_WORKER_MIN_INSTANCES
+DEV_WORKER_MAX_INSTANCES
+
+# Production Environment
+PROD_GCP_PROJECT_ID
+PROD_GCP_ZONE
+PROD_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-prod-docker-repo)
+PROD_NAMING_PREFIX
+PROD_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
+PROD_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
+PROD_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
+PROD_API_SERVICE_ACCOUNT_EMAIL   # From Terraform output
+PROD_SUPABASE_URL                # From your .env.main
+PROD_SUPABASE_ANON_KEY           # From your .env.main (Supabase anon key)
+PROD_SUPABASE_SERVICE_ROLE       # From your .env.main
+PROD_SUPABASE_JWT_SECRET         # From your .env.main
+PROD_JIGSAWSTACK_API_KEY         # From your .env.main
+PROD_WORKER_MAX_INSTANCES
+
+```
+
 ### 8. Running Locally
 
 1.  **Backend:**
@@ -289,3 +289,38 @@ Regular deployments via CI/CD (pushing code changes) will typically _not_ requir
 - Poulate the secrets in vercel
 - Update the vercel.json (with the new ip)
 - Commit the changes for CI/CD
+
+# Frontend Monitoring Setup
+
+After setting up the basic infrastructure, you should configure frontend monitoring to ensure the availability of your Vercel-deployed frontend:
+
+1. **Run Terraform Apply:**
+
+   - The frontend monitoring is implemented in Terraform and will create:
+     - An uptime check targeting your frontend URL
+     - An alert policy that triggers if the frontend is unavailable
+   - Run `scripts/gcp_apply.sh` to create these resources
+
+2. **Configure GitHub Secrets:**
+
+   - After running Terraform, note the `Frontend Uptime Check ID` output
+   - Add these secrets to your GitHub repository:
+     - `VERCEL_TOKEN`: Your Vercel Personal Access Token (from Vercel Dashboard > Account Settings > Tokens)
+     - `VERCEL_ORG_ID`: Your Vercel Organization/Team ID (if applicable)
+     - `VERCEL_PROJECT_ID_DEV`: The Vercel Project ID for your develop branch deployments
+     - `VERCEL_PROJECT_ID_PROD`: The Vercel Project ID for your main branch deployments
+     - `DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The Frontend Uptime Check ID for the dev environment
+     - `PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The Frontend Uptime Check ID for the prod environment
+
+3. **How it Works:**
+
+   - The deployment workflow (`deploy_backend.yml`) now includes steps to:
+     - Query the Vercel API to find the latest deployment URL for the current branch
+     - Update the GCP Uptime Check to monitor that specific URL
+   - This ensures your monitoring always targets the latest version of your frontend
+   - Alerts will be sent to the configured email address if the frontend becomes unavailable
+
+4. **Troubleshooting:**
+   - If the workflow fails to update the monitoring URL, you can manually update it in the GCP Console
+   - Go to GCP Monitoring > Uptime Checks > Select the frontend uptime check
+   - Update the hostname to match your latest Vercel deployment URL
