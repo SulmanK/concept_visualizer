@@ -198,8 +198,8 @@ resource "google_monitoring_alert_policy" "api_health_ping_failure_alert" {
                                         # This means if we get at least 5 failures in the alignment period, trigger the alert
 
       # This is the "grace period" for startup
-      duration = var.api_startup_alert_delay # e.g., "1500s" (25 minutes).
-                                             # The failures must persist for this entire duration before an alert fires.
+      duration = "2100s" # 35 minutes.
+                         # The failures must persist for this entire duration before an alert fires.
 
       trigger {
         count = 1 # Trigger if the condition is met once
@@ -257,5 +257,98 @@ EOT
     google_monitoring_uptime_check_config.api_health_ping,
     google_monitoring_notification_channel.email_alert_channel,
     google_compute_address.api_static_ip, # Depends on the static IP resource
+  ]
+}
+
+# --- Frontend Availability Uptime Check ---
+resource "google_monitoring_uptime_check_config" "frontend_availability" {
+  project      = var.project_id
+  display_name = "${var.naming_prefix}-frontend-availability-${var.environment}"
+  timeout      = "10s" # How long each ping waits for a response
+
+  http_check {
+    path           = "/"                # Check the root path of your frontend
+    port           = "443"              # Vercel uses HTTPS
+    use_ssl        = true
+    request_method = "GET"
+  }
+
+  # Validates that the page title is present - a good sign the app loaded
+  content_matchers {
+    content = "<title>Concept Visualizer</title>" # Adjust to your actual <title>
+    matcher = "CONTAINS_STRING"                    # Checks if the string is present in the response body
+  }
+
+  monitored_resource {
+    type = "uptime_url"
+    labels = {
+      host = var.initial_frontend_hostname_placeholder # This will be updated by CI/CD
+    }
+  }
+  period = "300s" # Check every 5 minutes (valid value)
+}
+
+# --- Alert Policy for Frontend Availability Failures ---
+resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" {
+  project      = var.project_id
+  display_name = "${var.naming_prefix}-frontend-down-al-${var.environment}"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Frontend Application Unavailable (Sustained)"
+    condition_threshold {
+      filter = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\" AND metric.label.check_id=\"${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}\""
+      aggregations {
+        alignment_period   = var.alert_alignment_period # e.g., "300s"
+        per_series_aligner = "ALIGN_FRACTION_TRUE"
+      }
+      comparison      = "COMPARISON_LT"
+      threshold_value = 0.9 # Alert if less than 90% success rate in an alignment_period
+      duration        = var.frontend_startup_alert_delay # e.g., "300s"
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  notification_channels = [
+    google_monitoring_notification_channel.email_alert_channel.id,
+  ]
+
+  documentation {
+    content = <<-EOT
+### Frontend Availability Alert (${var.environment})
+
+**Summary:** The frontend application is failing uptime checks.
+**Monitored Host (may be placeholder if CI/CD hasn't updated it yet):** `${var.initial_frontend_hostname_placeholder}`
+**Uptime Check ID:** `${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}`
+**Condition:** Success rate less than 90% over a ${var.alert_alignment_period} window, persisting for ${var.frontend_startup_alert_delay}.
+
+**Possible Causes:**
+*   Vercel platform issues.
+*   DNS resolution problems for your custom domain (if any).
+*   Misconfiguration in Vercel deployment settings.
+*   The application is not serving the expected content (e.g., your app's title tag).
+*   The Uptime Check's target hostname in GCP Monitoring is outdated (CI/CD job may have failed to update it).
+
+**Recommended Actions:**
+1.  **Check Vercel Status:** Visit [status.vercel.com](https://status.vercel.com/).
+2.  **Check Vercel Deployment Logs:** Review logs for your frontend deployment in the Vercel dashboard.
+3.  **Verify DNS Configuration:** If using a custom domain, ensure DNS records are correct.
+4.  **Verify Uptime Check Target:** In GCP Monitoring, check the hostname configured for Uptime Check ID `${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}`. Ensure it matches your latest Vercel deployment URL.
+5.  **Manually Access Frontend URL:** Try accessing your Vercel deployment URL from different networks/devices.
+    EOT
+    mime_type = "text/markdown"
+  }
+
+  user_labels = {
+    environment = var.environment
+    service     = "${var.naming_prefix}-frontend"
+    tier        = "frontend"
+  }
+
+  depends_on = [
+    google_monitoring_uptime_check_config.frontend_availability,
+    google_monitoring_notification_channel.email_alert_channel,
   ]
 }
