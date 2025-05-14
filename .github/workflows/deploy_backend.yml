@@ -363,7 +363,7 @@ jobs:
           echo "Alert Policy ID: $FRONTEND_ALERT_POLICY_ID"
           echo "Notification Channel ID: $ALERT_NOTIFICATION_CHANNEL_FULL_ID"
 
-          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~\' | cut -d/ -f1)
+          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's#^https?://##' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
 
           mkdir -p /tmp/terraform_monitor
@@ -419,14 +419,12 @@ jobs:
             lifecycle {
               create_before_destroy = true
               ignore_changes = [
-                # Minimal list: attributes not explicitly set here that might drift
-                # or have provider defaults different from an imported state.
-                "checker_type",
-                "log_check_failures",
-                "selected_regions",
-                "user_labels",
-                "http_check.headers",
-                "http_check.mask_headers",
+                checker_type,
+                log_check_failures,
+                selected_regions,
+                user_labels,
+                http_check[0].headers,
+                http_check[0].mask_headers,
               ]
             }
           }
