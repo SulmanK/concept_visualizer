@@ -344,36 +344,56 @@ jobs:
           # Extract hostname from URL, handling both http:// and https:// prefixes
           HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
-          echo "Updating Uptime Check ID: $UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
 
-          # First get the current configuration
-          mkdir -p /tmp/monitor
-          gcloud monitoring uptime describe $UPTIME_CHECK_ID_FOR_MONITOR \
-            --project=$GCP_PROJECT_ID_FOR_MONITOR \
-            --format=json > /tmp/monitor/uptime.json
+          # Create directory for Terraform files if it doesn't exist
+          mkdir -p /tmp/terraform_monitor
 
-          # Update the host field with the new hostname
-          jq --arg host "$HOSTNAME" '.monitoredResource.labels.host = $host' /tmp/monitor/uptime.json > /tmp/monitor/updated_uptime.json
+          # Create a minimal Terraform file to update the uptime check
+          cat > /tmp/terraform_monitor/main.tf << EOF
+          provider "google" {
+            project = "$GCP_PROJECT_ID_FOR_MONITOR"
+            region  = "${{ env.REGION }}"
+          }
 
-          # Validate the change first
-          echo "Validating the uptime check configuration update..."
-          if gcloud monitoring uptime update $UPTIME_CHECK_ID_FOR_MONITOR \
-              --project=$GCP_PROJECT_ID_FOR_MONITOR \
-              --config-from-file=/tmp/monitor/updated_uptime.json \
-              --validate-only 2>/tmp/validate_error; then
+          # Import the existing uptime check resource
+          resource "google_monitoring_uptime_check_config" "frontend_uptime_check" {
+            display_name = "${{ env.NAMING_PREFIX }}-frontend-uptime-${{ env.ENVIRONMENT }}"
+            timeout      = "10s"
+            period       = "60s"
 
-            echo "Validation successful. Applying the update..."
-            # Apply the update if validation was successful
-            gcloud monitoring uptime update $UPTIME_CHECK_ID_FOR_MONITOR \
-              --project=$GCP_PROJECT_ID_FOR_MONITOR \
-              --config-from-file=/tmp/monitor/updated_uptime.json \
-              --quiet
+            http_check {
+              path         = "/"
+              port         = "443"
+              use_ssl      = true
+              validate_ssl = true
+              host         = "$HOSTNAME"
+            }
 
-            echo "Uptime check configuration updated successfully"
+            monitored_resource {
+              type = "uptime_url"
+              labels = {
+                project_id = "$GCP_PROJECT_ID_FOR_MONITOR"
+                host       = "$HOSTNAME"
+              }
+            }
+          }
+          EOF
+
+          # Initialize Terraform
+          cd /tmp/terraform_monitor
+          terraform init
+
+          # Import existing uptime check resource if it exists
+          terraform import google_monitoring_uptime_check_config.frontend_uptime_check \
+            projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR || \
+            echo "Resource could not be imported, continuing with apply"
+
+          # Apply Terraform changes
+          terraform apply -auto-approve
+
+          # Check if Terraform apply was successful
+          if [ $? -eq 0 ]; then
+            echo "Successfully updated uptime check to monitor: $HOSTNAME using Terraform"
           else
-            # Validation failed
-            cat /tmp/validate_error
-            echo "Warning: Failed to validate the uptime check configuration update"
-            echo "This could be due to IAM permissions. The monitoring.admin role may need to be added to the CI/CD service account."
-            # Continue workflow even if this fails - don't exit with error
+            echo "Warning: Failed to update the uptime check configuration with Terraform"
           fi
