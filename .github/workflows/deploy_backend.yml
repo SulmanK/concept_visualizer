@@ -345,8 +345,20 @@ jobs:
           HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
 
-          # Create directory for Terraform files if it doesn't exist
+          # Install Terraform
+          echo "Installing Terraform..."
+          TF_VERSION="1.5.7"
+          wget -q -O terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+          unzip -q terraform.zip
+          chmod +x terraform
+          mkdir -p /tmp/bin
+          mv terraform /tmp/bin/
+          export PATH="/tmp/bin:$PATH"
+          terraform --version
+
+          # Create directories for temporary files
           mkdir -p /tmp/terraform_monitor
+          mkdir -p /tmp/monitor
 
           # Create a minimal Terraform file to update the uptime check
           cat > /tmp/terraform_monitor/main.tf << EOF
@@ -376,6 +388,10 @@ jobs:
                 host       = "$HOSTNAME"
               }
             }
+
+            lifecycle {
+              create_before_destroy = true
+            }
           }
           EOF
 
@@ -394,6 +410,63 @@ jobs:
           # Check if Terraform apply was successful
           if [ $? -eq 0 ]; then
             echo "Successfully updated uptime check to monitor: $HOSTNAME using Terraform"
+
+            # Get the new uptime check ID from Terraform state
+            NEW_CHECK_ID=$(terraform state show google_monitoring_uptime_check_config.frontend_uptime_check | grep "^id" | cut -d= -f2 | tr -d ' "')
+            echo "New uptime check ID: $NEW_CHECK_ID"
+
+            # List all uptime checks with the same display name
+            echo "Checking for any orphaned uptime checks..."
+            DISPLAY_NAME="${{ env.NAMING_PREFIX }}-frontend-uptime-${{ env.ENVIRONMENT }}"
+            ORPHANED_CHECKS=$(gcloud monitoring uptime-check-configs list \
+              --project=$GCP_PROJECT_ID_FOR_MONITOR \
+              --filter="displayName:\"$DISPLAY_NAME\" AND NOT id:\"$NEW_CHECK_ID\"" \
+              --format="value(name)")
+
+            # Delete any orphaned checks that might exist
+            if [ -n "$ORPHANED_CHECKS" ]; then
+              echo "Found orphaned uptime checks, cleaning up..."
+              for CHECK in $ORPHANED_CHECKS; do
+                CHECK_ID=$(echo $CHECK | sed 's|.*/||')
+                echo "Deleting orphaned check: $CHECK_ID"
+                gcloud monitoring uptime-check-configs delete $CHECK_ID --project=$GCP_PROJECT_ID_FOR_MONITOR --quiet
+              done
+            else
+              echo "No orphaned uptime checks found."
+            fi
           else
-            echo "Warning: Failed to update the uptime check configuration with Terraform"
+            echo "Warning: Terraform approach failed. Falling back to direct gcloud update..."
+
+            # Fallback approach: Create new uptime check with gcloud
+            DISPLAY_NAME="${{ env.NAMING_PREFIX }}-frontend-uptime-${{ env.ENVIRONMENT }}"
+            NEW_CHECK_ID="${{ env.NAMING_PREFIX }}-frontend-check-${{ env.ENVIRONMENT }}-$(date +%s)"
+
+            echo "Creating new uptime check with ID: $NEW_CHECK_ID"
+            gcloud monitoring uptime-check-configs create $NEW_CHECK_ID \
+              --display-name="$DISPLAY_NAME" \
+              --http-check-path="/" \
+              --http-check-port=443 \
+              --http-check-use-ssl \
+              --http-check-validate-ssl \
+              --http-check-host="$HOSTNAME" \
+              --period=60s \
+              --timeout=10s \
+              --project=$GCP_PROJECT_ID_FOR_MONITOR
+
+            if [ $? -eq 0 ]; then
+              echo "Successfully created new uptime check via gcloud"
+
+              # Now delete the old check if different
+              if [ "$UPTIME_CHECK_ID_FOR_MONITOR" != "$NEW_CHECK_ID" ]; then
+                echo "Deleting old uptime check: $UPTIME_CHECK_ID_FOR_MONITOR"
+                gcloud monitoring uptime-check-configs delete $UPTIME_CHECK_ID_FOR_MONITOR \
+                  --project=$GCP_PROJECT_ID_FOR_MONITOR --quiet || \
+                  echo "Warning: Could not delete old uptime check, it may have been deleted already"
+              fi
+
+              # We need to update the GitHub secret for next time
+              echo "IMPORTANT: Update your GitHub secret with the new uptime check ID: $NEW_CHECK_ID"
+            else
+              echo "Warning: Failed to create new uptime check via gcloud"
+            fi
           fi
