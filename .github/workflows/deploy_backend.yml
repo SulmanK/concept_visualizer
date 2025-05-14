@@ -344,25 +344,23 @@ jobs:
           # Extract hostname from URL, handling both http:// and https:// prefixes
           HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's~^https?://~~' | cut -d/ -f1)
           echo "Extracted hostname: $HOSTNAME"
-
           echo "Updating Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR to monitor $HOSTNAME"
 
-          # Create a temporary file with the updated uptime check configuration
-          cat > /tmp/uptime_config.json << EOF
-          {
-            "monitoredResource": {
-              "type": "uptime_url",
-              "labels": {
-                "host": "$HOSTNAME",
-                "project_id": "$GCP_PROJECT_ID_FOR_MONITOR"
-              }
-            }
-          }
-          EOF
+          # First, get the current uptime check configuration
+          ACCESS_TOKEN=$(gcloud auth print-access-token)
 
-          # Update the uptime check using the correct command
-          gcloud monitoring uptime-check-configs update "projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR" \
-            --project="$GCP_PROJECT_ID_FOR_MONITOR" \
-            --from-file=/tmp/uptime_config.json
+          # Get the current configuration
+          CURRENT_CONFIG=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR")
 
-          echo "GCP Frontend Uptime Check updated successfully."
+          # Create a temporary file with updated configuration
+          # Update the monitored resource with the new hostname while keeping other parameters the same
+          echo "$CURRENT_CONFIG" | jq --arg hostname "$HOSTNAME" '.httpCheck.host = $hostname' > /tmp/updated_config.json
+
+          # Update the uptime check using the REST API
+          curl -X PATCH -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/updated_config.json \
+            "https://monitoring.googleapis.com/v3/projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR?updateMask=httpCheck.host"
+
+          echo "Uptime check configuration updated successfully"
