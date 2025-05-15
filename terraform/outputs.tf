@@ -126,6 +126,11 @@ output "frontend_uptime_check_id" {
   value       = google_monitoring_uptime_check_config.frontend_availability.uptime_check_id
 }
 
+output "frontend_uptime_check_config_id" {
+  description = "The full ID (name) of the frontend uptime check configuration."
+  value       = google_monitoring_uptime_check_config.frontend_availability.name
+}
+
 output "frontend_uptime_check_name_full" {
   description = "The full name/path of the frontend uptime check. Useful for `gcloud` commands."
   value       = google_monitoring_uptime_check_config.frontend_availability.name
@@ -166,14 +171,14 @@ output "artifact_registry_repository_name" {
   value       = "${var.naming_prefix}-docker-repo"
 }
 
-output "frontend_uptime_check_config_id" {
-  description = "The full ID (name) of the frontend uptime check configuration."
-  value       = google_monitoring_uptime_check_config.frontend_availability.name
-}
-
 output "frontend_alert_policy_id" {
   description = "The full ID (name) of the frontend availability alert policy."
   value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name
+}
+
+output "frontend_alert_policy_id_short" {
+  description = "The short ID of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.id
 }
 
 output "frontend_alert_policy_name" {
