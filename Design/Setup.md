@@ -16,6 +16,8 @@ Ensure you have the following command-line tools installed and configured:
 - **Terraform CLI:** (v1.3 or later recommended) For managing GCP infrastructure. ([https://developer.hashicorp.com/terraform/downloads](https://developer.hashicorp.com/terraform/downloads))
 - **Supabase CLI:** For managing Supabase functions and secrets. ([https://supabase.com/docs/guides/cli](https://supabase.com/docs/guides/cli))
   - Log in after installation: `supabase login`.
+- **GitHub CLI (`gh`):** (Optional, but required for GitHub secret automation via `gcp_apply.sh`) For interacting with GitHub. ([https://cli.github.com/](https://cli.github.com/))
+  - Authenticate after installation: `gh auth login`.
 
 ### 2. JigsawStack API Key
 
@@ -211,89 +213,58 @@ Deploy the frontend application using Vercel.
 
 ## 7. GitHub Secrets Setup
 
-Configure secrets in your GitHub repository settings ("Settings" > "Secrets and variables" > "Actions") to allow CI/CD workflows to authenticate with GCP.
+Configure secrets in your GitHub repository settings ("Settings" > "Secrets and variables" > "Actions") to allow CI/CD workflows to authenticate with GCP and other services.
 
-Required Secrets: (Get values from Terraform outputs and your `.env` files), Vercel, Supabase.
+**Automation Note:** The `scripts/gcp_apply.sh` script, upon successful completion, will now automatically attempt to populate many of the necessary GitHub Actions secrets using the `scripts/gh_populate_secrets.sh` helper script. This automation is branch-aware (setting `DEV_*` or `PROD_*` secrets based on the current branch).
 
-This is the full list of secrets:
+**Prerequisite for Automation:** You must have the GitHub CLI (`gh`) installed and authenticated (`gh auth login`) for the automation to work.
 
-```
-Global
-GCP_REGION
-VERCEL_ORG_ID
-VERCEL_TOKEN
+### Automatically Populated Secrets (via `scripts/gcp_apply.sh`):
 
-Production
-PROD_ALERT_ALIGNMENT_PERIOD
-PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID
-PROD_API_SERVICE_ACCOUNT_EMAIL
-PROD_ARTIFACT_REGISTRY_REPO_NAME
-PROD_CICD_SERVICE_ACCOUNT_EMAIL
-PROD_FRONTEND_ALERT_POLICY_ID
-PROD_FRONTEND_STARTUP_ALERT_DELAY
-PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID
-PROD_GCP_PROJECT_ID
-PROD_GCP_ZONE
-PROD_JIGSAWSTACK_API_KEY
-PROD_NAMING_PREFIX
-PROD_SUPABASE_ANON_KEY
-PROD_SUPABASE_JWT_SECRET
-PROD_SUPABASE_SERVICE_ROLE
-PROD_SUPABASE_URL
-PROD_WORKER_MAX_INSTANCES
-PROD_WORKER_MIN_INSTANCES
-PROD_WORKER_SERVICE_ACCOUNT_EMAIL
-PROD_WORKLOAD_IDENTITY_PROVIDER
-PROD_VERCEL_PROJECT_ID
+The following secrets will be set by the automation script. Values are sourced from Terraform outputs or active `.tfvars` files.
 
-Development
-DEV_ALERT_ALIGNMENT_PERIOD
-DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID
-DEV_API_SERVICE_ACCOUNT_EMAIL
-DEV_ARTIFACT_REGISTRY_REPO_NAME
-DEV_CICD_SERVICE_ACCOUNT_EMAIL
-DEV_FRONTEND_ALERT_POLICY_ID
-DEV_FRONTEND_STARTUP_ALERT_DELAY
-DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID
-DEV_GCP_PROJECT_ID
-DEV_GCP_ZONE
-DEV_JIGSAWSTACK_API_KEY
-DEV_NAMING_PREFIX
-DEV_SUPABASE_ANON_KEY
-DEV_SUPABASE_JWT_SECRET
-DEV_SUPABASE_SERVICE_ROLE
-DEV_SUPABASE_URL
-DEV_WORKER_MAX_INSTANCES
-DEV_WORKER_MIN_INSTANCES
-DEV_WORKER_SERVICE_ACCOUNT_EMAIL
-DEV_WORKLOAD_IDENTITY_PROVIDER
-DEV_VERCEL_PROJECT_ID
-```
+- **Global:**
+  - `GCP_REGION`
+- \*\*Environment-Specific (prefixed with `DEV_` or `PROD_`):
+  - `GCP_PROJECT_ID`
+  - `GCP_ZONE`
+  - `NAMING_PREFIX`
+  - `API_SERVICE_ACCOUNT_EMAIL`
+  - `WORKER_SERVICE_ACCOUNT_EMAIL`
+  - `CICD_SERVICE_ACCOUNT_EMAIL`
+  - `WORKLOAD_IDENTITY_PROVIDER`
+  - `ARTIFACT_REGISTRY_REPO_NAME`
+  - `FRONTEND_UPTIME_CHECK_CONFIG_ID`
+  - `FRONTEND_ALERT_POLICY_ID`
+  - `ALERT_NOTIFICATION_CHANNEL_FULL_ID`
+  - `FRONTEND_STARTUP_ALERT_DELAY`
+  - `ALERT_ALIGNMENT_PERIOD`
+  - `WORKER_MIN_INSTANCES`
+  - `WORKER_MAX_INSTANCES`
 
-The Terraform configuration secrets will be automatically set by our creation scripts. Here is a list of secrets you should add to the GitHub repo manually:
+### Manually Added GitHub Secrets:
 
-```
-Global
-GCP_REGION
-VERCEL_ORG_ID
-VERCEL_TOKEN
+These secrets still need to be added manually to your GitHub repository settings. They are typically sensitive, obtained from third-party services, or not directly output by the Terraform configuration in a way suitable for this automation.
 
-Production
-PROD_JIGSAWSTACK_API_KEY
-PROD_SUPABASE_ANON_KEY
-PROD_SUPABASE_JWT_SECRET
-PROD_SUPABASE_SERVICE_ROLE
-PROD_SUPABASE_URL
-PROD_VERCEL_PROJECT_ID
+- **Global:**
+  - `VERCEL_ORG_ID`
+  - `VERCEL_TOKEN`
+- \*\*Production (prefixed with `PROD_`):
+  - `PROD_JIGSAWSTACK_API_KEY`
+  - `PROD_SUPABASE_ANON_KEY`
+  - `PROD_SUPABASE_JWT_SECRET`
+  - `PROD_SUPABASE_SERVICE_ROLE`
+  - `PROD_SUPABASE_URL`
+  - `PROD_VERCEL_PROJECT_ID`
+- \*\*Development (prefixed with `DEV_`):
+  - `DEV_JIGSAWSTACK_API_KEY`
+  - `DEV_SUPABASE_ANON_KEY`
+  - `DEV_SUPABASE_JWT_SECRET`
+  - `DEV_SUPABASE_SERVICE_ROLE`
+  - `DEV_SUPABASE_URL`
+  - `DEV_VERCEL_PROJECT_ID`
 
-Development
-DEV_JIGSAWSTACK_API_KEY
-DEV_SUPABASE_ANON_KEY
-DEV_SUPABASE_JWT_SECRET
-DEV_SUPABASE_SERVICE_ROLE
-DEV_SUPABASE_URL
-DEV_VERCEL_PROJECT_ID
-```
+_(The comprehensive list of all secrets and their descriptions can be found in `.github/SECRETS.md` which should align with the above distinction of automated vs. manual.)_
 
 ### 8. Running Locally
 
