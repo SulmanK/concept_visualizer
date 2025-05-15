@@ -324,3 +324,49 @@ terraform output -raw frontend_alert_policy_name
 
 echo -e "\nAlert Notification Channel ID for $ENVIRONMENT environment (e.g., PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID):"
 terraform output -raw frontend_notification_channel_id
+
+# --- Global Secrets (Not environment-specific but fetched once) ---
+GCP_REGION_SECRET_NAME="GCP_REGION"
+TF_OUTPUT_GCP_REGION="gcp_region"
+
+# --- Prefixed Secrets (e.g., PROD_GCP_PROJECT_ID) ---
+# Maps Secret Suffix to Terraform Output Name
+declare -A DEV_SECRET_TF_OUTPUT_MAP=(
+  ["GCP_PROJECT_ID"]="project_id"
+  ["GCP_ZONE"]="gcp_zone"
+  ["NAMING_PREFIX"]="naming_prefix"
+  ["WORKLOAD_IDENTITY_PROVIDER"]="workload_identity_full_provider_name" # Use the full name
+  ["CICD_SERVICE_ACCOUNT_EMAIL"]="cicd_service_account_email"
+  ["ARTIFACT_REGISTRY_REPO_NAME"]="artifact_registry_repository_name"
+  ["WORKER_SERVICE_ACCOUNT_EMAIL"]="worker_service_account_email"
+  ["API_SERVICE_ACCOUNT_EMAIL"]="api_service_account_email"
+  ["WORKER_MIN_INSTANCES"]="worker_min_instances_output"
+  ["WORKER_MAX_INSTANCES"]="worker_max_instances_output"
+  ["FRONTEND_UPTIME_CHECK_CONFIG_ID"]="frontend_uptime_check_id" # Short ID
+  ["FRONTEND_ALERT_POLICY_ID"]="frontend_alert_policy_id_short" # Short ID
+  ["ALERT_NOTIFICATION_CHANNEL_FULL_ID"]="notification_channel_id_full" # Use the new full ID output
+  ["FRONTEND_STARTUP_ALERT_DELAY"]="frontend_startup_alert_delay_output"
+  ["ALERT_ALIGNMENT_PERIOD"]="alert_alignment_period_output"
+  ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output"
+  # Add other dev-specific mappings here if needed
+)
+
+declare -A PROD_SECRET_TF_OUTPUT_MAP=(
+  ["GCP_PROJECT_ID"]="project_id"
+  ["GCP_ZONE"]="gcp_zone"
+  ["NAMING_PREFIX"]="naming_prefix"
+  ["WORKLOAD_IDENTITY_PROVIDER"]="workload_identity_full_provider_name" # Use the full name
+  ["CICD_SERVICE_ACCOUNT_EMAIL"]="cicd_service_account_email"
+  ["ARTIFACT_REGISTRY_REPO_NAME"]="artifact_registry_repository_name"
+  ["WORKER_SERVICE_ACCOUNT_EMAIL"]="worker_service_account_email"
+  ["API_SERVICE_ACCOUNT_EMAIL"]="api_service_account_email"
+  ["WORKER_MIN_INSTANCES"]="worker_min_instances_output"
+  ["WORKER_MAX_INSTANCES"]="worker_max_instances_output"
+  ["FRONTEND_UPTIME_CHECK_CONFIG_ID"]="frontend_uptime_check_id" # Short ID
+  ["FRONTEND_ALERT_POLICY_ID"]="frontend_alert_policy_id_short" # Short ID
+  ["ALERT_NOTIFICATION_CHANNEL_FULL_ID"]="notification_channel_id_full" # Use the new full ID output
+  ["FRONTEND_STARTUP_ALERT_DELAY"]="frontend_startup_alert_delay_output"
+  ["ALERT_ALIGNMENT_PERIOD"]="alert_alignment_period_output"
+  ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output"
+  # Add other prod-specific mappings here if needed
+)
