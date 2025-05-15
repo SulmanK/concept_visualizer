@@ -97,8 +97,13 @@ output "alert_policy_name" {
 }
 
 output "notification_channel_name" {
-  description = "The name of the notification channel for alerts"
+  description = "The display name of the email notification channel created for alerts."
   value       = google_monitoring_notification_channel.email_alert_channel.display_name
+}
+
+output "notification_channel_id_full" {
+  description = "The full ID (projects/.../notificationChannels/...) of the email notification channel."
+  value       = google_monitoring_notification_channel.email_alert_channel.name
 }
 
 output "notification_channel_verification_note" {
