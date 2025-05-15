@@ -386,11 +386,11 @@ jobs:
           if [[ ! "$FRONTEND_ALERT_POLICY_ID" == projects/* ]]; then # if short ID was passed
             KNOWN_ALERT_POLICY_FULL_PATH="projects/${GCP_PROJECT_ID_FOR_MONITOR}/alertPolicies/${FRONTEND_ALERT_POLICY_ID}"
           fi
-          STALE_ALERT_POLICIES=$(gcloud monitoring policies list --project="${GCP_PROJECT_ID_FOR_MONITOR}" --filter="displayName=${ALERT_POLICY_DISPLAY_NAME_TO_CLEAN}" --format="value(name)")
+          STALE_ALERT_POLICIES=$(gcloud alpha monitoring policies list --project="${GCP_PROJECT_ID_FOR_MONITOR}" --filter="displayName=${ALERT_POLICY_DISPLAY_NAME_TO_CLEAN}" --format="value(name)")
           for STALE_POLICY_PATH in $STALE_ALERT_POLICIES; do
             if [[ "$STALE_POLICY_PATH" != "$KNOWN_ALERT_POLICY_FULL_PATH" ]]; then
               echo "Deleting stale alert policy: $STALE_POLICY_PATH"
-              gcloud monitoring policies delete "$STALE_POLICY_PATH" --project="${GCP_PROJECT_ID_FOR_MONITOR}" --quiet || echo "Warning: Failed to delete stale alert policy $STALE_POLICY_PATH"
+              gcloud alpha monitoring policies delete "$STALE_POLICY_PATH" --project="${GCP_PROJECT_ID_FOR_MONITOR}" --quiet || echo "Warning: Failed to delete stale alert policy $STALE_POLICY_PATH"
             fi
           done
           echo "Cleanup of stale monitoring resources attempt complete."
