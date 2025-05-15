@@ -57,6 +57,7 @@ These secrets must still be added manually to your GitHub repository settings (S
 # Global
 VERCEL_ORG_ID
 VERCEL_TOKEN
+TF_STATE_BUCKET_NAME
 
 # Development Environment
 DEV_JIGSAWSTACK_API_KEY

@@ -152,9 +152,22 @@ You need two Supabase projects: one for development (`dev`) and one for producti
       --project="project-hosting-tfstate-bucket" # Project where bucket lives
     ```
 
-6.  Update tf.vars with your .env variables
+6.  Populate environment variable files:
+    - `backend/env.main`
+    - `backend/env.develop`
+    - `terraform/environments/dev.tfvars`
+    - `terraform/environments/prod.tfvars`
+7.  Initialize Terraform:
 
-7.  Run `scripts/gcp_apply.sh`.
+    ```bash
+    cd terraform
+    terraform init -backend-config="bucket=concept-visualizer-tfstate-1"
+    terraform workspace new dev
+    terraform workspace new prod
+
+    ```
+
+8.  Run `scripts/gcp_apply.sh`.
 
 ### 6. Vercel Frontend Setup
 
@@ -249,6 +262,7 @@ These secrets still need to be added manually to your GitHub repository settings
 - **Global:**
   - `VERCEL_ORG_ID`
   - `VERCEL_TOKEN`
+  - `TF_STATE_BUCKET_NAME`
 - \*\*Production (prefixed with `PROD_`):
   - `PROD_JIGSAWSTACK_API_KEY`
   - `PROD_SUPABASE_ANON_KEY`

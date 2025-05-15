@@ -16,3 +16,5 @@ alert_email_address         = "your-main-dev-alert-email@example.com" # <-- REPL
 alert_alignment_period      = "300s" # 5 minutes
 alert_duration              = "60s"  # Alert if condition met for 1 minute
 api_startup_alert_delay         = "600s" # 10 minutes grace period for API startup
+initial_frontend_hostname      = "placeholder.dev.example.com" # Example placeholder
+frontend_uptime_check_period   = "300s" # Example: 5 minutes, matches default

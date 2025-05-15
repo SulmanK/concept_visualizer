@@ -160,3 +160,18 @@ output "artifact_registry_repository_name" {
   description = "The simple name of the Artifact Registry repository (e.g., my-project-dev-docker-repo)."
   value       = "${var.naming_prefix}-docker-repo"
 }
+
+output "frontend_uptime_check_config_id" {
+  description = "The full ID (name) of the frontend uptime check configuration."
+  value       = google_monitoring_uptime_check_config.frontend_availability.name
+}
+
+output "frontend_alert_policy_id" {
+  description = "The full ID (name) of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name
+}
+
+output "frontend_alert_policy_name" {
+  description = "The name of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.display_name
+}
