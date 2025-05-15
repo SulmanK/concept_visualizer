@@ -9,6 +9,8 @@ Add these secrets to your GitHub repository under Settings > Secrets and variabl
 ```
 # GCP Authentication (shared between environments)
 GCP_REGION
+VERCEL_ORG_ID
+VERCEL_TOKEN
 
 # Development Environment
 DEV_GCP_PROJECT_ID
@@ -26,6 +28,12 @@ DEV_SUPABASE_JWT_SECRET
 DEV_JIGSAWSTACK_API_KEY
 DEV_WORKER_MIN_INSTANCES
 DEV_WORKER_MAX_INSTANCES
+DEV_VERCEL_PROJECT_ID
+DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID
+DEV_FRONTEND_ALERT_POLICY_ID
+DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID
+DEV_FRONTEND_STARTUP_ALERT_DELAY
+DEV_ALERT_ALIGNMENT_PERIOD
 
 # Production Environment
 PROD_GCP_PROJECT_ID
@@ -43,6 +51,12 @@ PROD_SUPABASE_JWT_SECRET
 PROD_JIGSAWSTACK_API_KEY
 PROD_WORKER_MIN_INSTANCES
 PROD_WORKER_MAX_INSTANCES
+PROD_VERCEL_PROJECT_ID
+PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID
+PROD_FRONTEND_ALERT_POLICY_ID
+PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID
+PROD_FRONTEND_STARTUP_ALERT_DELAY
+PROD_ALERT_ALIGNMENT_PERIOD
 ```
 
 ## Terraform-Managed Resources
@@ -75,6 +89,34 @@ Several secrets are automatically created and managed by Terraform. After applyi
    # (either manually or using the GitHub CLI)
    ```
 
+## Manually Added GitHub Secrets
+
+The following secrets should be added manually to your GitHub repository settings. This list complements the secrets generated from Terraform outputs (detailed in the 'Terraform-Managed Resources' section).
+
+### Global
+
+- `GCP_REGION`
+- `VERCEL_ORG_ID`
+- `VERCEL_TOKEN`
+
+### Production
+
+- `PROD_JIGSAWSTACK_API_KEY`
+- `PROD_SUPABASE_ANON_KEY`
+- `PROD_SUPABASE_JWT_SECRET`
+- `PROD_SUPABASE_SERVICE_ROLE`
+- `PROD_SUPABASE_URL`
+- `PROD_VERCEL_PROJECT_ID`
+
+### Development
+
+- `DEV_JIGSAWSTACK_API_KEY`
+- `DEV_SUPABASE_ANON_KEY`
+- `DEV_SUPABASE_JWT_SECRET`
+- `DEV_SUPABASE_SERVICE_ROLE`
+- `DEV_SUPABASE_URL`
+- `DEV_VERCEL_PROJECT_ID`
+
 ## Details of GitHub Secrets
 
 ## Development Environment
@@ -102,6 +144,18 @@ Several secrets are automatically created and managed by Terraform. After applyi
 
 - `DEV_JIGSAWSTACK_API_KEY`: The JigsawStack API key for the development environment
 
+### Vercel Development
+
+- `DEV_VERCEL_PROJECT_ID`: The Vercel Project ID for the development frontend deployment.
+
+### Frontend Monitoring Development (GCP)
+
+- `DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The ID of the GCP Uptime Check configuration for the dev frontend.
+- `DEV_FRONTEND_ALERT_POLICY_ID`: The ID of the GCP Alert Policy for the dev frontend.
+- `DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID`: The full ID of the GCP Notification Channel for dev alerts (e.g., projects/your-project/notificationChannels/your-channel-id).
+- `DEV_FRONTEND_STARTUP_ALERT_DELAY`: The delay before alerts become active for new dev frontend deployments (e.g., '300s').
+- `DEV_ALERT_ALIGNMENT_PERIOD`: The alignment period for dev frontend alert conditions (e.g., '300s').
+
 ## Production Environment
 
 ### GCP Production Configuration
@@ -126,6 +180,18 @@ Several secrets are automatically created and managed by Terraform. After applyi
 ### JigsawStack Production
 
 - `PROD_JIGSAWSTACK_API_KEY`: The JigsawStack API key for the production environment
+
+### Vercel Production
+
+- `PROD_VERCEL_PROJECT_ID`: The Vercel Project ID for the production frontend deployment.
+
+### Frontend Monitoring Production (GCP)
+
+- `PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The ID of the GCP Uptime Check configuration for the prod frontend.
+- `PROD_FRONTEND_ALERT_POLICY_ID`: The ID of the GCP Alert Policy for the prod frontend.
+- `PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID`: The full ID of the GCP Notification Channel for prod alerts (e.g., projects/your-project/notificationChannels/your-channel-id).
+- `PROD_FRONTEND_STARTUP_ALERT_DELAY`: The delay before alerts become active for new prod frontend deployments (e.g., '2100s').
+- `PROD_ALERT_ALIGNMENT_PERIOD`: The alignment period for prod frontend alert conditions (e.g., '300s').
 
 ## Testing Environment Variables
 

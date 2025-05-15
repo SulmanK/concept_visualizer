@@ -282,6 +282,14 @@ else
     echo "Startup scripts uploaded successfully."
 fi
 
+echo -e "\n===== STEP 7: Populating GitHub Secrets =====\n"
+"$SCRIPT_DIR/gh_populate_secrets.sh"
+if [ $? -ne 0 ]; then
+    echo "Warning: Failed to populate GitHub secrets. Please run scripts/gh_populate_secrets.sh manually."
+else
+    echo "GitHub secrets populated successfully."
+fi
+
 echo -e "\nDeployment process completed!"
 
 # Display important output values for setting up GitHub Actions

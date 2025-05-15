@@ -125,3 +125,38 @@ output "frontend_uptime_check_name_full" {
   description = "The full name/path of the frontend uptime check. Useful for `gcloud` commands."
   value       = google_monitoring_uptime_check_config.frontend_availability.name
 }
+
+output "gcp_zone" {
+  description = "The GCP zone for zonal resources."
+  value       = var.zone
+}
+
+output "naming_prefix" {
+  description = "The naming prefix for resources."
+  value       = var.naming_prefix
+}
+
+output "frontend_startup_alert_delay_output" {
+  description = "Frontend startup alert delay."
+  value       = var.frontend_startup_alert_delay
+}
+
+output "alert_alignment_period_output" {
+  description = "Alert alignment period for frontend alerts."
+  value       = var.alert_alignment_period # Assuming this var is used for frontend alert policy
+}
+
+output "worker_min_instances_output" {
+  description = "Minimum number of Cloud Function worker instances."
+  value       = var.worker_min_instances
+}
+
+output "worker_max_instances_output" {
+  description = "Maximum number of Cloud Function worker instances."
+  value       = var.worker_max_instances
+}
+
+output "artifact_registry_repository_name" {
+  description = "The simple name of the Artifact Registry repository (e.g., my-project-dev-docker-repo)."
+  value       = "${var.naming_prefix}-docker-repo"
+}

@@ -201,6 +201,11 @@ Deploy the frontend application using Vercel.
     }
     ```
 6.  **Deploy:** Trigger a deployment on Vercel (e.g., by pushing to `main` or `develop`).
+7.  **Get the Vercel secrets for GitHub:**
+    - `VERCEL_ORG_ID`
+    - `VERCEL_TOKEN`
+    - `PROD_VERCEL_PROJECT_ID`
+    - `DEV_VERCEL_PROJECT_ID`
 
 ---
 
@@ -208,45 +213,86 @@ Deploy the frontend application using Vercel.
 
 Configure secrets in your GitHub repository settings ("Settings" > "Secrets and variables" > "Actions") to allow CI/CD workflows to authenticate with GCP.
 
-Required Secrets: (Get values from Terraform outputs and your .env files), Vercel, Supabase
+Required Secrets: (Get values from Terraform outputs and your `.env` files), Vercel, Supabase.
+
+This is the full list of secrets:
 
 ```
-# GCP Authentication (Common)
+Global
 GCP_REGION
+VERCEL_ORG_ID
+VERCEL_TOKEN
 
-# Development Environment
-DEV_GCP_PROJECT_ID
-DEV_GCP_ZONE
-DEV_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-dev-docker-repo)
-DEV_NAMING_PREFIX
-DEV_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
-DEV_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
-DEV_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-DEV_API_SERVICE_ACCOUNT_EMAIL    # From Terraform output
-DEV_SUPABASE_URL                 # From your .env.develop
-DEV_SUPABASE_ANON_KEY            # From your .env.develop (Supabase anon key)
-DEV_SUPABASE_SERVICE_ROLE        # From your .env.develop
-DEV_SUPABASE_JWT_SECRET          # From your .env.develop
-DEV_JIGSAWSTACK_API_KEY          # From your .env.develop
-DEV_WORKER_MIN_INSTANCES
-DEV_WORKER_MAX_INSTANCES
-
-# Production Environment
+Production
+PROD_ALERT_ALIGNMENT_PERIOD
+PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID
+PROD_API_SERVICE_ACCOUNT_EMAIL
+PROD_ARTIFACT_REGISTRY_REPO_NAME
+PROD_CICD_SERVICE_ACCOUNT_EMAIL
+PROD_FRONTEND_ALERT_POLICY_ID
+PROD_FRONTEND_STARTUP_ALERT_DELAY
+PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID
 PROD_GCP_PROJECT_ID
 PROD_GCP_ZONE
-PROD_ARTIFACT_REGISTRY_REPO_NAME # From Terraform output (e.g., concept-viz-prod-docker-repo)
+PROD_JIGSAWSTACK_API_KEY
 PROD_NAMING_PREFIX
-PROD_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output
-PROD_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output
-PROD_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-PROD_API_SERVICE_ACCOUNT_EMAIL   # From Terraform output
-PROD_SUPABASE_URL                # From your .env.main
-PROD_SUPABASE_ANON_KEY           # From your .env.main (Supabase anon key)
-PROD_SUPABASE_SERVICE_ROLE       # From your .env.main
-PROD_SUPABASE_JWT_SECRET         # From your .env.main
-PROD_JIGSAWSTACK_API_KEY         # From your .env.main
+PROD_SUPABASE_ANON_KEY
+PROD_SUPABASE_JWT_SECRET
+PROD_SUPABASE_SERVICE_ROLE
+PROD_SUPABASE_URL
 PROD_WORKER_MAX_INSTANCES
+PROD_WORKER_MIN_INSTANCES
+PROD_WORKER_SERVICE_ACCOUNT_EMAIL
+PROD_WORKLOAD_IDENTITY_PROVIDER
+PROD_VERCEL_PROJECT_ID
 
+Development
+DEV_ALERT_ALIGNMENT_PERIOD
+DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID
+DEV_API_SERVICE_ACCOUNT_EMAIL
+DEV_ARTIFACT_REGISTRY_REPO_NAME
+DEV_CICD_SERVICE_ACCOUNT_EMAIL
+DEV_FRONTEND_ALERT_POLICY_ID
+DEV_FRONTEND_STARTUP_ALERT_DELAY
+DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID
+DEV_GCP_PROJECT_ID
+DEV_GCP_ZONE
+DEV_JIGSAWSTACK_API_KEY
+DEV_NAMING_PREFIX
+DEV_SUPABASE_ANON_KEY
+DEV_SUPABASE_JWT_SECRET
+DEV_SUPABASE_SERVICE_ROLE
+DEV_SUPABASE_URL
+DEV_WORKER_MAX_INSTANCES
+DEV_WORKER_MIN_INSTANCES
+DEV_WORKER_SERVICE_ACCOUNT_EMAIL
+DEV_WORKLOAD_IDENTITY_PROVIDER
+DEV_VERCEL_PROJECT_ID
+```
+
+The Terraform configuration secrets will be automatically set by our creation scripts. Here is a list of secrets you should add to the GitHub repo manually:
+
+```
+Global
+GCP_REGION
+VERCEL_ORG_ID
+VERCEL_TOKEN
+
+Production
+PROD_JIGSAWSTACK_API_KEY
+PROD_SUPABASE_ANON_KEY
+PROD_SUPABASE_JWT_SECRET
+PROD_SUPABASE_SERVICE_ROLE
+PROD_SUPABASE_URL
+PROD_VERCEL_PROJECT_ID
+
+Development
+DEV_JIGSAWSTACK_API_KEY
+DEV_SUPABASE_ANON_KEY
+DEV_SUPABASE_JWT_SECRET
+DEV_SUPABASE_SERVICE_ROLE
+DEV_SUPABASE_URL
+DEV_VERCEL_PROJECT_ID
 ```
 
 ### 8. Running Locally
@@ -269,9 +315,9 @@ PROD_WORKER_MAX_INSTANCES
 
 ---
 
-### 8. Running Cloud
+### 9. Running Cloud
 
-    - After the backend and frontend is deployed on GCP and Vercel, respectively. Head on over to the project url given by vercel.
+After the backend and frontend is deployed on GCP and Vercel, respectively. Head on over to the project url given by vercel.
 
 ### Important: Full Recreations
 
@@ -283,46 +329,11 @@ PROD_WORKER_MAX_INSTANCES
 
 Regular deployments via CI/CD (pushing code changes) will typically _not_ require these full update steps, only updating the application code or container image.
 
-# Everytime we recreate our terraform resources
+### Everytime we recreate our terraform resources
 
 - Populate the secrets in Github
   - workflow
   - frontend monitoring config
-- Poulate the secrets in vercel
+- Populate the secrets in vercel
 - Update the vercel.json (with the new ip)
 - Commit the changes for CI/CD
-
-# Frontend Monitoring Setup
-
-After setting up the basic infrastructure, you should configure frontend monitoring to ensure the availability of your Vercel-deployed frontend:
-
-1. **Run Terraform Apply:**
-
-   - The frontend monitoring is implemented in Terraform and will create:
-     - An uptime check targeting your frontend URL
-     - An alert policy that triggers if the frontend is unavailable
-   - Run `scripts/gcp_apply.sh` to create these resources
-
-2. **Configure GitHub Secrets:**
-
-   - After running Terraform, note the `Frontend Uptime Check ID` output
-   - Add these secrets to your GitHub repository:
-     - `VERCEL_TOKEN`: Your Vercel Personal Access Token (from Vercel Dashboard > Account Settings > Tokens)
-     - `VERCEL_ORG_ID`: Your Vercel Organization/Team ID (if applicable)
-     - `VERCEL_PROJECT_ID_DEV`: The Vercel Project ID for your develop branch deployments
-     - `VERCEL_PROJECT_ID_PROD`: The Vercel Project ID for your main branch deployments
-     - `DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The Frontend Uptime Check ID for the dev environment
-     - `PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The Frontend Uptime Check ID for the prod environment
-
-3. **How it Works:**
-
-   - The deployment workflow (`deploy_backend.yml`) now includes steps to:
-     - Query the Vercel API to find the latest deployment URL for the current branch
-     - Update the GCP Uptime Check to monitor that specific URL
-   - This ensures your monitoring always targets the latest version of your frontend
-   - Alerts will be sent to the configured email address if the frontend becomes unavailable
-
-4. **Troubleshooting:**
-   - If the workflow fails to update the monitoring URL, you can manually update it in the GCP Console
-   - Go to GCP Monitoring > Uptime Checks > Select the frontend uptime check
-   - Update the hostname to match your latest Vercel deployment URL
