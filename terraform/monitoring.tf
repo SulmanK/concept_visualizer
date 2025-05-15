@@ -304,7 +304,7 @@ resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" 
       }
       comparison      = "COMPARISON_LT"
       threshold_value = 0.9 # Alert if less than 90% success rate in an alignment_period
-      duration        = var.frontend_startup_alert_delay # e.g., "300s"
+      duration        = var.frontend_startup_alert_delay # e.g., "2100s"
       trigger {
         count = 1
       }

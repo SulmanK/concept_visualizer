@@ -1,121 +1,106 @@
 # GitHub Secrets for CI/CD
 
-This document lists all the GitHub secrets required for the CI/CD workflows to function properly. All secrets follow a consistent naming convention: environment prefix (`DEV_` or `PROD_`) followed by the service/purpose.
+This document lists all the GitHub secrets required for the CI/CD workflows to function properly. Many of these secrets are now automatically populated by the `scripts/gh_populate_secrets.sh` script, which is called at the end of `scripts/gcp_apply.sh`. Ensure you have the GitHub CLI (`gh`) installed and authenticated for this automation to work.
 
-## Complete List of Required GitHub Secrets
+All secrets follow a consistent naming convention: environment prefix (`DEV_` or `PROD_`) followed by the service/purpose, or global if not prefixed.
 
-Add these secrets to your GitHub repository under Settings > Secrets and variables > Actions:
+## Overview of GitHub Secrets
+
+### Automatically Populated Secrets (via `scripts/gcp_apply.sh`)
+
+The following secrets are automatically set in your GitHub repository by the `scripts/gh_populate_secrets.sh` script. Values are sourced from Terraform outputs or active `.tfvars` files.
 
 ```
-# GCP Authentication (shared between environments)
+# Global (from .tfvars)
 GCP_REGION
-VERCEL_ORG_ID
-VERCEL_TOKEN
 
-# Development Environment
+# Development Environment (from Terraform outputs)
 DEV_GCP_PROJECT_ID
 DEV_GCP_ZONE
-DEV_ARTIFACT_REGISTRY_REPO_NAME
 DEV_NAMING_PREFIX
-DEV_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output: workload_identity_provider
-DEV_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output: cicd_service_account_email
-DEV_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-DEV_API_SERVICE_ACCOUNT_EMAIL   # From Terraform output
-DEV_SUPABASE_URL
-DEV_SUPABASE_ANON_KEY
-DEV_SUPABASE_SERVICE_ROLE
-DEV_SUPABASE_JWT_SECRET
-DEV_JIGSAWSTACK_API_KEY
-DEV_WORKER_MIN_INSTANCES
-DEV_WORKER_MAX_INSTANCES
-DEV_VERCEL_PROJECT_ID
+DEV_API_SERVICE_ACCOUNT_EMAIL
+DEV_WORKER_SERVICE_ACCOUNT_EMAIL
+DEV_CICD_SERVICE_ACCOUNT_EMAIL
+DEV_WORKLOAD_IDENTITY_PROVIDER
+DEV_ARTIFACT_REGISTRY_REPO_NAME
 DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID
 DEV_FRONTEND_ALERT_POLICY_ID
 DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID
 DEV_FRONTEND_STARTUP_ALERT_DELAY
 DEV_ALERT_ALIGNMENT_PERIOD
+DEV_WORKER_MIN_INSTANCES
+DEV_WORKER_MAX_INSTANCES
 
-# Production Environment
+# Production Environment (from Terraform outputs)
 PROD_GCP_PROJECT_ID
 PROD_GCP_ZONE
-PROD_ARTIFACT_REGISTRY_REPO_NAME
 PROD_NAMING_PREFIX
-PROD_WORKLOAD_IDENTITY_PROVIDER  # From Terraform output: workload_identity_provider
-PROD_CICD_SERVICE_ACCOUNT_EMAIL  # From Terraform output: cicd_service_account_email
-PROD_WORKER_SERVICE_ACCOUNT_EMAIL # From Terraform output
-PROD_API_SERVICE_ACCOUNT_EMAIL  # From Terraform output
-PROD_SUPABASE_URL
-PROD_SUPABASE_ANON_KEY
-PROD_SUPABASE_SERVICE_ROLE
-PROD_SUPABASE_JWT_SECRET
-PROD_JIGSAWSTACK_API_KEY
-PROD_WORKER_MIN_INSTANCES
-PROD_WORKER_MAX_INSTANCES
-PROD_VERCEL_PROJECT_ID
+PROD_API_SERVICE_ACCOUNT_EMAIL
+PROD_WORKER_SERVICE_ACCOUNT_EMAIL
+PROD_CICD_SERVICE_ACCOUNT_EMAIL
+PROD_WORKLOAD_IDENTITY_PROVIDER
+PROD_ARTIFACT_REGISTRY_REPO_NAME
 PROD_FRONTEND_UPTIME_CHECK_CONFIG_ID
 PROD_FRONTEND_ALERT_POLICY_ID
 PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID
 PROD_FRONTEND_STARTUP_ALERT_DELAY
 PROD_ALERT_ALIGNMENT_PERIOD
+PROD_WORKER_MIN_INSTANCES
+PROD_WORKER_MAX_INSTANCES
 ```
 
-## Terraform-Managed Resources
+### Manually Configured Secrets
 
-Several secrets are automatically created and managed by Terraform. After applying your Terraform configuration for each environment, use the outputs to populate these GitHub secrets:
+These secrets must still be added manually to your GitHub repository settings (Settings > Secrets and variables > Actions). They are typically sensitive, obtained from third-party services, or not part of the Terraform-managed infrastructure.
+
+```
+# Global
+VERCEL_ORG_ID
+VERCEL_TOKEN
+
+# Development Environment
+DEV_JIGSAWSTACK_API_KEY
+DEV_SUPABASE_ANON_KEY
+DEV_SUPABASE_JWT_SECRET
+DEV_SUPABASE_SERVICE_ROLE
+DEV_SUPABASE_URL
+DEV_VERCEL_PROJECT_ID
+
+# Production Environment
+PROD_JIGSAWSTACK_API_KEY
+PROD_SUPABASE_ANON_KEY
+PROD_SUPABASE_JWT_SECRET
+PROD_SUPABASE_SERVICE_ROLE
+PROD_SUPABASE_URL
+PROD_VERCEL_PROJECT_ID
+```
+
+## Terraform Outputs & Secret Population
+
+While many GitHub secrets are now set automatically using the `scripts/gh_populate_secrets.sh` script (which internally uses `terraform output`), you might still want to inspect Terraform outputs directly for verification or debugging.
+
+After applying your Terraform configuration for each environment, you can view the outputs. For example:
 
 1. For Development environment:
 
    ```bash
-   # After applying Terraform to the dev environment (terraform workspace select dev && terraform apply)
-   export DEV_WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw workload_identity_provider)
-   export DEV_CICD_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw cicd_service_account_email)
-   export DEV_WORKER_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw worker_service_account_email)
-   export DEV_API_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw api_service_account_email)
-
-   # You can then add these as GitHub secrets
-   # (either manually or using the GitHub CLI)
+   # After running scripts/gcp_apply.sh on the develop branch
+   # To view specific outputs (already used by the automation script):
+   cd terraform
+   terraform workspace select dev
+   terraform output -raw workload_identity_full_provider_name
+   terraform output -raw cicd_service_account_email
+   # etc.
    ```
 
 2. For Production environment:
-
    ```bash
-   # After applying Terraform to the prod environment (terraform workspace select prod && terraform apply)
-   export PROD_WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw workload_identity_provider)
-   export PROD_CICD_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw cicd_service_account_email)
-   export PROD_WORKER_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw worker_service_account_email)
-   export PROD_API_SERVICE_ACCOUNT_EMAIL=$(terraform output -raw api_service_account_email)
-
-   # You can then add these as GitHub secrets
-   # (either manually or using the GitHub CLI)
+   # After running scripts/gcp_apply.sh on the main branch
+   cd terraform
+   terraform workspace select prod
+   terraform output -raw workload_identity_full_provider_name
+   # etc.
    ```
-
-## Manually Added GitHub Secrets
-
-The following secrets should be added manually to your GitHub repository settings. This list complements the secrets generated from Terraform outputs (detailed in the 'Terraform-Managed Resources' section).
-
-### Global
-
-- `GCP_REGION`
-- `VERCEL_ORG_ID`
-- `VERCEL_TOKEN`
-
-### Production
-
-- `PROD_JIGSAWSTACK_API_KEY`
-- `PROD_SUPABASE_ANON_KEY`
-- `PROD_SUPABASE_JWT_SECRET`
-- `PROD_SUPABASE_SERVICE_ROLE`
-- `PROD_SUPABASE_URL`
-- `PROD_VERCEL_PROJECT_ID`
-
-### Development
-
-- `DEV_JIGSAWSTACK_API_KEY`
-- `DEV_SUPABASE_ANON_KEY`
-- `DEV_SUPABASE_JWT_SECRET`
-- `DEV_SUPABASE_SERVICE_ROLE`
-- `DEV_SUPABASE_URL`
-- `DEV_VERCEL_PROJECT_ID`
 
 ## Details of GitHub Secrets
 

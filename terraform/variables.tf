@@ -129,7 +129,7 @@ variable "alert_duration" {
 variable "api_startup_alert_delay" {
   description = "The duration (e.g., '600s') a failing health check condition must persist before an alert is triggered. Acts as an initial grace period after VM/API setup."
   type        = string
-  default     = "600s" # Default to 10 minutes, adjust as needed
+  default     = "2700s" # Default to 45 minutes, adjust as needed
 }
 
 variable "initial_frontend_hostname_placeholder" {
@@ -141,5 +141,5 @@ variable "initial_frontend_hostname_placeholder" {
 variable "frontend_startup_alert_delay" {
   description = "The duration a failing frontend health check must persist before alerting."
   type        = string
-  default     = "300s" # 5 minutes, Vercel deployments are usually fast
+  default     = "2700s" # 45 minutes, Vercel deployments are usually fast
 }
