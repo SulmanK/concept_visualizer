@@ -264,28 +264,39 @@ EOT
 resource "google_monitoring_uptime_check_config" "frontend_availability" {
   project      = var.project_id
   display_name = "${var.naming_prefix}-frontend-availability-${var.environment}"
-  timeout      = "10s" # How long each ping waits for a response
+  timeout      = "10s"
 
   http_check {
-    path           = "/"                # Check the root path of your frontend
-    port           = "443"              # Vercel uses HTTPS
-    use_ssl        = true
-    request_method = "GET"
-  }
-
-  # Validates that the page title is present - a good sign the app loaded
-  content_matchers {
-    content = "<title>Concept Visualizer</title>" # Adjust to your actual <title>
-    matcher = "CONTAINS_STRING"                    # Checks if the string is present in the response body
+    path         = "/"
+    port         = "443"
+    use_ssl      = true
+    validate_ssl = true
   }
 
   monitored_resource {
     type = "uptime_url"
     labels = {
-      host = var.initial_frontend_hostname_placeholder # This will be updated by CI/CD
+      project_id = var.project_id
+      host       = var.initial_frontend_hostname
     }
   }
-  period = "300s" # Check every 5 minutes (valid value)
+
+  period         = var.frontend_uptime_check_period
+  selected_regions = ["USA"]
+
+  content_matchers {
+    content = "<title>Concept Visualizer</title>"
+    matcher = "CONTAINS_STRING"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [
+      monitored_resource[0].labels.host,
+    ]
+  }
+
+  depends_on = [google_monitoring_notification_channel.email_alert_channel]
 }
 
 # --- Alert Policy for Frontend Availability Failures ---
@@ -351,19 +362,4 @@ resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" 
     google_monitoring_uptime_check_config.frontend_availability,
     google_monitoring_notification_channel.email_alert_channel,
   ]
-}
-
-output "frontend_alert_policy_id" {
-  description = "The ID of the frontend availability failure alert policy."
-  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.id
-}
-
-output "frontend_alert_policy_name" {
-  description = "The full name of the frontend availability failure alert policy."
-  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name # Often the same as ID or more descriptive
-}
-
-output "frontend_notification_channel_id" {
-  description = "The ID of the notification channel used for alerts."
-  value       = google_monitoring_notification_channel.email_alert_channel.id # Assuming this is the one used
 }

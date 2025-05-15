@@ -95,14 +95,6 @@ The following helper scripts are located in the `scripts/` directory at the proj
      git checkout main
      scripts/gcp_apply.sh
      ```
-5. Populate secrets:
-   - Create environment files:
-     - `backend/.env.develop` for development secrets
-     - `backend/.env.main` for production secrets
-   - Run the script:
-     ```bash
-     scripts/gcp_populate_secrets.sh
-     ```
 
 ## Important Notes
 

@@ -143,3 +143,23 @@ variable "frontend_startup_alert_delay" {
   type        = string
   default     = "2700s" # 45 minutes, Vercel deployments are usually fast
 }
+
+variable "alert_notification_channel_email" {
+  description = "Email address for the alert notification channel. If not provided, one will be created with a default name."
+  type        = string
+  default     = ""
+}
+
+variable "initial_frontend_hostname" {
+  description = "Initial placeholder hostname for the frontend uptime check. This will be updated by the deployment workflow."
+  type        = string
+  default     = "placeholder.example.com"
+}
+
+variable "frontend_uptime_check_period" {
+  description = "How often the frontend uptime check is performed (e.g., '300s' for 5 minutes)."
+  type        = string
+  default     = "300s"
+}
+
+# --- Optional Variables for Worker Autoscaling (Cloud Function 2nd Gen) ---
