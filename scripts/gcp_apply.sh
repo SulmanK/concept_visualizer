@@ -323,7 +323,7 @@ echo -e "\nFrontend Alert Policy Name for $ENVIRONMENT environment:"
 terraform output -raw frontend_alert_policy_name
 
 echo -e "\nAlert Notification Channel ID for $ENVIRONMENT environment (e.g., PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID):"
-terraform output -raw frontend_notification_channel_id
+terraform output -raw notification_channel_id_full
 
 # --- Global Secrets (Not environment-specific but fetched once) ---
 GCP_REGION_SECRET_NAME="GCP_REGION"
