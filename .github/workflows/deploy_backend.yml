@@ -556,6 +556,7 @@ jobs:
             elif [[ -z "$TF_STATE_BUCKET_NAME" ]]; then
               echo "ERROR: TF_STATE_BUCKET_NAME is not set. Skipping GCS storage of IDs."
             else
+              echo "DEBUG: Current TF_STATE_BUCKET_NAME is: '${TF_STATE_BUCKET_NAME}'"
               UPTIME_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_uptime_check_id.txt"
               ALERT_POLICY_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_alert_policy_id.txt"
 
