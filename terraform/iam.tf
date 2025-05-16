@@ -222,7 +222,7 @@ resource "google_storage_bucket_iam_member" "state_bucket_cicd_access" {
 
 # Data source to reference the manually created GCS bucket for Terraform state
 data "google_storage_bucket" "manual_tf_state_bucket" {
-  name = "concept-visualizer-tfstate-1" # ** IMPORTANT: Ensure this is your exact manually created bucket name **
+  name = var.manual_tf_state_bucket_name
 }
 
 # Grant the CI/CD service account permissions to manage objects in the manually created TF state bucket

@@ -162,4 +162,10 @@ variable "frontend_uptime_check_period" {
   default     = "300s"
 }
 
+variable "manual_tf_state_bucket_name" {
+  description = "The name of the manually created GCS bucket used for Terraform state and other shared resources (like dynamic monitoring IDs)."
+  type        = string
+  # No default, this should be explicitly set in tfvars
+}
+
 # --- Optional Variables for Worker Autoscaling (Cloud Function 2nd Gen) ---
