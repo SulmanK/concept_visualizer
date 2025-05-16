@@ -18,3 +18,5 @@ alert_duration              = "0s"   # Alert immediately on first failure in an 
 api_startup_alert_delay         = "900s" # 15 minutes grace period for API startup (longer for prod)
 initial_frontend_hostname      = "placeholder.prod.example.com" # Example placeholder
 frontend_uptime_check_period   = "60s"  # Example: Check more frequently in prod
+
+manual_tf_state_bucket_name    = "your-manual-tf-state-bucket-name" # e.g., concept-visualizer-tfstate-1
