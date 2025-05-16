@@ -350,9 +350,17 @@ jobs:
         env:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET_NAME }}
           VERCEL_URL: ${{ steps.get_vercel_url.outputs.url }}
+          ALERT_EMAIL_ADDRESS: ${{ secrets.ALERT_EMAIL_ADDRESS }}
         run: |
           echo "Applying frontend monitoring configuration with actual Vercel URL"
           echo "Vercel URL for monitoring: $VERCEL_URL"
+
+          # Additional debugging
+          echo "Current directory: $(pwd)"
+          echo "Contents of terraform directory:"
+          ls -la terraform/
+          echo "Contents of environments directory (if it exists):"
+          ls -la terraform/environments/ || echo "Environments directory not found"
 
           # Initialize Terraform using the shared remote backend
           terraform -chdir=terraform init -reconfigure \
@@ -361,12 +369,39 @@ jobs:
           # Select the appropriate workspace
           terraform -chdir=terraform workspace select "${{ env.ENVIRONMENT }}"
 
-          # Apply only the frontend monitoring resources with the actual Vercel URL
-          # Include all required variables from environment variables to avoid prompts
+          # Check for required variables
+          echo "Checking required variables..."
+          terraform -chdir=terraform providers
+
+          # Create a temporary tfvars file with just what we need for this operation
+          echo "Creating temporary tfvars file..."
+          cat > terraform/temp_frontend_monitoring.tfvars <<EOF
+          project_id = "${{ env.GCP_PROJECT_ID }}"
+          environment = "${{ env.ENVIRONMENT }}"
+          naming_prefix = "${{ env.NAMING_PREFIX }}"
+          frontend_hostname = "$VERCEL_URL"
+          alert_email_address = "$ALERT_EMAIL_ADDRESS"
+          region = "${{ env.REGION }}"
+          zone = "${{ env.GCP_ZONE }}"
+          terraform_state_bucket_name = "$TF_STATE_BUCKET"
+          manual_tf_state_bucket_name = "$TF_STATE_BUCKET"
+          github_repo = ""
+          terraform_runner_user_emails = []
+          terraform_cicd_sa_email = ""
+          allow_ssh_ips = []
+          EOF
+
+          echo "Content of temporary tfvars file:"
+          cat terraform/temp_frontend_monitoring.tfvars
+
+          # Try to apply with the temporary tfvars file
+          echo "Proceeding with terraform apply using temporary tfvars file..."
           terraform -chdir=terraform apply -auto-approve \
-            -var="frontend_hostname=$VERCEL_URL" \
-            -var-file="environments/${{ env.ENVIRONMENT }}.tfvars" \
+            -var-file="temp_frontend_monitoring.tfvars" \
             -target=google_monitoring_uptime_check_config.frontend_availability \
             -target=google_monitoring_alert_policy.frontend_availability_failure_alert
 
           echo "Frontend monitoring resources updated successfully to target: $VERCEL_URL"
+
+          # Clean up temporary file
+          rm -f terraform/temp_frontend_monitoring.tfvars

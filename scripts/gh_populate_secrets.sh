@@ -72,6 +72,50 @@ echo "Found Terraform CLI."
 echo "Changing to Terraform directory: $TERRAFORM_DIR"
 cd "$TERRAFORM_DIR"
 
+# Check if we need to unlock the state
+TF_STATE_BUCKET=$(grep 'terraform_state_bucket_name' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+check_and_clear_state_lock() {
+  local workspace="$1"
+  local bucket="$TF_STATE_BUCKET"
+
+  echo "Checking for state locks in workspace: $workspace..."
+
+  # Check if there's a lock file
+  if gsutil -q stat "gs://${bucket}/terraform/state/${workspace}.tflock" 2>/dev/null; then
+    echo "WARNING: State lock detected for workspace: $workspace"
+
+    # Try to get lock info
+    local lock_content
+    lock_content=$(gsutil cat "gs://${bucket}/terraform/state/${workspace}.tflock" 2>/dev/null || echo "Could not read lock file")
+
+    echo "Lock Info:"
+    echo "$lock_content"
+
+    read -p "Do you want to force-remove this lock? Only do this if you're sure no other operations are running! (y/n) " force_unlock
+
+    if [[ "$force_unlock" == "y" || "$force_unlock" == "Y" ]]; then
+      echo "Removing state lock..."
+      if gsutil rm "gs://${bucket}/terraform/state/${workspace}.tflock"; then
+        echo "Lock successfully removed."
+      else
+        echo "Failed to remove lock. You may need to do this manually."
+        exit 1
+      fi
+    else
+      echo "Proceeding with lock in place. This may cause failures if the lock is still active."
+    fi
+  else
+    echo "No state lock detected for workspace: $workspace"
+  fi
+}
+
+# Initialize and select workspace
+terraform init -backend-config="bucket=$TF_STATE_BUCKET" -reconfigure
+terraform workspace select "$ENV_NAME"
+
+# Check for state lock
+check_and_clear_state_lock "$ENV_NAME"
+
 # --- Define Secrets to Automate ---
 # Associative array: GitHub Secret Suffix -> Terraform Output Name
 declare -A PREFIXED_SECRETS
@@ -135,6 +179,97 @@ for SECRET_SUFFIX in "${!PREFIXED_SECRETS[@]}"; do
         echo "Warning: Terraform output '$TF_OUTPUT_NAME' for secret $FULL_GH_SECRET_NAME was empty or not found. Skipping." >&2
     fi
 done
+
+# Set additional essential secrets that may not come from Terraform
+echo "
+Setting any additional essential secrets:"
+
+# Set TF_STATE_BUCKET_NAME
+FULL_GH_SECRET_NAME="${TARGET_PREFIX}TF_STATE_BUCKET_NAME"
+echo "Setting $FULL_GH_SECRET_NAME..."
+if gh secret set "$FULL_GH_SECRET_NAME" -b "$TF_STATE_BUCKET"; then
+    echo "Successfully set $FULL_GH_SECRET_NAME."
+else
+    echo "Error setting $FULL_GH_SECRET_NAME." >&2
+fi
+
+# Set ALERT_EMAIL_ADDRESS - get from tfvars file
+ALERT_EMAIL=$(grep 'alert_email_address' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+if [[ -n "$ALERT_EMAIL" ]]; then
+    echo "Setting ALERT_EMAIL_ADDRESS..."
+    if gh secret set "ALERT_EMAIL_ADDRESS" -b "$ALERT_EMAIL"; then
+        echo "Successfully set ALERT_EMAIL_ADDRESS."
+    else
+        echo "Error setting ALERT_EMAIL_ADDRESS." >&2
+    fi
+else
+    echo "Warning: alert_email_address not found in $TFVARS_FILE."
+    echo "Please set this secret manually to enable frontend monitoring alerts."
+
+    # Prompt user to provide the email
+    read -p "Would you like to provide an alert email address now? (y/n): " SET_EMAIL
+    if [[ "$SET_EMAIL" == "y" || "$SET_EMAIL" == "Y" ]]; then
+        read -p "Enter email address for monitoring alerts: " USER_EMAIL
+        if [[ -n "$USER_EMAIL" ]]; then
+            if gh secret set "ALERT_EMAIL_ADDRESS" -b "$USER_EMAIL"; then
+                echo "Successfully set ALERT_EMAIL_ADDRESS to $USER_EMAIL."
+            else
+                echo "Error setting ALERT_EMAIL_ADDRESS." >&2
+            fi
+        else
+            echo "No email provided. Skipping."
+        fi
+    fi
+fi
+
+# Handle VERCEL_PROJECT_ID if needed
+# This is not part of Terraform state but needed for frontend monitoring
+VERCEL_PROJECT_ID_SECRET="${TARGET_PREFIX}VERCEL_PROJECT_ID"
+if ! gh secret list | grep -q "$VERCEL_PROJECT_ID_SECRET"; then
+    echo "WARNING: $VERCEL_PROJECT_ID_SECRET is not set. This is required for frontend monitoring."
+    echo "Please set this secret manually with your Vercel project ID."
+
+    # Prompt user to provide Vercel Project ID
+    read -p "Would you like to provide a Vercel Project ID now? (y/n): " SET_VERCEL_ID
+    if [[ "$SET_VERCEL_ID" == "y" || "$SET_VERCEL_ID" == "Y" ]]; then
+        read -p "Enter Vercel Project ID: " VERCEL_ID
+        if [[ -n "$VERCEL_ID" ]]; then
+            if gh secret set "$VERCEL_PROJECT_ID_SECRET" -b "$VERCEL_ID"; then
+                echo "Successfully set $VERCEL_PROJECT_ID_SECRET to $VERCEL_ID."
+            else
+                echo "Error setting $VERCEL_PROJECT_ID_SECRET." >&2
+            fi
+        else
+            echo "No Vercel Project ID provided. Skipping."
+        fi
+    fi
+fi
+
+# --- Verify Frontend Monitoring Secrets ---
+echo "
+Verifying frontend monitoring secrets:"
+
+FRONTEND_UPTIME_CHECK_ID="${TARGET_PREFIX}FRONTEND_UPTIME_CHECK_CONFIG_ID"
+FRONTEND_ALERT_POLICY_ID="${TARGET_PREFIX}FRONTEND_ALERT_POLICY_ID"
+ALERT_NOTIFICATION_CHANNEL_ID="${TARGET_PREFIX}ALERT_NOTIFICATION_CHANNEL_FULL_ID"
+
+# Get the current values from GitHub to check if they exist
+UPTIME_CHECK_ID_VALUE=$(gh secret list | grep -w "$FRONTEND_UPTIME_CHECK_ID" | wc -l)
+ALERT_POLICY_ID_VALUE=$(gh secret list | grep -w "$FRONTEND_ALERT_POLICY_ID" | wc -l)
+NOTIFICATION_CHANNEL_ID_VALUE=$(gh secret list | grep -w "$ALERT_NOTIFICATION_CHANNEL_ID" | wc -l)
+ALERT_EMAIL_VALUE=$(gh secret list | grep -w "ALERT_EMAIL_ADDRESS" | wc -l)
+
+if [[ "$UPTIME_CHECK_ID_VALUE" -eq 0 || "$ALERT_POLICY_ID_VALUE" -eq 0 ||
+     "$NOTIFICATION_CHANNEL_ID_VALUE" -eq 0 || "$ALERT_EMAIL_VALUE" -eq 0 ]]; then
+    echo "WARNING: One or more required frontend monitoring secrets are missing."
+    echo "Please ensure the following secrets are set correctly:"
+    echo "- $FRONTEND_UPTIME_CHECK_ID"
+    echo "- $FRONTEND_ALERT_POLICY_ID"
+    echo "- $ALERT_NOTIFICATION_CHANNEL_ID"
+    echo "- ALERT_EMAIL_ADDRESS"
+else
+    echo "All required frontend monitoring secrets appear to be set."
+fi
 
 # --- Return to Original Directory ---
 cd "$PROJECT_ROOT"
