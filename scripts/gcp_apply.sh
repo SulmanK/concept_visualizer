@@ -168,6 +168,45 @@ PROJECT_ID=$(grep 'project_id' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2
 REGION=$(grep 'region' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
 NAMING_PREFIX=$(grep 'naming_prefix' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
 
+# Check for and offer to clear state lock if it exists
+check_and_clear_state_lock() {
+  local workspace="$1"
+  local bucket="$TF_STATE_BUCKET"
+
+  echo "Checking for state locks in workspace: $workspace..."
+
+  # Check if there's a lock file
+  if gsutil -q stat "gs://${bucket}/terraform/state/${workspace}.tflock" 2>/dev/null; then
+    echo "WARNING: State lock detected for workspace: $workspace"
+
+    # Try to get lock info
+    local lock_content
+    lock_content=$(gsutil cat "gs://${bucket}/terraform/state/${workspace}.tflock" 2>/dev/null || echo "Could not read lock file")
+
+    echo "Lock Info:"
+    echo "$lock_content"
+
+    read -p "Do you want to force-remove this lock? Only do this if you're sure no other operations are running! (y/n) " force_unlock
+
+    if [[ "$force_unlock" == "y" || "$force_unlock" == "Y" ]]; then
+      echo "Removing state lock..."
+      if gsutil rm "gs://${bucket}/terraform/state/${workspace}.tflock"; then
+        echo "Lock successfully removed."
+      else
+        echo "Failed to remove lock. You may need to do this manually."
+        exit 1
+      fi
+    else
+      echo "Proceeding with lock in place. This may cause failures if the lock is still active."
+    fi
+  else
+    echo "No state lock detected for workspace: $workspace"
+  fi
+}
+
+# Check for state lock before proceeding with deployment
+check_and_clear_state_lock "$ENVIRONMENT"
+
 # Construct the image name
 ARTIFACT_REGISTRY_REPO="${NAMING_PREFIX}-docker-repo"
 API_IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/concept-api-${ENVIRONMENT}:latest"
@@ -324,6 +363,21 @@ terraform output -raw frontend_alert_policy_name
 
 echo -e "\nAlert Notification Channel ID for $ENVIRONMENT environment (e.g., PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID):"
 terraform output -raw notification_channel_id_full
+
+# Alert Email Address
+ALERT_EMAIL=$(grep 'alert_email_address' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+echo -e "\nAlert Email Address for monitoring (ALERT_EMAIL_ADDRESS):"
+if [[ -n "$ALERT_EMAIL" ]]; then
+    echo "$ALERT_EMAIL"
+else
+    echo "⚠️ ALERT_EMAIL_ADDRESS not found in $TFVARS_FILE. This is required for frontend monitoring."
+    echo "Please add 'alert_email_address = \"your-email@example.com\"' to your tfvars file."
+fi
+
+echo -e "\n===== GITHUB SECRETS ALREADY POPULATED =====\n"
+echo "GitHub Actions secrets for your CI/CD workflow have been automatically populated by step 7."
+echo "If you need to update them again, you can manually run:"
+echo "  ./scripts/gh_populate_secrets.sh"
 
 # --- Global Secrets (Not environment-specific but fetched once) ---
 GCP_REGION_SECRET_NAME="GCP_REGION"
