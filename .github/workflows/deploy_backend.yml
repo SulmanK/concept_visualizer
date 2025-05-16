@@ -362,8 +362,10 @@ jobs:
           terraform -chdir=terraform workspace select "${{ env.ENVIRONMENT }}"
 
           # Apply only the frontend monitoring resources with the actual Vercel URL
+          # Include all required variables from environment variables to avoid prompts
           terraform -chdir=terraform apply -auto-approve \
             -var="frontend_hostname=$VERCEL_URL" \
+            -var-file="environments/${{ env.ENVIRONMENT }}.tfvars" \
             -target=google_monitoring_uptime_check_config.frontend_availability \
             -target=google_monitoring_alert_policy.frontend_availability_failure_alert
 
