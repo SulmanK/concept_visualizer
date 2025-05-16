@@ -345,248 +345,26 @@ jobs:
           echo "VERCEL_DEPLOYMENT_URL_FOR_MONITORING=$DEPLOY_URL" >> $GITHUB_ENV
           echo "::set-output name=url::$DEPLOY_URL"
 
-      - name: Update GCP Frontend Uptime Check
-        if: env.FRONTEND_UPTIME_CHECK_ID != '' && env.VERCEL_DEPLOYMENT_URL_FOR_MONITORING != '' && env.FRONTEND_ALERT_POLICY_ID != '' && env.ALERT_NOTIFICATION_CHANNEL_FULL_ID != ''
+      - name: Apply/Update Frontend Monitoring Resources
+        if: env.FRONTEND_UPTIME_CHECK_ID != '' && steps.get_vercel_url.outputs.url != '' && env.ENVIRONMENT == 'dev' || env.ENVIRONMENT == 'prod'
         env:
-          GCP_PROJECT_ID_FOR_MONITOR: ${{ env.GCP_PROJECT_ID }}
-          UPTIME_CHECK_ID_FOR_MONITOR: ${{ env.FRONTEND_UPTIME_CHECK_ID }}
-          VERCEL_URL_TO_MONITOR: ${{ env.VERCEL_DEPLOYMENT_URL_FOR_MONITORING }}
-          FRONTEND_ALERT_POLICY_ID: ${{ env.FRONTEND_ALERT_POLICY_ID }}
-          ALERT_NOTIFICATION_CHANNEL_FULL_ID: ${{ env.ALERT_NOTIFICATION_CHANNEL_FULL_ID }}
-          FRONTEND_STARTUP_ALERT_DELAY: ${{ env.FRONTEND_STARTUP_ALERT_DELAY || '300s' }}
-          ALERT_ALIGNMENT_PERIOD: ${{ env.ALERT_ALIGNMENT_PERIOD || '300s' }}
-          TF_STATE_BUCKET_NAME: ${{ secrets.TF_STATE_BUCKET_NAME }}
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET_NAME }}
+          VERCEL_URL: ${{ steps.get_vercel_url.outputs.url }}
         run: |
-          echo "Updating Frontend Uptime Check for environment: ${{ env.ENVIRONMENT }}"
-          echo "Monitoring URL: $VERCEL_URL_TO_MONITOR"
-          echo "Uptime Check ID (config): $UPTIME_CHECK_ID_FOR_MONITOR"
-          echo "Alert Policy ID: $FRONTEND_ALERT_POLICY_ID"
-          echo "Notification Channel ID: $ALERT_NOTIFICATION_CHANNEL_FULL_ID"
-          echo "TF State Bucket: $TF_STATE_BUCKET_NAME"
+          echo "Applying frontend monitoring configuration with actual Vercel URL"
+          echo "Vercel URL for monitoring: $VERCEL_URL"
 
-          HOSTNAME=$(echo "$VERCEL_URL_TO_MONITOR" | sed -E 's#^https?://##' | cut -d/ -f1)
-          echo "Extracted hostname: $HOSTNAME"
+          # Initialize Terraform using the shared remote backend
+          terraform -chdir=terraform init -reconfigure \
+            -backend-config="bucket=$TF_STATE_BUCKET"
 
-          # --- BEGIN: Clean Up Stale Dynamic Monitoring Resources (Hygiene) ---
-          echo "Cleaning up potentially stale monitoring resources..."
-          UPTIME_CHECK_DISPLAY_NAME_TO_CLEAN="${{ env.NAMING_PREFIX }}-frontend-availability-${{ env.ENVIRONMENT }}"
-          ALERT_POLICY_DISPLAY_NAME_TO_CLEAN="${{ env.NAMING_PREFIX }}-frontend-down-al-${{ env.ENVIRONMENT }}"
+          # Select the appropriate workspace
+          terraform -chdir=terraform workspace select "${{ env.ENVIRONMENT }}"
 
-          # Clean stale uptime checks
-          STALE_UPTIME_CHECKS=$(gcloud monitoring uptime list-configs --project="${GCP_PROJECT_ID_FOR_MONITOR}" --filter="displayName=${UPTIME_CHECK_DISPLAY_NAME_TO_CLEAN}" --format="value(name)")
-          KNOWN_UPTIME_CHECK_FULL_PATH="projects/${GCP_PROJECT_ID_FOR_MONITOR}/uptimeCheckConfigs/${UPTIME_CHECK_ID_FOR_MONITOR}"
-          for STALE_CHECK_PATH in $STALE_UPTIME_CHECKS; do
-            if [[ "$STALE_CHECK_PATH" != "$KNOWN_UPTIME_CHECK_FULL_PATH" ]]; then
-              echo "Deleting stale uptime check: $STALE_CHECK_PATH"
-              gcloud monitoring uptime delete "$STALE_CHECK_PATH" --project="${GCP_PROJECT_ID_FOR_MONITOR}" --quiet || echo "Warning: Failed to delete stale uptime check $STALE_CHECK_PATH"
-            fi
-          done
+          # Apply only the frontend monitoring resources with the actual Vercel URL
+          terraform -chdir=terraform apply -auto-approve \
+            -var="frontend_hostname=$VERCEL_URL" \
+            -target=google_monitoring_uptime_check_config.frontend_availability \
+            -target=google_monitoring_alert_policy.frontend_availability_failure_alert
 
-          # Clean stale alert policies
-          KNOWN_ALERT_POLICY_FULL_PATH="projects/${GCP_PROJECT_ID_FOR_MONITOR}/alertPolicies/${FRONTEND_ALERT_POLICY_ID}"
-          if [[ ! "$FRONTEND_ALERT_POLICY_ID" == projects/* ]]; then # if short ID was passed
-            KNOWN_ALERT_POLICY_FULL_PATH="projects/${GCP_PROJECT_ID_FOR_MONITOR}/alertPolicies/${FRONTEND_ALERT_POLICY_ID}"
-          fi
-          STALE_ALERT_POLICIES=$(gcloud alpha monitoring policies list --project="${GCP_PROJECT_ID_FOR_MONITOR}" --filter="displayName=${ALERT_POLICY_DISPLAY_NAME_TO_CLEAN}" --format="value(name)")
-          for STALE_POLICY_PATH in $STALE_ALERT_POLICIES; do
-            if [[ "$STALE_POLICY_PATH" != "$KNOWN_ALERT_POLICY_FULL_PATH" ]]; then
-              echo "Deleting stale alert policy: $STALE_POLICY_PATH"
-              gcloud alpha monitoring policies delete "$STALE_POLICY_PATH" --project="${GCP_PROJECT_ID_FOR_MONITOR}" --quiet || echo "Warning: Failed to delete stale alert policy $STALE_POLICY_PATH"
-            fi
-          done
-          echo "Cleanup of stale monitoring resources attempt complete."
-          # --- END: Clean Up Stale Dynamic Monitoring Resources ---
-
-          mkdir -p /tmp/terraform_monitor
-          cd /tmp/terraform_monitor
-
-          # Construct full alert policy path if only short ID is given
-          FULL_ALERT_POLICY_ID=$FRONTEND_ALERT_POLICY_ID
-          if [[ ! "$FULL_ALERT_POLICY_ID" == projects/* ]]; then
-            FULL_ALERT_POLICY_ID="projects/$GCP_PROJECT_ID_FOR_MONITOR/alertPolicies/$FRONTEND_ALERT_POLICY_ID"
-          fi
-          echo "Full Alert Policy ID for import: $FULL_ALERT_POLICY_ID"
-
-          cat > main.tf << EOF
-          provider "google" {
-            project = "$GCP_PROJECT_ID_FOR_MONITOR"
-            region  = "${{ env.REGION }}"
-          }
-
-          variable "target_hostname" { type = string }
-          variable "gcp_project_id" { type = string }
-          variable "naming_prefix" { type = string }
-          variable "environment" { type = string }
-          variable "alert_notification_channel_full_id" { type = string }
-          variable "frontend_startup_alert_delay" { type = string }
-          variable "alert_alignment_period" { type = string }
-
-          resource "google_monitoring_uptime_check_config" "frontend_availability" {
-            project      = var.gcp_project_id
-            display_name = "\${var.naming_prefix}-frontend-availability-\${var.environment}"
-            timeout      = "10s"
-            period       = "300s" # Consistent with design_doc, adjust if var.frontend_uptime_check_period is available & preferred
-
-            http_check {
-              path         = "/"
-              port         = "443"
-              use_ssl      = true
-              validate_ssl = true
-            }
-
-            content_matchers {
-              content = "<title>Concept Visualizer</title>"
-              matcher = "CONTAINS_STRING"
-            }
-
-            monitored_resource {
-              type = "uptime_url"
-              labels = {
-                project_id = var.gcp_project_id
-                host       = var.target_hostname # Also dynamic
-              }
-            }
-
-            lifecycle {
-              create_before_destroy = true
-              # No ignore_changes here as this TF apply should be authoritative for these fields during workflow run
-            }
-          }
-
-          resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" {
-            project      = var.gcp_project_id
-            display_name = "\${var.naming_prefix}-frontend-down-al-\${var.environment}"
-            combiner     = "OR"
-
-            conditions {
-              display_name = "Frontend Application Unavailable (Sustained)"
-              condition_threshold {
-                filter = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" AND resource.type=\"uptime_url\" AND metric.label.check_id=\"\${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}\""
-                aggregations {
-                  alignment_period   = var.alert_alignment_period
-                  per_series_aligner = "ALIGN_FRACTION_TRUE"
-                }
-                comparison      = "COMPARISON_LT"
-                threshold_value = 0.9
-                duration        = var.frontend_startup_alert_delay
-                trigger { count = 1 }
-              }
-            }
-
-            notification_channels = [
-              var.alert_notification_channel_full_id,
-            ]
-
-            documentation {
-              content = <<EOT
-          ### Frontend Availability Alert (\${var.environment})
-
-          **Summary:** The frontend application is failing uptime checks.
-          **Monitored Host:** \${var.target_hostname}
-          **Uptime Check ID:** \${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}
-          **Condition:** Success rate less than 90% over a \${var.alert_alignment_period} window, persisting for \${var.frontend_startup_alert_delay}.
-
-          **Possible Causes:**
-          *   Vercel platform issues.
-          *   DNS resolution problems for your custom domain (if any).
-          *   Misconfiguration in Vercel deployment settings.
-          *   The application is not serving the expected content.
-          *   The Uptime Check\'s target hostname in GCP Monitoring is outdated.
-
-          **Recommended Actions:**
-          1.  **Check Vercel Status:** Visit [status.vercel.com](https://status.vercel.com/).
-          2.  **Check Vercel Deployment Logs.**
-          3.  **Verify DNS Configuration.**
-          4.  **Verify Uptime Check Target in GCP Monitoring.**
-          5.  **Manually Access Frontend URL.**
-          EOT
-              mime_type = "text/markdown"
-            }
-
-            user_labels = {
-              environment = var.environment
-              service     = "\${var.naming_prefix}-frontend"
-              tier        = "frontend"
-            }
-          }
-
-          # Outputs for storing definitive IDs
-          output "frontend_availability_config_full_id" {
-            description = "Full ID of the frontend uptime check config."
-            value = google_monitoring_uptime_check_config.frontend_availability.name
-          }
-
-          output "frontend_availability_alert_policy_full_id" {
-            description = "Full ID of the frontend alert policy."
-            value = google_monitoring_alert_policy.frontend_availability_failure_alert.name
-          }
-          EOF
-
-          cat > terraform.tfvars <<EOF
-          target_hostname                  = "$HOSTNAME"
-          gcp_project_id                   = "$GCP_PROJECT_ID_FOR_MONITOR"
-          naming_prefix                    = "${{ env.NAMING_PREFIX }}"
-          environment                      = "${{ env.ENVIRONMENT }}"
-          alert_notification_channel_full_id = "$ALERT_NOTIFICATION_CHANNEL_FULL_ID"
-          frontend_startup_alert_delay     = "${{ env.FRONTEND_STARTUP_ALERT_DELAY }}"
-          alert_alignment_period           = "${{ env.ALERT_ALIGNMENT_PERIOD }}"
-          EOF
-
-          terraform init -no-color
-
-          echo "Importing Uptime Check: projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR into ephemeral TF state..."
-          # Using actual resource name frontend_availability
-          terraform import -no-color google_monitoring_uptime_check_config.frontend_availability "projects/$GCP_PROJECT_ID_FOR_MONITOR/uptimeCheckConfigs/$UPTIME_CHECK_ID_FOR_MONITOR" || echo "Uptime check import failed or resource does not exist. Continuing..."
-
-          echo "Importing Alert Policy: $FULL_ALERT_POLICY_ID into ephemeral TF state..."
-          # Using actual resource name frontend_availability_failure_alert
-          terraform import -no-color google_monitoring_alert_policy.frontend_availability_failure_alert "$FULL_ALERT_POLICY_ID" || echo "Alert policy import failed or resource does not exist. Continuing..."
-
-          terraform apply -auto-approve -no-color -var-file=terraform.tfvars
-
-          if [ $? -eq 0 ]; then
-            echo "Successfully updated frontend uptime check and alert policy via Terraform."
-
-            # --- BEGIN: Store Definitive Resource IDs to GCS ---
-            echo "Storing definitive resource IDs to GCS..."
-            DEFINITIVE_UPTIME_CHECK_FULL_ID=$(terraform output -raw frontend_availability_config_full_id)
-            DEFINITIVE_ALERT_POLICY_FULL_ID=$(terraform output -raw frontend_availability_alert_policy_full_id)
-
-            if [[ -z "$DEFINITIVE_UPTIME_CHECK_FULL_ID" || -z "$DEFINITIVE_ALERT_POLICY_FULL_ID" ]]; then
-              echo "ERROR: Could not retrieve definitive IDs from Terraform output. Skipping GCS storage."
-            elif [[ -z "$TF_STATE_BUCKET_NAME" ]]; then
-              echo "ERROR: TF_STATE_BUCKET_NAME is not set. Skipping GCS storage of IDs."
-            else
-              UPTIME_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_uptime_check_id.txt"
-              ALERT_POLICY_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_alert_policy_id.txt"
-
-              echo "DEBUG: Authenticated gcloud user:"
-              gcloud auth list
-              echo "DEBUG: gsutil version details:"
-              gsutil version -l
-              echo "DEBUG: TF_STATE_BUCKET_NAME for GCS copy is: '$TF_STATE_BUCKET_NAME'"
-              echo "DEBUG: Uptime Check ID GCS Path for copy is: '$UPTIME_ID_GCS_PATH'"
-              echo "DEBUG: Alert Policy ID GCS Path for copy is: '$ALERT_POLICY_ID_GCS_PATH'"
-
-              echo "Uptime Check ID to store: $DEFINITIVE_UPTIME_CHECK_FULL_ID at $UPTIME_ID_GCS_PATH"
-              echo "$DEFINITIVE_UPTIME_CHECK_FULL_ID" > /tmp/definitive_uptime_check_id.txt
-              gsutil cp /tmp/definitive_uptime_check_id.txt "$UPTIME_ID_GCS_PATH"
-              GSUTIL_UPTIME_EXIT_CODE=$?
-
-              echo "Alert Policy ID to store: $DEFINITIVE_ALERT_POLICY_FULL_ID at $ALERT_POLICY_ID_GCS_PATH"
-              echo "$DEFINITIVE_ALERT_POLICY_FULL_ID" > /tmp/definitive_alert_policy_id.txt
-              gsutil cp /tmp/definitive_alert_policy_id.txt "$ALERT_POLICY_ID_GCS_PATH"
-              GSUTIL_POLICY_EXIT_CODE=$?
-
-              if [ $GSUTIL_UPTIME_EXIT_CODE -eq 0 ] && [ $GSUTIL_POLICY_EXIT_CODE -eq 0 ]; then
-                echo "Definitive IDs stored in GCS."
-              else
-                echo "ERROR: One or more gsutil cp commands failed. Exit codes - Uptime: $GSUTIL_UPTIME_EXIT_CODE, Policy: $GSUTIL_POLICY_EXIT_CODE"
-                # exit 1 # Optionally exit if GCS storage fails
-              fi
-            fi
-            # --- END: Store Definitive Resource IDs to GCS ---
-          else
-            echo "ERROR: Terraform apply failed. Review logs."
-            exit 1
-          fi
+          echo "Frontend monitoring resources updated successfully to target: $VERCEL_URL"

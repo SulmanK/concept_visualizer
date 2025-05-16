@@ -277,7 +277,7 @@ resource "google_monitoring_uptime_check_config" "frontend_availability" {
     type = "uptime_url"
     labels = {
       project_id = var.project_id
-      host       = var.initial_frontend_hostname
+      host       = var.frontend_hostname != "" ? var.frontend_hostname : var.initial_frontend_hostname
     }
   }
 
@@ -291,9 +291,6 @@ resource "google_monitoring_uptime_check_config" "frontend_availability" {
 
   lifecycle {
     create_before_destroy = true
-    ignore_changes = [
-      monitored_resource[0].labels.host,
-    ]
   }
 
   depends_on = [google_monitoring_notification_channel.email_alert_channel]
@@ -331,7 +328,7 @@ resource "google_monitoring_alert_policy" "frontend_availability_failure_alert" 
 ### Frontend Availability Alert (${var.environment})
 
 **Summary:** The frontend application is failing uptime checks.
-**Monitored Host (may be placeholder if CI/CD hasn't updated it yet):** `${var.initial_frontend_hostname_placeholder}`
+**Monitored Host:** ${var.frontend_hostname != "" ? var.frontend_hostname : var.initial_frontend_hostname}
 **Uptime Check ID:** `${google_monitoring_uptime_check_config.frontend_availability.uptime_check_id}`
 **Condition:** Success rate less than 90% over a ${var.alert_alignment_period} window, persisting for ${var.frontend_startup_alert_delay}.
 
