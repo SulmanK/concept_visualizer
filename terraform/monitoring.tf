@@ -277,6 +277,7 @@ resource "google_monitoring_uptime_check_config" "frontend_availability" {
     type = "uptime_url"
     labels = {
       project_id = var.project_id
+      # The host must not include protocols (http:// or https://) or paths, only the domain name
       host       = var.frontend_hostname != "" ? var.frontend_hostname : var.initial_frontend_hostname
     }
   }
