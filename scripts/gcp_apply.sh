@@ -347,7 +347,7 @@ declare -A DEV_SECRET_TF_OUTPUT_MAP=(
   ["ALERT_NOTIFICATION_CHANNEL_FULL_ID"]="notification_channel_id_full" # Use the new full ID output
   ["FRONTEND_STARTUP_ALERT_DELAY"]="frontend_startup_alert_delay_output"
   ["ALERT_ALIGNMENT_PERIOD"]="alert_alignment_period_output"
-  ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output"
+  # ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output" # Removed: This secret is manually set
   # Add other dev-specific mappings here if needed
 )
 
@@ -367,6 +367,6 @@ declare -A PROD_SECRET_TF_OUTPUT_MAP=(
   ["ALERT_NOTIFICATION_CHANNEL_FULL_ID"]="notification_channel_id_full" # Use the new full ID output
   ["FRONTEND_STARTUP_ALERT_DELAY"]="frontend_startup_alert_delay_output"
   ["ALERT_ALIGNMENT_PERIOD"]="alert_alignment_period_output"
-  ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output"
+  # ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output" # Removed: This secret is manually set
   # Add other prod-specific mappings here if needed
 )
