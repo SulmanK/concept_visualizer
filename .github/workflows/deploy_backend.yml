@@ -559,17 +559,30 @@ jobs:
               UPTIME_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_uptime_check_id.txt"
               ALERT_POLICY_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_alert_policy_id.txt"
 
+              echo "DEBUG: Authenticated gcloud user:"
+              gcloud auth list
+              echo "DEBUG: gsutil version details:"
+              gsutil version -l
               echo "DEBUG: TF_STATE_BUCKET_NAME for GCS copy is: '$TF_STATE_BUCKET_NAME'"
               echo "DEBUG: Uptime Check ID GCS Path for copy is: '$UPTIME_ID_GCS_PATH'"
               echo "DEBUG: Alert Policy ID GCS Path for copy is: '$ALERT_POLICY_ID_GCS_PATH'"
 
               echo "Uptime Check ID to store: $DEFINITIVE_UPTIME_CHECK_FULL_ID at $UPTIME_ID_GCS_PATH"
-              echo "$DEFINITIVE_UPTIME_CHECK_FULL_ID" | gsutil cp - "$UPTIME_ID_GCS_PATH"
+              echo "$DEFINITIVE_UPTIME_CHECK_FULL_ID" > /tmp/definitive_uptime_check_id.txt
+              gsutil cp /tmp/definitive_uptime_check_id.txt "$UPTIME_ID_GCS_PATH"
+              GSUTIL_UPTIME_EXIT_CODE=$?
 
               echo "Alert Policy ID to store: $DEFINITIVE_ALERT_POLICY_FULL_ID at $ALERT_POLICY_ID_GCS_PATH"
-              echo "$DEFINITIVE_ALERT_POLICY_FULL_ID" | gsutil cp - "$ALERT_POLICY_ID_GCS_PATH"
+              echo "$DEFINITIVE_ALERT_POLICY_FULL_ID" > /tmp/definitive_alert_policy_id.txt
+              gsutil cp /tmp/definitive_alert_policy_id.txt "$ALERT_POLICY_ID_GCS_PATH"
+              GSUTIL_POLICY_EXIT_CODE=$?
 
-              echo "Definitive IDs stored in GCS."
+              if [ $GSUTIL_UPTIME_EXIT_CODE -eq 0 ] && [ $GSUTIL_POLICY_EXIT_CODE -eq 0 ]; then
+                echo "Definitive IDs stored in GCS."
+              else
+                echo "ERROR: One or more gsutil cp commands failed. Exit codes - Uptime: $GSUTIL_UPTIME_EXIT_CODE, Policy: $GSUTIL_POLICY_EXIT_CODE"
+                # exit 1 # Optionally exit if GCS storage fails
+              fi
             fi
             # --- END: Store Definitive Resource IDs to GCS ---
           else
