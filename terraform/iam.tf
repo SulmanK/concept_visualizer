@@ -216,3 +216,21 @@ resource "google_storage_bucket_iam_member" "state_bucket_cicd_access" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${var.terraform_cicd_sa_email}"
 }
+
+# --- IAM for Manually Created Terraform State Bucket ---
+# This bucket is used by the main Terraform configuration AND for storing dynamic monitoring IDs.
+
+# Data source to reference the manually created GCS bucket for Terraform state
+data "google_storage_bucket" "manual_tf_state_bucket" {
+  name = "concept-visualizer-tfstate-1" # ** IMPORTANT: Ensure this is your exact manually created bucket name **
+}
+
+# Grant the CI/CD service account permissions to manage objects in the manually created TF state bucket
+# This is needed by the deploy_backend.yml workflow to write the dynamic monitoring resource IDs.
+resource "google_storage_bucket_iam_member" "cicd_sa_manual_tfstate_bucket_object_admin" {
+  bucket = data.google_storage_bucket.manual_tf_state_bucket.name
+  role   = "roles/storage.objectAdmin" # Allows listing, creating, reading, deleting objects
+  member = "serviceAccount:${google_service_account.cicd_service_account.email}"
+}
+
+# --- End of IAM for Manually Created Terraform State Bucket ---
