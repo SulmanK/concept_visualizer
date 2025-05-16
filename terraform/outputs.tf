@@ -121,19 +121,35 @@ output "api_health_alert_policy_name" {
   value       = google_monitoring_alert_policy.api_health_ping_failure_alert.display_name
 }
 
+# Monitoring outputs - Frontend specific
 output "frontend_uptime_check_id" {
-  description = "The ID (not full name) of the Uptime Check configuration for the frontend."
+  description = "The uptime check ID (short ID) for the frontend application."
   value       = google_monitoring_uptime_check_config.frontend_availability.uptime_check_id
 }
 
-output "frontend_uptime_check_config_id" {
-  description = "The full ID (name) of the frontend uptime check configuration."
+output "frontend_uptime_check_full_id" {
+  description = "The full resource ID of the frontend uptime check configuration (projects/...)"
   value       = google_monitoring_uptime_check_config.frontend_availability.name
 }
 
-output "frontend_uptime_check_name_full" {
-  description = "The full name/path of the frontend uptime check. Useful for `gcloud` commands."
-  value       = google_monitoring_uptime_check_config.frontend_availability.name
+output "frontend_alert_policy_id" {
+  description = "The full ID (name) of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name
+}
+
+output "frontend_alert_policy_id_short" {
+  description = "The short ID of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.id
+}
+
+output "frontend_alert_policy_name" {
+  description = "The display name of the frontend availability alert policy."
+  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.display_name
+}
+
+output "frontend_current_hostname" {
+  description = "The current hostname being monitored for the frontend application."
+  value       = var.frontend_hostname != "" ? var.frontend_hostname : var.initial_frontend_hostname
 }
 
 output "gcp_zone" {
@@ -169,19 +185,4 @@ output "worker_max_instances_output" {
 output "artifact_registry_repository_name" {
   description = "The simple name of the Artifact Registry repository (e.g., my-project-dev-docker-repo)."
   value       = "${var.naming_prefix}-docker-repo"
-}
-
-output "frontend_alert_policy_id" {
-  description = "The full ID (name) of the frontend availability alert policy."
-  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.name
-}
-
-output "frontend_alert_policy_id_short" {
-  description = "The short ID of the frontend availability alert policy."
-  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.id
-}
-
-output "frontend_alert_policy_name" {
-  description = "The name of the frontend availability alert policy."
-  value       = google_monitoring_alert_policy.frontend_availability_failure_alert.display_name
 }

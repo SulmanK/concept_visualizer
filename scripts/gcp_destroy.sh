@@ -61,30 +61,6 @@ if [ $? -ne 0 ]; then echo "Error: Terraform init failed."; exit 1; fi
 echo "Selecting Terraform workspace: $WORKSPACE"
 terraform workspace select "$WORKSPACE"
 
-# --- BEGIN: Fetch and Import Dynamically Managed Monitoring Resources ---
-echo "Attempting to fetch and import dynamically managed frontend monitoring resources..."
-UPTIME_CHECK_ID_GCS_PATH="gs://${TF_STATE_BUCKET}/dynamic_frontend_monitoring_ids/${WORKSPACE}/frontend_uptime_check_id.txt"
-ALERT_POLICY_ID_GCS_PATH="gs://${TF_STATE_BUCKET}/dynamic_frontend_monitoring_ids/${WORKSPACE}/frontend_alert_policy_id.txt"
-
-DEFINITIVE_UPTIME_CHECK_ID=$(gsutil cat "$UPTIME_CHECK_ID_GCS_PATH" 2>/dev/null || echo "")
-DEFINITIVE_ALERT_POLICY_ID=$(gsutil cat "$ALERT_POLICY_ID_GCS_PATH" 2>/dev/null || echo "")
-
-if [[ -n "$DEFINITIVE_UPTIME_CHECK_ID" ]]; then
-  echo "Found definitive Uptime Check ID: $DEFINITIVE_UPTIME_CHECK_ID. Attempting to import..."
-  terraform import -no-color "google_monitoring_uptime_check_config.frontend_availability" "$DEFINITIVE_UPTIME_CHECK_ID" || echo "Warning: Failed to import dynamic uptime check '$DEFINITIVE_UPTIME_CHECK_ID'. It might have already been deleted or was never created by the workflow."
-else
-  echo "No definitive Uptime Check ID found in GCS. Skipping import."
-fi
-
-if [[ -n "$DEFINITIVE_ALERT_POLICY_ID" ]]; then
-  echo "Found definitive Alert Policy ID: $DEFINITIVE_ALERT_POLICY_ID. Attempting to import..."
-  terraform import -no-color "google_monitoring_alert_policy.frontend_availability_failure_alert" "$DEFINITIVE_ALERT_POLICY_ID" || echo "Warning: Failed to import dynamic alert policy '$DEFINITIVE_ALERT_POLICY_ID'. It might have already been deleted or was never created by the workflow."
-else
-  echo "No definitive Alert Policy ID found in GCS. Skipping import."
-fi
-echo "Dynamic resource import attempt complete."
-# --- END: Fetch and Import Dynamically Managed Monitoring Resources ---
-
 # Plan destroy
 echo "Planning destruction of Terraform resources..."
 terraform plan -destroy -var-file="$TFVARS_FILE" -out=tfplan
@@ -129,16 +105,6 @@ APPLY_RESULT=$?
 
 if [ $APPLY_RESULT -eq 0 ]; then
   echo "Terraform destroy completed successfully."
-  # --- BEGIN: Clean Up Dynamic ID Files from GCS ---
-  echo "Cleaning up dynamic ID files from GCS..."
-  if [[ -n "$DEFINITIVE_UPTIME_CHECK_ID" ]]; then # Only attempt delete if ID was read
-    gsutil rm "$UPTIME_CHECK_ID_GCS_PATH" 2>/dev/null || echo "Warning: Could not remove uptime check ID file: $UPTIME_CHECK_ID_GCS_PATH. It might have already been deleted."
-  fi
-  if [[ -n "$DEFINITIVE_ALERT_POLICY_ID" ]]; then # Only attempt delete if ID was read
-    gsutil rm "$ALERT_POLICY_ID_GCS_PATH" 2>/dev/null || echo "Warning: Could not remove alert policy ID file: $ALERT_POLICY_ID_GCS_PATH. It might have already been deleted."
-  fi
-  echo "Dynamic ID file cleanup attempt complete."
-  # --- END: Clean Up Dynamic ID Files from GCS ---
 else
   echo "Error: Terraform destroy failed with exit code $APPLY_RESULT."
   exit $APPLY_RESULT

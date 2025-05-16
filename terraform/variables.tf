@@ -156,6 +156,12 @@ variable "initial_frontend_hostname" {
   default     = "placeholder.example.com"
 }
 
+variable "frontend_hostname" {
+  description = "The actual hostname to monitor for frontend uptime checks. When set, this overrides initial_frontend_hostname. Usually set by CI/CD during deployment."
+  type        = string
+  default     = ""
+}
+
 variable "frontend_uptime_check_period" {
   description = "How often the frontend uptime check is performed (e.g., '300s' for 5 minutes)."
   type        = string
