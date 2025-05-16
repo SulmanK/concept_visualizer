@@ -560,32 +560,6 @@ jobs:
               UPTIME_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_uptime_check_id.txt"
               ALERT_POLICY_ID_GCS_PATH="gs://${TF_STATE_BUCKET_NAME}/dynamic_frontend_monitoring_ids/${{ env.ENVIRONMENT }}/frontend_alert_policy_id.txt"
 
-              # --- BEGIN: Explicitly activate service account for gsutil ---
-              echo "DEBUG: Attempting to activate service account for gsutil operations..."
-              echo "DEBUG: Credentials file path from auth step: ${{ steps.gcloud_auth.outputs.credentials_file_path }}"
-              if [[ -n "${{ steps.gcloud_auth.outputs.credentials_file_path }}" && -f "${{ steps.gcloud_auth.outputs.credentials_file_path }}" ]]; then
-                echo "Activating service account using credentials file: ${{ steps.gcloud_auth.outputs.credentials_file_path }}"
-                gcloud auth activate-service-account --key-file="${{ steps.gcloud_auth.outputs.credentials_file_path }}"
-                GCLOUD_ACTIVATION_EXIT_CODE=$?
-                echo "gcloud auth activate-service-account exit code: $GCLOUD_ACTIVATION_EXIT_CODE"
-                if [ $GCLOUD_ACTIVATION_EXIT_CODE -ne 0 ]; then
-                  echo "ERROR: Failed to activate service account. GCS operations might fail."
-                  # Optionally, exit here if activation is critical: exit 1
-                fi
-              elif [[ -n "${{ env.GOOGLE_APPLICATION_CREDENTIALS }}" && -f "${{ env.GOOGLE_APPLICATION_CREDENTIALS }}" ]]; then
-                echo "Activating service account using GOOGLE_APPLICATION_CREDENTIALS env var pointing to: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}"
-                gcloud auth activate-service-account --key-file="${{ env.GOOGLE_APPLICATION_CREDENTIALS }}"
-                GCLOUD_ACTIVATION_EXIT_CODE=$?
-                echo "gcloud auth activate-service-account exit code: $GCLOUD_ACTIVATION_EXIT_CODE"
-                if [ $GCLOUD_ACTIVATION_EXIT_CODE -ne 0 ]; then
-                  echo "ERROR: Failed to activate service account using GOOGLE_APPLICATION_CREDENTIALS. GCS operations might fail."
-                  # Optionally, exit here: exit 1
-                fi
-              else
-                echo "WARNING: Credentials file path from auth step OR GOOGLE_APPLICATION_CREDENTIALS is not available or file does not exist. gsutil might not be authenticated."
-              fi
-              # --- END: Explicitly activate service account for gsutil ---
-
               echo "DEBUG: Authenticated gcloud user:"
               gcloud auth list
               echo "DEBUG: gsutil version details:"
