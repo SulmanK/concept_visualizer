@@ -133,9 +133,10 @@ jobs:
       - name: Deploy API to Compute Engine MIG (Rolling Update)
         run: |
           IMAGE_URL="${{ env.REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/concept-api-${{ env.ENVIRONMENT }}:${{ github.sha }}"
-          # Use a shorter hash (first 8 characters) to avoid name length issues
+          # Use a shorter hash (first 8 characters) and add timestamp for uniqueness
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
-          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}"
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          TEMPLATE_NAME="${{ env.NAMING_PREFIX }}-api-tpl-${SHORT_SHA}-${TIMESTAMP}"
           MIG_NAME="${{ env.NAMING_PREFIX }}-api-igm-${{ env.ENVIRONMENT }}"
 
           echo "Target Template Name: $TEMPLATE_NAME"
@@ -151,62 +152,38 @@ jobs:
 
           echo "Using static IP: $STATIC_IP"
 
-          # Check if the instance template already exists
-          echo "Checking if instance template '$TEMPLATE_NAME' already exists..."
-          if gcloud compute instance-templates describe "$TEMPLATE_NAME" --project="${{ env.GCP_PROJECT_ID }}" --region="${{ env.REGION }}" --quiet &> /dev/null; then
-            echo "Instance template '$TEMPLATE_NAME' already exists. Skipping creation."
-          else
-            echo "Creating new instance template '$TEMPLATE_NAME'..."
-            # Create a new instance template with the required configuration
-            gcloud compute instance-templates create "$TEMPLATE_NAME" \
-              --project="${{ env.GCP_PROJECT_ID }}" \
-              --region="${{ env.REGION }}" \
-              --machine-type=e2-micro \
-              --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
-              --maintenance-policy=MIGRATE \
-              --provisioning-model=STANDARD \
-              --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
-              --scopes=https://www.googleapis.com/auth/cloud-platform \
-              --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
-              --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
-              --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
-              --address="$STATIC_IP" \
-              --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
-              --description="Template for Concept API instances (${{ github.sha }})"
-            # Check the exit code of the create command
-            if [ $? -ne 0 ]; then
-              echo "Error: Failed to create instance template '$TEMPLATE_NAME'."
-              exit 1
-            fi
-            echo "Instance template '$TEMPLATE_NAME' created successfully."
-          fi
+          echo "Creating new instance template '$TEMPLATE_NAME'..."
+          # Always create a new instance template with the required configuration
+          gcloud compute instance-templates create "$TEMPLATE_NAME" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --machine-type=e2-micro \
+            --network-tier=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "PREMIUM" || echo "STANDARD") \
+            --maintenance-policy=MIGRATE \
+            --provisioning-model=STANDARD \
+            --service-account="${{ env.API_SERVICE_ACCOUNT_EMAIL }}" \
+            --scopes=https://www.googleapis.com/auth/cloud-platform \
+            --tags=http-server,https-server,concept-api,${{ env.NAMING_PREFIX }}-api-vm-${{ env.ENVIRONMENT }} \
+            --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
+            --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
+            --address="$STATIC_IP" \
+            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
+            --description="Template for Concept API instances (${{ github.sha }}) created at $(date)"
 
-          # Update the Instance Group to use the new template
-          echo "Setting new instance template on the Instance Group Manager"
-          gcloud compute instance-groups managed set-instance-template "$MIG_NAME" \
-            --template="$TEMPLATE_NAME" \
+          # Check the exit code of the create command
+          if [ $? -ne 0 ]; then
+            echo "Error: Failed to create instance template '$TEMPLATE_NAME'."
+            exit 1
+          fi
+          echo "Instance template '$TEMPLATE_NAME' created successfully."
+
+          # Update the Instance Group to use the new template with a rolling update
+          echo "Updating Instance Group Manager with new template using rolling update"
+          gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
+            --version=template="$TEMPLATE_NAME" \
+            --max-unavailable="50%" \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}"
-
-          # Get existing instances in the MIG
-          echo "Getting existing instances in the group"
-          INSTANCES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
-            --zone="${{ env.GCP_ZONE }}" \
-            --project="${{ env.GCP_PROJECT_ID }}" \
-            --format="value(name)")
-
-          # For each instance, recreate it with the new template
-          if [ -n "$INSTANCES" ]; then
-            for INSTANCE in $INSTANCES; do
-              echo "Recreating instance $INSTANCE with new template"
-              gcloud compute instance-groups managed recreate-instances "$MIG_NAME" \
-                --instances="$INSTANCE" \
-                --zone="${{ env.GCP_ZONE }}" \
-                --project="${{ env.GCP_PROJECT_ID }}"
-            done
-          else
-            echo "No instances found in the MIG, skipping recreation"
-          fi
 
           # Wait for the instances to be stable
           echo "Waiting for instance group to become stable"
@@ -216,6 +193,28 @@ jobs:
             --project="${{ env.GCP_PROJECT_ID }}" \
             --timeout=300 \
             "$MIG_NAME"
+
+          # Clean up old templates, keeping only the latest 10
+          echo "Cleaning up old instance templates, keeping the latest 10"
+          OLD_TEMPLATES=$(gcloud compute instance-templates list \
+            --filter="name ~ '${{ env.NAMING_PREFIX }}-api-tpl-'" \
+            --project="${{ env.GCP_PROJECT_ID }}" \
+            --sort-by=~creationTimestamp \
+            --format="value(name)" \
+            | tail -n +11)
+
+          if [ -n "$OLD_TEMPLATES" ]; then
+            echo "Found old templates to delete:"
+            echo "$OLD_TEMPLATES"
+            for OLD_TEMPLATE in $OLD_TEMPLATES; do
+              echo "Deleting old template: $OLD_TEMPLATE"
+              gcloud compute instance-templates delete "$OLD_TEMPLATE" \
+                --project="${{ env.GCP_PROJECT_ID }}" \
+                --quiet || echo "Warning: Failed to delete template $OLD_TEMPLATE"
+            done
+          else
+            echo "No old templates to clean up (keeping the latest 10)"
+          fi
 
       - name: Get Latest Vercel Deployment URL
         id: get_vercel_url
