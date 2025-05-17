@@ -177,13 +177,18 @@ jobs:
           fi
           echo "Instance template '$TEMPLATE_NAME' created successfully."
 
-          # Update the Instance Group to use the new template with zero-downtime for 1-VM MIG
-          echo "Updating Instance Group Manager with new template using substitute method (zero-downtime)"
-          gcloud compute instance-groups managed rolling-action start-update "$MIG_NAME" \
-            --version=template="$TEMPLATE_NAME" \
-            --replacement-method=SUBSTITUTE \
-            --max-surge=1 \
-            --max-unavailable=0 \
+          # Update the Instance Group to use the new template with a replace action
+          echo "Updating Instance Group Manager with new template using replace action"
+          # First update the template
+          gcloud compute instance-groups managed set-instance-template "$MIG_NAME" \
+            --template="$TEMPLATE_NAME" \
+            --zone="${{ env.GCP_ZONE }}" \
+            --project="${{ env.GCP_PROJECT_ID }}"
+
+          # Then replace all instances
+          echo "Replacing all instances with new template"
+          gcloud compute instance-groups managed rolling-action replace "$MIG_NAME" \
+            --max-unavailable=100% \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}"
 
