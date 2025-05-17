@@ -167,8 +167,6 @@ You need two Supabase projects: one for development (`dev`) and one for producti
 
     ```
 
-8.  Run `scripts/gcp_apply.sh`.
-
 ### 6. Vercel Frontend Setup
 
 Deploy the frontend application using Vercel.
@@ -280,7 +278,9 @@ These secrets still need to be added manually to your GitHub repository settings
 
 _(The comprehensive list of all secrets and their descriptions can be found in `.github/SECRETS.md` which should align with the above distinction of automated vs. manual.)_
 
-### 8. Running Locally
+### 8. Run `scripts/gcp_apply.sh`.
+
+### 9. Running Locally
 
 1.  **Backend:**
     ```bash
@@ -300,7 +300,7 @@ _(The comprehensive list of all secrets and their descriptions can be found in `
 
 ---
 
-### 9. Running Cloud
+### 10. Running Cloud
 
 After the backend and frontend is deployed on GCP and Vercel, respectively. Head on over to the project url given by vercel.
 
@@ -313,12 +313,3 @@ After the backend and frontend is deployed on GCP and Vercel, respectively. Head
   - You likely need to re-run `scripts/gcp_populate_secrets.sh` as the Secret Manager resources were recreated.
 
 Regular deployments via CI/CD (pushing code changes) will typically _not_ require these full update steps, only updating the application code or container image.
-
-### Everytime we recreate our terraform resources
-
-- Populate the secrets in Github
-  - workflow
-  - frontend monitoring config
-- Populate the secrets in vercel
-- Update the vercel.json (with the new ip)
-- Commit the changes for CI/CD

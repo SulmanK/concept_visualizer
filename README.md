@@ -84,6 +84,12 @@ A web application for generating and refining visual concepts like logos and col
   - GitHub Actions (CI/CD, Scheduled Tasks)
   - Pre-commit Hooks (Code Quality)
 
+## System Architecture
+
+The following diagram illustrates the system architecture and data flow of the Concept Visualizer application:
+
+![System Architecture Diagram](./system_arch_diagram.png)
+
 ## Project Structure
 
 ```

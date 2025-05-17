@@ -424,3 +424,52 @@ declare -A PROD_SECRET_TF_OUTPUT_MAP=(
   # ["TF_STATE_BUCKET_NAME"]="terraform_state_bucket_name_output" # Removed: This secret is manually set
   # Add other prod-specific mappings here if needed
 )
+
+# --- STEP 8: Update and commit vercel.json with API external IP ---
+echo -e "\n===== STEP 8: Updating vercel.json with API External IP =====\n"
+
+# Get the API external IP
+API_EXTERNAL_IP=$(terraform output -raw api_vm_external_ip)
+if [ -z "$API_EXTERNAL_IP" ]; then
+    echo "Error: Failed to get API external IP from terraform output."
+    echo "Please update vercel.json manually with the correct API IP."
+else
+    echo "API External IP: $API_EXTERNAL_IP"
+
+    # Path to vercel.json
+    VERCEL_JSON_PATH="$PROJECT_ROOT/frontend/my-app/vercel.json"
+
+    if [ -f "$VERCEL_JSON_PATH" ]; then
+        echo "Updating vercel.json with new API IP..."
+
+        # Use sed to replace the IP address in vercel.json
+        # This sed pattern finds "http://<any-ip-address>/" and replaces it with the new IP
+        sed -i.bak -E "s|\"destination\": \"http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/|\"destination\": \"http://$API_EXTERNAL_IP/|g" "$VERCEL_JSON_PATH"
+
+        # Remove the backup file
+        rm "${VERCEL_JSON_PATH}.bak"
+
+        # Verify the change
+        echo "Changes made to vercel.json:"
+        grep -A 1 "destination" "$VERCEL_JSON_PATH"
+
+        # Commit the changes
+        echo "Committing changes to vercel.json..."
+        git -C "$PROJECT_ROOT" add "$VERCEL_JSON_PATH"
+        git -C "$PROJECT_ROOT" commit -m "Update API IP in vercel.json to $API_EXTERNAL_IP [automated]"
+
+        # Ask user if they want to push the changes
+        read -p "Do you want to push the changes to vercel.json? (y/n) " PUSH_CHANGES
+        if [[ "$PUSH_CHANGES" == "y" || "$PUSH_CHANGES" == "Y" ]]; then
+            git -C "$PROJECT_ROOT" push origin "$CURRENT_BRANCH"
+            echo "Changes pushed to the $CURRENT_BRANCH branch."
+        else
+            echo "Changes committed but not pushed. Use 'git push' to push them manually."
+        fi
+    else
+        echo "Error: vercel.json not found at $VERCEL_JSON_PATH"
+        echo "Please update vercel.json manually with the API IP: $API_EXTERNAL_IP"
+    fi
+fi
+
+echo -e "\nDeployment and configuration process completed!"
