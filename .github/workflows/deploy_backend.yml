@@ -177,52 +177,67 @@ jobs:
           fi
           echo "Instance template '$TEMPLATE_NAME' created successfully."
 
-          # First update the template
+          # First update the template in the MIG
+          echo "Setting new instance template for MIG"
           gcloud compute instance-groups managed set-instance-template "$MIG_NAME" \
             --template="$TEMPLATE_NAME" \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}"
 
-          # Get the current VM instance and restart it to force the startup script to run with the new template
-          echo "Getting current VM instance from the managed instance group"
-          INSTANCE_NAMES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+          # Get the current VM instances and note them down
+          echo "Getting current VM instances from the managed instance group"
+          EXISTING_INSTANCES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
             --format="value(name)")
 
-          if [ -n "$INSTANCE_NAMES" ]; then
-            echo "Found instances: $INSTANCE_NAMES"
-            for INSTANCE_NAME in $INSTANCE_NAMES; do
-              echo "Restarting instance $INSTANCE_NAME to apply new template"
-              gcloud compute instances reset "$INSTANCE_NAME" \
-                --zone="${{ env.GCP_ZONE }}" \
-                --project="${{ env.GCP_PROJECT_ID }}" || echo "Warning: Failed to reset instance $INSTANCE_NAME, proceeding with replacement"
-            done
+          if [ -n "$EXISTING_INSTANCES" ]; then
+            echo "Found existing instances: $EXISTING_INSTANCES"
 
-            # Wait a bit for the instances to start resetting before proceeding
-            echo "Waiting 30 seconds for instance reset to initiate..."
-            sleep 30
+            # Start the replacement operation
+            echo "Replacing all instances with new template"
+            gcloud compute instance-groups managed rolling-action replace "$MIG_NAME" \
+              --max-unavailable=100% \
+              --replacement-method=recreate \
+              --zone="${{ env.GCP_ZONE }}" \
+              --project="${{ env.GCP_PROJECT_ID }}"
+
+            # Wait for the instances to be stable
+            echo "Waiting for instance group to become stable"
+            gcloud compute instance-groups managed wait-until \
+              --stable \
+              --zone="${{ env.GCP_ZONE }}" \
+              --project="${{ env.GCP_PROJECT_ID }}" \
+              --timeout=300 \
+              "$MIG_NAME"
+
+            echo "Instance group is now stable"
+
+            # Get the new VM instances
+            NEW_INSTANCES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+              --zone="${{ env.GCP_ZONE }}" \
+              --project="${{ env.GCP_PROJECT_ID }}" \
+              --format="value(name)")
+
+            echo "New instances after replacement: $NEW_INSTANCES"
+
+            # Force a restart of each new instance to ensure startup script runs with new image
+            if [ -n "$NEW_INSTANCES" ]; then
+              for INSTANCE in $NEW_INSTANCES; do
+                echo "Ensuring instance $INSTANCE is using the new template and image"
+                echo "Restarting instance $INSTANCE to force startup script execution"
+                gcloud compute instances reset "$INSTANCE" \
+                  --zone="${{ env.GCP_ZONE }}" \
+                  --project="${{ env.GCP_PROJECT_ID }}" || echo "Warning: Failed to reset instance $INSTANCE"
+
+                # Wait a bit for the restart to complete
+                echo "Waiting 30 seconds for instance restart..."
+                sleep 30
+              done
+            fi
           else
-            echo "No VM instances found to restart"
+            echo "No VM instances found to replace"
           fi
-
-          # Then replace all instances
-          echo "Replacing all instances with new template"
-          gcloud compute instance-groups managed rolling-action replace "$MIG_NAME" \
-            --max-unavailable=100% \
-            --replacement-method=RECREATE \
-            --force-replacement \
-            --zone="${{ env.GCP_ZONE }}" \
-            --project="${{ env.GCP_PROJECT_ID }}"
-
-          # Wait for the instances to be stable
-          echo "Waiting for instance group to become stable"
-          gcloud compute instance-groups managed wait-until \
-            --stable \
-            --zone="${{ env.GCP_ZONE }}" \
-            --project="${{ env.GCP_PROJECT_ID }}" \
-            --timeout=300 \
-            "$MIG_NAME"
 
           # Clean up old templates, keeping only the latest 10
           echo "Cleaning up old instance templates, keeping the latest 10"
