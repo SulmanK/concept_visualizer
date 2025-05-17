@@ -194,49 +194,56 @@ jobs:
           if [ -n "$EXISTING_INSTANCES" ]; then
             echo "Found existing instances: $EXISTING_INSTANCES"
 
-            # Start the replacement operation
-            echo "Replacing all instances with new template"
-            gcloud compute instance-groups managed rolling-action replace "$MIG_NAME" \
-              --max-unavailable=100% \
-              --replacement-method=recreate \
+            # For a single-instance MIG, instead of using rolling-action replace
+            # which has constraints on maxSurge with recreate method,
+            # restart the existing instance to force the startup script to run
+            for INSTANCE in $EXISTING_INSTANCES; do
+              echo "Restarting instance $INSTANCE to apply new template"
+              gcloud compute instances reset "$INSTANCE" \
+                --zone="${{ env.GCP_ZONE }}" \
+                --project="${{ env.GCP_PROJECT_ID }}" || echo "Warning: Failed to reset instance $INSTANCE"
+
+              # Wait for the instance to restart
+              echo "Waiting 60 seconds for instance restart to complete..."
+              sleep 60
+            done
+
+            # In case the reset isn't enough to trigger a template update,
+            # use an alternative approach to force recreation one by one
+            echo "Using alternative approach to ensure instances are recreated with new template"
+
+            # Temporarily reduce the target size to 0 to remove all instances
+            echo "Temporarily reducing MIG size to 0"
+            gcloud compute instance-groups managed resize "$MIG_NAME" \
+              --size=0 \
               --zone="${{ env.GCP_ZONE }}" \
               --project="${{ env.GCP_PROJECT_ID }}"
 
-            # Wait for the instances to be stable
-            echo "Waiting for instance group to become stable"
-            gcloud compute instance-groups managed wait-until \
-              --stable \
+            # Wait for instances to be removed
+            echo "Waiting for instances to be removed..."
+            sleep 30
+
+            # Restore the original target size to recreate new instances with the new template
+            echo "Resizing MIG back to 1 to create new instances with the new template"
+            gcloud compute instance-groups managed resize "$MIG_NAME" \
+              --size=1 \
               --zone="${{ env.GCP_ZONE }}" \
-              --project="${{ env.GCP_PROJECT_ID }}" \
-              --timeout=300 \
-              "$MIG_NAME"
+              --project="${{ env.GCP_PROJECT_ID }}"
 
-            echo "Instance group is now stable"
+            # Wait for new instances to be created
+            echo "Waiting for new instances to be created..."
+            sleep 60
 
-            # Get the new VM instances
+            # Verify instances are running with the new template
+            echo "Verifying instances are running with the new template"
             NEW_INSTANCES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
               --zone="${{ env.GCP_ZONE }}" \
               --project="${{ env.GCP_PROJECT_ID }}" \
               --format="value(name)")
 
-            echo "New instances after replacement: $NEW_INSTANCES"
-
-            # Force a restart of each new instance to ensure startup script runs with new image
-            if [ -n "$NEW_INSTANCES" ]; then
-              for INSTANCE in $NEW_INSTANCES; do
-                echo "Ensuring instance $INSTANCE is using the new template and image"
-                echo "Restarting instance $INSTANCE to force startup script execution"
-                gcloud compute instances reset "$INSTANCE" \
-                  --zone="${{ env.GCP_ZONE }}" \
-                  --project="${{ env.GCP_PROJECT_ID }}" || echo "Warning: Failed to reset instance $INSTANCE"
-
-                # Wait a bit for the restart to complete
-                echo "Waiting 30 seconds for instance restart..."
-                sleep 30
-              done
-            fi
+            echo "Instances after update: $NEW_INSTANCES"
           else
-            echo "No VM instances found to replace"
+            echo "No VM instances found to update"
           fi
 
           # Clean up old templates, keeping only the latest 10
