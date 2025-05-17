@@ -185,18 +185,21 @@ jobs:
 
           # Get the current VM instance and restart it to force the startup script to run with the new template
           echo "Getting current VM instance from the managed instance group"
-          INSTANCE_NAME=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
+          INSTANCE_NAMES=$(gcloud compute instance-groups managed list-instances "$MIG_NAME" \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}" \
-            --format="value(name)" | head -n 1)
+            --format="value(name)")
 
-          if [ -n "$INSTANCE_NAME" ]; then
-            echo "Restarting instance $INSTANCE_NAME to apply new template"
-            gcloud compute instances reset "$INSTANCE_NAME" \
-              --zone="${{ env.GCP_ZONE }}" \
-              --project="${{ env.GCP_PROJECT_ID }}"
+          if [ -n "$INSTANCE_NAMES" ]; then
+            echo "Found instances: $INSTANCE_NAMES"
+            for INSTANCE_NAME in $INSTANCE_NAMES; do
+              echo "Restarting instance $INSTANCE_NAME to apply new template"
+              gcloud compute instances reset "$INSTANCE_NAME" \
+                --zone="${{ env.GCP_ZONE }}" \
+                --project="${{ env.GCP_PROJECT_ID }}" || echo "Warning: Failed to reset instance $INSTANCE_NAME, proceeding with replacement"
+            done
 
-            # Wait a bit for the instance to start resetting before proceeding
+            # Wait a bit for the instances to start resetting before proceeding
             echo "Waiting 30 seconds for instance reset to initiate..."
             sleep 30
           else
@@ -207,6 +210,8 @@ jobs:
           echo "Replacing all instances with new template"
           gcloud compute instance-groups managed rolling-action replace "$MIG_NAME" \
             --max-unavailable=100% \
+            --replacement-method=RECREATE \
+            --force-replacement \
             --zone="${{ env.GCP_ZONE }}" \
             --project="${{ env.GCP_PROJECT_ID }}"
 
