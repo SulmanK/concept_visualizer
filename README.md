@@ -88,7 +88,7 @@ A web application for generating and refining visual concepts like logos and col
 
 The following diagram illustrates the system architecture and data flow of the Concept Visualizer application:
 
-![System Architecture Diagram](./system_arch_diagram.png)
+![System Architecture Diagram](./docs/assets/system_arch_diagram.png)
 
 ## Project Structure
 
