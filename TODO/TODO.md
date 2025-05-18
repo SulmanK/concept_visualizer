@@ -1,0 +1,2 @@
+- Finish up image refinement
+- [Optional] - Move onto a multi VM setup
