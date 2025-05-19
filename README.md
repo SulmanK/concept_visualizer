@@ -3,7 +3,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/SulmanK/concept-visualizer/.github%2Fworkflows%2Fci-tests.yml?branch=main)](https://github.com/SulmanK/concept-visualizer/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A web application for generating and refining visual concepts like logos and color palettes using AI assistance. Describe your ideas, and let the AI bring them to life!
+A web application for generating and refining visual concepts like logos and color palettes using AI assistance. Describe your ideas, and let the AI bring them to life! Check out the [blog post](https://sulmank.github.io/Blog/writing/2025/05/19/concept-visualizer-technical-deep-dive/) for details. Here is the [web application](https://concept-visualizer-blush.vercel.app/).
 
 ![Concept Visualizer Demo](./docs/assets/demo.gif)
 
