@@ -146,7 +146,7 @@ export const Footer: React.FC<FooterProps> = ({
               <ul className="space-y-3 flex flex-col items-center sm:items-start">
                 <li>
                   <a
-                    href="https://github.com/SulmanK/concept-visualizer"
+                    href="https://github.com/SulmanK/concept_visualizer"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-indigo-200 hover:text-white transition-colors duration-200 flex items-center group"
