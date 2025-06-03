@@ -74,6 +74,10 @@ class ImageProcessingService(ImageProcessingServiceInterface):
                     if height is not None:
                         height = cast(int, height)
 
+                    # Ensure we have proper int values, not None
+                    if width is None:
+                        raise ValueError("Width cannot be None for resize operation")
+
                     current_image = await self.resize_image(
                         current_image,
                         width=width,

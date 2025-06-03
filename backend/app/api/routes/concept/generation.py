@@ -190,15 +190,15 @@ async def generate_concept(
             concept_id = str(uuid.uuid4())
 
             # Store the image
-            image_path = f"concepts/{user_id}/{concept_id}.png"
-
-            # Use ImagePersistenceService to store the image
-            image_url = await commons.image_persistence_service.store_image(
+            stored_result = await commons.image_persistence_service.store_image(
                 image_data=image_data,
                 content_type="image/png",
                 user_id=user_id,
                 file_name=f"{concept_id}.png",
             )
+
+            # Extract the URL from the tuple (path, url)
+            image_path, image_url = stored_result
 
             logger.info(f"Stored base concept image at: {mask_path(image_path)}")
 
