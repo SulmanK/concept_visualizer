@@ -200,6 +200,11 @@ async def generate_concept(
             # Extract the URL from the tuple (path, url)
             image_path, image_url = stored_result
 
+            # Convert to HttpUrl for the response model
+            from pydantic import HttpUrl
+
+            image_url_typed = HttpUrl(image_url)
+
             logger.info(f"Stored base concept image at: {mask_path(image_path)}")
 
             # Extract colors from the image using ImageService
@@ -237,7 +242,7 @@ async def generate_concept(
                 logo_description=request.logo_description,
                 theme_description=request.theme_description,
                 created_at=datetime.now().isoformat(),
-                image_url=image_url,
+                image_url=image_url_typed,
                 color_palette=None,
                 original_image_url=None,
                 refinement_prompt=None,
