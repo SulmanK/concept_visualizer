@@ -14,7 +14,7 @@ import requests
 from fastapi import UploadFile
 from PIL import Image
 
-from app.core.config import get_masked_value
+from app.core.config import get_masked_value, settings
 from app.utils.jwt_utils import create_supabase_jwt
 
 from ...utils.security.mask import mask_id, mask_path
@@ -126,7 +126,7 @@ class ImageStorage:
         """Get a signed URL for an image in storage.
 
         This method provides a stable interface that forwards to get_signed_url with a standard
-        expiration time of 4 days (345600 seconds).
+        expiration time of 31 days (2,678,400 seconds).
 
         Args:
             path: Path to the image in storage (format: user_id/filename)
@@ -137,15 +137,15 @@ class ImageStorage:
 
         Note:
             - The path MUST follow the pattern `{user_id}/...` for RLS policies to work
-            - The signed URL is valid for 4 days (345600 seconds)
+            - The signed URL is valid for 31 days (2,678,400 seconds)
             - This method ensures consistent URL handling across the application
         """
         if not path:
             self.logger.warning("Empty path provided to get_image_url")
             return None
 
-        # Forward to get_signed_url with 4-day expiration
-        return self.get_signed_url(path=path, bucket=bucket, expiry_seconds=345600)
+        # Forward to get_signed_url with 31-day expiration
+        return self.get_signed_url(path=path, bucket=bucket, expiry_seconds=settings.SIGNED_URL_EXPIRY_SECONDS)
 
     async def apply_color_palette(self, image_path: str, palette: List[str], user_id: str) -> Optional[str]:
         """Apply a color palette to an image and store the result.
@@ -349,7 +349,7 @@ class ImageStorage:
             self.logger.error(f"Error storing image: {e}")
             return None
 
-    def get_signed_url(self, path: str, bucket: Optional[str] = None, expiry_seconds: int = 3600) -> Optional[str]:
+    def get_signed_url(self, path: str, bucket: Optional[str] = None, expiry_seconds: int = settings.SIGNED_URL_EXPIRY_SECONDS) -> Optional[str]:
         """Get a signed URL for an image with a specified expiration time.
 
         This method should be used whenever a URL needs to be shared outside the system
@@ -358,7 +358,7 @@ class ImageStorage:
         Args:
             path: Path to the image in storage (format: user_id/filename)
             bucket: Optional bucket name (defaults to concept bucket)
-            expiry_seconds: Expiration time in seconds (default 1 hour)
+            expiry_seconds: Expiration time in seconds (default: 31 days)
 
         Returns:
             Signed URL for the image or None if failed
@@ -526,13 +526,13 @@ class ImageStorage:
             self.logger.error(f"Error deleting image {mask_path(path)}: {str(e)}")
             raise
 
-    def create_signed_url(self, path: str, bucket_name: str, expires_in: int = 3600) -> Optional[str]:
+    def create_signed_url(self, path: str, bucket_name: str, expires_in: int = settings.SIGNED_URL_EXPIRY_SECONDS) -> Optional[str]:
         """Create a signed URL for a file in the storage bucket.
 
         Args:
             path: Storage path of the file
             bucket_name: Storage bucket name
-            expires_in: Seconds until the URL expires
+            expires_in: Seconds until the URL expires (default: 31 days)
 
         Returns:
             Signed URL or None if creation fails

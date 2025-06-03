@@ -11,6 +11,7 @@ import pytest
 from fastapi import UploadFile
 from PIL import Image
 
+from app.core.config import settings
 from app.core.exceptions import ImageNotFoundError, ImageStorageError
 from app.core.supabase.image_storage import ImageStorage
 from app.services.persistence.image_persistence_service import ImagePersistenceService
@@ -551,7 +552,7 @@ class TestImagePersistenceService:
 
         # Verify storage method was called - note the parameter difference here
         # The actual implementation uses bucket and expiry_seconds whereas the test was using bucket_name and expires_in
-        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/image.png", bucket="concept-images", expiry_seconds=345600)
+        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/image.png", bucket="concept-images", expiry_seconds=settings.SIGNED_URL_EXPIRY_SECONDS)
 
         # Verify the result
         assert url == "https://example.com/signed-url"
@@ -573,7 +574,7 @@ class TestImagePersistenceService:
         url = service.get_signed_url("user-123/palette.png", is_palette=True)
 
         # Verify correct bucket was used
-        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/palette.png", bucket="palette-images", expiry_seconds=345600)
+        mock_image_storage.get_signed_url.assert_called_once_with(path="user-123/palette.png", bucket="palette-images", expiry_seconds=settings.SIGNED_URL_EXPIRY_SECONDS)
 
         # Verify the result
         assert url == "https://example.com/signed-url"
@@ -687,7 +688,7 @@ class TestImagePersistenceService:
                 url = service.get_image_url(path)
 
                 # Verify signed URL was created with is_palette=False
-                mock_get_signed_url.assert_called_once_with(path, is_palette=False, expiry_seconds=3600)  # Default in the implementation
+                mock_get_signed_url.assert_called_once_with(path, is_palette=False, expiry_seconds=settings.SIGNED_URL_EXPIRY_SECONDS)  # Default in the implementation
 
                 # Verify the result
                 assert url == "https://example.com/signed-url"

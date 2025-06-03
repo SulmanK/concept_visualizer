@@ -125,5 +125,5 @@ const RecentConceptsList = () => {
 - Anonymous authentication is used by default
 - Token refresh is handled automatically with a 5-minute pre-expiry threshold
 - Rate limits are refreshed after authentication state changes
-- Authenticated URLs use signed URLs with a 3-day expiration
+- Authenticated URLs use signed URLs with a 31-day expiration
 - Fallback mechanisms exist for error cases

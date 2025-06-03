@@ -300,13 +300,13 @@ class ImagePersistenceService(ImagePersistenceServiceInterface):
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
 
-    def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 345600) -> str:
+    def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = settings.SIGNED_URL_EXPIRY_SECONDS) -> str:
         """Get a signed URL for an image with expiry time.
 
         Args:
             path: Path of the image in storage
             is_palette: Whether the image is in the palette bucket
-            expiry_seconds: Expiry time in seconds (default: 4 days)
+            expiry_seconds: Expiry time in seconds (default: 31 days)
 
         Returns:
             Signed URL for the image
@@ -325,12 +325,12 @@ class ImagePersistenceService(ImagePersistenceServiceInterface):
             self.logger.error(error_msg)
             raise ImageStorageError(error_msg)
 
-    def get_image_url(self, image_path: str, expiration: int = 3600) -> str:
+    def get_image_url(self, image_path: str, expiration: int = settings.SIGNED_URL_EXPIRY_SECONDS) -> str:
         """Get a URL for an image.
 
         Args:
             image_path: Path of the image in storage
-            expiration: Expiration time in seconds
+            expiration: Expiration time in seconds (default: 31 days)
 
         Returns:
             URL for the image

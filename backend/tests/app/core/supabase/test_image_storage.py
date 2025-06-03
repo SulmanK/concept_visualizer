@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi import UploadFile
 
+from app.core.config import settings
 from app.core.supabase.image_storage import ImageStorage
 
 
@@ -126,7 +127,7 @@ class TestGetImageUrl:
 
             # Assert
             assert result == expected_url
-            mock_get_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=345600)
+            mock_get_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=settings.SIGNED_URL_EXPIRY_SECONDS)
 
     def test_get_image_url_empty_path(self, image_storage: ImageStorage) -> None:
         """Test get_image_url with empty path."""
@@ -476,7 +477,7 @@ class TestGetSignedUrl:
             # Assert
             assert result == expected_url
             # Should use the default bucket (concepts)
-            mock_create_signed.assert_called_once_with(path=path, bucket_name="concepts", expires_in=3600)
+            mock_create_signed.assert_called_once_with(path=path, bucket_name="concepts", expires_in=settings.SIGNED_URL_EXPIRY_SECONDS)
 
     def test_get_signed_url_error(self, image_storage: ImageStorage) -> None:
         """Test error handling in get_signed_url."""
@@ -491,7 +492,7 @@ class TestGetSignedUrl:
 
             # Assert
             assert result is None
-            mock_create_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=3600)
+            mock_create_signed.assert_called_once_with(path=path, bucket_name=bucket, expires_in=settings.SIGNED_URL_EXPIRY_SECONDS)
 
 
 class TestUploadImage:

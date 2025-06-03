@@ -49,6 +49,7 @@ class Settings(BaseSettings):
         DB_TABLE_PALETTES: Name of the palettes table in the database
         PUB_SUB_TOPIC_ID: Topic ID for Google Cloud Pub/Sub
         PUB_SUB_PROJECT_ID: Project ID for Google Cloud Pub/Sub
+        SIGNED_URL_EXPIRY_SECONDS: Signed URL expiration time in seconds
     """
 
     # API settings
@@ -70,6 +71,9 @@ class Settings(BaseSettings):
     # Storage bucket settings
     STORAGE_BUCKET_PALETTE: str = "your-bucket-name"
     STORAGE_BUCKET_CONCEPT: str = "your-bucket-name"
+
+    # Signed URL expiration time: 31 days in seconds (2,678,400 seconds)
+    SIGNED_URL_EXPIRY_SECONDS: int = 31 * 24 * 60 * 60  # 31 days
 
     # Database table settings
     DB_TABLE_TASKS: str = "tasks"

@@ -123,20 +123,19 @@ The service provides both synchronous and asynchronous retrieval options.
 ### URL Generation
 
 ```python
-def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 259200) -> str:
-    """
-    Get a signed URL for an image.
+def get_signed_url(self, path: str, is_palette: bool = False, expiry_seconds: int = 2678400) -> str:
+    """Get a signed URL for an image with expiry time.
 
     Args:
         path: Path of the image in storage
-        is_palette: Whether the image is a palette (uses palette-images bucket)
-        expiry_seconds: Expiry time in seconds (default: 3 days)
+        is_palette: Whether the image is in the palette bucket
+        expiry_seconds: Expiry time in seconds (default: 31 days)
 
     Returns:
         Signed URL for the image
 
     Raises:
-        ImageStorageError: If URL signing fails
+        ImageStorageError: If URL generation fails
     """
     # Implementation...
 ```

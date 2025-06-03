@@ -8,6 +8,7 @@ import {
   fetchRecentConceptsFromApi,
   fetchConceptDetailFromApi,
 } from "./conceptService";
+import { SIGNED_URL_EXPIRY_SECONDS } from "../constants/storage";
 
 // Environment variables for Supabase
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
@@ -249,10 +250,10 @@ export async function getAuthenticatedImageUrl(
   try {
     if (!path) return "";
 
-    // Use createSignedUrl with 3-day expiration
+    // Use createSignedUrl with 31-day expiration
     const { data, error } = await supabase.storage
       .from(bucket)
-      .createSignedUrl(path, 259200); // 3 days in seconds
+      .createSignedUrl(path, SIGNED_URL_EXPIRY_SECONDS); // 31 days in seconds
 
     if (data?.signedUrl) {
       return data.signedUrl;

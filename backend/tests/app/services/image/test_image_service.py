@@ -4,7 +4,6 @@ This module tests the ImageService class which is responsible for
 image processing and persistence operations.
 """
 
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
