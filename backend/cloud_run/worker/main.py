@@ -205,8 +205,6 @@ def handle_pubsub(cloud_event: CloudEvent) -> None:
 
     # Define an internal async helper function
     async def _async_handle_pubsub() -> None:
-        global SERVICES_GLOBAL
-
         # Process the Pub/Sub event asynchronously
         if SERVICES_GLOBAL is None:
             logger.warning("SERVICES_GLOBAL is None, attempting to re-initialize services")
