@@ -117,9 +117,10 @@ You need two Supabase projects: one for development (`dev`) and one for producti
 ## 5. GCP Setup
 
 1.  **Authenticate `gcloud`:**
+    - Swap accounts (if needed) `gcloud config set account ACCOUNT_NAME`
     - Run `gcloud auth login` to authenticate your primary user account.
     - Run `gcloud auth application-default login`.
-2.  **Create GCP Projects:** Manually create three separate GCP Projects via the Cloud Console: one for `dev` (e.g., `yourproject-dev`) and one for `prod` (e.g., `yourproject-prod`) and one for managed tf state. Note down their unique Project IDs.
+2.  **Create GCP Projects:** Manually create three separate GCP Projects via the Cloud Console: one for `dev` (e.g., `yourproject-dev`) and one for `prod` (e.g., `yourproject-prod`) and one for managed tf state (`yourproject-managed`). Note down their unique Project IDs.
 3.  **Enable APIs:** For **both** the `dev` and `prod` projects, run the following `gcloud` command (replace `YOUR_PROJECT_ID_HERE` accordingly for each project):
     ```bash
     gcloud services enable \
@@ -149,7 +150,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
     gcloud storage buckets add-iam-policy-binding gs://yourproject-tfstate \
       --member="user:your-gcp-email@example.com" \
       --role="roles/storage.admin" \
-      --project="project-hosting-tfstate-bucket" # Project where bucket lives
+      --project="yourproject-managed" # Project where bucket lives
     ```
 
 6.  Populate environment variable files:

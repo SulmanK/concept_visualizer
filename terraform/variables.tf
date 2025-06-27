@@ -70,7 +70,7 @@ variable "worker_cpu" {
 variable "worker_memory" {
   description = "Memory allocation for the Cloud Function worker."
   type        = string
-  default     = "2048Mi"
+  default     = "4096Mi"  # Increased from 2GB to 4GB for palette processing
 }
 
 variable "worker_min_instances" {
