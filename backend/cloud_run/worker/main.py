@@ -31,14 +31,33 @@ from .processors.base_processor import BaseTaskProcessor
 from .processors.generation_processor import GenerationTaskProcessor
 from .processors.refinement_processor import RefinementTaskProcessor
 
-# Configure dynamic logging level
+# Configure logging for Google Cloud Functions
 log_level_str = os.environ.get("CONCEPT_LOG_LEVEL", "INFO").upper()
 log_level = getattr(logging, log_level_str, logging.INFO)
-logging.basicConfig(
-    level=log_level,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+
+# Configure root logger for Google Cloud Logging compatibility
+root_logger = logging.getLogger()
+root_logger.setLevel(log_level)
+
+# Remove any existing handlers to avoid conflicts
+for handler in root_logger.handlers[:]:
+    root_logger.removeHandler(handler)
+
+# Create console handler with structured format for Google Cloud Logging
+console_handler = logging.StreamHandler()
+console_handler.setLevel(log_level)
+
+# Use structured format that works well with Google Cloud Logging
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+console_handler.setFormatter(formatter)
+root_logger.addHandler(console_handler)
+
+# Ensure we capture all levels including DEBUG if needed
+if log_level == logging.DEBUG:
+    console_handler.setLevel(logging.DEBUG)
+
 logger = logging.getLogger("concept-worker-main")
+logger.info(f"Logging configured at level: {log_level_str}")
 
 # Type for our services dictionary
 ServicesDict = Dict[str, Any]
@@ -153,14 +172,22 @@ async def process_pubsub_message(message: Dict[str, Any], services: ServicesDict
     task_id = message.get("task_id")
     user_id = message.get("user_id")
 
+    logger.info(f"[TASK {task_id}] Starting message processing - Type: {task_type}, User: {user_id}")
+
     if not task_id or not user_id:
-        logger.error(f"Message missing required task_id or user_id. Task_id: {task_id}, User_id: {user_id}")
+        logger.error(f"[TASK {task_id}] VALIDATION ERROR: Missing required task_id or user_id. Task_id: {task_id}, User_id: {user_id}")
         # Optionally, try to update task status to FAILED if task_id is known
         if task_id and "task_service" in services:
-            await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message="Core task information missing in message payload (task_id or user_id)")
+            try:
+                await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message="Core task information missing in message payload (task_id or user_id)")
+                logger.info(f"[TASK {task_id}] Updated task status to FAILED due to missing required fields")
+            except Exception as e:
+                logger.error(f"[TASK {task_id}] Failed to update task status: {e}")
         return
 
     processor: Optional[BaseTaskProcessor] = None
+
+    logger.info(f"[TASK {task_id}] Validating task type: {task_type}")
 
     if task_type == TASK_TYPE_GENERATION:
         # Validate required fields for generation
@@ -168,9 +195,14 @@ async def process_pubsub_message(message: Dict[str, Any], services: ServicesDict
         theme_description = message.get("theme_description")
         if not logo_description or not theme_description:
             error_msg = "Missing logo/theme description for generation task."
-            logger.error(f"Task {task_id}: {error_msg}")
-            await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+            logger.error(f"[TASK {task_id}] VALIDATION ERROR: {error_msg}")
+            try:
+                await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+                logger.info(f"[TASK {task_id}] Updated task status to FAILED due to validation error")
+            except Exception as e:
+                logger.error(f"[TASK {task_id}] Failed to update task status: {e}")
             return
+        logger.info(f"[TASK {task_id}] Creating GenerationTaskProcessor")
         processor = GenerationTaskProcessor(task_id, user_id, message, services)
 
     elif task_type == TASK_TYPE_REFINEMENT:
@@ -179,18 +211,38 @@ async def process_pubsub_message(message: Dict[str, Any], services: ServicesDict
         original_image_url = message.get("original_image_url")
         if not refinement_prompt or not original_image_url:
             error_msg = "Missing prompt/original URL for refinement task."
-            logger.error(f"Task {task_id}: {error_msg}")
-            await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+            logger.error(f"[TASK {task_id}] VALIDATION ERROR: {error_msg}")
+            try:
+                await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+                logger.info(f"[TASK {task_id}] Updated task status to FAILED due to validation error")
+            except Exception as e:
+                logger.error(f"[TASK {task_id}] Failed to update task status: {e}")
             return
+        logger.info(f"[TASK {task_id}] Creating RefinementTaskProcessor")
         processor = RefinementTaskProcessor(task_id, user_id, message, services)
     else:
         error_msg = f"Unknown task type: {task_type}"
-        logger.error(f"Task {task_id}: {error_msg}")
-        await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+        logger.error(f"[TASK {task_id}] VALIDATION ERROR: {error_msg}")
+        try:
+            await services["task_service"].update_task_status(task_id=task_id, status=TASK_STATUS_FAILED, error_message=error_msg)
+            logger.info(f"[TASK {task_id}] Updated task status to FAILED due to unknown task type")
+        except Exception as e:
+            logger.error(f"[TASK {task_id}] Failed to update task status: {e}")
         return
 
     if processor:
-        await processor.process()
+        logger.info(f"[TASK {task_id}] Starting processor execution")
+        try:
+            await processor.process()
+            logger.info(f"[TASK {task_id}] Processor completed successfully")
+        except Exception as e:
+            logger.error(f"[TASK {task_id}] PROCESSOR ERROR: {e}")
+            logger.error(f"[TASK {task_id}] Exception type: {type(e).__name__}")
+            logger.error(f"[TASK {task_id}] Full traceback:\n{traceback.format_exc()}")
+            # Re-raise to propagate the error up
+            raise
+    else:
+        logger.error(f"[TASK {task_id}] ERROR: No processor created")
 
 
 @functions_framework.cloud_event
@@ -202,9 +254,12 @@ def handle_pubsub(cloud_event: CloudEvent) -> None:
     Args:
         cloud_event: The CloudEvent from Pub/Sub
     """
+    logger.info("=== Cloud Function invoked: handle_pubsub ===")
 
     # Define an internal async helper function
     async def _async_handle_pubsub() -> None:
+        logger.info("Starting async message processing")
+
         # Process the Pub/Sub event asynchronously
         if SERVICES_GLOBAL is None:
             logger.warning("SERVICES_GLOBAL is None, attempting to re-initialize services")
@@ -220,38 +275,54 @@ def handle_pubsub(cloud_event: CloudEvent) -> None:
 
         # Extract the message data
         try:
+            logger.debug("Extracting message data from CloudEvent")
             event_data = cloud_event.data
             if "message" not in event_data:
-                logger.error("No message field in event data")
+                logger.error("ERROR: No message field in event data")
+                logger.error(f"Event data keys: {list(event_data.keys()) if event_data else 'None'}")
                 return
 
             # Extract and decode the message
             message_data = event_data["message"]
             if "data" not in message_data:
-                logger.error("No data field in message data")
+                logger.error("ERROR: No data field in message data")
+                logger.error(f"Message data keys: {list(message_data.keys()) if message_data else 'None'}")
                 return
 
             # Base64 decode the message data
             encoded_data = message_data["data"]
             decoded_data = base64.b64decode(encoded_data).decode("utf-8")
-            message_payload = json.loads(decoded_data)
+            logger.debug(f"Successfully decoded message data: {decoded_data[:200]}...")
 
-            logger.info(f"Received Pub/Sub message: {message_payload.get('task_id')}")
-            logger.debug(f"Message payload: {message_payload}")
+            message_payload = json.loads(decoded_data)
+            task_id = message_payload.get("task_id", "unknown")
+            task_type = message_payload.get("task_type", "unknown")
+
+            logger.info(f"Processing Pub/Sub message - Task ID: {task_id}, Type: {task_type}")
+            logger.debug(f"Full message payload: {message_payload}")
 
             # Process the message
             await process_pubsub_message(message_payload, SERVICES_GLOBAL)
 
+            logger.info(f"Successfully completed processing for task {task_id}")
+
         except json.JSONDecodeError as je:
-            logger.error(f"Error decoding JSON message: {je}")
+            logger.error(f"JSON DECODE ERROR: {je}")
+            logger.error(f"Raw decoded data: {decoded_data if 'decoded_data' in locals() else 'Not available'}")
         except Exception as e:
-            logger.error(f"Error processing Pub/Sub message: {e}")
-            logger.error(traceback.format_exc())
+            logger.error(f"CRITICAL ERROR processing Pub/Sub message: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            logger.error(f"Full traceback:\n{traceback.format_exc()}")
+            # Re-raise to ensure Cloud Functions sees this as a failure
+            raise
 
     # Run the async function
     try:
         asyncio.run(_async_handle_pubsub())
+        logger.info("=== Cloud Function completed successfully ===")
     except Exception as e:
-        logger.critical(f"Fatal error in handle_pubsub: {e}", exc_info=True)
+        logger.critical(f"FATAL ERROR in handle_pubsub: {e}")
+        logger.critical(f"Exception type: {type(e).__name__}")
+        logger.critical(f"Full exception traceback:\n{traceback.format_exc()}")
         # Re-raising signals failure to the platform for potential retries
         raise
