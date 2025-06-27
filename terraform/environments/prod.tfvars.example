@@ -8,7 +8,7 @@ terraform_runner_user_emails    = ["your-gcp-email@example.com"] # <-- REPLACE
 terraform_cicd_sa_email         = "" # Leave blank, will be created by Terraform automatically
 allow_ssh_ips                   = [] # Prod should not have SSH open generally
 api_vm_machine_type             = "e2-micro"
-worker_min_instances            = 0
+worker_min_instances            = 1
 worker_max_instances            = 5
 github_repo                     = "your-github-username/concept_visualizer" # <-- REPLACE with your GitHub repository name
 # Add other prod vars from variables.tf if needed

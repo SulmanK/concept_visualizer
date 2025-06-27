@@ -40,15 +40,16 @@ def get_redis_client() -> Optional[Redis]:
         redis_url = f"rediss://:{settings.UPSTASH_REDIS_PASSWORD}@{settings.UPSTASH_REDIS_ENDPOINT}:{settings.UPSTASH_REDIS_PORT}"
         logger.debug(f"Connecting to Redis at: {mask_key(settings.UPSTASH_REDIS_ENDPOINT)}")
 
-        # Create client using connection URL
+        # Create client using connection URL with enhanced cold start resilience
         client = cast(
             Redis,
             redis.from_url(
                 redis_url,
-                socket_timeout=3,  # Slightly increased timeout for reliability
-                socket_connect_timeout=3,
-                retry_on_timeout=True,  # Changed to boolean - some versions use boolean instead of max_tries
-                health_check_interval=15,
+                socket_timeout=10,  # Increased from 3 for cold start resilience
+                socket_connect_timeout=10,  # Increased from 3 for cold start resilience
+                retry_on_timeout=True,
+                retry_on_error=[redis.ConnectionError],  # Add connection error retry
+                health_check_interval=30,  # Increased from 15 for cold start resilience
                 decode_responses=True,  # Automatically decode responses to strings
             ),
         )

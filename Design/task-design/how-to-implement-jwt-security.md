@@ -393,7 +393,8 @@ To make authentication JWTs work with RLS, you need to add a custom JWT extracti
 
 ```sql
 -- Function to extract JWT from URL query parameter
-CREATE OR REPLACE FUNCTION auth.get_jwt_from_url()
+-- NOTE: Updated to use public schema due to Supabase deprecating custom objects in internal schemas
+CREATE OR REPLACE FUNCTION public.get_jwt_from_url()
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -410,7 +411,8 @@ END;
 $$;
 
 -- Function to get JWT from header or URL
-CREATE OR REPLACE FUNCTION auth.get_jwt()
+-- NOTE: Updated to use public schema due to Supabase deprecating custom objects in internal schemas
+CREATE OR REPLACE FUNCTION public.get_jwt()
 RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -429,7 +431,7 @@ BEGIN
     _token := replace(_token, 'Bearer ', '');
   ELSE
     -- Try to get token from URL query parameter
-    _token := auth.get_jwt_from_url();
+    _token := public.get_jwt_from_url();
   END IF;
 
   -- Return the token if found, otherwise return NULL
