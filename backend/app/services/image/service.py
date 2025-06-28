@@ -253,7 +253,7 @@ class ImageService(ImageServiceInterface):
             # For Cloud Run with limited CPU/memory, limit concurrent variations
             from app.core.config import settings
 
-            config_limit = getattr(settings, "PALETTE_PROCESSING_CONCURRENCY_LIMIT", 3)
+            config_limit = getattr(settings, "PALETTE_PROCESSING_CONCURRENCY_LIMIT", 4)
             max_concurrent = min(config_limit, len(palettes))  # Process max configured limit at a time, or fewer if we have fewer palettes
             semaphore = asyncio.Semaphore(max_concurrent)
 

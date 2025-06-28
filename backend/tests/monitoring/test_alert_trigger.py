@@ -2,6 +2,7 @@
 Test script to trigger Cloud Monitoring alerts by generating specific log entries.
 This script simulates an error in the Cloud Function to test if alerts are working properly.
 """
+
 import json
 import logging
 import os

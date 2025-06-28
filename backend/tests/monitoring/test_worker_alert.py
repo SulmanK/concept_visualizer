@@ -2,6 +2,7 @@
 Integration test for Cloud Monitoring alerts by simulating worker function errors.
 This test is designed to generate log entries that match the alert filter criteria.
 """
+
 import json
 import logging
 import os

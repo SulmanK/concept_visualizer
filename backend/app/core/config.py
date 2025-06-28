@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     PUB_SUB_PROJECT_ID: str = "your-project-id"
 
     # Image processing settings
-    PALETTE_PROCESSING_CONCURRENCY_LIMIT: int = 3  # Max concurrent palette variations to process
+    PALETTE_PROCESSING_CONCURRENCY_LIMIT: int = 4  # Max concurrent palette variations to process
     PALETTE_PROCESSING_TIMEOUT_SECONDS: int = 120  # Timeout for individual palette processing in seconds
 
     # Configure Pydantic to use environment variables

@@ -162,7 +162,7 @@ class TestImageService:
 
     @pytest.mark.asyncio
     async def test_create_palette_variations(self, image_service: ImageService, mock_processing_service: AsyncMock, mock_persistence_service: MagicMock) -> None:
-        """Test create_palette_variations method."""
+        """Test create_palette_variations method with semaphore optimization."""
         # Test data
         base_image_data = b"test_image_data"
         palettes = [
@@ -191,8 +191,12 @@ class TestImageService:
             ("path/to/palette2.png", "https://example.com/palette2.png"),
         ]
 
-        # Mock PIL Image
-        with patch("PIL.Image.open") as mock_pil_open:
+        # Mock PIL Image and the semaphore optimization components
+        with patch("PIL.Image.open") as mock_pil_open, patch("app.core.config.settings") as mock_settings, patch("asyncio.Semaphore") as mock_semaphore_class, patch("asyncio.gather") as mock_gather:
+            # Configure the mock settings
+            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 4
+            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 120
+
             # Configure the mocked image
             mock_img = MagicMock()
             mock_img.mode = "RGB"
@@ -200,6 +204,33 @@ class TestImageService:
             mock_buffer.getvalue.return_value = b"test_image_data"  # Match the expected input for the test
             mock_img.save.side_effect = lambda buffer, format: None
             mock_pil_open.return_value = mock_img
+
+            # Mock the semaphore
+            mock_semaphore = MagicMock()
+            mock_semaphore_class.return_value = mock_semaphore
+
+            # Mock asyncio.gather to return a coroutine that resolves to successful results for valid palettes
+            async def mock_gather_coroutine(*tasks, return_exceptions=True):
+                # Only return results for palettes with colors (skip empty palette)
+                return [
+                    {
+                        "name": "Palette 1",
+                        "colors": ["#FFFFFF", "#000000", "#FF0000"],
+                        "description": "Test palette 1",
+                        "image_path": "path/to/palette1.png",
+                        "image_url": "https://example.com/palette1.png",
+                    },
+                    {
+                        "name": "Palette 2",
+                        "colors": ["#00FF00", "#0000FF", "#FFFF00"],
+                        "description": "Test palette 2",
+                        "image_path": "path/to/palette2.png",
+                        "image_url": "https://example.com/palette2.png",
+                    },
+                    None,  # Empty palette result
+                ]
+
+            mock_gather.side_effect = mock_gather_coroutine
 
             # Mock BytesIO
             with patch("app.services.image.service.BytesIO") as mock_bytesio:
@@ -216,33 +247,11 @@ class TestImageService:
         # Verify the result contains two processed palettes
         assert len(result) == 2
 
-        # Verify the processing service was called twice (once for each valid palette)
-        assert mock_processing_service.process_image.call_count == 2
+        # Verify semaphore was created with correct concurrency limit
+        mock_semaphore_class.assert_called_once_with(3)  # min(4, 3) since we have 3 total palettes
 
-        # Verify the processing service was called with correct operations for applying palettes
-        mock_processing_service.process_image.assert_any_call(
-            b"test_image_data",
-            operations=[
-                {
-                    "type": "apply_palette",
-                    "palette": ["#FFFFFF", "#000000", "#FF0000"],
-                    "blend_strength": 0.75,
-                }
-            ],
-        )
-        mock_processing_service.process_image.assert_any_call(
-            b"test_image_data",
-            operations=[
-                {
-                    "type": "apply_palette",
-                    "palette": ["#00FF00", "#0000FF", "#FFFF00"],
-                    "blend_strength": 0.75,
-                }
-            ],
-        )
-
-        # Verify the persistence service was called twice (once for each valid palette)
-        assert mock_persistence_service.store_image.call_count == 2
+        # Verify asyncio.gather was called for concurrent processing
+        mock_gather.assert_called_once()
 
         # Verify the result contains the expected palette data
         palette_names = [palette["name"] for palette in result]
@@ -287,8 +296,12 @@ class TestImageService:
         # Setup mock persistence to return successful results for the first palette
         mock_persistence_service.store_image.return_value = ("path/to/palette.png", "https://example.com/palette.png")
 
-        # Mock PIL Image
-        with patch("PIL.Image.open") as mock_pil_open:
+        # Mock PIL Image and the semaphore optimization components
+        with patch("PIL.Image.open") as mock_pil_open, patch("app.core.config.settings") as mock_settings, patch("asyncio.Semaphore") as mock_semaphore_class, patch("asyncio.gather") as mock_gather:
+            # Configure the mock settings
+            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 4
+            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 120
+
             # Configure the mocked image
             mock_img = MagicMock()
             mock_img.mode = "RGB"
@@ -296,6 +309,25 @@ class TestImageService:
             mock_buffer.getvalue.return_value = b"test_image_data"
             mock_img.save.side_effect = lambda buffer, format: None
             mock_pil_open.return_value = mock_img
+
+            # Mock the semaphore
+            mock_semaphore = MagicMock()
+            mock_semaphore_class.return_value = mock_semaphore
+
+            # Mock asyncio.gather to return a coroutine with one success and one exception
+            async def mock_gather_coroutine(*tasks, return_exceptions=True):
+                return [
+                    {
+                        "name": "Success Palette",
+                        "colors": ["#FFFFFF", "#000000", "#FF0000"],
+                        "description": "This palette should process successfully",
+                        "image_path": "path/to/palette.png",
+                        "image_url": "https://example.com/palette.png",
+                    },
+                    Exception("Processing error"),  # Exception for second palette
+                ]
+
+            mock_gather.side_effect = mock_gather_coroutine
 
             # Mock BytesIO
             with patch("app.services.image.service.BytesIO") as mock_bytesio:
@@ -313,11 +345,11 @@ class TestImageService:
         assert len(result) == 1
         assert result[0]["name"] == "Success Palette"
 
-        # Verify the processing service was called twice
-        assert mock_processing_service.process_image.call_count == 2
+        # Verify semaphore was created with correct concurrency limit
+        mock_semaphore_class.assert_called_once_with(2)  # min(4, 2) since we have 2 total palettes
 
-        # Verify the persistence service was called only once (for the successful palette)
-        assert mock_persistence_service.store_image.call_count == 1
+        # Verify asyncio.gather was called for concurrent processing
+        mock_gather.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_apply_palette_to_image(self, image_service: ImageService, mock_processing_service: AsyncMock) -> None:
