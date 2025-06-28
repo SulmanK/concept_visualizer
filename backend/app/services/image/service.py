@@ -249,16 +249,27 @@ class ImageService(ImageServiceInterface):
             # Prepare the metadata prefix with timestamp for unique filenames
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
 
-            # Create async tasks for parallel processing
+            # Create a semaphore to limit concurrent processing
+            # For Cloud Run with limited CPU/memory, limit concurrent variations
+            from app.core.config import settings
+
+            config_limit = getattr(settings, "PALETTE_PROCESSING_CONCURRENCY_LIMIT", 3)
+            max_concurrent = min(config_limit, len(palettes))  # Process max configured limit at a time, or fewer if we have fewer palettes
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            self.logger.info("Using concurrency limit of {} for palette variation processing".format(max_concurrent))
+
+            # Create async tasks for controlled parallel processing
             tasks = []
             for idx, palette in enumerate(palettes):
-                tasks.append(self._process_single_palette_variation(validated_image_data, palette, user_id, timestamp, idx, blend_strength))
+                tasks.append(self._process_single_palette_variation_with_semaphore(semaphore, validated_image_data, palette, user_id, timestamp, idx, blend_strength))
 
-            # Execute all tasks concurrently
-            self.logger.info("Starting parallel processing of {} palette variations".format(len(tasks)))
+            # Execute all tasks with concurrency control
+            self.logger.info("Starting controlled parallel processing of {} palette variations (max {} concurrent)".format(len(tasks), max_concurrent))
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Process results
+            successful_variations = 0
             for result in results:
                 if isinstance(result, Exception):
                     self.logger.error("Error processing a palette variation: {}".format(str(result)))
@@ -268,17 +279,55 @@ class ImageService(ImageServiceInterface):
                     # Type checking: only append results that are dictionaries, not exceptions or None
                     result_dict = cast(Dict[str, Any], result)
                     result_palettes.append(result_dict)
+                    successful_variations += 1
 
             end_time = datetime.now()
             processing_time = (end_time - start_time).total_seconds()
             self.logger.info(
-                "Successfully created {} palette variations in {:.2f} seconds (avg {:.2f} seconds per variation)".format(len(result_palettes), processing_time, processing_time / max(len(palettes), 1))
+                "Successfully created {} of {} palette variations in {:.2f} seconds (avg {:.2f} seconds per variation)".format(
+                    successful_variations, len(palettes), processing_time, processing_time / max(len(palettes), 1)
+                )
             )
             return result_palettes
 
         except Exception as e:
             self.logger.error("Error in create_palette_variations: {}".format(str(e)))
             raise ImageError("Error creating palette variations: {}".format(str(e)))
+
+    async def _process_single_palette_variation_with_semaphore(
+        self, semaphore: asyncio.Semaphore, base_image_data: bytes, palette: Dict[str, Any], user_id: str, timestamp: str, idx: int, blend_strength: float = 0.75
+    ) -> Optional[Dict[str, Any]]:
+        """Process a single palette variation with concurrency control.
+
+        Args:
+            semaphore: Semaphore to limit concurrent operations
+            base_image_data: Binary image data of the base image
+            palette: Dictionary containing palette information
+            user_id: User ID for storage
+            timestamp: Timestamp string for unique filenames
+            idx: Index of the palette in the original list
+            blend_strength: Strength of the palette application
+
+        Returns:
+            Dictionary with palette information and image URLs, or None if processing fails
+
+        Raises:
+            Exception: If any step of the processing fails
+        """
+        async with semaphore:  # Acquire semaphore to limit concurrency
+            # Add timeout for individual palette processing to prevent hanging
+            try:
+                from app.core.config import settings
+
+                timeout_seconds = getattr(settings, "PALETTE_PROCESSING_TIMEOUT_SECONDS", 120)
+                return await asyncio.wait_for(
+                    self._process_single_palette_variation(base_image_data, palette, user_id, timestamp, idx, blend_strength),
+                    timeout=float(timeout_seconds),  # Configurable timeout per palette variation
+                )
+            except asyncio.TimeoutError:
+                palette_name = palette.get("name", f"Palette {idx + 1}")
+                self.logger.error("Timeout processing palette variation: {}".format(palette_name))
+                raise Exception(f"Timeout processing palette variation: {palette_name}")
 
     async def _process_single_palette_variation(
         self, base_image_data: bytes, palette: Dict[str, Any], user_id: str, timestamp: str, idx: int, blend_strength: float = 0.75
