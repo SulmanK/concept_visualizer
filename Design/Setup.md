@@ -136,8 +136,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
       cloudbuild.googleapis.com \
       cloudresourcemanager.googleapis.com \
       eventarc.googleapis.com \
-      cloudfunctions.googleapis.com
-      --project=YOUR_PROJECT_ID_HERE
+      cloudfunctions.googleapis.com --project=YOUR_PROJECT_ID_HERE
     ```
 4.  **Create GCS Bucket for Terraform State (Manual/Bootstrap):**
     - **Action:** Choose **one** GCP project to host the state bucket (e.g., the `managed` project). Manually create a GCS bucket in that project using the Cloud Console or `gcloud`.
@@ -165,6 +164,15 @@ You need two Supabase projects: one for development (`dev`) and one for producti
     terraform init -backend-config="bucket=concept-visualizer-tfstate-1"
     terraform workspace new dev
     terraform workspace new prod
+
+    ```
+
+8.  Remove Terraform Config (if needed)
+
+    ```bash
+    cd terraform
+    rm -f tfplan tfplan.*
+    rm -rf .terraform
 
     ```
 
