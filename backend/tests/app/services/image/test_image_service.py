@@ -194,14 +194,14 @@ class TestImageService:
         # Mock PIL Image and the semaphore optimization components
         with patch("PIL.Image.open") as mock_pil_open, patch("app.core.config.settings") as mock_settings, patch("asyncio.Semaphore") as mock_semaphore_class, patch("asyncio.gather") as mock_gather:
             # Configure the mock settings
-            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 4
-            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 120
+            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 1
+            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 180
 
             # Configure the mocked image
             mock_img = MagicMock()
             mock_img.mode = "RGB"
             mock_buffer = MagicMock()
-            mock_buffer.getvalue.return_value = b"test_image_data"  # Match the expected input for the test
+            mock_buffer.getvalue.return_value = b"test_image_data"
             mock_img.save.side_effect = lambda buffer, format: None
             mock_pil_open.return_value = mock_img
 
@@ -248,7 +248,7 @@ class TestImageService:
         assert len(result) == 2
 
         # Verify semaphore was created with correct concurrency limit
-        mock_semaphore_class.assert_called_once_with(3)  # min(4, 3) since we have 3 total palettes
+        mock_semaphore_class.assert_called_once_with(1)  # min(1, 3) = 1 (sequential processing)
 
         # Verify asyncio.gather was called for concurrent processing
         mock_gather.assert_called_once()
@@ -299,8 +299,8 @@ class TestImageService:
         # Mock PIL Image and the semaphore optimization components
         with patch("PIL.Image.open") as mock_pil_open, patch("app.core.config.settings") as mock_settings, patch("asyncio.Semaphore") as mock_semaphore_class, patch("asyncio.gather") as mock_gather:
             # Configure the mock settings
-            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 4
-            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 120
+            mock_settings.PALETTE_PROCESSING_CONCURRENCY_LIMIT = 1
+            mock_settings.PALETTE_PROCESSING_TIMEOUT_SECONDS = 180
 
             # Configure the mocked image
             mock_img = MagicMock()
@@ -346,7 +346,7 @@ class TestImageService:
         assert result[0]["name"] == "Success Palette"
 
         # Verify semaphore was created with correct concurrency limit
-        mock_semaphore_class.assert_called_once_with(2)  # min(4, 2) since we have 2 total palettes
+        mock_semaphore_class.assert_called_once_with(1)  # min(1, 2) = 1 (sequential processing)
 
         # Verify asyncio.gather was called for concurrent processing
         mock_gather.assert_called_once()

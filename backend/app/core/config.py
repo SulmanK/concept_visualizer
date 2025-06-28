@@ -99,8 +99,12 @@ class Settings(BaseSettings):
     PUB_SUB_PROJECT_ID: str = "your-project-id"
 
     # Image processing settings
-    PALETTE_PROCESSING_CONCURRENCY_LIMIT: int = 4  # Max concurrent palette variations to process
-    PALETTE_PROCESSING_TIMEOUT_SECONDS: int = 120  # Timeout for individual palette processing in seconds
+    # Recommended values by environment:
+    # - Cloud Run (limited resources): CONCURRENCY_LIMIT=1, TIMEOUT=180-240s
+    # - High-memory instances (4GB+ RAM): CONCURRENCY_LIMIT=2-3, TIMEOUT=120s
+    # - Powerful servers (8GB+ RAM, 4+ CPU): CONCURRENCY_LIMIT=4-6, TIMEOUT=90s
+    PALETTE_PROCESSING_CONCURRENCY_LIMIT: int = 1  # Max concurrent palette variations to process (1=sequential, better for Cloud Run)
+    PALETTE_PROCESSING_TIMEOUT_SECONDS: int = 180  # Timeout for individual palette processing in seconds
 
     # Configure Pydantic to use environment variables
     model_config = SettingsConfigDict(
