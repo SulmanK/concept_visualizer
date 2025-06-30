@@ -121,7 +121,8 @@ jobs:
             --run-service-account="${{ env.WORKER_SERVICE_ACCOUNT_EMAIL }}" \
             --trigger-topic="$TASKS_TOPIC_NAME" \
             --timeout=540s \
-            --memory=2048Mi \
+            --memory=4096Mi \
+            --cpu=2 \
             --min-instances=${{ env.WORKER_MIN_INSTANCES }} \
             --max-instances=${{ env.WORKER_MAX_INSTANCES }} \
             --set-env-vars="ENVIRONMENT=${{ env.ENVIRONMENT }},GCP_PROJECT_ID=${{ env.GCP_PROJECT_ID }},CONCEPT_STORAGE_BUCKET_CONCEPT=concept-images-${{ env.ENVIRONMENT }},CONCEPT_STORAGE_BUCKET_PALETTE=palette-images-${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_TASKS=tasks_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_CONCEPTS=concepts_${{ env.ENVIRONMENT }},CONCEPT_DB_TABLE_PALETTES=color_variations_${{ env.ENVIRONMENT }},CONCEPT_LOG_LEVEL=$([[ "${{ env.ENVIRONMENT }}" == "prod" ]] && echo "INFO" || echo "DEBUG"),CONCEPT_UPSTASH_REDIS_PORT=6379" \
