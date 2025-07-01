@@ -277,6 +277,9 @@ These secrets still need to be added manually to your GitHub repository settings
   - `PROD_SUPABASE_SERVICE_ROLE`
   - `PROD_SUPABASE_URL`
   - `PROD_VERCEL_PROJECT_ID`
+  - `PROD_UPSTASH_REDIS_ENDPOINT`
+  - `PROD_UPSTASH_REDIS_PASSWORD`
+  - `PROD_UPSTASH_REDIS_PORT` (optional, defaults to `6379`)
 - \*\*Development (prefixed with `DEV_`):
   - `DEV_JIGSAWSTACK_API_KEY`
   - `DEV_SUPABASE_ANON_KEY`
@@ -284,6 +287,9 @@ These secrets still need to be added manually to your GitHub repository settings
   - `DEV_SUPABASE_SERVICE_ROLE`
   - `DEV_SUPABASE_URL`
   - `DEV_VERCEL_PROJECT_ID`
+  - `DEV_UPSTASH_REDIS_ENDPOINT`
+  - `DEV_UPSTASH_REDIS_PASSWORD`
+  - `DEV_UPSTASH_REDIS_PORT` (optional)
 
 _(The comprehensive list of all secrets and their descriptions can be found in `.github/SECRETS.md` which should align with the above distinction of automated vs. manual.)_
 

@@ -66,6 +66,9 @@ DEV_SUPABASE_JWT_SECRET
 DEV_SUPABASE_SERVICE_ROLE
 DEV_SUPABASE_URL
 DEV_VERCEL_PROJECT_ID
+DEV_UPSTASH_REDIS_ENDPOINT
+DEV_UPSTASH_REDIS_PASSWORD
+DEV_UPSTASH_REDIS_PORT
 
 # Production Environment
 PROD_JIGSAWSTACK_API_KEY
@@ -74,6 +77,9 @@ PROD_SUPABASE_JWT_SECRET
 PROD_SUPABASE_SERVICE_ROLE
 PROD_SUPABASE_URL
 PROD_VERCEL_PROJECT_ID
+PROD_UPSTASH_REDIS_ENDPOINT
+PROD_UPSTASH_REDIS_PASSWORD
+PROD_UPSTASH_REDIS_PORT
 ```
 
 ## Terraform Outputs & Secret Population
@@ -134,6 +140,12 @@ After applying your Terraform configuration for each environment, you can view t
 
 - `DEV_VERCEL_PROJECT_ID`: The Vercel Project ID for the development frontend deployment.
 
+### Redis Development (for Rate-Limit Flush)
+
+- `DEV_UPSTASH_REDIS_ENDPOINT`: The Redis endpoint hostname for the development environment (without protocol, e.g., "your-redis.upstash.io")
+- `DEV_UPSTASH_REDIS_PASSWORD`: The Redis password for the development environment
+- `DEV_UPSTASH_REDIS_PORT`: The Redis port for the development environment (optional, defaults to 6379)
+
 ### Frontend Monitoring Development (GCP)
 
 - `DEV_FRONTEND_UPTIME_CHECK_CONFIG_ID`: The ID of the GCP Uptime Check configuration for the dev frontend.
@@ -170,6 +182,12 @@ After applying your Terraform configuration for each environment, you can view t
 ### Vercel Production
 
 - `PROD_VERCEL_PROJECT_ID`: The Vercel Project ID for the production frontend deployment.
+
+### Redis Production (for Rate-Limit Flush)
+
+- `PROD_UPSTASH_REDIS_ENDPOINT`: The Redis endpoint hostname for the production environment (without protocol, e.g., "your-redis.upstash.io")
+- `PROD_UPSTASH_REDIS_PASSWORD`: The Redis password for the production environment
+- `PROD_UPSTASH_REDIS_PORT`: The Redis port for the production environment (optional, defaults to 6379)
 
 ### Frontend Monitoring Production (GCP)
 

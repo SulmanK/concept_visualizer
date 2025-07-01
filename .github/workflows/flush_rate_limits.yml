@@ -1,0 +1,92 @@
+name: Monthly Rate-Limit Flush
+
+on:
+  # Run at 00:00 UTC on the 1st day of every month
+  schedule:
+    - cron: '0 0 1 * *'
+
+  # Allow manual execution for testing or ad-hoc flushes
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to flush (prod/dev)'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - prod
+          - dev
+
+jobs:
+  flush-rate-limits:
+    name: Flush Rate-Limit Keys
+    runs-on: ubuntu-latest
+
+    # Default to production for scheduled runs, use input for manual runs
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || 'prod' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Redis client
+        run: |
+          pip install redis==4.6.0
+
+      - name: Set environment variables
+        run: |
+          if [[ "${{ env.TARGET_ENV }}" == "prod" ]]; then
+            echo "CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ secrets.PROD_UPSTASH_REDIS_ENDPOINT }}" >> $GITHUB_ENV
+            echo "CONCEPT_UPSTASH_REDIS_PASSWORD=${{ secrets.PROD_UPSTASH_REDIS_PASSWORD }}" >> $GITHUB_ENV
+            echo "CONCEPT_UPSTASH_REDIS_PORT=${{ secrets.PROD_UPSTASH_REDIS_PORT || '6379' }}" >> $GITHUB_ENV
+          else
+            echo "CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ secrets.DEV_UPSTASH_REDIS_ENDPOINT }}" >> $GITHUB_ENV
+            echo "CONCEPT_UPSTASH_REDIS_PASSWORD=${{ secrets.DEV_UPSTASH_REDIS_PASSWORD }}" >> $GITHUB_ENV
+            echo "CONCEPT_UPSTASH_REDIS_PORT=${{ secrets.DEV_UPSTASH_REDIS_PORT || '6379' }}" >> $GITHUB_ENV
+          fi
+
+      - name: Verify environment variables
+        run: |
+          if [[ -z "$CONCEPT_UPSTASH_REDIS_ENDPOINT" ]]; then
+            echo "Error: CONCEPT_UPSTASH_REDIS_ENDPOINT is not set"
+            exit 1
+          fi
+          if [[ -z "$CONCEPT_UPSTASH_REDIS_PASSWORD" ]]; then
+            echo "Error: CONCEPT_UPSTASH_REDIS_PASSWORD is not set"
+            exit 1
+          fi
+          echo "Environment: ${{ env.TARGET_ENV }}"
+          echo "Redis endpoint: ${CONCEPT_UPSTASH_REDIS_ENDPOINT}"
+          echo "Redis port: ${CONCEPT_UPSTASH_REDIS_PORT}"
+
+      - name: Run rate-limit flush
+        id: flush
+        run: |
+          echo "Starting monthly rate-limit flush for ${{ env.TARGET_ENV }} environment..."
+          python scripts/maintenance/flush_rate_limits.py
+
+      - name: Report success
+        if: success()
+        run: |
+          echo "✅ Monthly rate-limit flush completed successfully for ${{ env.TARGET_ENV }} environment"
+          echo "Check the logs above for details on how many keys were deleted."
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Monthly rate-limit flush failed for ${{ env.TARGET_ENV }} environment"
+          echo "Check the logs above for error details."
+          echo "This may require manual investigation or retry."
+          exit 1
+
+      - name: Notify on failure (Future Enhancement)
+        if: failure()
+        run: |
+          echo "Future enhancement: Send notification to Slack/Teams/Email"
+          echo "For now, GitHub will send notification emails to repository watchers"
