@@ -9,22 +9,22 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to flush (prod/dev)'
+        description: 'Environment to flush (main/develop)'
         required: true
-        default: 'prod'
+        default: 'main'
         type: choice
         options:
-          - prod
-          - dev
+          - main
+          - develop
 
 jobs:
   flush-rate-limits:
     name: Flush Rate-Limit Keys
     runs-on: ubuntu-latest
 
-    # Default to production for scheduled runs, use input for manual runs
+    # Default to main for scheduled runs, use input for manual runs
     env:
-      TARGET_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      TARGET_BRANCH: ${{ github.event.inputs.environment || 'main' }}
 
     steps:
       - name: Checkout repository
@@ -41,14 +41,19 @@ jobs:
 
       - name: Set environment variables
         run: |
-          if [[ "${{ env.TARGET_ENV }}" == "prod" ]]; then
+          if [[ "${{ env.TARGET_BRANCH }}" == "main" ]]; then
             echo "CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ secrets.PROD_UPSTASH_REDIS_ENDPOINT }}" >> $GITHUB_ENV
             echo "CONCEPT_UPSTASH_REDIS_PASSWORD=${{ secrets.PROD_UPSTASH_REDIS_PASSWORD }}" >> $GITHUB_ENV
             echo "CONCEPT_UPSTASH_REDIS_PORT=${{ secrets.PROD_UPSTASH_REDIS_PORT || '6379' }}" >> $GITHUB_ENV
-          else
+            echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+          elif [[ "${{ env.TARGET_BRANCH }}" == "develop" ]]; then
             echo "CONCEPT_UPSTASH_REDIS_ENDPOINT=${{ secrets.DEV_UPSTASH_REDIS_ENDPOINT }}" >> $GITHUB_ENV
             echo "CONCEPT_UPSTASH_REDIS_PASSWORD=${{ secrets.DEV_UPSTASH_REDIS_PASSWORD }}" >> $GITHUB_ENV
             echo "CONCEPT_UPSTASH_REDIS_PORT=${{ secrets.DEV_UPSTASH_REDIS_PORT || '6379' }}" >> $GITHUB_ENV
+            echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          else
+            echo "Error: Unknown branch ${{ env.TARGET_BRANCH }}"
+            exit 1
           fi
 
       - name: Verify environment variables
@@ -61,26 +66,27 @@ jobs:
             echo "Error: CONCEPT_UPSTASH_REDIS_PASSWORD is not set"
             exit 1
           fi
-          echo "Environment: ${{ env.TARGET_ENV }}"
+          echo "Branch: ${{ env.TARGET_BRANCH }}"
+          echo "Environment: ${ENVIRONMENT}"
           echo "Redis endpoint: ${CONCEPT_UPSTASH_REDIS_ENDPOINT}"
           echo "Redis port: ${CONCEPT_UPSTASH_REDIS_PORT}"
 
       - name: Run rate-limit flush
         id: flush
         run: |
-          echo "Starting monthly rate-limit flush for ${{ env.TARGET_ENV }} environment..."
+          echo "Starting monthly rate-limit flush for ${ENVIRONMENT} environment (branch: ${{ env.TARGET_BRANCH }})..."
           python scripts/maintenance/flush_rate_limits.py
 
       - name: Report success
         if: success()
         run: |
-          echo "✅ Monthly rate-limit flush completed successfully for ${{ env.TARGET_ENV }} environment"
+          echo "✅ Monthly rate-limit flush completed successfully for ${ENVIRONMENT} environment"
           echo "Check the logs above for details on how many keys were deleted."
 
       - name: Report failure
         if: failure()
         run: |
-          echo "❌ Monthly rate-limit flush failed for ${{ env.TARGET_ENV }} environment"
+          echo "❌ Monthly rate-limit flush failed for ${ENVIRONMENT} environment"
           echo "Check the logs above for error details."
           echo "This may require manual investigation or retry."
           exit 1

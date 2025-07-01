@@ -22,7 +22,7 @@ The workflow relies on the following encrypted secrets (per environment):
 | `PROD_UPSTASH_REDIS_ENDPOINT` | Hostname of the Upstash Redis instance (without protocol). |
 | `PROD_UPSTASH_REDIS_PASSWORD` | Password for the Redis instance.                           |
 | `PROD_UPSTASH_REDIS_PORT`     | (Optional) Port number; defaults to `6379` if omitted.     |
-| `DEV_UPSTASH_REDIS_*`         | Same variables for the **dev** environment (optional).     |
+| `DEV_UPSTASH_REDIS_*`         | Same variables for the **develop** environment (optional). |
 
 Store these secrets under **Repository Settings → Secrets and variables → Actions**.
 
