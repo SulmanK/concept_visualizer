@@ -27,7 +27,7 @@ resource "google_cloudfunctions2_function" "worker_function" {
     max_instance_count  = var.worker_max_instances
     min_instance_count  = var.worker_min_instances
     available_memory    = var.worker_memory
-    timeout_seconds     = 540 # Maximum allowed for functions with an event trigger (9 minutes)
+    timeout_seconds     = 540 # Increased timeout to 18 minutes to accommodate longer tasks
     service_account_email = google_service_account.worker_service_account.email
 
     environment_variables = {
