@@ -213,7 +213,7 @@ class TestConceptService:
         result = await concept_service.generate_concept(logo_prompt, theme_prompt)
 
         # Assert
-        mock_client.generate_image.assert_called_once_with(prompt=logo_prompt, width=512, height=512)
+        mock_client.generate_image.assert_called_once_with(prompt=logo_prompt, width=256, height=256)
 
         # Verify the response structure
         assert "image_url" in result

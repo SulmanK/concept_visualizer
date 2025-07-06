@@ -72,7 +72,7 @@ class TestConceptGenerator:
                 result = await generator.generate(logo_description, theme_description)
 
         # Verify correct calls were made
-        mock_client.generate_image.assert_called_once_with(prompt=logo_description, width=512, height=512, model="stable-diffusion-xl")
+        mock_client.generate_image.assert_called_once_with(prompt=logo_description, width=256, height=256, model="stable-diffusion-xl")
 
         # Updated to match implementation - now using generate_multiple_palettes
         mock_client.generate_multiple_palettes.assert_called_once_with(logo_description=logo_description, theme_description=theme_description, num_palettes=1)

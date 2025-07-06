@@ -78,7 +78,7 @@ class ConceptService(ConceptServiceInterface):
             self.logger.info(f"Generating concept with logo_description='{logo_description}', theme_description='{theme_description}'")
 
             # Generate the image using the JigsawStack client - only use logo_description for image generation
-            image_response = await self.client.generate_image(prompt=logo_description, width=512, height=512)
+            image_response = await self.client.generate_image(prompt=logo_description, width=256, height=256)
 
             # Extract the image URL from the response - handling different response formats
             image_url = None
