@@ -10,6 +10,7 @@ import logging
 import uuid
 from datetime import datetime
 from io import BytesIO
+from time import perf_counter
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 import httpx
@@ -358,7 +359,8 @@ class ImageService(ImageServiceInterface):
                 self.logger.warning("Empty color palette: {}, skipping".format(palette_name))
                 return None
 
-            # Apply the palette to the base image using the processing service
+            # ▶ STEP 1 ─── Palette processing timing
+            t0 = perf_counter()
             colorized_image = await self.processing.process_image(
                 base_image_data,
                 operations=[
@@ -369,6 +371,7 @@ class ImageService(ImageServiceInterface):
                     }
                 ],
             )
+            self.logger.info("TIMING_PROCESS_PALETTE sec=%.3f", perf_counter() - t0)
 
             if not colorized_image:
                 self.logger.error("Failed to apply palette: {}".format(palette_name))
@@ -378,13 +381,15 @@ class ImageService(ImageServiceInterface):
             unique_id = str(uuid.uuid4())
             filename = "palette_{}_{}.png".format(timestamp, unique_id)
 
-            # Store with metadata
+            # ▶ STEP 2 ─── Upload timing
+            t0 = perf_counter()
             metadata = {
                 "palette_name": palette_name,
                 "description": palette_description,
                 "colors": json.dumps(palette_colors),
             }
 
+            t0 = perf_counter()
             palette_path, palette_url = await self.persistence.store_image(
                 image_data=colorized_image,
                 user_id=user_id,
@@ -392,6 +397,7 @@ class ImageService(ImageServiceInterface):
                 metadata=metadata,
                 is_palette=True,
             )
+            self.logger.info("TIMING_UPLOAD sec=%.3f", perf_counter() - t0)
 
             # Annotate the variables to fix type errors
             palette_path_str: str = palette_path
