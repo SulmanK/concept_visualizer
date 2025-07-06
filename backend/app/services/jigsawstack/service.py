@@ -35,8 +35,8 @@ class JigsawStackService(JigsawStackServiceInterface):
     async def generate_image(
         self,
         prompt: str,
-        width: int = 512,
-        height: int = 512,
+        width: int = 256,
+        height: int = 256,
         model: str = "stable-diffusion-xl",
     ) -> Dict[str, Any]:
         """Generate an image based on a prompt.
