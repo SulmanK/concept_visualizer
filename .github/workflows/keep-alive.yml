@@ -1,0 +1,37 @@
+name: Keep Repository Active
+
+on:
+  schedule:
+    # Run on the 1st of every month at 00:00 UTC
+    - cron: '0 0 1 * *'
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update last activity timestamp
+        run: |
+          echo "# Repository Activity Log" > .last-activity.md
+          echo "" >> .last-activity.md
+          echo "Last automated activity: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> .last-activity.md
+          echo "" >> .last-activity.md
+          echo "This file is automatically updated to keep the repository active and prevent GitHub from disabling workflows due to inactivity." >> .last-activity.md
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Commit and push changes
+        run: |
+          git add .last-activity.md
+          git commit -m "chore: update repository activity timestamp" || exit 0
+          git push
