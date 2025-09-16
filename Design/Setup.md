@@ -176,6 +176,8 @@ You need two Supabase projects: one for development (`dev`) and one for producti
 
     ```
 
+9.  Update tf.vars
+
 ### 6. Vercel Frontend Setup
 
 Deploy the frontend application using Vercel.
