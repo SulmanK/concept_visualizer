@@ -186,3 +186,8 @@ output "artifact_registry_repository_name" {
   description = "The simple name of the Artifact Registry repository (e.g., my-project-dev-docker-repo)."
   value       = "${var.naming_prefix}-docker-repo"
 }
+
+output "assets_bucket_name" {
+  description = "Name of the GCS bucket for startup scripts and other assets (used by VMs and upload script)."
+  value       = google_storage_bucket.assets_bucket.name
+}

@@ -135,6 +135,7 @@ PREFIXED_SECRETS=(
     ["ALERT_ALIGNMENT_PERIOD"]="alert_alignment_period_output"
     ["WORKER_MIN_INSTANCES"]="worker_min_instances_output"
     ["WORKER_MAX_INSTANCES"]="worker_max_instances_output"
+    ["ASSETS_BUCKET_NAME"]="assets_bucket_name"
 )
 
 # --- Set Global Secrets ---

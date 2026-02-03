@@ -44,6 +44,7 @@ jobs:
             echo "ALERT_NOTIFICATION_CHANNEL_FULL_ID=${{ secrets.DEV_ALERT_NOTIFICATION_CHANNEL_FULL_ID }}" >> $GITHUB_ENV
             echo "FRONTEND_STARTUP_ALERT_DELAY=${{ secrets.DEV_FRONTEND_STARTUP_ALERT_DELAY || '2100s' }}" >> $GITHUB_ENV
             echo "ALERT_ALIGNMENT_PERIOD=${{ secrets.DEV_ALERT_ALIGNMENT_PERIOD || '300s' }}" >> $GITHUB_ENV
+            echo "ASSETS_BUCKET_NAME=${{ secrets.DEV_ASSETS_BUCKET_NAME }}" >> $GITHUB_ENV
           elif [[ "${{ github.event.workflow_run.head_branch || github.ref_name }}" == "main" ]]; then
             echo "ENVIRONMENT=prod" >> $GITHUB_ENV
             echo "GCP_PROJECT_ID=${{ secrets.PROD_GCP_PROJECT_ID }}" >> $GITHUB_ENV
@@ -62,6 +63,7 @@ jobs:
             echo "ALERT_NOTIFICATION_CHANNEL_FULL_ID=${{ secrets.PROD_ALERT_NOTIFICATION_CHANNEL_FULL_ID }}" >> $GITHUB_ENV
             echo "FRONTEND_STARTUP_ALERT_DELAY=${{ secrets.PROD_FRONTEND_STARTUP_ALERT_DELAY || '2100s' }}" >> $GITHUB_ENV
             echo "ALERT_ALIGNMENT_PERIOD=${{ secrets.PROD_ALERT_ALIGNMENT_PERIOD || '300s' }}" >> $GITHUB_ENV
+            echo "ASSETS_BUCKET_NAME=${{ secrets.PROD_ASSETS_BUCKET_NAME }}" >> $GITHUB_ENV
           else
             echo "Branch is not develop or main, skipping deployment."
             exit 0
@@ -168,7 +170,7 @@ jobs:
             --create-disk=auto-delete=yes,boot=yes,device-name=boot,image-family=debian-11,image-project=debian-cloud,mode=rw,size=10,type=pd-balanced \
             --subnet=projects/${{ env.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/subnetworks/default \
             --address="$STATIC_IP" \
-            --metadata=startup-script-url=gs://${{ env.NAMING_PREFIX }}-assets-${{ env.ENVIRONMENT }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
+            --metadata=startup-script-url=gs://${{ env.ASSETS_BUCKET_NAME }}/startup-scripts/api-startup.sh,environment=${{ env.ENVIRONMENT }},naming_prefix=${{ env.NAMING_PREFIX }},region=${{ env.REGION }},docker-image="$IMAGE_URL" \
             --description="Template for Concept API instances (${{ github.sha }}) created at $(date)"
 
           # Check the exit code of the create command

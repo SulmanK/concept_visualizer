@@ -10,6 +10,16 @@ This workflow runs when:
 
 - The `CI Tests & Deployment` workflow completes successfully on `main` or `develop` branches
 
+## When this workflow is skipped
+
+The **Deploy Backend** job is skipped in these cases:
+
+1. **CI Tests & Deployment did not run** – Pushes or PRs to branches other than `main` or `develop` do not trigger CI Tests & Deployment, so Deploy Backend never runs.
+2. **CI Tests & Deployment did not succeed** – The job uses `if: github.event.workflow_run.conclusion == 'success'`. If the parent workflow fails, is cancelled, or is skipped, this workflow is skipped.
+3. **Wrong branch on the triggering run** – The workflow is triggered only for runs of CI Tests & Deployment on `branches: [develop, main]`. A run from another branch (e.g. a PR from a feature branch) will start the workflow, but the "Set Environment Specifics" step may exit early if the run’s branch is not `develop` or `main`.
+
+To get deployments: push to `main` or `develop` and ensure CI Tests & Deployment completes successfully.
+
 ## Workflow Structure
 
 ### Environment Setup
@@ -98,6 +108,7 @@ The workflow requires numerous secrets to be configured in the GitHub repository
 - Workload identity providers
 - Service account emails
 - Naming prefixes
+- Assets bucket name (`DEV_ASSETS_BUCKET_NAME`, `PROD_ASSETS_BUCKET_NAME`) for VM startup script URL
 - Terraform state bucket names
 - Artifact registry repository names
 - Vercel configuration settings

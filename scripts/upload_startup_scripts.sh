@@ -46,8 +46,13 @@ if [[ -z "$NAMING_PREFIX" ]]; then
     exit 1
 fi
 
-# Define the GCS bucket name based on naming convention (matching Terraform)
-BUCKET_NAME="${NAMING_PREFIX}-assets-${ENVIRONMENT}"
+BUCKET_UNIQUE_SUFFIX=$(grep 'bucket_unique_suffix' "$TFVARS_FILE" | head -n 1 | awk -F'=' '{print $2}' | tr -d ' "')
+if [[ -z "$BUCKET_UNIQUE_SUFFIX" ]]; then
+    BUCKET_UNIQUE_SUFFIX="4"
+fi
+
+# Define the GCS bucket name based on naming convention (matching Terraform storage.tf)
+BUCKET_NAME="${NAMING_PREFIX}-assets-${ENVIRONMENT}-${BUCKET_UNIQUE_SUFFIX}"
 SCRIPTS_DIR="$PROJECT_ROOT/terraform/scripts"
 
 # Check if the required scripts exist
