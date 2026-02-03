@@ -218,26 +218,51 @@ resource "google_storage_bucket_iam_member" "state_bucket_cicd_access" {
 }
 
 # --- Cloud Build / Cloud Functions build service account ---
-# Cloud Functions 2nd gen uses Cloud Build. The build runs as the default Compute Engine
-# service account (in newer projects). Grant it permissions to read source, build, and push images.
+# Cloud Functions 2nd gen uses Cloud Build. The build may run as the default Compute Engine
+# service account (newer projects) or the Cloud Build legacy SA. Grant both so either works.
 # See: https://cloud.google.com/functions/docs/troubleshooting#build-service-account
 
+locals {
+  build_sa_compute = "${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  build_sa_cloudbuild_legacy = "${data.google_project.current.number}@cloudbuild.gserviceaccount.com"
+}
+
+# Default Compute Engine service account (used in many projects after May 2024)
 resource "google_project_iam_member" "build_sa_cloudbuild_builder" {
   project = var.project_id
   role    = "roles/cloudbuild.builds.builder"
-  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  member  = "serviceAccount:${local.build_sa_compute}"
 }
 
 resource "google_project_iam_member" "build_sa_artifact_registry_writer" {
   project = var.project_id
   role    = "roles/artifactregistry.writer"
-  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  member  = "serviceAccount:${local.build_sa_compute}"
 }
 
 resource "google_storage_bucket_iam_member" "build_sa_function_source_reader" {
   bucket = google_storage_bucket.function_source_placeholder.name
   role   = "roles/storage.objectViewer"
-  member = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  member = "serviceAccount:${local.build_sa_compute}"
+}
+
+# Cloud Build legacy service account (used in some projects / orgs)
+resource "google_project_iam_member" "build_sa_legacy_cloudbuild_builder" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${local.build_sa_cloudbuild_legacy}"
+}
+
+resource "google_project_iam_member" "build_sa_legacy_artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${local.build_sa_cloudbuild_legacy}"
+}
+
+resource "google_storage_bucket_iam_member" "build_sa_legacy_function_source_reader" {
+  bucket = google_storage_bucket.function_source_placeholder.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${local.build_sa_cloudbuild_legacy}"
 }
 
 # --- IAM for Manually Created Terraform State Bucket ---

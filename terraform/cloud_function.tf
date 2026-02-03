@@ -108,6 +108,9 @@ resource "google_cloudfunctions2_function" "worker_function" {
     google_project_iam_member.build_sa_cloudbuild_builder,
     google_project_iam_member.build_sa_artifact_registry_writer,
     google_storage_bucket_iam_member.build_sa_function_source_reader,
+    google_project_iam_member.build_sa_legacy_cloudbuild_builder,
+    google_project_iam_member.build_sa_legacy_artifact_registry_writer,
+    google_storage_bucket_iam_member.build_sa_legacy_function_source_reader,
   ]
 }
 

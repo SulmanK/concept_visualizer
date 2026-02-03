@@ -509,7 +509,7 @@ def configure_error_handlers(app: Any) -> None:
         app: The FastAPI application instance
     """
 
-    @app.exception_handler(APIError)  # type: ignore[misc]
+    @app.exception_handler(APIError)  # type: ignore[untyped-decorator]
     async def api_error_handler(request: Request, exc: APIError) -> JSONResponse:
         """Handle all API-specific errors with a consistent response format.
 
@@ -531,7 +531,7 @@ def configure_error_handlers(app: Any) -> None:
         content = {"detail": exc.detail}
         return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
-    @app.exception_handler(StarletteHTTPException)  # type: ignore[misc]
+    @app.exception_handler(StarletteHTTPException)  # type: ignore[untyped-decorator]
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         """Handle regular HTTP exceptions using the same format as APIError.
 
@@ -556,7 +556,7 @@ def configure_error_handlers(app: Any) -> None:
             headers=exc.headers,
         )
 
-    @app.exception_handler(RequestValidationError)  # type: ignore[misc]
+    @app.exception_handler(RequestValidationError)  # type: ignore[untyped-decorator]
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         """Handle request validation errors (422 Unprocessable Entity).
 
@@ -603,7 +603,7 @@ def configure_error_handlers(app: Any) -> None:
             },
         )
 
-    @app.exception_handler(ApplicationError)  # type: ignore[misc]
+    @app.exception_handler(ApplicationError)  # type: ignore[untyped-decorator]
     async def application_error_handler(request: Request, exc: ApplicationError) -> JSONResponse:
         """Handle application domain exceptions by mapping them to API errors.
 
@@ -641,7 +641,7 @@ def configure_error_handlers(app: Any) -> None:
         )
 
     # Legacy handler for TaskNotFoundError (can be removed once all routes are updated)
-    @app.exception_handler(TaskNotFoundError)  # type: ignore[misc]
+    @app.exception_handler(TaskNotFoundError)  # type: ignore[untyped-decorator]
     async def task_not_found_handler(request: Request, exc: TaskNotFoundError) -> JSONResponse:
         """Legacy handler for task not found errors."""
         return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(exc)})
