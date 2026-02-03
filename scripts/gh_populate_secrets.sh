@@ -185,13 +185,20 @@ done
 echo "
 Setting any additional essential secrets:"
 
-# Set TF_STATE_BUCKET_NAME
+# Set TF_STATE_BUCKET_NAME (prefixed for env, and global for workflow compatibility)
 FULL_GH_SECRET_NAME="${TARGET_PREFIX}TF_STATE_BUCKET_NAME"
 echo "Setting $FULL_GH_SECRET_NAME..."
 if gh secret set "$FULL_GH_SECRET_NAME" -b "$TF_STATE_BUCKET"; then
     echo "Successfully set $FULL_GH_SECRET_NAME."
 else
     echo "Error setting $FULL_GH_SECRET_NAME." >&2
+fi
+# Also set global TF_STATE_BUCKET_NAME - deploy_backend workflow uses this (no prefix)
+echo "Setting TF_STATE_BUCKET_NAME (global)..."
+if gh secret set "TF_STATE_BUCKET_NAME" -b "$TF_STATE_BUCKET"; then
+    echo "Successfully set TF_STATE_BUCKET_NAME."
+else
+    echo "Error setting TF_STATE_BUCKET_NAME." >&2
 fi
 
 # Set ALERT_EMAIL_ADDRESS - get from tfvars file

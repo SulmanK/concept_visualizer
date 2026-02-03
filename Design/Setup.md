@@ -247,6 +247,7 @@ The following secrets will be set by the automation script. Values are sourced f
 
 - **Global:**
   - `GCP_REGION`
+  - `TF_STATE_BUCKET_NAME` (from `terraform_state_bucket_name` in tfvars; used by deploy_backend workflow)
 - \*\*Environment-Specific (prefixed with `DEV_` or `PROD_`):
   - `GCP_PROJECT_ID`
   - `GCP_ZONE`
@@ -271,7 +272,7 @@ These secrets still need to be added manually to your GitHub repository settings
 - **Global:**
   - `VERCEL_ORG_ID`
   - `VERCEL_TOKEN`
-  - `TF_STATE_BUCKET_NAME`
+  - ~~`TF_STATE_BUCKET_NAME`~~ — **Now set automatically** by `gcp_apply.sh` (Step 7: `gh_populate_secrets.sh`) from `terraform_state_bucket_name` in your tfvars.
 - \*\*Production (prefixed with `PROD_`):
   - `PROD_JIGSAWSTACK_API_KEY`
   - `PROD_SUPABASE_ANON_KEY`
