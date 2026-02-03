@@ -142,6 +142,31 @@ if [ $SECRETS_RESULT -ne 0 ]; then
     echo "Continuing with deployment despite secret population failure..."
 fi
 
+# STEP 3.5: Apply Cloud Build / Cloud Function build IAM and function source bucket first, then wait for IAM propagation.
+# This prevents "missing permission on the build service account" when the worker function is created in Step 4.
+# GCP IAM can take 1-2 minutes to propagate; applying these early gives time before the function build runs.
+echo -e "\n===== STEP 3.5: Cloud Build permissions and function source (with IAM propagation wait) =====\n"
+terraform plan -var-file="$TFVARS_FILE" \
+  -target=google_storage_bucket.function_source_placeholder \
+  -target=google_storage_bucket_object.placeholder_source_zip \
+  -target=google_project_iam_member.build_sa_cloudbuild_builder \
+  -target=google_project_iam_member.build_sa_artifact_registry_writer \
+  -target=google_storage_bucket_iam_member.build_sa_function_source_reader \
+  -target=google_project_iam_member.build_sa_legacy_cloudbuild_builder \
+  -target=google_project_iam_member.build_sa_legacy_artifact_registry_writer \
+  -target=google_storage_bucket_iam_member.build_sa_legacy_function_source_reader \
+  -out=tfplan.build_iam
+
+echo "Applying Cloud Build permissions and function source bucket..."
+terraform apply -auto-approve tfplan.build_iam
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to apply build IAM / function source."
+    exit 1
+fi
+
+echo -e "\nWaiting 90 seconds for IAM propagation (reduces Cloud Function build permission errors)..."
+sleep 90
+
 # STEP 4: Apply the full Terraform configuration
 echo -e "\n===== STEP 4: Applying full infrastructure =====\n"
 terraform plan -var-file="$TFVARS_FILE" -out=tfplan.full
