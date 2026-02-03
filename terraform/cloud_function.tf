@@ -104,7 +104,10 @@ resource "google_cloudfunctions2_function" "worker_function" {
     google_pubsub_topic.tasks_topic,
     google_artifact_registry_repository.docker_repo,
     google_artifact_registry_repository_iam_member.worker_sa_repo_reader, # Ensure worker can read from AR
-    google_storage_bucket_object.placeholder_source_zip # Ensure the placeholder source exists
+    google_storage_bucket_object.placeholder_source_zip, # Ensure the placeholder source exists
+    google_project_iam_member.build_sa_cloudbuild_builder,
+    google_project_iam_member.build_sa_artifact_registry_writer,
+    google_storage_bucket_iam_member.build_sa_function_source_reader,
   ]
 }
 

@@ -2,7 +2,7 @@
 
 # Create a storage bucket for startup scripts and other assets
 resource "google_storage_bucket" "assets_bucket" {
-  name     = "${var.naming_prefix}-assets-${var.environment}"
+  name     = "${var.naming_prefix}-assets-${var.environment}-${var.bucket_unique_suffix}"
   project  = var.project_id
   location = var.region
 

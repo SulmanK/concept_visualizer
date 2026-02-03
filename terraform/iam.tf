@@ -217,6 +217,29 @@ resource "google_storage_bucket_iam_member" "state_bucket_cicd_access" {
   member = "serviceAccount:${var.terraform_cicd_sa_email}"
 }
 
+# --- Cloud Build / Cloud Functions build service account ---
+# Cloud Functions 2nd gen uses Cloud Build. The build runs as the default Compute Engine
+# service account (in newer projects). Grant it permissions to read source, build, and push images.
+# See: https://cloud.google.com/functions/docs/troubleshooting#build-service-account
+
+resource "google_project_iam_member" "build_sa_cloudbuild_builder" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "build_sa_artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}
+
+resource "google_storage_bucket_iam_member" "build_sa_function_source_reader" {
+  bucket = google_storage_bucket.function_source_placeholder.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}
+
 # --- IAM for Manually Created Terraform State Bucket ---
 # This bucket is used by the main Terraform configuration AND for storing dynamic monitoring IDs.
 

@@ -161,7 +161,7 @@ You need two Supabase projects: one for development (`dev`) and one for producti
 
     ```bash
     cd terraform
-    terraform init -backend-config="bucket=concept-visualizer-tfstate-1"
+    terraform init -backend-config="bucket=BUCKET_NAME"
     terraform workspace new dev
     terraform workspace new prod
 

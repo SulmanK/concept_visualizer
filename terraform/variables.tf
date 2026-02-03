@@ -32,6 +32,12 @@ variable "naming_prefix" {
   default     = "concept-viz"
 }
 
+variable "bucket_unique_suffix" {
+  description = "Unique suffix (e.g., '4') appended to GCS bucket names for global uniqueness. Bucket names are shared across all GCP users."
+  type        = string
+  default     = "4"
+}
+
 variable "terraform_state_bucket_name" {
   description = "Name of the GCS bucket holding Terraform state."
   type        = string

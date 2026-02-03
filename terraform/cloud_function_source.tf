@@ -3,7 +3,7 @@
 # 1. Create a bucket to hold the dummy source zip
 resource "google_storage_bucket" "function_source_placeholder" {
   project       = var.project_id
-  name          = "${var.naming_prefix}-func-source-${var.environment}"
+  name          = "${var.naming_prefix}-func-source-${var.environment}-${var.bucket_unique_suffix}"
   location      = var.region
   force_destroy = true  # Allows easy cleanup during destroy
 
