@@ -94,25 +94,27 @@ async def refine_concept_image(
     logger.info(f"[WORKER_TIMING] Task {task_id}: Image refined at {refine_end:.2f} (Duration: {(refine_end - refine_start):.2f}s)")
 
     # Extract the image data
+    refined_image_bytes: bytes
     refined_image_data = refined_concept.get("image_data")
-    if not refined_image_data or not isinstance(refined_image_data, bytes):
-        # Try to get the image URL and download it
+    if isinstance(refined_image_data, bytes) and refined_image_data:
+        refined_image_bytes = refined_image_data
+    else:
         refined_image_url = refined_concept.get("image_url")
-        if refined_image_url:
-            logger.info(f"Task {task_id}: No image data in refined concept, downloading from URL: {refined_image_url}")
-            try:
-                async with httpx.AsyncClient() as client:
-                    response = await client.get(refined_image_url)
-                    response.raise_for_status()
-                    refined_image_data = response.content
-            except Exception as e:
-                logger.error(f"Task {task_id}: Error downloading refined image: {e}")
-                raise Exception(f"Failed to download refined image: {e}")
-        else:
+        if not refined_image_url:
             raise Exception("No image data or URL in refined concept response")
 
-    logger.info(f"Task {task_id}: Refined image obtained, size: {len(refined_image_data)} bytes")
-    return cast(bytes, refined_image_data)
+        logger.info(f"Task {task_id}: No image data in refined concept, downloading from URL: {refined_image_url}")
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(refined_image_url)
+                response.raise_for_status()
+                refined_image_bytes = response.content
+        except Exception as e:
+            logger.error(f"Task {task_id}: Error downloading refined image: {e}")
+            raise Exception(f"Failed to download refined image: {e}")
+
+    logger.info(f"Task {task_id}: Refined image obtained, size: {len(refined_image_bytes)} bytes")
+    return refined_image_bytes
 
 
 async def store_refined_image(
